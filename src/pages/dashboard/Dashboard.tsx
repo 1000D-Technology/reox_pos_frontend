@@ -3,7 +3,7 @@
 function Dashboard() {
     return (
         <div>
-           fdtghjkl;
+           Dashboard
         </div>
     )
 }
