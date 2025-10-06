@@ -1,8 +1,13 @@
+import {Bandage} from "lucide-react";
 
 
 function SignIn() {
     return (
-        <div>SignIn</div>
+        <>
+        <div className={'flex'}>
+            <Bandage />
+        </div>
+        </>
     )
 }
 

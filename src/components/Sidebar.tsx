@@ -71,7 +71,7 @@ export default function Sidebar({isOpen}: SidebarProps) {
             path: "/stock",
             icon: <FolderTree size={20}/>,
             children: [
-                {label: "Create Stock", path: "/stock/create-stock"},
+                {label: "Stock List", path: "/stock/stock-list"},
                 {label: "Out of Stock", path: "/stock/out-of-stock"},
                 {label: "Damaged Stock", path: "/stock/damaged-stock"},
                 {label: "Low Stock", path: "/stock/low-stock"},
@@ -140,7 +140,7 @@ export default function Sidebar({isOpen}: SidebarProps) {
                 {/* Logo */}
                 <div className="flex items-center justify-center h-16">
                     {isOpen ? (
-                        <img src="/logo.png" alt="" className="h-5"/>
+                        <img src="/logo.png" alt="" className="h-8"/>
                     ) : (
                         <img src="/logo.png" alt="" className="h-3"/>
                     )}
