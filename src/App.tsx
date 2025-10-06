@@ -8,7 +8,7 @@ import ManageInvoice from "./pages/dashboard/Sales/ManageInvoice";
 import ManageSales from "./pages/dashboard/Sales/ManageSales";
 import ManageUserSales from "./pages/dashboard/Sales/ManageUserSales";
 import CreateProducts from "./pages/dashboard/Products/CreateProducts.tsx";
-import CreateStock from "./pages/dashboard/Stock/CreateStock.tsx";
+import StockList from "./pages/dashboard/Stock/StockList.tsx";
 import CreateQuotation from "./pages/dashboard/Quotation/CreateQuotation.tsx";
 import ManageSupplier from "./pages/dashboard/Supplier/ManageSupplier.tsx";
 import SupplierPayment from "./pages/dashboard/Supplier/SupplierPayment";
@@ -49,7 +49,7 @@ export default function App() {
                     <Route path="/sales/manage-user-sales" element={<ManageUserSales />} />
                     <Route path="/quotation/create-quotation" element={<CreateQuotation />} />
                     <Route path="/quotation/quotation-list" element={<QuatationList />} />
-                    <Route path="/stock/create-stock" element={<CreateStock />} />
+                    <Route path="/stock/stock-list" element={<StockList />} />
                     <Route path="/stock/out-of-stock" element={<OutOfStock />} />
                     <Route path="/stock/damaged-stock" element={<DamagedStock />} />
                     <Route path="/stock/low-stock" element={<LowStock />} />
