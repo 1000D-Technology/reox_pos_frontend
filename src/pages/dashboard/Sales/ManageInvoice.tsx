@@ -1,20 +1,59 @@
 import {
   CalendarDays,
   ChartNoAxesCombined,
+  ChevronLeft,
+  ChevronRight,
   FileSpreadsheet,
   Printer,
   RefreshCcw,
   SaveAll,
-  Search,
+  SearchCheck,
 } from "lucide-react";
+
 
 function ManageInvoice() {
   return (
-    <div>
-      <div className="text-4xl text-gray-400 font-bold">Invoice Management</div>
+    <div className="h-screen">
+      <nav className="flex" aria-label="Breadcrumb">
+        <ol className="inline-flex items-center space-x-1 md:space-x-2 rtl:space-x-reverse">
+          <li className="inline-flex items-center">
+            <a
+              href="#"
+              className="inline-flex items-center text-sm  text-gray-700 hover:text-blue-600 dark:text-gray-400 dark:hover:text-white"
+            >
+              Pages
+            </a>
+          </li>
+          <li>
+            <div className="flex items-center">
+              <svg
+                className="rtl:rotate-180 w-2 h-2 text-gray-400"
+                aria-hidden="true"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 6 10"
+              >
+                <path
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="m1 9 4-4-4-4"
+                />
+              </svg>
+              <a href="#" className="ms-1 text-sm  text-gray-950">
+                Invoice Management
+              </a>
+            </div>
+          </li>
+        </ol>
+      </nav>
 
-      <div className="flex justify-between mt-4 gap-4">
-        <div className="bg-white rounded-xl w-1/3 p-2 flex items-center">
+      <div className="text-4xl text-gray-400 font-semibold">
+        Invoice Management
+      </div>
+      <div className="grid grid-cols-3 gap-4 mt-4">
+        <div className="bg-white p-2  rounded-xl flex items-center">
           <div className="w-1/4  flex justify-center items-center border-r-2 border-gray-300">
             <div className="bg-[#BBF7D0] rounded-full w-10 h-10 flex justify-center items-center">
               <ChartNoAxesCombined />
@@ -22,11 +61,11 @@ function ManageInvoice() {
           </div>
           <div className="w-3/4 m-2 ">
             <div className="text-sm text-gray-500">Total Sales</div>
-            <div className="text-lg font-bold">LKR.5000000.00</div>
+            <div className="text-lg font-semibold">LKR.5000000.00</div>
           </div>
         </div>
 
-        <div className="bg-white rounded-xl w-1/3 p-2 flex items-center">
+        <div className="bg-white p-2 rounded-xl flex items-center">
           <div className="w-1/4  flex justify-center items-center border-r-2 border-gray-300">
             <div className="bg-[#BBF7D0] rounded-full w-10 h-10 flex justify-center items-center">
               <FileSpreadsheet />
@@ -34,11 +73,11 @@ function ManageInvoice() {
           </div>
           <div className="w-3/4 m-2 ">
             <div className="text-sm text-gray-500">Total Invoice</div>
-            <div className="text-lg font-bold">50</div>
+            <div className="text-lg font-semibold">50</div>
           </div>
         </div>
 
-        <div className="bg-white rounded-xl w-1/3 p-2 flex items-center">
+        <div className="bg-white p-2 rounded-xl flex items-center">
           <div className="w-1/4  flex justify-center items-center border-r-2 border-gray-300">
             <div className="bg-[#BBF7D0] rounded-full w-10 h-10 flex justify-center items-center">
               <CalendarDays />
@@ -46,7 +85,7 @@ function ManageInvoice() {
           </div>
           <div className="w-3/4 m-2 ">
             <div className="text-sm text-gray-500">Date Range</div>
-            <div className="text-lg font-bold">6 Days</div>
+            <div className="text-lg font-semibold">6 Days</div>
           </div>
         </div>
       </div>
@@ -79,7 +118,7 @@ function ManageInvoice() {
           <div className="w-1/4">
             <div className="flex mt-7">
               <button className="bg-[#059669] text-white px-4 py-2 rounded-md w-full flex items-center justify-center">
-                <Search /> &nbsp;&nbsp;Search
+                <SearchCheck /> &nbsp;&nbsp;Search
               </button>
               <button className="bg-[#8C8C8C] text-white px-4 py-2 rounded-md w-full ml-2 flex items-center justify-center">
                 <RefreshCcw /> &nbsp;&nbsp;Clear
@@ -88,7 +127,8 @@ function ManageInvoice() {
           </div>
         </div>
       </div>
-      <div className="bg-white rounded-xl w-full h-full mt-4 p-8">
+
+      <div className="bg-white rounded-t-xl w-full h-[40vh] mt-4 p-8">
         <div className="bg-[#059669] p-2 rounded-md flex">
           <div className="text-white w-1/5">Invoice ID</div>
           <div className="text-white w-1/5">Total Amount (LKR)</div>
@@ -104,17 +144,84 @@ function ManageInvoice() {
           <div className="w-1/5 flex items-center">Saman Silva</div>
           <div className="w-1/5 flex">
             <div className="w-1/2 flex justify-center items-center">
-              <div className="bg-[#BBF7D0] rounded-full w-10 h-10 flex justify-center items-center">
-                 <Printer className="text-[#059669]"/>
+              <div
+                className="bg-[#BBF7D0] rounded-full w-10 h-10 flex justify-center items-center"
+                data-tooltip-target="tooltip-default"
+              >
+                <Printer className="text-[#059669]" />
+              </div>
+              <div
+                id="tooltip-default"
+                role="tooltip"
+                className="absolute z-10 invisible inline-block px-3 py-2 text-sm font-medium text-white transition-opacity duration-300 bg-gray-900 rounded-lg shadow-xs opacity-0 tooltip dark:bg-gray-700"
+              >
+                Tooltip content
+                <div className="tooltip-arrow" data-popper-arrow></div>
               </div>
             </div>
             <div className="w-1/2 flex justify-center items-center">
               <div className="bg-[#FEF08A] rounded-full w-10 h-10 flex justify-center items-center">
-                <SaveAll className="text-[#F59E0B]"/>
+                <SaveAll className="text-[#F59E0B]" />
               </div>
             </div>
           </div>
         </div>
+      </div>
+      <div className="flex justify-center bg-white rounded-b-xl w-full h-16 p-4">
+        <nav aria-label="Page navigation example">
+          <ul className="inline-flex -space-x-px text-sm">
+            <li>
+              <a
+                href="#"
+                className="flex items-center justify-center px-3 h-8 ms-0 "
+              >
+                <ChevronLeft className="w-4 h-4" /> Previous
+              </a>
+            </li>
+            <li>
+              <a
+                href="#"
+                className="flex items-center justify-center px-3 h-8 rounded-md border  border-gray-300 bg-white text-gray-700 shadow-sm"
+              >
+                1
+              </a>
+            </li>
+            <li>
+              <a
+                href="#"
+                className="flex items-center justify-center px-3 h-8 leading-tight"
+              >
+                2
+              </a>
+            </li>
+            <li>
+              <a
+                href="#"
+                aria-current="page"
+                className="flex items-center justify-center px-3 h-8 leading-tight"
+              >
+                3
+              </a>
+            </li>
+            <li>
+              <a
+                href="#"
+                className="flex items-center justify-center px-3 h-8 leading-tight"
+              >
+                ...
+              </a>
+            </li>
+
+            <li>
+              <a
+                href="#"
+                className="flex items-center justify-center px-3 h-8 leading-tight"
+              >
+                Next <ChevronRight className="w-4 h-4" />
+              </a>
+            </li>
+          </ul>
+        </nav>
       </div>
     </div>
   );
