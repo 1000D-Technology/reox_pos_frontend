@@ -82,7 +82,7 @@ function ManageUserSales() {
 
     return (
         <div className={'h-full'}>
-            <div className="h-[43%] flex flex-col gap-4">
+            <div className="h-[39%] flex flex-col gap-4">
 
                 <div>
                     <div className="text-sm text-gray-500 flex items-center">
@@ -147,7 +147,7 @@ function ManageUserSales() {
                 </div>
             </div>
 
-            <div className="h-[60%]">
+            <div className="h-[61%]">
                 {/* Sales Table Section */}
                 <div className="bg-white h-full rounded-xl w-full  p-8">
                     <div className="overflow-x-auto h-[95%]">
