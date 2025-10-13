@@ -10,7 +10,6 @@ import {
   SearchCheck,
 } from "lucide-react";
 
-
 function ManageInvoice() {
   return (
     <div className="h-screen">
@@ -101,27 +100,39 @@ function ManageInvoice() {
               placeholder="Enter Invoice Number..."
             />
           </div>
-          <div className="w-1/4">
+            <div className="w-1/4">
             <label className="text-sm font-medium">From Date</label>
-            <input
+            <div className="relative">
+              <input
               type="text"
-              className="border border-[#E5E5E5] rounded-md p-2 w-full mt-1"
-            />
-          </div>
+              className="border border-[#E5E5E5] rounded-md p-2 w-full mt-1 pr-10"
+              placeholder="10/01/2025"
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+              <CalendarDays size={18} />
+              </span>
+            </div>
+            </div>
           <div className="w-1/4">
             <label className="text-sm font-medium">To Date</label>
-            <input
-              type="text"
-              className="border border-[#E5E5E5] rounded-md p-2 w-full mt-1"
-            />
+            <div className="relative">
+              <input
+                type="text"
+                className="border border-[#E5E5E5] rounded-md p-2 w-full mt-1 pr-10"
+                placeholder="10/01/2025"
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+                <CalendarDays size={18} />
+              </span>
+            </div>
           </div>
           <div className="w-1/4">
             <div className="flex mt-7">
               <button className="bg-[#059669] text-white px-4 py-2 rounded-md w-full flex items-center justify-center">
-                <SearchCheck /> &nbsp;&nbsp;Search
+                <SearchCheck size={18}/> &nbsp;&nbsp;Search
               </button>
               <button className="bg-[#8C8C8C] text-white px-4 py-2 rounded-md w-full ml-2 flex items-center justify-center">
-                <RefreshCcw /> &nbsp;&nbsp;Clear
+                <RefreshCcw size={18}/> &nbsp;&nbsp;Clear
               </button>
             </div>
           </div>
@@ -129,7 +140,7 @@ function ManageInvoice() {
       </div>
 
       <div className="bg-white rounded-t-xl w-full h-[40vh] mt-4 p-8">
-        <div className="bg-[#059669] p-2 rounded-md flex">
+        <div className="bg-[#059669] p-2 rounded-sm flex">
           <div className="text-white w-1/5">Invoice ID</div>
           <div className="text-white w-1/5">Total Amount (LKR)</div>
           <div className="text-white w-1/5">Issued Date</div>
@@ -137,31 +148,29 @@ function ManageInvoice() {
           <div className="text-white w-1/5">Actions</div>
         </div>
 
-        <div className="border-b border-gray-300 p-2 rounded-md flex">
+        <div className="border-b border-gray-300 p-2 rounded-sm flex">
           <div className=" w-1/5 flex items-center">250929003</div>
           <div className="w-1/5 flex items-center">25000.00</div>
           <div className="w-1/5 flex items-center">9/29/2025, 8:51:54 AM</div>
           <div className="w-1/5 flex items-center">Saman Silva</div>
           <div className="w-1/5 flex">
-            <div className="w-1/2 flex justify-center items-center">
-              <div
-                className="bg-[#BBF7D0] rounded-full w-10 h-10 flex justify-center items-center"
-                data-tooltip-target="tooltip-default"
-              >
-                <Printer className="text-[#059669]" />
+            <div className="relative group w-1/2 flex justify-center items-center">
+              <div className="bg-[#BBF7D0] w-10 h-10 flex justify-center items-center rounded-full cursor-pointer">
+                <Printer className="text-[#059669]" size={18}/>
               </div>
-              <div
-                id="tooltip-default"
-                role="tooltip"
-                className="absolute z-10 invisible inline-block px-3 py-2 text-sm font-medium text-white transition-opacity duration-300 bg-gray-900 rounded-lg shadow-xs opacity-0 tooltip dark:bg-gray-700"
-              >
-                Tooltip content
-                <div className="tooltip-arrow" data-popper-arrow></div>
+              <div className="absolute bottom-[-2.2rem] scale-0 group-hover:scale-100 transition-transform duration-200 bg-black text-white text-sm font-medium px-3 py-1 rounded-full shadow-lg">
+                Print Invoice
+                <div className="absolute top-[-5px] left-1/2 -translate-x-1/2 w-2 h-2 bg-black rotate-45"></div>
               </div>
             </div>
-            <div className="w-1/2 flex justify-center items-center">
+
+            <div className="relative group w-1/2 flex justify-center items-center">
               <div className="bg-[#FEF08A] rounded-full w-10 h-10 flex justify-center items-center">
-                <SaveAll className="text-[#F59E0B]" />
+                <SaveAll className="text-[#F59E0B]" size={18}/>
+              </div>
+              <div className="absolute bottom-[-2.2rem] scale-0 group-hover:scale-100 transition-transform duration-200 bg-black text-white text-sm font-medium px-3 py-1 rounded-full shadow-lg">
+                Save Invoice
+                <div className="absolute top-[-5px] left-1/2 -translate-x-1/2 w-2 h-2 bg-black rotate-45"></div>
               </div>
             </div>
           </div>
