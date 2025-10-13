@@ -1,17 +1,14 @@
 import {
-    ChartLine,
     ChevronLeft,
     ChevronRight,
-    CreditCard,
     Eye,
     Printer,
     RefreshCw,
-    Scale,
     SearchCheck,
     Trash,
-    Users
+
 } from 'lucide-react';
-import { ChartNoAxesCombined } from 'lucide-react';
+
 import { useEffect, useState } from 'react';
 
 function QuatationList() {
