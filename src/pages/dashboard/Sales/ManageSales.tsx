@@ -197,7 +197,7 @@ function ManageSales() {
                 <div className={'grid md:grid-cols-4 gap-4 '}>
                     <div>
                         <label htmlFor="invoice-number"
-                               className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                               className="block text-sm font-medium text-gray-700 mb-1">Invoice Number</label>
                         <input type="text" id="invoice-number" placeholder="Enter Invoice Number..."
                                className="w-full text-sm rounded-md py-2 px-2  border-2 border-gray-100 "/>
 
