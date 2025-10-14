@@ -1,212 +1,214 @@
-import {
+ import {
     ChevronLeft,
     ChevronRight,
+    XCircle,
     Eye,
     Printer,
     RefreshCw,
     SearchCheck,
     Trash,
-
 } from 'lucide-react';
-
 import { useEffect, useState } from 'react';
+// Import StokeInvoice component
+import StokeInvoice from '../../../components/StokeInvoice';
 
-function QuatationList() {
+function QuotationList() {
+    // Existing states
+    const [selectedIndex, setSelectedIndex] = useState(0);
+    const [showQuotationAdd, setShowQuotationAdd] = useState(false);
+    // New state for invoice visibility
+    const [showInvoice, setShowInvoice] = useState(false);
 
+    // Add sample data to prevent undefined errors
     const salesData = [
         {
-            quationId: '250929003',
-            grossAmount: '25000.00',
-            discount: '0.00',
-            discountAmount: '650.00',
-            netAmount: '650.00',
-            createBy: 'shanila',
-            createAt: '9/29/2025, 8:51:54 AM',
+            quotationId: 'Q-001',
+            grossAmount: '20,000.00',
+            discount: '5%',
+            discountAmount: '1,000.00',
+            netAmount: '19,000.00',
+            createBy: 'John Doe',
+            createAt: '2025-10-14'
         },
         {
-            quationId: '250929003',
-            grossAmount: '25000.00',
-            discount: '0.00',
-            discountAmount: '650.00',
-            netAmount: '650.00',
-            createBy: 'shanila',
-            createAt: '9/29/2025, 8:51:54 AM',
+            quotationId: 'Q-002',
+            grossAmount: '15,000.00',
+            discount: '0%',
+            discountAmount: '0.00',
+            netAmount: '15,000.00',
+            createBy: 'Jane Smith',
+            createAt: '2025-10-13'
         }
-
     ];
 
-    // 🔹 Selected row state
-    const [selectedIndex, setSelectedIndex] = useState(0);
+    // Existing handlers
+    const handleViewQuotation = () => {
+        setShowQuotationAdd(true);
+    };
 
-    // 🔹 Handle Up / Down arrow keys
-    useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === "ArrowDown") {
-                setSelectedIndex((prev) => (prev < salesData.length - 1 ? prev + 1 : prev));
-            } else if (e.key === "ArrowUp") {
-                setSelectedIndex((prev) => (prev > 0 ? prev - 1 : prev));
-            }
-        };
+    const handleCloseQuotationAdd = () => {
+        setShowQuotationAdd(false);
+    };
 
-        window.addEventListener("keydown", handleKeyDown);
-        return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [salesData.length]);
+    // New handlers for invoice
+    const handleViewInvoice = () => {
+        setShowInvoice(true);
+    };
+
+    const handleCloseInvoice = () => {
+        setShowInvoice(false);
+    };
 
     return (
-        <div className={'flex flex-col gap-4 h-full'}>
-            <div>
-                <div className="text-sm text-gray-500 flex items-center">
-                    <span>Pages</span>
-                    <span className="mx-2">›</span>
-                    <span className="text-black">Manage Quotations</span>
-                </div>
-                <h1 className="text-3xl font-semibold text-gray-500">Manage Quotations</h1>
+        <div className={'h-full flex flex-col p-4 sm:p-6 lg:p-8'}>
+            <div className="flex justify-between items-center mb-6">
+                <h1 className="text-2xl font-semibold text-gray-800">Quotation List</h1>
+                <button 
+                    onClick={handleViewQuotation}
+                    className="bg-emerald-600 text-white px-4 py-2 rounded-md hover:bg-emerald-700 transition-colors"
+                >
+                    New Quotation
+                </button>
             </div>
+            
+            <div className="flex-1 min-h-0">
+                {!showQuotationAdd ? (
+                    <div className="bg-white h-full rounded-xl w-full p-4 sm:p-6 lg:p-8 flex flex-col shadow-md">
+                        {/* Properly structure the table */}
+                        <div className="overflow-x-auto">
+                            <table className="min-w-full divide-y divide-gray-200">
+                                <thead className="bg-gray-50">
+                                    <tr>
+                                        <th scope="col" className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            ID
+                                        </th>
+                                        <th scope="col" className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Amount
+                                        </th>
+                                        <th scope="col" className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Created By
+                                        </th>
+                                        <th scope="col" className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Date
+                                        </th>
+                                        <th scope="col" className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Actions
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody className="bg-white divide-y divide-gray-200">
+                                    {salesData.map((sale, index) => (
+                                        <tr key={sale.quotationId} 
+                                            onClick={() => setSelectedIndex(index)}
+                                            className={`cursor-pointer ${index === selectedIndex
+                                                ? "bg-green-100 border-l-4 border-green-600"
+                                                : "hover:bg-green-50"}`}>
+                                            <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
+                                                <div className="text-sm font-medium text-gray-900">{sale.quotationId}</div>
+                                            </td>
+                                            <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
+                                                <div className="text-sm text-gray-900">{sale.netAmount}</div>
+                                            </td>
+                                            <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
+                                                <div className="text-sm text-gray-900">{sale.createBy}</div>
+                                            </td>
+                                            <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
+                                                <div className="text-sm text-gray-900">{sale.createAt}</div>
+                                            </td>
+                                            <td className="px-4 sm:px-6 py-2 whitespace-nowrap text-sm font-medium">
+                                                <div className="flex items-center space-x-2">
+                                                    {/* Print button */}
+                                                    <div className="relative group">
+                                                        <button className="p-2 bg-green-100 rounded-full text-green-700 hover:bg-green-200 transition-colors">
+                                                            <Printer className="w-5 h-5" />
+                                                        </button>
+                                                        <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max px-2 py-1 text-xs text-white bg-gray-900 rounded-md invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                                            Print Quotation
+                                                        </span>
+                                                    </div>
 
-            <div className={'bg-white rounded-md p-4 flex flex-col'}>
-                <h2 className="text-xl font-semibold text-gray-400">Filter</h2>
-                <div className={'grid md:grid-cols-4 gap-4 '}>
-                    <div>
-                        <label htmlFor="quotation-id"
-                               className="block text-sm font-medium text-gray-700 mb-1">Quotation ID</label>
-                        <input type="text" id="quotation-id" placeholder="Enter Invoice Number..."
-                               className="w-full text-sm rounded-md py-2 px-2  border-2 border-gray-100 "/>
+                                                    {/* Eye button - Updated to open StokeInvoice */}
+                                                    <div className="relative group">
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setSelectedIndex(index);
+                                                                handleViewInvoice();
+                                                            }}
+                                                            className="p-2 bg-yellow-100 rounded-full text-yellow-700 hover:bg-yellow-200 transition-colors">
+                                                            <Eye className="w-5 h-5" />
+                                                        </button>
+                                                        <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max px-2 py-1 text-xs text-white bg-gray-900 rounded-md invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                                            View Quotation
+                                                        </span>
+                                                    </div>
 
+                                                    {/* Delete button */}
+                                                    <div className="relative group">
+                                                        <button 
+                                                            onClick={(e) => e.stopPropagation()}
+                                                            className="p-2 bg-red-100 rounded-full text-red-700 hover:bg-red-200 transition-colors">
+                                                            <Trash className="w-5 h-5" />
+                                                        </button>
+                                                        <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max px-2 py-1 text-xs text-white bg-gray-900 rounded-md invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                                            Delete
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        {/* Pagination */}
+                        <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-200">
+                            <div className="text-sm text-gray-700">
+                                Showing <span className="font-medium">1</span> to <span className="font-medium">2</span> of <span className="font-medium">2</span> results
+                            </div>
+                            <div className="flex items-center space-x-2">
+                                <button className="px-3 py-1 rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300 disabled:opacity-50">
+                                    <ChevronLeft className="w-5 h-5" />
+                                </button>
+                                <button className="px-3 py-1 rounded-md bg-emerald-600 text-white">
+                                    1
+                                </button>
+                                <button className="px-3 py-1 rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300 disabled:opacity-50">
+                                    <ChevronRight className="w-5 h-5" />
+                                </button>
+                            </div>
+                        </div>
                     </div>
-                    <div>
-                        <label htmlFor="from-date"
-                               className="block text-sm font-medium text-gray-700 mb-1">From Date</label>
-                        <input type="date" id="from-date" placeholder="Enter Invoice Number..."
-                               className="w-full text-sm rounded-md py-2 px-2  border-2 border-gray-100 "/>
-
-                    </div>
-                    <div>
-                        <label htmlFor="to-date"
-                               className="block text-sm font-medium text-gray-700 mb-1">To Date</label>
-                        <input type="date" id="to-date" placeholder="Enter Invoice Number..."
-                               className="w-full text-sm rounded-md py-2 px-2  border-2 border-gray-100 "/>
-
-                    </div>
-                    <div className={'grid grid-cols-2 md:items-end items-start gap-2 text-white font-medium'}>
-                        <button className={'bg-emerald-600 py-2 rounded-md flex items-center justify-center'}>
-                            <SearchCheck className="mr-2" size={14}/>Search
-                        </button>
-                        <button className={'bg-gray-500 py-2 rounded-md flex items-center justify-center'}><RefreshCw
-                            className="mr-2" size={14}/>Cancel
-                        </button>
-                    </div>
-                </div>
-            </div>
-            <div className={'flex flex-col bg-white rounded-md h-full p-4 justify-between'}>
-                <div
-                    className="overflow-y-auto max-h-md md:h-[320px] lg:h-[500px] rounded-md scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-                    <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-emerald-600 sticky top-0 z-10">
-                        <tr>
-                            {['Quotation ID', 'Gross Amount (LKR)', 'Discount %', 'Discount Amount', 'NET Amount', 'Created By', 'Created AT', 'Actions'
-                            ].map((header, i, arr) => (
-                                <th
-                                    key={header}
-                                    scope="col"
-                                    className={`px-6 py-3 text-left text-sm font-medium text-white tracking-wider
-                            ${i === 0 ? "rounded-tl-lg" : ""}
-                            ${i === arr.length - 1 ? "rounded-tr-lg" : ""}`}
-                                >
-                                    {header}
-                                </th>
-                            ))}
-                        </tr>
-                        </thead>
-
-                        <tbody className="bg-white divide-y divide-gray-200">
-                        {salesData.map((sale, index) => (
-                            <tr
-                                key={index}
-                                onClick={() => setSelectedIndex(index)}
-                                className={`cursor-pointer ${
-                                    index === selectedIndex
-                                        ? "bg-green-100 border-l-4 border-green-600"
-                                        : "hover:bg-green-50"
-                                }`}
+                ) : (
+                    /* Implement basic quotation view */
+                    <div className="bg-white h-full rounded-xl w-full p-4 sm:p-6 lg:p-8 flex flex-col shadow-md">
+                        <div className="flex justify-between items-center mb-6">
+                            <h2 className="text-xl font-semibold text-gray-800">Quotation Details</h2>
+                            <button 
+                                onClick={handleCloseQuotationAdd}
+                                className="p-2 bg-gray-100 rounded-full hover:bg-gray-200"
                             >
-                                <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">{sale.quationId}</td>
-                                <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">{sale.grossAmount}</td>
-                                <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">{sale.discount}</td>
-                                <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">{sale.discountAmount}</td>
-                                <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">{sale.netAmount}</td>
-                                <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">{sale.createBy}</td>
-                                <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">{sale.createAt}</td>
-                                <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
-                                    <div className="flex items-center space-x-2">
-                                        <div className="relative group">
-                                            <button
-                                                className="p-2 bg-green-100 rounded-full text-green-700 hover:bg-green-200 transition-colors">
-                                                <Printer className="w-5 h-5"/>
-                                            </button>
-                                            <span
-                                                className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max px-2 py-1 text-xs text-white bg-gray-900 rounded-md invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-opacity">
-                                                        Print Quotation
-                                                    </span>
-                                        </div>
-                                        <div className="relative group">
-                                            <button
-                                                className="p-2 bg-yellow-100 rounded-full text-yellow-700 hover:bg-yellow-200 transition-colors">
-                                                <Eye className="w-5 h-5"/>
-                                            </button>
-                                            <span
-                                                className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max px-2 py-1 text-xs text-white bg-gray-900 rounded-md invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-opacity">
-                                                        View Quotation
-                                                    </span>
-                                        </div>
-                                        <div className="relative group">
-                                            <button
-                                                className="p-2 bg-red-100 rounded-full text-red-700 hover:bg-red-200 transition-colors">
-                                                <Trash className="w-5 h-5"/>
-                                            </button>
-                                            <span
-                                                className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max px-2 py-1 text-xs text-white bg-gray-900 rounded-md invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-opacity">
-                                                        Delete
-                                                    </span>
-                                        </div>
-                                    </div>
-                                </td>
-
-                            </tr>
-                        ))}
-                        </tbody>
-                    </table>
-                </div>
-
-                <nav className="bg-white flex items-center justify-center sm:px-6">
-                    <div className="flex items-center space-x-2">
-                        <button
-                            className="flex items-center px-2 py-2 text-sm font-medium text-gray-500 hover:text-gray-700">
-                            <ChevronLeft className="mr-2 h-5 w-5"/> Previous
-                        </button>
-                        <button
-                            className="px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white">
-                            1
-                        </button>
-                        <button
-                            className="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-gray-500 hover:bg-gray-100">
-                            2
-                        </button>
-                        <button
-                            className="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-gray-500 hover:bg-gray-100">
-                            3
-                        </button>
-                        <span className="text-gray-500 px-2">...</span>
-                        <button
-                            className="flex items-center px-2 py-2 text-sm font-medium text-gray-500 hover:text-gray-700">
-                            Next <ChevronRight className="ml-2 h-5 w-5"/>
-                        </button>
+                                <XCircle className="w-6 h-6 text-gray-500" />
+                            </button>
+                        </div>
+                        <div className="flex-1">
+                            {/* Quotation form would go here */}
+                            <p className="text-gray-600">Quotation detail form content</p>
+                        </div>
                     </div>
-                </nav>
+                )}
             </div>
 
-
+            {/* Conditionally render StokeInvoice */}
+            {showInvoice && (
+                <StokeInvoice 
+                    onClose={handleCloseInvoice} 
+                    quotationData={salesData[selectedIndex]} 
+                />
+            )}
         </div>
     );
 }
 
-export default QuatationList;
+export default QuotationList;
