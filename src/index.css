@@ -4,3 +4,8 @@
 @import "tailwindcss";
 
 
+html {
+    font-size: 13px;
+
+}
+
