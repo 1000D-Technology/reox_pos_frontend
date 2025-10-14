@@ -106,12 +106,25 @@ function ManageUserSales() {
             </div>
             <div className={'bg-white rounded-md p-4 flex flex-col'}>
                 <h2 className="text-xl font-semibold text-gray-400">Filter</h2>
-                <div className={'grid md:grid-cols-4 gap-4 '}>
+                <div className={'grid md:grid-cols-5 gap-4 '}>
                     <div>
                         <label htmlFor="invoice-number"
-                               className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                               className="block text-sm font-medium text-gray-700 mb-1">Invoice Number</label>
                         <input type="text" id="invoice-number" placeholder="Enter Invoice Number..."
                                className="w-full text-sm rounded-md py-2 px-2  border-2 border-gray-100 "/>
+
+                    </div>
+                    <div>
+                        <label htmlFor="cashier"
+                               className="block text-sm font-medium text-gray-700 mb-1">Select Cashier</label>
+                        <select id="cashier"
+                                className="w-full text-sm rounded-md py-2 px-2  border-2 border-gray-100 ">
+                            <option selected>Choose a country</option>
+                            <option value="US">United States</option>
+                            <option value="CA">Canada</option>
+                            <option value="FR">France</option>
+                            <option value="DE">Germany</option>
+                        </select>
 
                     </div>
                     <div>
