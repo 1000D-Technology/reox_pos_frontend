@@ -119,11 +119,11 @@ function ManageUserSales() {
                                className="block text-sm font-medium text-gray-700 mb-1">Select Cashier</label>
                         <select id="cashier"
                                 className="w-full text-sm rounded-md py-2 px-2  border-2 border-gray-100 ">
-                            <option selected>Choose a country</option>
-                            <option value="US">United States</option>
-                            <option value="CA">Canada</option>
-                            <option value="FR">France</option>
-                            <option value="DE">Germany</option>
+                            <option selected>Choose Cashier</option>
+                            <option value="US">Frank</option>
+                            <option value="CA">Elsa</option>
+                            <option value="FR">Saman</option>
+                            <option value="DE">Kumara</option>
                         </select>
 
                     </div>
