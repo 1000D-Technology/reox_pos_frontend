@@ -159,7 +159,7 @@ export default function Sidebar({isOpen}: SidebarProps) {
                                                 isOpen ? "pr-2" : "justify-center"
                                             } gap-3 px-3 py-2 text-sm transition 
                                             ${(location.pathname === item.path || location.pathname.startsWith(item.path + "/"))
-                                                ? "bg-gradient-to-l from-emerald-200 font-semibold"
+                                                ? "bg-gradient-to-l from-emerald-200 font-semibold border-e-4 border-emerald-600"
                                                 : "text-gray-700 hover:bg-green-50"}`}
                                             onClick={(e) => toggleDropdown(item.label, e)}
                                         >

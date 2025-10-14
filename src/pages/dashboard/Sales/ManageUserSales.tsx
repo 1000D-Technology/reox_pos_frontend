@@ -1,227 +1,290 @@
- import { BreadcrumbItem, Breadcrumbs } from "@heroui/breadcrumbs";
-// import { Pagination } from "@heroui/pagination";
-import { useState } from "react";
 import {
-  CalendarDays,
-  ChartLine,
-  FileSpreadsheet,
-  LucideChartNoAxesCombined,
-  RefreshCwIcon,
-  Scale,
-  SearchCheckIcon,
-  Printer,
-  Eye,
-  SaveAll,
-} from "lucide-react";
+    CalendarDays,
+    ChartLine,
+    ChevronLeft,
+    ChevronRight,
+    Eye,
+    FileSpreadsheet,
+    Printer,
+    RefreshCw,
+    Scale,
+    SearchCheck,
+
+} from 'lucide-react';
+import { ChartNoAxesCombined } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 function ManageUserSales() {
-  const [currentPage, setCurrentPage] = useState(1);
-  const totalPages = 5;
 
-  return (
-    <>
-      <div className="w-full ps-5 ">
-        <div>
-          <Breadcrumbs>
-            <BreadcrumbItem>Pages</BreadcrumbItem>
-            <BreadcrumbItem >Cashier Management</BreadcrumbItem>
-          </Breadcrumbs>
-        </div>
-        <div className="text-4xl font-medium text-gray-400">Cashier Management</div>
-      </div>
+    const summaryCards = [
+        { title: 'Total Sales', value: 'LKR.500000.00', icon: <ChartNoAxesCombined size={20} /> },
+        { title: 'Total Profit', value: '50', icon: <ChartLine size={20} /> },
+        { title: 'Total Invoices ', value: '100', icon: <FileSpreadsheet size={20} /> },
+        { title: 'Total Discount', value: '50', icon: <Scale size={20} /> },
+        { title: 'Date Range', value: '2 Days', icon: <CalendarDays size={20} /> },
+    ];
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 p-5">
-        <div className="h-23 bg-white rounded-[15px] flex items-center justify-start p-4 shadow-sm">
-          <div className="flex-shrink-0 rounded-3xl bg-[#BBF7D0] w-12 h-12 flex items-center justify-center mr-4">
-            <LucideChartNoAxesCombined className="w-6 h-6 text-black" />
-          </div>
-          <div className="border-l border-gray-200 h-12 pl-4 flex flex-col justify-center">
-            <div className="text-sm font-light text-gray-600">Total Sales</div>
-            <div className="text-base font-medium text-gray-900">
-              LKR.5000.00
+
+    const salesData = [
+        {
+            invoiceId: '250929003',
+            grossAmount: '25000.00',
+            customer: 'Unknown',
+            discount: '0.00',
+            netAmount: '650.00',
+            cashPay: '650.00',
+            cardPay: '0.00',
+            balance: '0.00',
+            cashier: 'Saman Silva',
+            issuedAt: '9/29/2025, 8:51:54 AM',
+        },
+        {
+            invoiceId: '250929004',
+            grossAmount: '30000.00',
+            customer: 'John Doe',
+            discount: '100.00',
+            netAmount: '29900.00',
+            cashPay: '10000.00',
+            cardPay: '19900.00',
+            balance: '0.00',
+            cashier: 'Nimal Perera',
+            issuedAt: '9/29/2025, 9:15:20 AM',
+        },
+        {
+            invoiceId: '250929005',
+            grossAmount: '12000.00',
+            customer: 'Jane Smith',
+            discount: '0.00',
+            netAmount: '12000.00',
+            cashPay: '12000.00',
+            cardPay: '0.00',
+            balance: '0.00',
+            cashier: 'Kamal Silva',
+            issuedAt: '9/29/2025, 10:02:40 AM',
+        },
+    ];
+
+    // 🔹 Selected row state
+    const [selectedIndex, setSelectedIndex] = useState(0);
+
+    // 🔹 Handle Up / Down arrow keys
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === "ArrowDown") {
+                setSelectedIndex((prev) => (prev < salesData.length - 1 ? prev + 1 : prev));
+            } else if (e.key === "ArrowUp") {
+                setSelectedIndex((prev) => (prev > 0 ? prev - 1 : prev));
+            }
+        };
+
+        window.addEventListener("keydown", handleKeyDown);
+        return () => window.removeEventListener("keydown", handleKeyDown);
+    }, [salesData.length]);
+
+    return (
+        <div className={'flex flex-col gap-4 h-full'}>
+            <div>
+                <div className="text-sm text-gray-500 flex items-center">
+                    <span>Pages</span>
+                    <span className="mx-2">›</span>
+                    <span className="text-black">Cashier Sales Management</span>
+                </div>
+                <h1 className="text-3xl font-semibold text-gray-500">Cashier Sales Management</h1>
             </div>
-          </div>
-        </div>
-
-        <div className="h-23 bg-white rounded-[15px] flex items-center justify-start p-4 shadow-sm">
-          <div className="flex-shrink-0 rounded-3xl bg-[#BBF7D0] w-12 h-12 flex items-center justify-center mr-4">
-            <ChartLine className="w-6 h-6 text-black" />
-          </div>
-          <div className="border-l border-gray-200 h-12 pl-4 flex flex-col justify-center">
-            <div className="text-sm font-light text-gray-600">Total Profit</div>
-            <div className="text-base font-medium text-gray-900">50</div>
-          </div>
-        </div>
-
-        <div className="h-23 bg-white rounded-[15px] flex items-center justify-start p-4 shadow-sm">
-          <div className="flex-shrink-0 rounded-3xl bg-[#BBF7D0] w-12 h-12 flex items-center justify-center mr-4">
-            <FileSpreadsheet className="w-6 h-6 text-black" />
-          </div>
-          <div className="border-l border-gray-200 h-12 pl-4 flex flex-col justify-center">
-            <div className="text-sm font-light text-gray-600">
-              Total Invoices
+            <div className={' rounded-md grid md:grid-cols-5 grid-cols-3 gap-4'}>
+                {summaryCards.map((card, index) => (
+                    <div key={index} className="bg-white p-5 rounded-xl  flex items-center space-x-4 ">
+                        <div className="bg-[#BBF7D0] p-3 rounded-full">
+                            <span className="text-gray-700">{card.icon}</span>
+                        </div>
+                        <div className='border-l-2 border-[#D9D9D9] pl-2'>
+                            <p className="text-sm text-gray-400 ">{card.title}</p>
+                            <p className="text-lg font-semibold text-gray-900">{card.value}</p>
+                        </div>
+                    </div>
+                ))}
             </div>
-            <div className="text-base font-medium text-gray-900">50</div>
-          </div>
-        </div>
+            <div className={'bg-white rounded-md p-4 flex flex-col'}>
+                <h2 className="text-xl font-semibold text-gray-400">Filter</h2>
+                <div className={'grid md:grid-cols-5 gap-4 '}>
+                    <div>
+                        <label htmlFor="invoice-number"
+                               className="block text-sm font-medium text-gray-700 mb-1">Invoice Number</label>
+                        <input type="text" id="invoice-number" placeholder="Enter Invoice Number..."
+                               className="w-full text-sm rounded-md py-2 px-2  border-2 border-gray-100 "/>
 
-        <div className="h-23 bg-white rounded-[15px] flex items-center justify-start p-4 shadow-sm">
-          <div className="flex-shrink-0 rounded-3xl bg-[#BBF7D0] w-12 h-12 flex items-center justify-center mr-4">
-            <Scale className="w-6 h-6 text-black" />
-          </div>
-          <div className="border-l border-gray-200 h-12 pl-4 flex flex-col justify-center">
-            <div className="text-sm font-light text-gray-600">
-              Total Discount
+                    </div>
+                    <div>
+                        <label htmlFor="cashier"
+                               className="block text-sm font-medium text-gray-700 mb-1">Select Cashier</label>
+                        <select id="cashier"
+                                className="w-full text-sm rounded-md py-2 px-2  border-2 border-gray-100 ">
+                            <option selected>Choose Cashier</option>
+                            <option value="US">Frank</option>
+                            <option value="CA">Elsa</option>
+                            <option value="FR">Saman</option>
+                            <option value="DE">Kumara</option>
+                        </select>
+
+                    </div>
+                    <div>
+                        <label htmlFor="from-date"
+                               className="block text-sm font-medium text-gray-700 mb-1">From Date</label>
+                        <input type="date" id="from-date" placeholder="Enter Invoice Number..."
+                               className="w-full text-sm rounded-md py-2 px-2  border-2 border-gray-100 "/>
+
+                    </div>
+                    <div>
+                        <label htmlFor="to-date"
+                               className="block text-sm font-medium text-gray-700 mb-1">To Date</label>
+                        <input type="date" id="to-date" placeholder="Enter Invoice Number..."
+                               className="w-full text-sm rounded-md py-2 px-2  border-2 border-gray-100 "/>
+
+                    </div>
+                    <div className={'grid grid-cols-2 md:items-end items-start gap-2 text-white font-medium'}>
+                        <button className={'bg-emerald-600 py-2 rounded-md flex items-center justify-center'}>
+                            <SearchCheck className="mr-2" size={14}/>Search
+                        </button>
+                        <button className={'bg-gray-500 py-2 rounded-md flex items-center justify-center'}><RefreshCw
+                            className="mr-2" size={14}/>Cancel
+                        </button>
+                    </div>
+                </div>
             </div>
-            <div className="text-base font-medium text-gray-900">50</div>
-          </div>
-        </div>
+            <div className={'flex flex-col bg-white rounded-md h-full p-4 justify-between'}>
+                <div
+                    className="overflow-y-auto max-h-md md:h-[320px] lg:h-[500px] rounded-md scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                    <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-emerald-600 sticky top-0 z-10">
+                        <tr>
+                            {[
+                                'Invoice ID',
+                                'Gross Amount (LKR)',
+                                'Customer',
+                                'Discount',
+                                'NET Amount',
+                                'Cash Pay',
+                                'Card Pay',
+                                'Balance',
+                                'Issued Cashier',
+                                'Issued At',
+                                'Actions'
+                            ].map((header, i, arr) => (
+                                <th
+                                    key={header}
+                                    scope="col"
+                                    className={`px-6 py-3 text-left text-sm font-medium text-white tracking-wider
+                            ${i === 0 ? "rounded-tl-lg" : ""}
+                            ${i === arr.length - 1 ? "rounded-tr-lg" : ""}`}
+                                >
+                                    {header}
+                                </th>
+                            ))}
+                        </tr>
+                        </thead>
 
-        <div className="h-23 bg-white rounded-[15px] flex items-center justify-start p-4 shadow-sm">
-          <div className="flex-shrink-0 rounded-3xl bg-[#BBF7D0] w-12 h-12 flex items-center justify-center mr-4">
-            <CalendarDays className="w-6 h-6 text-black" />
-          </div>
-          <div className="border-l border-gray-200 h-12 pl-4 flex flex-col justify-center">
-            <div className="text-sm font-light text-gray-600">Date Range</div>
-            <div className="text-base font-medium text-gray-900">2 Days</div>
-          </div>
-        </div>
-      </div>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                        {salesData.map((sale, index) => (
+                            <tr
+                                key={index}
+                                onClick={() => setSelectedIndex(index)}
+                                className={`cursor-pointer ${
+                                    index === selectedIndex
+                                        ? "bg-green-100 border-l-4 border-green-600"
+                                        : "hover:bg-green-50"
+                                }`}
+                            >
+                                <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
+                                    {sale.invoiceId}
+                                </td>
+                                <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
+                                    {sale.grossAmount}
+                                </td>
+                                <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
+                                    {sale.customer}
+                                </td>
+                                <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
+                                    {sale.discount}
+                                </td>
+                                <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
+                                    {sale.netAmount}
+                                </td>
+                                <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
+                                    {sale.cashPay}
+                                </td>
+                                <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
+                                    {sale.cardPay}
+                                </td>
+                                <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
+                                    {sale.balance}
+                                </td>
+                                <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
+                                    {sale.cashier}
+                                </td>
+                                <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
+                                    {sale.issuedAt}
+                                </td>
+                                <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
+                                    <div className="flex items-center space-x-2">
+                                        <div className="relative group">
+                                            <button
+                                                className="p-2 bg-green-100 rounded-full text-green-700 hover:bg-green-200 transition-colors">
+                                                <Printer className="w-5 h-5"/>
+                                            </button>
+                                            <span
+                                                className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max px-2 py-1 text-xs text-white bg-gray-900 rounded-md invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-opacity">
+                                        Print Invoice
+                                    </span>
+                                        </div>
+                                        <div className="relative group">
+                                            <button
+                                                className="p-2 bg-yellow-100 rounded-full text-yellow-700 hover:bg-yellow-200 transition-colors">
+                                                <Eye className="w-5 h-5"/>
+                                            </button>
+                                            <span
+                                                className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max px-2 py-1 text-xs text-white bg-gray-900 rounded-md invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-opacity">
+                                        View Invoice
+                                    </span>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        ))}
+                        </tbody>
+                    </table>
+                </div>
 
-      <div className="bg-white p-5 mx-5 rounded-2xl shadow-sm">
-        <h3 className="text-lg font-semibold mb-4 text-gray-800">Filter</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
-          <div className="flex flex-col">
-            <label
-              htmlFor="cashier"
-              className="text-sm font-medium mb-2 text-gray-700"
-            >
-              Select Cashier
-            </label>
-            <input
-              type="text"
-              id="cashier"
-              className="border border-gray-300 rounded-md p-2.5 focus:ring-green-500 focus:border-green-500 text-gray-800"
-              placeholder="select user"
-            />
-          </div>
-
-          <div className="flex flex-col">
-            <label
-              htmlFor="fromDate"
-              className="text-sm font-medium mb-2 text-gray-700"
-            >
-              From Date
-            </label>
-            <input
-              type="date"
-              id="fromDate"
-              defaultValue="2025-01-10"
-              className="border border-gray-300 rounded-md p-2.5 focus:ring-green-500 focus:border-green-500 text-gray-800"
-            />
-          </div>
-
-          <div className="flex flex-col">
-            <label
-              htmlFor="toDate"
-              className="text-sm font-medium mb-2 text-gray-700"
-            >
-              To Date
-            </label>
-            <input
-              type="date"
-              id="toDate"
-              defaultValue="2025-01-10"
-              className="border border-gray-300 rounded-md p-2.5 focus:ring-green-500 focus:border-green-500 text-gray-800"
-            />
-          </div>
-
-          <div className="flex flex-row gap-4 pt-0 md:pt-6">
-            <button className="flex-1 bg-[#059669] text-white py-2.5 px-4 rounded-md flex items-center justify-center hover:bg-green-700 transition-colors">
-              <SearchCheckIcon className="w-4 h-4 mr-2" />
-              Search
-            </button>
-            <button className="flex-1 bg-gray-200 text-gray-700 py-2.5 px-4 rounded-md flex items-center justify-center hover:bg-gray-300 transition-colors">
-              <RefreshCwIcon className="w-4 h-4 mr-2" />
-              Clear
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div className="bg-white p-5 mx-5 my-5 rounded-2xl shadow-sm h-auto">
-        <div className="grid grid-cols-11 gap-5 bg-[#059669] h-13 rounded-md items-center text-white text-xs font-medium min-w-5xl">
-          <div className="px-2">Invoice ID</div>
-          <div>Gross Amount(LKR)</div>
-          <div> Customer</div>
-          <div>Discount</div>
-          <div>NET Amount</div>
-          <div>Cash Pay</div>
-          <div>Card Pay</div>
-          <div>Balance</div>
-          <div>Issued Cashier</div>
-          <div>Issued At</div>
-          <div>Actions</div>
-        </div>
-
-        <div className="grid grid-cols-11 gap-5  h-13  items-center  text-xs font-medium min-w-5xl border-b">
-            <div className="px-2">INV-001</div>
-            <div>2,500.00</div>
-            <div>John Doe</div>
-            <div>100.00</div>
-            <div>2,400.00</div>
-            <div>2,000.00</div>
-            <div>400.00</div>
-            <div>0.00</div>
-            <div>Jane Smith</div>
-            <div>2025-01-10 10:30</div>
-            <div className="flex gap-2">
-            <button className="p-1 rounded-full bg-[#BBF7D0]" title="Print">
-              <Printer className="w-4 h-4 text-green-600" />
-            </button>
-            <button className="p-1 rounded-full bg-[#FEF08A]" title="View">
-              <SaveAll className="w-4 h-4  text-yellow-600" />
-            </button>
+                <nav className="bg-white flex items-center justify-center sm:px-6">
+                    <div className="flex items-center space-x-2">
+                        <button
+                            className="flex items-center px-2 py-2 text-sm font-medium text-gray-500 hover:text-gray-700">
+                            <ChevronLeft className="mr-2 h-5 w-5"/> Previous
+                        </button>
+                        <button
+                            className="px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white">
+                            1
+                        </button>
+                        <button
+                            className="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-gray-500 hover:bg-gray-100">
+                            2
+                        </button>
+                        <button
+                            className="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-gray-500 hover:bg-gray-100">
+                            3
+                        </button>
+                        <span className="text-gray-500 px-2">...</span>
+                        <button
+                            className="flex items-center px-2 py-2 text-sm font-medium text-gray-500 hover:text-gray-700">
+                            Next <ChevronRight className="ml-2 h-5 w-5"/>
+                        </button>
+                    </div>
+                </nav>
             </div>
+
+
         </div>
+    );
+}
 
+export default ManageUserSales;
 
-        
-        
-
-        
-      </div>
-
-      <div className="flex flex-col items-center space-y-3 mx-5 mb-5">
-        <div className="flex justify-center items-center gap-4 w-full">
-          <button
-            onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-            className="px-4 py-2 rounded-md hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed flex items-center transition-colors"
-            disabled={currentPage === 1}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <polyline points="15 18 9 12 15 6"></polyline>
-            </svg>
-            <span className="ml-1">Previous</span>
-          </button>
-          
-           
-          
-          <button
-            onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-            className="px-4 py-2 rounded-md hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed flex items-center transition-colors"
-            disabled={currentPage === totalPages}
-          >
-            <span className="mr-1">Next</span>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <polyline points="9 18 15 12 9 6"></polyline>
-            </svg>
-          </button>
-        </div>
-        <p className="text-sm text-gray-500">
-          Showing page <span className="font-semibold text-green-700 border border-gray-300 rounded-md px-2 py-1">{currentPage}</span> of {totalPages}
-        </p>
-      </div>
-    </>
-  );
-}export default ManageUserSales;
