@@ -175,9 +175,9 @@ function ManageSales() {
                 <div className="text-sm text-gray-500 flex items-center">
                     <span>Pages</span>
                     <span className="mx-2">›</span>
-                    <span className="text-black">Cashier Sales Management</span>
+                    <span className="text-black">Sales Management</span>
                 </div>
-                <h1 className="text-3xl font-semibold text-gray-500">Cashier Sales Management</h1>
+                <h1 className="text-3xl font-semibold text-gray-500">Sales Management</h1>
             </div>
             <div className={' rounded-md grid md:grid-cols-5 grid-cols-3 gap-4'}>
                 {summaryCards.map((card, index) => (
