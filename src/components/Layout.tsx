@@ -2,6 +2,7 @@ import { useState } from "react";
 import Sidebar from "./Sidebar";
 import {Bell, Calculator, ClipboardPlus, PanelLeft, Power, RotateCcw} from "lucide-react";
 import {Link, Outlet} from "react-router-dom";
+import InvoiceModal from "./invoiceModel";
 
 
 export default function Layout() {
@@ -71,6 +72,7 @@ export default function Layout() {
                     <Outlet/>
                 </main>
             </div>
+            <InvoiceModal />
         </div>
     );
 }
