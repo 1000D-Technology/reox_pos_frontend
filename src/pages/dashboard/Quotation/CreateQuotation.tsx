@@ -1,13 +1,11 @@
 import {
-    Box,
-    ChevronLeft,
-    ChevronRight,
-    Eye,
+    Box, ChevronLeft, ChevronRight,
+
     Printer,
     PrinterIcon,
-    RefreshCw,
+
     Save,
-    SearchCheck,
+
     Trash,
 
 } from 'lucide-react';
@@ -118,7 +116,7 @@ function CreateQuotation() {
 
             </div>
 
-            <div className={'flex flex-col bg-white rounded-md lg:h-[400px] p-4 justify-between'}>
+            <div className={'flex flex-col bg-white rounded-md h-full p-4 justify-between'}>
                 <div
                     className="overflow-y-auto max-h-md md:h-[320px] lg:h-[400px] rounded-md scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
                     <table className="min-w-full divide-y divide-gray-200">
@@ -187,7 +185,7 @@ function CreateQuotation() {
                     </table>
                 </div>
 
-                {/* <nav className="bg-white flex items-center justify-center sm:px-6">
+              <nav className="bg-white flex items-center justify-center sm:px-6">
                     <div className="flex items-center space-x-2">
                         <button
                             className="flex items-center px-2 py-2 text-sm font-medium text-gray-500 hover:text-gray-700">
@@ -211,10 +209,10 @@ function CreateQuotation() {
                             Next <ChevronRight className="ml-2 h-5 w-5" />
                         </button>
                     </div>
-                </nav> */}
+                </nav>
             </div>
 
-            <div className="bg-[#059669] p-2 rounded-md flex text-xl">
+            <div className="bg-emerald-600 p-2 rounded-md flex text-xl">
                 <div className="text-white w-1/4 pl-5">Items: <span className='font-semibold'>2</span></div>
                 <div className="text-white w-1/4 text-center">Quantity: <span className='font-semibold'>2</span></div>
                 <div className="text-white w-1/4 text-center">Discount: <span className='font-semibold'>LKR.500.00</span></div>
