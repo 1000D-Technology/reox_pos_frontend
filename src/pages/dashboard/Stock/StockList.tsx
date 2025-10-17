@@ -15,7 +15,7 @@ function StockList() {
       </div>
 
       {/* filter */}
-      <div className="bg-white p-3 mr-0 rounded-2xl shadow-sm">
+      <div className="bg-white   mr-0 rounded-2xl shadow-sm  p-3">
         <h3 className="text-lg font-semibold text-gray-800">Filter</h3>
         <div className="flex gap-2 items-end">
           <div className="flex flex-col">
@@ -28,7 +28,7 @@ function StockList() {
             <input
               type="text"
               id="cashier"
-              className="w-60 border border-gray-300 rounded-md p-2.5 focus:ring-green-500 focus:border-green-500 text-gray-800 "
+              className="w-70 border border-gray-300 rounded-md p-2.5 focus:ring-green-500 focus:border-green-500 text-gray-800 "
               placeholder="select user"
             />
           </div>
@@ -77,10 +77,9 @@ function StockList() {
               placeholder="select product"
             />
           </div>
-
-          {/* buttons */}
-
-          <div className="flex gap-2 pt-0 items-center justify-end">
+             {/* buttons */}
+           <div className=" grid grid-cols-2 gap-5  items-center justify-end">
+            <div className="grid grid-1/2">
             <button className="bg-[#059669] text-white py-2.5 px-4 rounded-md flex items-center justify-center hover:bg-green-700 transition-colors">
               <SearchCheckIcon className="w-4 h-4 mr-2" />
               Search
@@ -89,9 +88,14 @@ function StockList() {
               <RefreshCwIcon className="w-4 h-4 mr-2" />
               Clear
             </button>
+            </div>
           </div>
         </div>
       </div>
+
+       
+
+         
 
       {/* table */}
       <div className="bg-white mt-5 rounded-2xl w-full ">
@@ -104,7 +108,7 @@ function StockList() {
           <div>Supplier</div>
           <div>Stock</div>
         </div>
-        <div className="grid grid-cols-7 gap-5  h-13  items-center  text-xs font-medium min-w-5xl border-b">
+        <div className="grid grid-cols-7 gap-5  h-13  items-center  text-xs font-medium min-w-5xl border-b mb-20">
           <div className="px-2">INV-001</div>
           <div>2,500.00</div>
           <div>John Doe</div>
@@ -113,8 +117,8 @@ function StockList() {
           <div>2,000.00</div>
           <div>400.00</div>
         </div>
-          
-  </div>
+
+        
              <div className="bg-white mt-50 rounded-2xl h-20 flex items-center justify-center gap-5">
                <div className="flex items-center gap-2 text-sm">
                  <button className="px-4 py-2 bg-gray-300 rounded-l-md hover:bg-gray-400">Previous</button>
@@ -126,6 +130,8 @@ function StockList() {
                  <button className="px-4 py-2 bg-gray-300 rounded-r-md hover:bg-gray-400">Next</button>
                </div>
              </div>
+          
+  </div>
   <div className="bg-white mt-2 rounded-2xl w-full h-20  flex items-center justify-center gap-5">
         <button className="bg-[#059669] rounded-2xl w-30 h-12 flex items-center justify-center text-white text-sm">
             <ClipboardList className="mr-2 h-4" />
