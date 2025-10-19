@@ -67,9 +67,9 @@ function ManageInvoice() {
                     <div className="text-sm text-gray-500 flex items-center">
                         <span>Pages</span>
                         <span className="mx-2">›</span>
-                        <span className="text-black">Manage Invoice</span>
+                        <span className="text-black">Invoice Management</span>
                     </div>
-                    <h1 className="text-3xl font-semibold text-gray-500">Manage Invoice</h1>
+                    <h1 className="text-3xl font-semibold text-gray-500">Invoice Management</h1>
                 </div>
                 <div className={' rounded-md grid md:grid-cols-3 grid-cols-3 gap-4'}>
                     {summaryCards.map((card, index) => (
