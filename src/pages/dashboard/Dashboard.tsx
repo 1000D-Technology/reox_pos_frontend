@@ -58,7 +58,7 @@ export default function Dashboard() {
             </div>
 
             <div className="mt-6">
-                <SalesChart />
+                <SalesChart/>
             </div>
 
             <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
