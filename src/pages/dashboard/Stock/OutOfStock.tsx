@@ -74,7 +74,7 @@ function OutOfStock() {
         </div>
         <h1 className="text-3xl font-semibold text-gray-500">Out Of Stock</h1>
       </div>
-      
+
       {/* Filter section */}
       <div className="w-full bg-white rounded-lg shadow-md p-5"> 
         <div className="flex justify-between items-center mb-4">
@@ -131,7 +131,7 @@ function OutOfStock() {
           </div>
         </div>
       </div>
-      
+
       {/* Table section */}
       <div className="flex flex-col bg-white rounded-md h-full p-4 justify-between">
         <div className="overflow-y-auto max-h-md md:h-[320px] lg:h-[500px] rounded-md scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
