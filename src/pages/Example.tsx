@@ -7,6 +7,7 @@ export default function Example() {
         { value: 'apple', label: 'Apple' },
         { value: 'banana', label: 'Banana' },
         { value: 'orange', label: 'Orange' },
+
     ];
     type SelectOption = {
         value: string;

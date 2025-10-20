@@ -8,6 +8,7 @@ import {
   SearchCheck,
 } from "lucide-react";
 import {useEffect, useState} from "react";
+import TypeableSelect from "../../../components/TypeableSelect.tsx";
 
 function StockList() {
 
@@ -26,6 +27,33 @@ function StockList() {
 
 
   ];
+
+  type SelectOption = {
+    value: string;
+    label: string;
+  };
+  const [selected, setSelected] = useState<SelectOption | null>(null);
+
+  const suppliers = [
+    {value: 'frank', label: 'Frank'},
+    {value: 'elsa', label: 'Elsa'},
+    {value: 'saman', label: 'Saman'},
+    {value: 'kumara', label: 'Kumara'},
+  ];
+
+  const units=[
+    {value: 'kg', label: 'Kilogram'},
+    {value: 'ltr', label: 'Litre'},
+    {value: 'pcs', label: 'Pieces'},
+  ];
+
+  const categories =[
+    {value: 'grocery', label: 'Grocery'},
+    {value: 'beverages', label: 'Beverages'},
+    {value: 'snacks', label: 'Snacks'},
+  ];
+
+
 
   // 🔹 Selected row state
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -61,40 +89,38 @@ function StockList() {
               <div>
                 <label htmlFor="category"
                        className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-                <select id="category"
-                        className="w-full text-sm rounded-md py-2 px-2  border-2 border-gray-100 ">
-                  <option selected>Choose Cashier</option>
-                  <option value="US">Frank</option>
-                  <option value="CA">Elsa</option>
-                  <option value="FR">Saman</option>
-                  <option value="DE">Kumara</option>
-                </select>
+                <TypeableSelect
+                    options={categories}
+                    value={selected?.value || null}
+                    onChange={(opt) => opt ? setSelected({ value: String(opt.value), label: opt.label }) : setSelected(null)}
+                    placeholder="Search categories.."
+                    allowCreate={true}
+                />
+
 
               </div>
               <div>
                 <label htmlFor="unit"
                        className="block text-sm font-medium text-gray-700 mb-1">Unit</label>
-                <select id="unit"
-                        className="w-full text-sm rounded-md py-2 px-2  border-2 border-gray-100 ">
-                  <option selected>Choose Cashier</option>
-                  <option value="US">Frank</option>
-                  <option value="CA">Elsa</option>
-                  <option value="FR">Saman</option>
-                  <option value="DE">Kumara</option>
-                </select>
+                <TypeableSelect
+                    options={units}
+                    value={selected?.value || null}
+                    onChange={(opt) => opt ? setSelected({ value: String(opt.value), label: opt.label }) : setSelected(null)}
+                    placeholder="Search units.."
+                    allowCreate={true}
+                />
 
               </div>
               <div>
                 <label htmlFor="supplier"
                        className="block text-sm font-medium text-gray-700 mb-1">Supplier</label>
-                <select id="unit"
-                        className="w-full text-sm rounded-md py-2 px-2  border-2 border-gray-100 ">
-                  <option selected>Choose Cashier</option>
-                  <option value="US">Frank</option>
-                  <option value="CA">Elsa</option>
-                  <option value="FR">Saman</option>
-                  <option value="DE">Kumara</option>
-                </select>
+                <TypeableSelect
+                    options={suppliers}
+                    value={selected?.value || null}
+                    onChange={(opt) => opt ? setSelected({ value: String(opt.value), label: opt.label }) : setSelected(null)}
+                    placeholder="Search suppliers.."
+                    allowCreate={true}
+                />
 
               </div>
               <div>

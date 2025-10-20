@@ -83,7 +83,7 @@ export default function TypeableSelect({
         } else if (e.key === 'Enter') {
             e.preventDefault();
             if (!open) {
-                setOpen(true);
+                setOpen(query.trim() !== '');
                 return;
             }
             if (filtered.length > 0 && highlight < filtered.length) {
@@ -103,10 +103,13 @@ export default function TypeableSelect({
     useEffect(() => {
         // reset highlight when filtered changes
         setHighlight(0);
+
+        // Only open dropdown when there's a query
+        setOpen(query.trim() !== '');
     }, [query]);
 
     return (
-        <div ref={wrapperRef} className={`relative w-full max-w-sm ${className}`}>
+        <div ref={wrapperRef} className={` w-full max-w-sm absolute z-50 ${className}`}>
             <div className="flex items-center gap-2">
                 <input
                     ref={inputRef}
@@ -114,22 +117,20 @@ export default function TypeableSelect({
                     className="w-full text-sm rounded-md py-2 px-2  border-2 border-gray-100 bg-white"
                     placeholder={placeholder}
                     value={query}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => { setQuery(e.target.value); setOpen(true); }}
-                    onFocus={() => setOpen(true)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => { setQuery(e.target.value); }}
                     onKeyDown={onKeyDown}
                 />
                 {selected && (
                     <button
                         title="Clear"
                         onClick={() => { setSelected(null); setQuery(''); onChange(null); inputRef.current?.focus(); }}
-
                     >
                         <X size={14} className="text-red-500 cursor-pointer"/>
                     </button>
                 )}
             </div>
 
-            {open && (
+            {open && query.trim() !== '' && (
                 <ul
                     ref={listRef}
                     className="w-full text-sm rounded-md py-2 px-2  border-2 border-gray-100 bg-white"
@@ -148,8 +149,6 @@ export default function TypeableSelect({
                             {opt.label}
                         </li>
                     ))}
-
-
                 </ul>
             )}
         </div>
