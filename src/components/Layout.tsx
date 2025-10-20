@@ -69,8 +69,8 @@ export default function Layout() {
                 </header>
 
                 {/* Page Content */}
-                <main className="flex-1 overflow-hidden ps-4 pe-1 my-3 me-3 h-full">
-                    <Outlet />
+                <main className="flex-1 overflow-y-auto ps-4 pe-1  my-3 me-3 h-full">
+                    <Outlet/>
                 </main>
 
                 {/* Invoice Modal with Animation */}

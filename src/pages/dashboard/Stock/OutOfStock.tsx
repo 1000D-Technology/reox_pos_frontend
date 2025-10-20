@@ -1,8 +1,13 @@
 
+
 function OutOfStock() {
+
+
     return (
-        <div>OutOfStock</div>
-    )
+        <div>
+            Out of Stock
+        </div>
+    );
 }
 
 export default OutOfStock
