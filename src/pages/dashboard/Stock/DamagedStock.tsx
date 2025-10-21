@@ -16,16 +16,44 @@ import TypeableSelect from '../../../components/TypeableSelect';
 
 function DamagedStock() {
 
-    const options = [
+    const category = [
         { value: 'apple', label: 'Apple' },
         { value: 'banana', label: 'Banana' },
         { value: 'orange', label: 'Orange' },
 
     ];
+
+    const unit = [
+        { value: 'unit1', label: 'unit1' },
+        { value: 'unit2', label: 'unit2' },
+        { value: 'unit3', label: 'unit3' },
+
+    ];
+    const supplier = [
+        { value: 'supplier1', label: 'supplier1' },
+        { value: 'supplier2', label: 'supplier2' },
+        { value: 'supplier3', label: 'supplier3' },
+
+    ];
+    const product = [
+        { value: 'product1', label: 'product1' },
+        { value: 'product2', label: 'product2' },
+        { value: 'product3', label: 'product3' },
+
+    ];
+    const stock = [
+        { value: 'stock1', label: 'stock1' },
+        { value: 'stock2', label: 'stock2' },
+        { value: 'stock3', label: 'stock3' },
+
+    ];
+
+    
     type SelectOption = {
         value: string;
         label: string;
     };
+
     const [selected, setSelected] = useState<SelectOption | null>(null);
 
     const salesData = [
@@ -81,7 +109,7 @@ function DamagedStock() {
                         <div >
                             <TypeableSelect
                                 className="w-1/2"
-                                options={options}
+                                options={category}
                                 value={selected?.value || null}
                                 onChange={(opt) => opt ? setSelected({ value: String(opt.value), label: opt.label }) : setSelected(null)}
                                 placeholder="Search fruits..."
@@ -96,10 +124,10 @@ function DamagedStock() {
                         <div >
                             <TypeableSelect
                                 className="w-[20px]"
-                                options={options}
+                                options={unit}
                                 value={selected?.value || null}
                                 onChange={(opt) => opt ? setSelected({ value: String(opt.value), label: opt.label }) : setSelected(null)}
-                                placeholder="Search fruits..."
+                                placeholder="Search units..."
                                 allowCreate={true}
                             />
                         </div>
@@ -111,10 +139,10 @@ function DamagedStock() {
                         <div >
                             <TypeableSelect
                                 className="w-[20px]"
-                                options={options}
+                                options={supplier}
                                 value={selected?.value || null}
                                 onChange={(opt) => opt ? setSelected({ value: String(opt.value), label: opt.label }) : setSelected(null)}
-                                placeholder="Search fruits..."
+                                placeholder="Search suppliers..."
                                 allowCreate={true}
                             />
                         </div>
@@ -123,8 +151,16 @@ function DamagedStock() {
                     <div>
                         <label htmlFor="quotation-id"
                             className="block text-sm font-medium text-gray-700 mb-1">Product ID/Name</label>
-                        <input type="text" id="quotation-id" placeholder="Select Product Id"
-                            className="w-full text-sm rounded-md py-2 px-2  border-2 border-gray-100 " />
+                        <div >
+                            <TypeableSelect
+                                className="w-[20px]"
+                                options={product}
+                                value={selected?.value || null}
+                                onChange={(opt) => opt ? setSelected({ value: String(opt.value), label: opt.label }) : setSelected(null)}
+                                placeholder="Search Product ID/Name..."
+                                allowCreate={true}
+                            />
+                        </div>
 
                     </div>
                     <div className={'grid grid-cols-2 md:items-end items-start gap-2 text-white font-medium'}>
@@ -143,8 +179,16 @@ function DamagedStock() {
                     <div>
                         <label htmlFor="quotation-id"
                             className="block text-sm font-medium text-gray-700 mb-1">Product ID/Name</label>
-                        <input type="text" id="quotation-id" placeholder="Search...."
-                            className="w-full text-sm rounded-md py-2 px-2  border-2 border-gray-100 " />
+                        <div >
+                            <TypeableSelect
+                                className="w-[20px]"
+                                options={product}
+                                value={selected?.value || null}
+                                onChange={(opt) => opt ? setSelected({ value: String(opt.value), label: opt.label }) : setSelected(null)}
+                                placeholder="Search Product ID/Name..."
+                                allowCreate={true}
+                            />
+                        </div>
 
                     </div>
                     <div>
@@ -153,10 +197,10 @@ function DamagedStock() {
                         <div >
                             <TypeableSelect
                                 className="w-[20px]"
-                                options={options}
+                                options={stock}
                                 value={selected?.value || null}
                                 onChange={(opt) => opt ? setSelected({ value: String(opt.value), label: opt.label }) : setSelected(null)}
-                                placeholder="Search fruits..."
+                                placeholder="Search stock list..."
                                 allowCreate={true}
                             />
                         </div>

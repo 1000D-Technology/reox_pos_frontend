@@ -109,7 +109,7 @@ export default function TypeableSelect({
     }, [query]);
 
     return (
-        <div ref={wrapperRef} className={` w-full max-w-sm absolute z-50 ${className}`}>
+        <div ref={wrapperRef} className={` w-full max-w-sm relative z-50 ${className}`}>
             <div className="flex items-center gap-2">
                 <input
                     ref={inputRef}
