@@ -109,7 +109,8 @@ export default function TypeableSelect({
     }, [query]);
 
     return (
-        <div ref={wrapperRef} className={` w-full max-w-sm relative z-50 ${className}`}>
+
+        <div ref={wrapperRef} className={` w-full max-w-sm block ${className}`}>
             <div className="flex items-center gap-2">
                 <input
                     ref={inputRef}
@@ -133,7 +134,7 @@ export default function TypeableSelect({
             {open && query.trim() !== '' && (
                 <ul
                     ref={listRef}
-                    className="w-full text-sm rounded-md py-2 px-2  border-2 border-gray-100 bg-white"
+                    className=" text-sm rounded-md py-2 px-2  border-2 border-gray-100 bg-white absolute z-50  max-w-[400px]'"
                 >
                     {filtered.length === 0 && !canCreate && (
                         <li className="">No results</li>

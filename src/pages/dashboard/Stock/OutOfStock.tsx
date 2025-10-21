@@ -1,5 +1,6 @@
 import { RefreshCw, SearchCheck, ClipboardList, ChevronLeft, ChevronRight } from "lucide-react"
 import { useState } from "react"
+import TypeableSelect from "../../../components/TypeableSelect.tsx";
 
 function OutOfStock() {
     // Sample data for out-of-stock items
@@ -63,6 +64,31 @@ function OutOfStock() {
 
     // Selected row state
     const [selectedIndex, setSelectedIndex] = useState(0);
+    const category = [
+        { value: 'apple', label: 'Apple' },
+        { value: 'banana', label: 'Banana' },
+        { value: 'orange', label: 'Orange' },
+
+    ];
+
+    const supplier = [
+        { value: 'supplier1', label: 'supplier1' },
+        { value: 'supplier2', label: 'supplier2' },
+        { value: 'supplier3', label: 'supplier3' },
+
+    ];
+    const productSearch = [
+        { value: 'product12', label: 'product12' },
+        { value: 'product2', label: 'product2' },
+        { value: 'product3', label: 'product3' },
+
+    ];
+    type SelectOption = {
+        value: string;
+        label: string;
+    };
+
+    const [selected, setSelected] = useState<SelectOption | null>(null);
 
     return (
         <div className={'flex flex-col gap-4 h-full'}>
@@ -84,28 +110,37 @@ function OutOfStock() {
                     {/* Four input fields with improved spacing */}
                     <div className="flex flex-col">
                         <label className="text-sm text-gray-600 mb-1">Product</label>
-                        <input
-                            type="text"
-                            placeholder="Search product"
-                            className="w-full h-10 border border-gray-300 rounded-lg px-4"
+                        <TypeableSelect
+                            className="w-1/2"
+                            options={productSearch}
+                            value={selected?.value || null}
+                            onChange={(opt) => opt ? setSelected({ value: String(opt.value), label: opt.label }) : setSelected(null)}
+                            placeholder="Search product..."
+                            allowCreate={true}
                         />
                     </div>
 
                     <div className="flex flex-col">
                         <label className="text-sm text-gray-600 mb-1">Category</label>
-                        <input
-                            type="text"
-                            placeholder="Select category"
-                            className="w-full h-10 border border-gray-300 rounded-lg px-4"
+                        <TypeableSelect
+                            className="w-1/2"
+                            options={category}
+                            value={selected?.value || null}
+                            onChange={(opt) => opt ? setSelected({ value: String(opt.value), label: opt.label }) : setSelected(null)}
+                            placeholder="Search categories..."
+                            allowCreate={true}
                         />
                     </div>
 
                     <div className="flex flex-col">
                         <label className="text-sm text-gray-600 mb-1">Supplier</label>
-                        <input
-                            type="text"
-                            placeholder="Select supplier"
-                            className="w-full h-10 border border-gray-300 rounded-lg px-4"
+                        <TypeableSelect
+                            className="w-1/2"
+                            options={supplier}
+                            value={selected?.value || null}
+                            onChange={(opt) => opt ? setSelected({ value: String(opt.value), label: opt.label }) : setSelected(null)}
+                            placeholder="Search suppliers..."
+                            allowCreate={true}
                         />
                     </div>
 

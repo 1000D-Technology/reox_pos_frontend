@@ -245,7 +245,7 @@ export function ClockCard() {
             transition={{ delay: 0.3 }}
             className="flex flex-col items-center justify-center h-full p-6 text-black bg-white shadow-lg rounded-2xl"
         >
-            <Icon className={`w-40 h-40 mb-2 ${isDayTime ? "text-emerald-400" : "text-emerald-400"}`} />
+            <Icon className={` mb-2 ${isDayTime ? "text-emerald-400" : "text-emerald-400"}`} size={100}/>
             {/* <SunDim className="w-40 h-40 mb-2 text-emerald-400" /> */}
 
             <div className="mt-2 text-sm opacity-90">

@@ -1,13 +1,13 @@
 import {
     ChevronLeft,
     ChevronRight,
-    Eye,
+
     NotepadText,
     Plus,
-    Printer,
+
     RefreshCw,
     SearchCheck,
-    Trash,
+
 
 } from 'lucide-react';
 
@@ -35,7 +35,13 @@ function DamagedStock() {
         { value: 'supplier3', label: 'supplier3' },
 
     ];
-    const product = [
+    const productSearch = [
+        { value: 'product12', label: 'product12' },
+        { value: 'product2', label: 'product2' },
+        { value: 'product3', label: 'product3' },
+
+    ];
+    const productAdd = [
         { value: 'product1', label: 'product1' },
         { value: 'product2', label: 'product2' },
         { value: 'product3', label: 'product3' },
@@ -101,7 +107,7 @@ function DamagedStock() {
 
             <div className={'bg-white rounded-md p-4 flex flex-col'}>
                 <h2 className="text-xl font-semibold text-gray-400">Filter</h2>
-                <div className={'grid md:grid-cols-5 gap-4 '}>
+                <div className={'grid md:grid-cols-5 gap-4'}>
                     <div>
                         <label htmlFor="quotation-id"
                             className="block text-sm font-medium text-gray-700 mb-1">Category</label>
@@ -112,7 +118,7 @@ function DamagedStock() {
                                 options={category}
                                 value={selected?.value || null}
                                 onChange={(opt) => opt ? setSelected({ value: String(opt.value), label: opt.label }) : setSelected(null)}
-                                placeholder="Search fruits..."
+                                placeholder="Search categories..."
                                 allowCreate={true}
                             />
                         </div>
@@ -154,7 +160,7 @@ function DamagedStock() {
                         <div >
                             <TypeableSelect
                                 className="w-[20px]"
-                                options={product}
+                                options={productSearch}
                                 value={selected?.value || null}
                                 onChange={(opt) => opt ? setSelected({ value: String(opt.value), label: opt.label }) : setSelected(null)}
                                 placeholder="Search Product ID/Name..."
@@ -182,7 +188,7 @@ function DamagedStock() {
                         <div >
                             <TypeableSelect
                                 className="w-[20px]"
-                                options={product}
+                                options={productAdd}
                                 value={selected?.value || null}
                                 onChange={(opt) => opt ? setSelected({ value: String(opt.value), label: opt.label }) : setSelected(null)}
                                 placeholder="Search Product ID/Name..."
