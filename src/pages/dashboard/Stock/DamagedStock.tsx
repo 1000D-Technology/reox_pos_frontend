@@ -12,8 +12,21 @@ import {
 } from 'lucide-react';
 
 import { useEffect, useState } from 'react';
+import TypeableSelect from '../../../components/TypeableSelect';
 
 function DamagedStock() {
+
+    const options = [
+        { value: 'apple', label: 'Apple' },
+        { value: 'banana', label: 'Banana' },
+        { value: 'orange', label: 'Orange' },
+
+    ];
+    type SelectOption = {
+        value: string;
+        label: string;
+    };
+    const [selected, setSelected] = useState<SelectOption | null>(null);
 
     const salesData = [
         {
@@ -64,22 +77,47 @@ function DamagedStock() {
                     <div>
                         <label htmlFor="quotation-id"
                             className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-                        <input type="text" id="quotation-id" placeholder="Select Category"
-                            className="w-full text-sm rounded-md py-2 px-2  border-2 border-gray-100 " />
+
+                        <div >
+                            <TypeableSelect
+                                className="w-1/2"
+                                options={options}
+                                value={selected?.value || null}
+                                onChange={(opt) => opt ? setSelected({ value: String(opt.value), label: opt.label }) : setSelected(null)}
+                                placeholder="Search fruits..."
+                                allowCreate={true}
+                            />
+                        </div>
 
                     </div>
                     <div>
                         <label htmlFor="quotation-id"
                             className="block text-sm font-medium text-gray-700 mb-1">Unit</label>
-                        <input type="text" id="quotation-id" placeholder="Select Unit"
-                            className="w-full text-sm rounded-md py-2 px-2  border-2 border-gray-100 " />
+                        <div >
+                            <TypeableSelect
+                                className="w-[20px]"
+                                options={options}
+                                value={selected?.value || null}
+                                onChange={(opt) => opt ? setSelected({ value: String(opt.value), label: opt.label }) : setSelected(null)}
+                                placeholder="Search fruits..."
+                                allowCreate={true}
+                            />
+                        </div>
 
                     </div>
                     <div>
                         <label htmlFor="quotation-id"
                             className="block text-sm font-medium text-gray-700 mb-1">Supplier</label>
-                        <input type="text" id="quotation-id" placeholder="Select Supplier"
-                            className="w-full text-sm rounded-md py-2 px-2  border-2 border-gray-100 " />
+                        <div >
+                            <TypeableSelect
+                                className="w-[20px]"
+                                options={options}
+                                value={selected?.value || null}
+                                onChange={(opt) => opt ? setSelected({ value: String(opt.value), label: opt.label }) : setSelected(null)}
+                                placeholder="Search fruits..."
+                                allowCreate={true}
+                            />
+                        </div>
 
                     </div>
                     <div>
@@ -112,8 +150,16 @@ function DamagedStock() {
                     <div>
                         <label htmlFor="quotation-id"
                             className="block text-sm font-medium text-gray-700 mb-1">Select Stock</label>
-                        <input type="text" id="quotation-id" placeholder="Select Stock"
-                            className="w-full text-sm rounded-md py-2 px-2  border-2 border-gray-100 " />
+                        <div >
+                            <TypeableSelect
+                                className="w-[20px]"
+                                options={options}
+                                value={selected?.value || null}
+                                onChange={(opt) => opt ? setSelected({ value: String(opt.value), label: opt.label }) : setSelected(null)}
+                                placeholder="Search fruits..."
+                                allowCreate={true}
+                            />
+                        </div>
 
                     </div>
                     <div>
