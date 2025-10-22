@@ -9,7 +9,7 @@ import {
     Settings,
     LogOut,
     Truck,
-    ChevronDown, AudioWaveform, BadgePlus, FolderTree, Boxes, UserCog
+    ChevronDown, AudioWaveform, BadgePlus, FolderTree, Boxes, UserCog, FolderSymlink
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { useState } from "react";
@@ -75,6 +75,15 @@ export default function Sidebar({isOpen}: SidebarProps) {
                 {label: "Out of Stock", path: "/stock/out-of-stock"},
                 {label: "Damaged Stock", path: "/stock/damaged-stock"},
                 {label: "Low Stock", path: "/stock/low-stock"},
+            ],
+        },
+        {
+            label: "GRN",
+            path: "/grn",
+            icon: <FolderSymlink size={20} />,
+            children: [
+                {label: "Create GRN", path: "/grn/create-grn"},
+                {label: "GRN List", path: "/grn/grn-list"},
             ],
         },
         {
