@@ -1,4 +1,4 @@
-import { RefreshCw, SearchCheck, ClipboardList, ChevronLeft, ChevronRight } from "lucide-react"
+import {RefreshCw, SearchCheck, ChevronLeft, ChevronRight, FileText} from "lucide-react"
 import { useState } from "react"
 import TypeableSelect from "../../../components/TypeableSelect.tsx";
 
@@ -114,7 +114,10 @@ function OutOfStock() {
                             className="w-1/2"
                             options={productSearch}
                             value={selected?.value || null}
-                            onChange={(opt) => opt ? setSelected({ value: String(opt.value), label: opt.label }) : setSelected(null)}
+                            onChange={(opt) => opt ? setSelected({
+                                value: String(opt.value),
+                                label: opt.label
+                            }) : setSelected(null)}
                             placeholder="Search product..."
                             allowCreate={true}
                         />
@@ -126,7 +129,10 @@ function OutOfStock() {
                             className="w-1/2"
                             options={category}
                             value={selected?.value || null}
-                            onChange={(opt) => opt ? setSelected({ value: String(opt.value), label: opt.label }) : setSelected(null)}
+                            onChange={(opt) => opt ? setSelected({
+                                value: String(opt.value),
+                                label: opt.label
+                            }) : setSelected(null)}
                             placeholder="Search categories..."
                             allowCreate={true}
                         />
@@ -138,7 +144,10 @@ function OutOfStock() {
                             className="w-1/2"
                             options={supplier}
                             value={selected?.value || null}
-                            onChange={(opt) => opt ? setSelected({ value: String(opt.value), label: opt.label }) : setSelected(null)}
+                            onChange={(opt) => opt ? setSelected({
+                                value: String(opt.value),
+                                label: opt.label
+                            }) : setSelected(null)}
                             placeholder="Search suppliers..."
                             allowCreate={true}
                         />
@@ -167,7 +176,8 @@ function OutOfStock() {
 
             {/* Table section */}
             <div className="flex flex-col bg-white rounded-md h-full p-4 justify-between">
-                <div className="overflow-y-auto max-h-md md:h-[320px] lg:h-[500px] rounded-md scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                <div
+                    className="overflow-y-auto max-h-md md:h-[320px] lg:h-[500px] rounded-md scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
                     <table className="min-w-full divide-y divide-gray-200">
                         <thead className="sticky top-0 z-10" style={{backgroundColor: '#EF4444'}}>
                         <tr>
@@ -242,39 +252,43 @@ function OutOfStock() {
                 {/* Pagination */}
                 <nav className="bg-white flex items-center justify-center sm:px-6 mt-4">
                     <div className="flex items-center space-x-2">
-                        <button className="flex items-center px-2 py-2 text-sm font-medium text-gray-500 hover:text-gray-700">
+                        <button
+                            className="flex items-center px-2 py-2 text-sm font-medium text-gray-500 hover:text-gray-700">
                             <ChevronLeft className="mr-2 h-5 w-5"/> Previous
                         </button>
-                        <button className="px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white">
+                        <button
+                            className="px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white">
                             1
                         </button>
-                        <button className="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-gray-500 hover:bg-gray-100">
+                        <button
+                            className="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-gray-500 hover:bg-gray-100">
                             2
                         </button>
-                        <button className="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-gray-500 hover:bg-gray-100">
+                        <button
+                            className="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-gray-500 hover:bg-gray-100">
                             3
                         </button>
                         <span className="text-gray-500 px-2">...</span>
-                        <button className="flex items-center px-2 py-2 text-sm font-medium text-gray-500 hover:text-gray-700">
+                        <button
+                            className="flex items-center px-2 py-2 text-sm font-medium text-gray-500 hover:text-gray-700">
                             Next <ChevronRight className="ml-2 h-5 w-5"/>
                         </button>
                     </div>
                 </nav>
             </div>
 
-            {/* Export buttons (added as requested) */}
-            <div className="bg-white mt-1 rounded-2xl w-full h-50 flex items-center justify-center gap-5">
-                <button className="bg-[#059669] rounded-2xl w-30 h-10 flex items-center justify-center text-white text-sm mt-5">
-                    <ClipboardList className="mr-2 h-4" />
-                    PDF
+            <div className={'bg-white flex justify-center p-4 gap-4'}>
+                <button
+                    className={'bg-emerald-600 px-6 py-2 font-medium text-white rounded-md flex gap-2 items-center shadow-sm'}>
+                    <FileText size={15}/>Exel
                 </button>
-                <button className="bg-[#F59E0B] rounded-2xl w-30 h-10 flex items-center justify-center text-white text-sm mt-5">
-                    <ClipboardList className="mr-2 h-4" />
-                    Excel
+                <button
+                    className={'bg-yellow-600 px-6 py-2 font-medium text-white rounded-md flex gap-2 items-center shadow-sm'}>
+                    <FileText size={15}/>CSV
                 </button>
-                <button className="bg-[#EF4444] rounded-2xl w-30 h-10 flex items-center justify-center text-white text-sm mt-5">
-                    <ClipboardList className="mr-2 h-4" />
-                    CSV
+                <button
+                    className={'bg-red-500 px-6 py-2 font-medium text-white rounded-md flex gap-2 items-center shadow-sm'}>
+                    <FileText size={15}/>PDF
                 </button>
             </div>
         </div>
