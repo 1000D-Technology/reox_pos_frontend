@@ -1,17 +1,17 @@
 import {CircleX, Printer} from "lucide-react";
 
-const InvoiceModal = ({ onClose }: { onClose: () => void }) => {
+const QuotationModal = ({ onClose }: { onClose: () => void }) => {
     const invoiceData = {
         invoiceNo: "250929003",
         date: "25 June 2025",
         customer: {
-            name: "Temporary Customer",
+            name: ";;l,kjhggfg",
             phone: "0747272489",
         },
         items: [
             {
                 id: "PID12345",
-                name: "Seat Belt",
+                name: "Seat",
                 mrp: 600.0,
                 discount: 20.0,
                 rate: 580.0,
@@ -143,4 +143,4 @@ const InvoiceModal = ({ onClose }: { onClose: () => void }) => {
     );
 };
 
-export default InvoiceModal;
+export default QuotationModal;

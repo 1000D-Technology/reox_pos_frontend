@@ -3,10 +3,12 @@ import Sidebar from "./Sidebar";
 import { Bell, Calculator, ClipboardPlus, PanelLeft, Power, RotateCcw } from "lucide-react";
 import { Link, Outlet } from "react-router-dom";
 import InvoiceModal from "./InvoiceModal";
+import QuotationModal from "./QuotationsModel";
 import { AnimatePresence, motion } from "framer-motion";
 
 // Event name constant (moved to prevent ESLint fast refresh issues)
 const OPEN_INVOICE_MODAL_EVENT = "openInvoiceModal";
+const OPEN_QUOTATION_MODAL_EVENT = "openQuotationModal";
 
 export default function Layout() {
     const [isOpen, setIsOpen] = useState(true);
@@ -17,6 +19,12 @@ export default function Layout() {
         const handleOpenModal = () => setIsModalOpen(true);
         window.addEventListener(OPEN_INVOICE_MODAL_EVENT, handleOpenModal);
         return () => window.removeEventListener(OPEN_INVOICE_MODAL_EVENT, handleOpenModal);
+    }, []);
+
+    useEffect(() => {
+        const handleOpenModal = () => setIsModalOpen(true);
+        window.addEventListener(OPEN_QUOTATION_MODAL_EVENT, handleOpenModal);
+        return () => window.removeEventListener(OPEN_QUOTATION_MODAL_EVENT, handleOpenModal);
     }, []);
 
     return (
@@ -92,6 +100,7 @@ export default function Layout() {
                                 className={'w-full h-full'}
                             >
                                 <InvoiceModal onClose={() => setIsModalOpen(false)} />
+                                <QuotationModal onClose={() => setIsModalOpen(false)} />
                             </motion.div>
                         </motion.div>
                     )}

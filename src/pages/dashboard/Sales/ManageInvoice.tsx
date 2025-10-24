@@ -1,6 +1,5 @@
 import {
     CalendarDays,
-
     ChartNoAxesCombined,
     ChevronLeft,
     ChevronRight, Eye, FileSpreadsheet,
@@ -186,7 +185,7 @@ function ManageInvoice() {
                                                 <button
                                                     className="p-2 bg-yellow-100 rounded-full text-yellow-700 hover:bg-yellow-200 transition-colors"
                                                     onClick={() => window.dispatchEvent(new CustomEvent("openInvoiceModal"))}
-                                                >
+                                                > 
                                                     <Eye className="w-5 h-5"/>
                                                 </button>
 
