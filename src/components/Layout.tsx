@@ -2,9 +2,10 @@ import { useState, useEffect } from "react";
 import Sidebar from "./Sidebar";
 import { Bell, Calculator, ClipboardPlus, PanelLeft, Power, RotateCcw } from "lucide-react";
 import { Link, Outlet } from "react-router-dom";
-import InvoiceModal from "./InvoiceModal";
-import QuotationModal from "./QuotationsModel";
+import InvoiceModal from "./models/InvoiceModal.tsx";
+
 import { AnimatePresence, motion } from "framer-motion";
+import QuotationModal from "./models/QuotationsModel.tsx";
 
 // Event name constant (moved to prevent ESLint fast refresh issues)
 const OPEN_INVOICE_MODAL_EVENT = "openInvoiceModal";
@@ -12,19 +13,20 @@ const OPEN_QUOTATION_MODAL_EVENT = "openQuotationModal";
 
 export default function Layout() {
     const [isOpen, setIsOpen] = useState(true);
-    const [isModalOpen, setIsModalOpen] = useState(false);
-
-    // Fixed: Using useEffect instead of useState for event listener
-    useEffect(() => {
-        const handleOpenModal = () => setIsModalOpen(true);
-        window.addEventListener(OPEN_INVOICE_MODAL_EVENT, handleOpenModal);
-        return () => window.removeEventListener(OPEN_INVOICE_MODAL_EVENT, handleOpenModal);
-    }, []);
+    const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
+    const [isQuotationModalOpen, setIsQuotationModalOpen] = useState(false);
 
     useEffect(() => {
-        const handleOpenModal = () => setIsModalOpen(true);
-        window.addEventListener(OPEN_QUOTATION_MODAL_EVENT, handleOpenModal);
-        return () => window.removeEventListener(OPEN_QUOTATION_MODAL_EVENT, handleOpenModal);
+        const handleOpenInvoiceModal = () => setIsInvoiceModalOpen(true);
+        const handleOpenQuotationModal = () => setIsQuotationModalOpen(true);
+
+        window.addEventListener(OPEN_INVOICE_MODAL_EVENT, handleOpenInvoiceModal);
+        window.addEventListener(OPEN_QUOTATION_MODAL_EVENT, handleOpenQuotationModal);
+
+        return () => {
+            window.removeEventListener(OPEN_INVOICE_MODAL_EVENT, handleOpenInvoiceModal);
+            window.removeEventListener(OPEN_QUOTATION_MODAL_EVENT, handleOpenQuotationModal);
+        };
     }, []);
 
     return (
@@ -83,13 +85,13 @@ export default function Layout() {
 
                 {/* Invoice Modal with Animation */}
                 <AnimatePresence>
-                    {isModalOpen && (
+                    {isInvoiceModalOpen && (
                         <motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             className="fixed inset-0 z-50 flex items-center justify-center w-full h-full"
-                            onClick={() => setIsModalOpen(false)}
+                            onClick={() => setIsInvoiceModalOpen(false)}
                         >
                             <motion.div
                                 initial={{ scale: 0.7, y: 50 }}
@@ -99,8 +101,28 @@ export default function Layout() {
                                 onClick={e => e.stopPropagation()}
                                 className={'w-full h-full'}
                             >
-                                <InvoiceModal onClose={() => setIsModalOpen(false)} />
-                                <QuotationModal onClose={() => setIsModalOpen(false)} />
+                                <InvoiceModal onClose={() => setIsInvoiceModalOpen(false)} />
+                            </motion.div>
+                        </motion.div>
+                    )}
+                    {/*quotation model*/}
+                    {isQuotationModalOpen && (
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 z-50 flex items-center justify-center w-full h-full"
+                            onClick={() => setIsQuotationModalOpen(false)}
+                        >
+                            <motion.div
+                                initial={{ scale: 0.7, y: 50 }}
+                                animate={{ scale: 1, y: 0 }}
+                                exit={{ scale: 0.7, y: 50 }}
+                                transition={{ type: "spring", damping: 20 }}
+                                onClick={e => e.stopPropagation()}
+                                className={'w-full h-full'}
+                            >
+                                <QuotationModal onClose={() => setIsQuotationModalOpen(false)} />
                             </motion.div>
                         </motion.div>
                     )}

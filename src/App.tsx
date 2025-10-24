@@ -33,6 +33,7 @@ import AttendanceMark from "./pages/dashboard/Employee/AttendanceMark.tsx";
 import AttendanceReport from "./pages/dashboard/Employee/Attendance Report.tsx";
 import EmployeeSalary from "./pages/dashboard/Employee/EmployeeSalary.tsx";
 import ManageUser from "./pages/dashboard/ManageUser.tsx";
+import CreateGrn from "./pages/dashboard/grn/CreateGrn.tsx";
 
 export default function App() {
     return (
@@ -53,6 +54,9 @@ export default function App() {
                     <Route path="/stock/out-of-stock" element={<OutOfStock />} />
                     <Route path="/stock/damaged-stock" element={<DamagedStock />} />
                     <Route path="/stock/low-stock" element={<LowStock />} />
+                    <Route path="/grn/create-grn" element={<CreateGrn />} />
+                    <Route path="/grn/create-grn" element={<CreateGrn />} />
+
                     <Route path="/products/create-product" element={<CreateProducts />} />
                     <Route path="/products/product-list" element={<ProductList />} />
                     <Route path="/products/manage-unit" element={<ManageUnit />} />

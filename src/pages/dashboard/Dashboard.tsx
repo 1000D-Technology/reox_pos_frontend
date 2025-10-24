@@ -1,7 +1,5 @@
 import { motion, type Variants } from "framer-motion";
-import {
-    ChartNoAxesCombined, FileSpreadsheet, UserCheck, Boxes, Users, Zap, BadgeInfo, SunDim, Star, Laptop,
-} from "lucide-react";
+import {ChartNoAxesCombined, FileSpreadsheet, UserCheck, Boxes, Users, Zap, BadgeInfo, SunDim, Star, Laptop, Moon, type LucideIcon,} from "lucide-react";
 import { Line } from "react-chartjs-2";
 import {Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler, ArcElement, BarElement,} from "chart.js";
 import { useEffect, useState } from "react";
@@ -21,9 +19,7 @@ export default function Dashboard() {
     ];
 
     return (
-
-        <div className="min-h-screen overflow-hidden py-4">
-
+        <div className="min-h-screen p-4 flex flex-col gap-6 overflow-x-auto">
             <motion.div
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -32,7 +28,7 @@ export default function Dashboard() {
                 <h1 className="text-3xl font-semibold text-gray-500">Main Dashboard</h1>
             </motion.div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-7 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-7">
                 {stats.map((stat, i) => (
                     <motion.div
                         key={i}
@@ -40,13 +36,13 @@ export default function Dashboard() {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: i * 0.1 }}
                         whileHover={{ scale: 1.05 }}
-                        className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-all flex items-center space-x-3 p-4"
+                        className="flex items-center p-4 space-x-3 transition-all bg-white shadow-sm rounded-2xl hover:shadow-md"
                     >
                         <div className={`p-3 rounded-full ${stat.color}`}>
                             <stat.icon className={`w-6 h-6 ${stat.iconColor}`} />
                         </div>
 
-                        {/*divider*/}
+                        {/* Divider */}
                         <div className="w-px h-10 bg-gray-300"></div>
 
                         <div>
@@ -57,36 +53,25 @@ export default function Dashboard() {
                 ))}
             </div>
 
-            <div className="mt-6">
-                <SalesChart/>
+            <div className="flex flex-col gap-6">
+                <SalesChart />
             </div>
 
-            <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
-
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                 <div className="col-span-1">
-                    <Summary />
+                    <Summary/>
                 </div>
 
-                <div className="col-span-1 grid grid-cols-2 gap-6">
+                <div className="grid grid-cols-[230px_1fr] col-span-1 gap-6">
                     <ClockCard />
                     <CalendarCard />
                 </div>
 
-                <div className="col-span-1 md:col-span-2 grid grid-cols-1 lg:grid-cols-2 gap-2">
-
-                    <div >
-                        <SystemStatus />
-                    </div>
-
-                    <div className="pl-4">
-                        <TopProducts />
-                    </div>
+                <div className="grid grid-cols-1 lg:grid-cols-[600px_1fr] gap-4 w-full md:col-span-2">
+                    <SystemStatus />
+                    <TopProducts />
                 </div>
-
-
             </div>
-
-
         </div>
     );
 }
@@ -150,9 +135,9 @@ export function SalesChart() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
-            className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100"
+            className="p-6 bg-white border border-gray-100 shadow-sm rounded-2xl "
         >
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
+            <div className="flex flex-col mb-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                     <h3 className="text-lg font-semibold text-gray-800">Sales Analyze</h3>
                     <p className="text-sm text-gray-500">
@@ -175,7 +160,7 @@ export function SalesChart() {
                     ))}
                 </div>
             </div>
-            <div className="h-[320px] w-full overflow-y-hidden">
+            <div className="h-[390px] w-[95%] mx-auto overflow-y-hidden">
                 <Line data={data} options={options} />
             </div>
         </motion.div>
@@ -201,11 +186,11 @@ export function Summary() {
 
     return (
         <motion.div
-            className="bg-white rounded-2xl shadow-md p-6 border border-gray-100 "
+            className="p-6 bg-white border border-gray-100 shadow-md rounded-2xl h-[384px]"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
         >
-            <h2 className="text-gray-800 text-lg font-semibold mb-4">
+            <h2 className="mb-4 text-lg font-semibold text-gray-800 ">
                 Summary of October 2025 Sales
             </h2>
             <div className="space-y-3">
@@ -217,8 +202,8 @@ export function Summary() {
                         animate={clickedIndex === index ? "clicked" : "visible"}
                         onClick={() => setClickedIndex(index)}
                     >
-                        <span className="text-gray-700 font-medium">{item.label}</span>
-                        <span className="text-gray-800 font-semibold">{item.value}</span>
+                        <span className="font-medium text-gray-700">{item.label}</span>
+                        <span className="font-semibold text-gray-800">{item.value}</span>
                     </motion.div>
                 ))}
             </div>
@@ -249,16 +234,21 @@ export function ClockCard() {
         return "Good Evening!";
     };
 
+    const hour = currentTime.getHours();
+    const isDayTime = hour >= 6 && hour < 18;
+    const Icon: LucideIcon = isDayTime ? SunDim : Moon;
+
     return (
         <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
-            className="p-6 text-black bg-white rounded-2xl shadow-lg h-full flex flex-col items-center justify-center"
+            className="flex flex-col items-center justify-center h-full p-6 text-black bg-white shadow-lg rounded-2xl"
         >
-            <SunDim className="w-8 h-8 text-emerald-400 mb-3" />
+            <Icon className={` mb-2 ${isDayTime ? "text-emerald-400" : "text-emerald-400"}`} size={100}/>
+            {/* <SunDim className="w-40 h-40 mb-2 text-emerald-400" /> */}
 
-            <div className="text-sm opacity-90 mt-2">
+            <div className="mt-2 text-sm opacity-90">
                 {currentTime.toLocaleDateString("en-US", {
                     weekday: "long",
                     year: "numeric",
@@ -271,8 +261,7 @@ export function ClockCard() {
                 {formatTime(currentTime)}
             </div>
 
-            <div className="text-2xl font-semibold mt-1 text-emerald-400">{getGreeting()}</div>
-
+            <div className="mt-1 text-2xl font-semibold text-emerald-400">{getGreeting()}</div>
         </motion.div>
     );
 }
@@ -305,25 +294,26 @@ export function CalendarCard() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 }}
-            className="bg-white rounded-2xl shadow-md p-5 border border-gray-200 h-full"
+            className=" h-full p-5 bg-white border border-gray-200 shadow-md rounded-2x "
         >
             <div className="flex items-center justify-between mb-2">
                 <button onClick={() => changeMonth(-1)} className="text-gray-700 hover:text-emerald-200">
                     ‹
                 </button>
-                <span className="text-lg font-semibold text-gray-900">
-          {monthNames[selectedDate.getMonth()]} {selectedDate.getFullYear()}
-        </span>
-                <button onClick={() => changeMonth(1)} className="text-gray-700 hover:text-emerald-200">
+                <span className="text-xl font-semibold text-gray-900 ">
+                    {monthNames[selectedDate.getMonth()]} {selectedDate.getFullYear()}
+                </span>
+                <button onClick={() => changeMonth(1)} className="text-gray-700 hover:text-emerald-200 ">
                     ›
                 </button>
             </div>
-            <div className="grid grid-cols-7 gap-1 text-center">
+            <div className="grid grid-cols-7 gap-y-6 gap-x-1 text-center ">
                 {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((day) => (
-                    <div key={day} className="text-xs font-semibold text-gray-600 py-1">
+                    <div key={day} className="py-1 text-xs font-semibold text-gray-600">
                         {day}
                     </div>
                 ))}
+
                 {Array.from({ length: firstDay }).map((_, i) => (
                     <div key={`empty-${i}`} />
                 ))}
@@ -365,12 +355,11 @@ export function SystemStatus() {
             initial={{ opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.36 }}
-            className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all p-6 border border-gray-100 "
+            className="p-6 transition-all bg-white border border-gray-100 shadow-sm rounded-xl hover:shadow-md "
         >
             <div className="flex items-center justify-between mb-4">
-
-                <h2 className="text-gray-600 text-lg font-semibold flex items-center gap-2">
-                <Laptop className="w-8 h-8 text-emerald-400 " />
+                <h2 className="flex items-center gap-2 text-lg font-semibold text-gray-600">
+                    <Laptop className="w-8 h-8 text-emerald-400 " />
                     System Status
                 </h2>
             </div>
@@ -379,7 +368,7 @@ export function SystemStatus() {
                 {status.map((item, idx) => (
                     <div
                         key={idx}
-                        className="bg-white rounded-xl p-4 flex flex-col items-center justify-center text-center border border-gray-200 shadow-sm"
+                        className="flex flex-col items-center justify-center p-4 text-center bg-white border border-gray-200 shadow-sm rounded-xl"
                     >
                         {/* circular progress */}
                         <div className="relative mb-3">
@@ -405,7 +394,7 @@ export function SystemStatus() {
                         {/* label */}
                         <div>
                             <div className="text-sm font-medium text-gray-700">{item.label}</div>
-                            <div className="text-xs text-gray-500 mt-1">System Performance</div>
+                            <div className="mt-1 text-xs text-gray-500">System Performance</div>
                         </div>
                     </div>
                 ))}
@@ -426,32 +415,32 @@ export function TopProducts() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.6 }}
-            className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-all p-6 border border-gray-200  h-full"
+            className="w-full h-full p-6 transition-all bg-white border border-gray-200 shadow-sm rounded-2xl hover:shadow-md "
         >
             <div className="flex items-center justify-between mb-4">
-                <h2 className="text-gray-600 text-lg font-semibold flex items-center gap-2">
+                <h2 className="flex items-center gap-2 text-lg font-semibold text-gray-600">
                     Top Products
                     <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
                 </h2>
             </div>
 
-            <div className="overflow-x-auto overflow-y-hidden">
-                <table className="w-full border border-gray-100 rounded-lg overflow-hidden">
+            <div className="overflow-x-auto overflow-y-hidden w-full">
+                <table className="w-full min-w-max overflow-hidden border border-gray-100 rounded-lg">
                     <thead>
                     <tr className="bg-emerald-400">
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        <th className="px-4 py-3 text-xs font-semibold tracking-wider text-left text-gray-600 uppercase">
                             Product ID
                         </th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        <th className="px-4 py-3 text-xs font-semibold tracking-wider text-left text-gray-600 uppercase">
                             Name
                         </th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        <th className="px-4 py-3 text-xs font-semibold tracking-wider text-left text-gray-600 uppercase">
                             MRP
                         </th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        <th className="px-4 py-3 text-xs font-semibold tracking-wider text-left text-gray-600 uppercase">
                             Barcode
                         </th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        <th className="px-4 py-3 text-xs font-semibold tracking-wider text-left text-gray-600 uppercase">
                             Quantity
                         </th>
                     </tr>
@@ -463,16 +452,16 @@ export function TopProducts() {
                             initial={{ opacity: 0, x: -20 }}
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ delay: 0.1 * index }}
-                            className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
+                            className="transition-colors border-b border-gray-100 hover:bg-gray-50"
                         >
-                            <td className="px-4 py-3 text-sm text-gray-600 font-medium">{product.id}</td>
-                            <td className="px-4 py-3 text-sm text-gray-600 font-medium">{product.name}</td>
-                            <td className="px-4 py-3 text-sm text-gray-600 font-medium ">{product.mrp}</td>
-                            <td className="px-4 py-3 text-sm text-gray-600 font-medium">{product.barcode}</td>
+                            <td className="px-4 py-3 text-sm font-medium text-gray-600">{product.id}</td>
+                            <td className="px-4 py-3 text-sm font-medium text-gray-600">{product.name}</td>
+                            <td className="px-4 py-3 text-sm font-medium text-gray-600 ">{product.mrp}</td>
+                            <td className="px-4 py-3 text-sm font-medium text-gray-600">{product.barcode}</td>
                             <td className="px-4 py-3 text-sm">
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium text-gray-600">
-                    {product.quantity}
-                  </span>
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium text-gray-600">
+                                    {product.quantity}
+                                </span>
                             </td>
                         </motion.tr>
                     ))}
