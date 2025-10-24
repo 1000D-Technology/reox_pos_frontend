@@ -3,11 +3,9 @@ import Sidebar from "./Sidebar";
 import { Bell, Calculator, ClipboardPlus, PanelLeft, Power, RotateCcw } from "lucide-react";
 import { Link, Outlet } from "react-router-dom";
 import InvoiceModal from "./models/InvoiceModal.tsx";
-
 import { AnimatePresence, motion } from "framer-motion";
 import QuotationModal from "./models/QuotationsModel.tsx";
 
-// Event name constant (moved to prevent ESLint fast refresh issues)
 const OPEN_INVOICE_MODAL_EVENT = "openInvoiceModal";
 const OPEN_QUOTATION_MODAL_EVENT = "openQuotationModal";
 
@@ -15,8 +13,17 @@ export default function Layout() {
     const [isOpen, setIsOpen] = useState(true);
     const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
     const [isQuotationModalOpen, setIsQuotationModalOpen] = useState(false);
+    const [isScrolled, setIsScrolled] = useState(false);
 
     useEffect(() => {
+        const handleScroll = (e: Event) => {
+            const target = e.target as HTMLElement;
+            setIsScrolled(target.scrollTop > 0);
+        };
+
+        const mainContent = document.querySelector('main');
+        mainContent?.addEventListener('scroll', handleScroll);
+
         const handleOpenInvoiceModal = () => setIsInvoiceModalOpen(true);
         const handleOpenQuotationModal = () => setIsQuotationModalOpen(true);
 
@@ -24,20 +31,20 @@ export default function Layout() {
         window.addEventListener(OPEN_QUOTATION_MODAL_EVENT, handleOpenQuotationModal);
 
         return () => {
+            mainContent?.removeEventListener('scroll', handleScroll);
             window.removeEventListener(OPEN_INVOICE_MODAL_EVENT, handleOpenInvoiceModal);
             window.removeEventListener(OPEN_QUOTATION_MODAL_EVENT, handleOpenQuotationModal);
         };
     }, []);
 
     return (
-        <div className="flex h-screen w-full bg-gradient-to-r from-emerald-50 to-yellow-50" style={{ fontSize: "10px", fontFamily: "Riope, sans-serif" }}>
-            {/* Sidebar */}
+        <div className="flex h-screen w-full bg-gradient-to-r from-emerald-50 to-yellow-50">
             <Sidebar isOpen={isOpen} toggle={() => setIsOpen(!isOpen)} />
 
-            {/* Main content */}
             <div className="flex-1 flex flex-col pt-3 pe-1">
-                {/* Header */}
-                <header className="h-16 flex items-center px-4 justify-between bg-white/10 backdrop-blur-md rounded-xl">
+                <header className={`h-16 flex items-center px-4 justify-between backdrop-blur-sm rounded-xl transition-colors duration-300 ${
+                    isScrolled ? 'bg-white/30' : 'bg-white/10'
+                }`}>
                     <button
                         onClick={() => setIsOpen(!isOpen)}
                         className="text-gray-400 hover:text-emerald-600 transition hover:cursor-pointer"
@@ -78,12 +85,10 @@ export default function Layout() {
                     </div>
                 </header>
 
-                {/* Page Content */}
-                <main className="flex-1 overflow-y-auto ps-4 pe-1  my-3 me-3 h-full">
+                <main className="flex-1 overflow-y-auto ps-3 pe-1 my-3 me-3 h-full hide-scrollbar">
                     <Outlet/>
                 </main>
 
-                {/* Invoice Modal with Animation */}
                 <AnimatePresence>
                     {isInvoiceModalOpen && (
                         <motion.div
@@ -105,7 +110,6 @@ export default function Layout() {
                             </motion.div>
                         </motion.div>
                     )}
-                    {/*quotation model*/}
                     {isQuotationModalOpen && (
                         <motion.div
                             initial={{ opacity: 0 }}

@@ -142,8 +142,8 @@ export default function Sidebar({isOpen}: SidebarProps) {
 
     return (
         <aside
-            className={`p-3 transition-all duration-500 ease-in-out
-        ${isOpen ? "w-72" : "w-20"}`}
+            className={`py-3 ps-2 transition-all duration-500 ease-in-out
+        ${isOpen ? "w-76" : "w-20"}`}
         >
             <div className="h-full flex flex-col transition-all duration-500 rounded-xl bg-white">
                 {/* Logo */}
@@ -156,7 +156,7 @@ export default function Sidebar({isOpen}: SidebarProps) {
                 </div>
 
                 {/* Navigation */}
-                <nav className="flex-1 items-center overflow-y-auto ps-2 py-4">
+                <nav className="flex-1 items-center overflow-y-auto ps-2 py-4 hide-scrollbar">
                     <ul className="space-y-2">
                         {navItems.map((item, index) => (
                             <li key={index}>

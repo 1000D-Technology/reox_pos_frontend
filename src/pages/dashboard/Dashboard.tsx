@@ -19,27 +19,31 @@ export default function Dashboard() {
     ];
 
     return (
-        <div className="min-h-screen p-4 flex flex-col gap-6 overflow-x-auto">
-            <motion.div
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="mb-6"
-            >
-                <h1 className="text-3xl font-semibold text-gray-500">Main Dashboard</h1>
-            </motion.div>
+        <div className="min-h-screen  flex flex-col gap-3 overflow-x-auto">
+            <div>
+                <div className="text-sm text-gray-500 flex items-center">
+                    <span>Pages</span>
+                    <span className="mx-2">›</span>
+                    <span className="text-black">Main Dashboard</span>
+                </div>
+                <h1 className="text-3xl font-semibold text-gray-500">
+                    Main Dashboard
+                </h1>
+            </div>
 
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-7">
+
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-7">
                 {stats.map((stat, i) => (
                     <motion.div
                         key={i}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: i * 0.1 }}
-                        whileHover={{ scale: 1.05 }}
-                        className="flex items-center p-4 space-x-3 transition-all bg-white shadow-sm rounded-2xl hover:shadow-md"
+                        initial={{opacity: 0, y: 20}}
+                        animate={{opacity: 1, y: 0}}
+                        transition={{delay: i * 0.1}}
+                        whileHover={{scale: 1.05}}
+                        className="flex items-center p-4 space-x-3 transition-all bg-white  rounded-2xl "
                     >
                         <div className={`p-3 rounded-full ${stat.color}`}>
-                            <stat.icon className={`w-6 h-6 ${stat.iconColor}`} />
+                            <stat.icon className={`w-6 h-6 ${stat.iconColor}`}/>
                         </div>
 
                         {/* Divider */}
@@ -54,22 +58,22 @@ export default function Dashboard() {
             </div>
 
             <div className="flex flex-col gap-6">
-                <SalesChart />
+                <SalesChart/>
             </div>
 
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                 <div className="col-span-1">
                     <Summary/>
                 </div>
 
-                <div className="grid grid-cols-[230px_1fr] col-span-1 gap-6">
-                    <ClockCard />
-                    <CalendarCard />
+                <div className="grid grid-cols-[230px_1fr] col-span-1 gap-3">
+                    <ClockCard/>
+                    <CalendarCard/>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-[600px_1fr] gap-4 w-full md:col-span-2">
-                    <SystemStatus />
-                    <TopProducts />
+                <div className="grid grid-cols-1 lg:grid-cols-[450px_1fr] gap-3 w-full md:col-span-2">
+                    <SystemStatus/>
+                    <TopProducts/>
                 </div>
             </div>
         </div>
@@ -135,7 +139,7 @@ export function SalesChart() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
-            className="p-6 bg-white border border-gray-100 shadow-sm rounded-2xl "
+            className="p-6 bg-white rounded-xl "
         >
             <div className="flex flex-col mb-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
@@ -149,7 +153,7 @@ export function SalesChart() {
                         <button
                             key={item}
                             onClick={() => setFilter(item)}
-                            className={`px-3 py-1 text-xs font-medium rounded-md border transition-all ${
+                            className={`px-3 py-1 text-xs font-medium rounded-xl border transition-all ${
                                 filter === item
                                     ? "bg-emerald-400 text-white border-emerald-400 shadow-sm"
                                     : "text-gray-600 border-gray-200 hover:bg-gray-100"
@@ -171,10 +175,11 @@ export function SalesChart() {
 export function Summary() {
     const summary = [
         { label: "Total Sales", value: "LKR.14500.00", bgColor: "bg-emerald-100" },
-        { label: "Total Discount", value: "LKR.14500.00", bgColor: "bg-gray-100" },
+        { label: "Total Discount", value: "LKR.14500.00", bgColor: "" },
         { label: "Total Profit", value: "LKR.14500.00", bgColor: "bg-emerald-100" },
-        { label: "Total Expenses", value: "LKR.14500.00", bgColor: "bg-gray-100" },
+        { label: "Total Expenses", value: "LKR.14500.00", bgColor: "" },
         { label: "Net Profit", value: "LKR.14500.00", bgColor: "bg-emerald-100" },
+
     ];
 
     const [clickedIndex, setClickedIndex] = useState<number | null>(null);
@@ -186,18 +191,18 @@ export function Summary() {
 
     return (
         <motion.div
-            className="p-6 bg-white border border-gray-100 shadow-md rounded-2xl h-[384px]"
+            className="p-6 bg-white rounded-xl h-[320px] overflow-y-auto "
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
         >
             <h2 className="mb-4 text-lg font-semibold text-gray-800 ">
                 Summary of October 2025 Sales
             </h2>
-            <div className="space-y-3">
+            <div className="">
                 {summary.map((item, index) => (
                     <motion.div
                         key={index}
-                        className={`flex justify-between items-center py-3 px-4 rounded-lg shadow-sm cursor-pointer ${item.bgColor}`}
+                        className={`flex justify-between items-center py-3 px-4 rounded-lg  cursor-pointer ${item.bgColor}`}
                         variants={itemVariants}
                         animate={clickedIndex === index ? "clicked" : "visible"}
                         onClick={() => setClickedIndex(index)}
@@ -243,7 +248,7 @@ export function ClockCard() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
-            className="flex flex-col items-center justify-center h-full p-6 text-black bg-white shadow-lg rounded-2xl"
+            className="flex flex-col items-center justify-center h-full p-6 text-black bg-white rounded-xl"
         >
             <Icon className={` mb-2 ${isDayTime ? "text-emerald-400" : "text-emerald-400"}`} size={100}/>
             {/* <SunDim className="w-40 h-40 mb-2 text-emerald-400" /> */}
@@ -294,7 +299,7 @@ export function CalendarCard() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 }}
-            className=" h-full p-5 bg-white border border-gray-200 shadow-md rounded-2x "
+            className=" h-full p-5 bg-white rounded-xl "
         >
             <div className="flex items-center justify-between mb-2">
                 <button onClick={() => changeMonth(-1)} className="text-gray-700 hover:text-emerald-200">
@@ -355,7 +360,7 @@ export function SystemStatus() {
             initial={{ opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.36 }}
-            className="p-6 transition-all bg-white border border-gray-100 shadow-sm rounded-xl hover:shadow-md "
+            className="p-6 transition-all bg-white   rounded-xl "
         >
             <div className="flex items-center justify-between mb-4">
                 <h2 className="flex items-center gap-2 text-lg font-semibold text-gray-600">
@@ -368,7 +373,7 @@ export function SystemStatus() {
                 {status.map((item, idx) => (
                     <div
                         key={idx}
-                        className="flex flex-col items-center justify-center p-4 text-center bg-white border border-gray-200 shadow-sm rounded-xl"
+                        className="flex flex-col items-center justify-center p-4 text-center bg-white  shadow-gray-200 shadow-2xl rounded-xl"
                     >
                         {/* circular progress */}
                         <div className="relative mb-3">
@@ -415,7 +420,7 @@ export function TopProducts() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.6 }}
-            className="w-full h-full p-6 transition-all bg-white border border-gray-200 shadow-sm rounded-2xl hover:shadow-md "
+            className="w-full h-full p-6 transition-all bg-white rounded-xl hover:shadow-md "
         >
             <div className="flex items-center justify-between mb-4">
                 <h2 className="flex items-center gap-2 text-lg font-semibold text-gray-600">
