@@ -98,7 +98,7 @@ function ManageCategory() {
                     <div>
                         <label htmlFor="new-category"
                             className="block text-sm font-medium text-gray-700 mb-1">Category Name</label>
-                        <input type="text" id="new-category" placeholder="Enter New Category..."
+                        <input type="text" id="new-category" placeholder="Enter New Category"
                             className="w-full text-sm rounded-md py-2 px-2 border-2 border-gray-100 focus:border-emerald-500 focus:ring-emerald-500" />
                     </div>
                     <div className={'grid  md:items-end items-start gap-2 text-white font-medium'}>
