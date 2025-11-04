@@ -1,7 +1,7 @@
 import {
     ChevronLeft,
     ChevronRight,
-    Edit,
+     Pencil,
     Trash,
     X,
 } from 'lucide-react';
@@ -83,9 +83,9 @@ function ManageCategory() {
                 <h1 className="text-3xl font-semibold text-gray-500">Manage Category</h1>
             </div>
 
-            <div className={'flex flex-col bg-white rounded-md h-full p-4 justify-between'}>
+            <div className={'flex flex-col bg-white rounded-md  p-4 justify-between gap-8'}>
 
-                <div className={'grid md:grid-cols-5 gap-4 mb-10'}>
+                <div className={'grid md:grid-cols-5 gap-4'}>
                     <div>
                         <label htmlFor="search-category"
                             className="block text-sm font-medium text-gray-700 mb-1">Search Category</label>
@@ -103,13 +103,13 @@ function ManageCategory() {
                     </div>
                     <div className={'grid  md:items-end items-start gap-2 text-white font-medium'}>
                         <button className={'bg-emerald-600 py-2 rounded-md flex items-center justify-center hover:bg-emerald-700'}>
-                            Save Unit
+                            Save Category
                         </button>
                     </div>
                 </div>
 
                 <div
-                    className="overflow-y-auto max-h-md md:h-[320px] lg:h-[500px] rounded-md scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                    className="overflow-y-auto max-h-md md:h-[320px] lg:h-[690px] rounded-md scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
                     <table className="min-w-full divide-y divide-gray-200">
                         <thead className="bg-emerald-600 sticky top-0 z-10">
                             <tr>
@@ -146,7 +146,7 @@ function ManageCategory() {
                                                 <button
                                                     onClick={() => handleEditClick(sale)}
                                                     className="p-2 bg-green-100 rounded-full text-green-700 hover:bg-green-200 transition-colors">
-                                                    <Edit className="w-5 h-5" />
+                                                    <Pencil size={15}/>
                                                 </button>
                                                 <span
                                                     className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max px-2 py-1 text-xs text-white bg-gray-900 rounded-md invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-opacity">
@@ -157,7 +157,7 @@ function ManageCategory() {
                                             <div className="relative group">
                                                 <button
                                                     className="p-2 bg-red-100 rounded-full text-red-700 hover:bg-red-200 transition-colors">
-                                                    <Trash className="w-5 h-5" />
+                                                    <Trash size={15} />
                                                 </button>
                                                 <span
                                                     className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max px-2 py-1 text-xs text-white bg-gray-900 rounded-md invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-opacity">
@@ -190,7 +190,7 @@ function ManageCategory() {
 
             {/* Update Category Modal */}
             {isModalOpen && selectedCategory && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/10 backdrop-blur-sm">
                     <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md relative ">
                         <button
                             onClick={handleCloseModal}

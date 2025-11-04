@@ -26,7 +26,7 @@ import ManageCategory from "./pages/dashboard/Products/ManageCategory.tsx";
 import RemovedProducts from "./pages/dashboard/Products/RemovedProducts.tsx";
 import CreateSupplier from "./pages/dashboard/Supplier/CreateSupplier.tsx";
 import SupplierGRN from "./pages/dashboard/Supplier/SupplierGRN.tsx";
-import BankManagement from "./pages/dashboard/Supplier/BankManagement.tsx";
+
 import CustomerSales from "./pages/dashboard/Customer/CustomerSales.tsx";
 import ManageEmployee from "./pages/dashboard/Employee/ManageEmployee.tsx";
 import AttendanceMark from "./pages/dashboard/Employee/AttendanceMark.tsx";
@@ -66,7 +66,7 @@ export default function App() {
                     <Route path="/supplier/manage-supplier" element={<ManageSupplier />} />
                     <Route path="/supplier/supplier-grn" element={<SupplierGRN />} />
                     <Route path="/supplier/supplier-payments" element={<SupplierPayment />} />
-                    <Route path="/supplier/bank-management" element={<BankManagement />} />
+
                     <Route path="/customer/manage-customer" element={<ManageCustomer />} />
                     <Route path="/customer/customer-sales" element={<CustomerSales />} />
                     <Route path="/employee/manage-employee" element={<ManageEmployee />} />

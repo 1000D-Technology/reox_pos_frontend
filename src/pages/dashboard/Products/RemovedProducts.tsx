@@ -101,7 +101,7 @@ function RemovedProducts() {
 
   return (
     <div>
-      <div className="mb-8">
+      <div className="">
         <div className="text-sm text-gray-500 flex items-center">
           <span>Pages</span>
           <span className="mx-2">›</span>
@@ -113,7 +113,7 @@ function RemovedProducts() {
         </h1>
       </div>
 
-      <div className="flex flex-col bg-[#FFFFFF] rounded-lg p-5 gap-2">
+      <div className="flex flex-col bg-white rounded-lg p-5 gap-2">
         <div className="flex items-center gap-6 mb-4 mt-5">
           <div className="flex flex-col">
             <label className="text-sm text-gray-500 mb-1 font-Geist font-bold">
@@ -140,28 +140,21 @@ function RemovedProducts() {
 
         {/* Responsive table: horizontal scroll on small screens + hide less-critical columns on small screens */}
         <div className="overflow-x-auto rounded-md">
-          <div className="min-w-[900px]"> {/* ensure table has a minimum width so columns stay aligned */}
+          <div className="overflow-y-auto max-h-md md:h-[320px] lg:h-[655px] rounded-md scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
             <table className="min-w-full divide-y divide-gray-200 table-fixed">
               <thead className="bg-red-500 sticky top-0 z-10">
                 <tr>
-                  <th className="w-12 px-6 py-3 text-left text-sm font-medium text-white tracking-wider">#</th>
-                  <th className="w-36 px-6 py-3 text-left text-sm font-medium text-white tracking-wider">Product ID</th>
-                  <th className="w-40 px-6 py-3 text-left text-sm font-medium text-white tracking-wider">Product Type</th>
-                  <th className="w-48 px-6 py-3 text-left text-sm font-medium text-white tracking-wider">Product Name</th>
-
-                  {/* hide these less-critical columns on small screens */}
-                  <th className="hidden md:table-cell w-36 px-6 py-3 text-left text-sm font-medium text-white tracking-wider">Product Code</th>
-                  <th className="hidden md:table-cell w-28 px-6 py-3 text-left text-sm font-medium text-white tracking-wider">Cabin</th>
-                  <th className="hidden lg:table-cell w-36 px-6 py-3 text-left text-sm font-medium text-white tracking-wider">Barcode</th>
-                  <th className="hidden lg:table-cell w-36 px-6 py-3 text-left text-sm font-medium text-white tracking-wider">Supplier</th>
-                  <th className="hidden lg:table-cell w-36 px-6 py-3 text-left text-sm font-medium text-white tracking-wider">Category</th>
-                  <th className="hidden md:table-cell w-24 px-6 py-3 text-left text-sm font-medium text-white tracking-wider">Unit</th>
-                  <th className="hidden lg:table-cell w-24 px-6 py-3 text-left text-sm font-medium text-white tracking-wider">Color</th>
-                  <th className="hidden lg:table-cell w-32 px-6 py-3 text-left text-sm font-medium text-white tracking-wider">MRP</th>
-                  <th className="hidden lg:table-cell w-32 px-6 py-3 text-left text-sm font-medium text-white tracking-wider">Locked Price</th>
-
-                  <th className="w-28 px-6 py-3 text-left text-sm font-medium text-white tracking-wider">Image</th>
-                  <th className="w-24 px-6 py-3 text-left text-sm font-medium text-white tracking-wider">Actions</th>
+                    {['#', 'Product ID', 'Product Type', 'Product Name','Product Code','Cabin','Barcode','Supplier','Category','Unit','Color','MRP','Locked Price','Image','Actions'].map((header, i, arr) => (
+                        <th
+                            key={header}
+                            scope="col"
+                            className={`px-6 py-3 text-left text-sm font-medium text-white tracking-wider
+                                            ${i === 0 ? "rounded-tl-lg" : ""}
+                                            ${i === arr.length - 1 ? "rounded-tr-lg" : ""}`}
+                        >
+                            {header}
+                        </th>
+                    ))}
                 </tr>
               </thead>
 

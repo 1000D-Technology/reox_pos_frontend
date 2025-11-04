@@ -346,13 +346,54 @@ export function CalendarCard() {
     );
 }
 
-//System Status
 export function SystemStatus() {
+    const [metrics, setMetrics] = useState({
+        loadStatus: 0,
+        cpuUsage: 0,
+        ramUsage: 0,
+        diskUsage: 0
+    });
+
+    const getStatusText = (value: number) => {
+        if (value > 80) return "Critical";
+        if (value > 60) return "Warning";
+        return "Normal";
+    };
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setMetrics({
+                loadStatus: Math.floor(Math.random() * 100),
+                cpuUsage: Math.floor(Math.random() * 100),
+                ramUsage: Math.floor(Math.random() * 100),
+                diskUsage: Math.floor(Math.random() * 100)
+            });
+        }, 2000);
+
+        return () => clearInterval(interval);
+    }, []);
+
     const status = [
-        { label: "Load Status", value: 31, ringColor: "rgb(251,146,60)" },
-        { label: "CPU Usage", value: 61, ringColor: "rgb(134,239,172)" },
-        { label: "RAM Usage", value: 11, ringColor: "rgb(134,239,172)" },
-        { label: "Disk Usage", value: 11, ringColor: "rgb(45,212,191)" },
+        {
+            label: "Load Status",
+            value: metrics.loadStatus,
+            ringColor: metrics.loadStatus > 80 ? "rgb(239,68,68)" : metrics.loadStatus > 60 ? "rgb(251,146,60)" : "rgb(134,239,172)"
+        },
+        {
+            label: "CPU Usage",
+            value: metrics.cpuUsage,
+            ringColor: metrics.cpuUsage > 80 ? "rgb(239,68,68)" : metrics.cpuUsage > 60 ? "rgb(251,146,60)" : "rgb(134,239,172)"
+        },
+        {
+            label: "RAM Usage",
+            value: metrics.ramUsage,
+            ringColor: metrics.ramUsage > 80 ? "rgb(239,68,68)" : metrics.ramUsage > 60 ? "rgb(251,146,60)" : "rgb(134,239,172)"
+        },
+        {
+            label: "Disk Usage",
+            value: metrics.diskUsage,
+            ringColor: metrics.diskUsage > 80 ? "rgb(239,68,68)" : metrics.diskUsage > 60 ? "rgb(251,146,60)" : "rgb(134,239,172)"
+        }
     ];
 
     return (
@@ -360,26 +401,28 @@ export function SystemStatus() {
             initial={{ opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.36 }}
-            className="p-6 transition-all bg-white   rounded-xl "
+            className="p-6 transition-all bg-white rounded-xl"
         >
             <div className="flex items-center justify-between mb-4">
                 <h2 className="flex items-center gap-2 text-lg font-semibold text-gray-600">
-                    <Laptop className="w-8 h-8 text-emerald-400 " />
+                    <Laptop className="w-8 h-8 text-emerald-400" />
                     System Status
                 </h2>
             </div>
 
             <div className="grid grid-cols-2 gap-2">
                 {status.map((item, idx) => (
-                    <div
+                    <motion.div
                         key={idx}
-                        className="flex flex-col items-center justify-center p-4 text-center bg-white  shadow-gray-200 shadow-2xl rounded-xl"
+                        initial={{ scale: 1 }}
+                        animate={{ scale: [1, 1.02, 1] }}
+                        transition={{ duration: 0.3 }}
+                        className="flex flex-col items-center justify-center p-4 text-center bg-white shadow-gray-200 shadow-2xl rounded-xl"
                     >
-                        {/* circular progress */}
                         <div className="relative mb-3">
                             <svg width="72" height="72" viewBox="0 0 96 96" className="-rotate-90">
                                 <circle cx="48" cy="48" r="38" stroke="#e6eef0" strokeWidth="10" fill="none" />
-                                <circle
+                                <motion.circle
                                     cx="48"
                                     cy="48"
                                     r="38"
@@ -389,24 +432,39 @@ export function SystemStatus() {
                                     strokeDasharray={2 * Math.PI * 38}
                                     strokeDashoffset={`${2 * Math.PI * 38 * (1 - item.value / 100)}`}
                                     strokeLinecap="round"
+                                    initial={{ strokeDashoffset: 2 * Math.PI * 38 }}
+                                    animate={{ strokeDashoffset: `${2 * Math.PI * 38 * (1 - item.value / 100)}` }}
+                                    transition={{ duration: 0.5 }}
                                 />
                             </svg>
                             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                <span className="text-sm font-bold text-gray-600">{item.value}%</span>
+                                <motion.span
+                                    className="text-sm font-bold text-gray-600"
+                                    animate={{ scale: [1, 1.1, 1] }}
+                                    transition={{ duration: 0.3 }}
+                                >
+                                    {item.value}%
+                                </motion.span>
                             </div>
                         </div>
 
-                        {/* label */}
                         <div>
                             <div className="text-sm font-medium text-gray-700">{item.label}</div>
-                            <div className="mt-1 text-xs text-gray-500">System Performance</div>
+                            <div className={`mt-1 text-xs ${
+                                item.value > 80 ? "text-red-500" :
+                                    item.value > 60 ? "text-orange-500" :
+                                        "text-emerald-500"
+                            }`}>
+                                {getStatusText(item.value)}
+                            </div>
                         </div>
-                    </div>
+                    </motion.div>
                 ))}
             </div>
         </motion.div>
     );
 }
+
 
 // TOP PRODUCTS TABLE
 export function TopProducts() {

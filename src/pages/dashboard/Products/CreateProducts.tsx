@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, FileText } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useState } from "react";
 import TypeableSelect from "../../../components/TypeableSelect.tsx";
 
@@ -93,13 +93,13 @@ function CreateProducts() {
           <div className="text-sm text-gray-500 flex items-center">
             <span>Pages</span>
             <span className="mx-2">›</span>
-            <span className="text-black">Stock List</span>
+            <span className="text-black">Create Product</span>
           </div>
-          <h1 className="text-3xl font-semibold text-gray-500">Stock List</h1>
+          <h1 className="text-3xl font-semibold text-gray-500">Create Product</h1>
         </div>
 
         <div className={"bg-white rounded-md p-4 flex flex-col"}>
-          <h2 className="text-xl font-semibold text-gray-400">Filter</h2>
+
           <div className={"grid md:grid-cols-5 gap-4 "}>
             <div>
               <label
@@ -329,7 +329,7 @@ function CreateProducts() {
           </div>
           <div
             className={
-              "flex justify-end md:items-end items-start p-2 gap-2 text-white font-medium border-b border-gray-200 pt-4"
+              "flex justify-end md:items-end items-start p-2 gap-2 text-white font-medium  pt-4"
             }
           >
             <button
@@ -347,7 +347,7 @@ function CreateProducts() {
             "flex flex-col bg-white rounded-md h-full p-4 justify-between"
           }
         >
-          <div className="overflow-y-auto max-h-md md:h-[320px] lg:h-[500px] rounded-md scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+          <div className="overflow-y-auto max-h-md md:h-[320px] lg:h-[460px] rounded-md scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-emerald-600 sticky top-0 z-10">
                 <tr>
@@ -457,32 +457,7 @@ function CreateProducts() {
           </nav>
         </div>
 
-        <div className={"bg-white flex justify-center p-4 gap-4"}>
-          <button
-            className={
-              "bg-emerald-600 px-6 py-2 font-medium text-white rounded-md flex gap-2 items-center shadow-sm"
-            }
-          >
-            <FileText size={15} />
-            Exel
-          </button>
-          <button
-            className={
-              "bg-yellow-600 px-6 py-2 font-medium text-white rounded-md flex gap-2 items-center shadow-sm"
-            }
-          >
-            <FileText size={15} />
-            CSV
-          </button>
-          <button
-            className={
-              "bg-red-500 px-6 py-2 font-medium text-white rounded-md flex gap-2 items-center shadow-sm"
-            }
-          >
-            <FileText size={15} />
-            PDF
-          </button>
-        </div>
+
       </div>
     </>
   );

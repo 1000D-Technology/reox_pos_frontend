@@ -107,7 +107,7 @@ export default function Sidebar({isOpen}: SidebarProps) {
                 {label: "Manage Supplier", path: "/supplier/manage-supplier"},
                 {label: "Supplier GRN History", path: "/supplier/supplier-grn"},
                 {label: "Supplier Payments", path: "/supplier/supplier-payments"},
-                {label: "Bank Management", path: "/supplier/bank-management"},
+
             ],
         },
         {
