@@ -1,6 +1,7 @@
 
-import { ChevronLeft, ChevronRight, Search, Copy, DollarSign, FileText, Check, Coins, Download } from 'lucide-react';
-import { useState } from 'react';
+import { ChevronLeft, ChevronRight, Copy, DollarSign, FileText, Check, Coins, Download } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import TypeableSelect from '../../../components/TypeableSelect';
 
 interface PaymentRow {
     id: string;
@@ -14,9 +15,10 @@ interface PaymentRow {
 }
 
 function SupplierPayment() {
-    const [supplierFilter, setSupplierFilter] = useState('');
+    const [supplierFilter, setSupplierFilter] = useState<string | number | null>('');
     const [billFilter, setBillFilter] = useState('');
     const [newPayment, setNewPayment] = useState('');
+    const [selectedIndex, setSelectedIndex] = useState(0);
 
     const sampleRows: PaymentRow[] = [
         {
@@ -30,6 +32,20 @@ function SupplierPayment() {
             status: 'Active',
         },
     ];
+
+    // keyboard up/down navigation for table selection (same as QuatationList)
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'ArrowDown') {
+                setSelectedIndex((prev) => (prev < sampleRows.length - 1 ? prev + 1 : prev));
+            } else if (e.key === 'ArrowUp') {
+                setSelectedIndex((prev) => (prev > 0 ? prev - 1 : prev));
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [sampleRows.length]);
 
     return (
         <div className="flex flex-col gap-4 h-full">
@@ -49,15 +65,15 @@ function SupplierPayment() {
                             { title: 'Total Amount', value: 'LKR.154250.00', icon: <DollarSign size={18} />, bg: '#D48AFE96', fg: '#8B5CF6' },
                             { title: 'Total Paid', value: 'LKR.154250.00', icon: <Download size={18} />, bg: '#FEF08A', fg: '#F59E0B' },
                             { title: 'Total Balance', value: 'LKR.154250.00', icon: <Coins size={18} />, bg: '#FEA18A', fg: '#EF4444' },
-                            { title: 'Open Bills', value: '11', icon: <Check size={18} />, bg: '#8ACAFEB2', fg: '#0284C7' },
+                            { title: 'Open Bills', value: '11', icon: <><Check size={12} /><Check size={12} /></>, bg: '#8ACAFEB2', fg: '#0284C7' },
                         ].map((card) => (
-                            <div key={card.title} className="bg-white rounded-md p-4 shadow-sm flex items-center gap-4">
+                            <div key={card.title} className="bg-white rounded-md p-4 border border-gray-100 flex items-center gap-4">
                                 <div style={{ background: card.bg }} className="rounded-full p-3 w-12 h-12 flex items-center justify-center">
                                     <span style={{ color: card.fg }}>{card.icon}</span>
                                 </div>
-                                <div>
-                                    <p className="text-sm text-gray-500">{card.title}</p>
-                                    <p className="text-lg font-semibold text-gray-800">{card.value}</p>
+                                <div className="min-w-0">
+                                    <p className="text-sm text-gray-500 truncate">{card.title}</p>
+                                    <p className="text-lg font-semibold text-gray-800 truncate">{card.value}</p>
                                 </div>
                             </div>
                         ))}
@@ -69,13 +85,13 @@ function SupplierPayment() {
                     <div>
                         <label className="block text-sm text-gray-600 mb-1">Supplier</label>
                         <div className="relative">
-                                    <Search className="absolute left-3 top-3 text-gray-400" size={16} />
-                                    <input
-                                        value={supplierFilter}
-                                        onChange={(e) => setSupplierFilter(e.target.value)}
+                                    {/* Use reusable TypeableSelect */}
+                                    <TypeableSelect
+                                        options={sampleRows.map(s => ({ value: s.id, label: `${s.name} — ${s.id}` }))}
+                                        value={supplierFilter ?? ''}
+                                        onChange={(opt) => setSupplierFilter(opt ? opt.value : '')}
                                         placeholder="Type to search supplier"
-                                        className="pl-10 pr-3 py-3 w-full border border-transparent bg-gray-50 rounded-lg text-sm placeholder-gray-400"
-                                        style={{ fontFamily: 'Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto', fontWeight: 500 }}
+                                        className="w-full"
                                     />
                         </div>
                     </div>
@@ -86,14 +102,14 @@ function SupplierPayment() {
                             value={billFilter}
                             onChange={(e) => setBillFilter(e.target.value)}
                             placeholder="Type to select Bill Number"
-                            className="py-2 w-full border rounded-md text-sm px-3"
+                            className="w-full text-sm rounded-md py-2 px-2 border-2 border-gray-100"
                         />
                     </div>
 
                                 <div>
                                     <label className="block text-sm text-gray-600 mb-1">Total:</label>
                                     <div className="text-sm text-black font-normal">Total: LKR58400.00</div>
-                                    <div className="text-lg text-black font-normal">Balance: <span className="text-emerald-700 font-normal">LKR5800.00</span></div>
+                                    <div className="text-lg text-black font-normal">Balance: <span className="text-emerald-700 font-semibold">LKR5800.00</span></div>
                                 </div>
 
                                 <div>
@@ -103,7 +119,7 @@ function SupplierPayment() {
                                             value={newPayment}
                                             onChange={(e) => setNewPayment(e.target.value)}
                                             placeholder="Enter Amount"
-                                            className="py-3 flex-1 border border-gray-200 bg-white rounded-md text-sm px-3"
+                                            className="py-3 flex-1 border-2 border-gray-100 bg-white rounded-md text-sm px-3"
                                             style={{ fontWeight: 600 }}
                                         />
                                         <div className="flex items-center gap-2 flex-shrink-0">
@@ -117,7 +133,7 @@ function SupplierPayment() {
 
             {/* Table container */}
                     <div className="bg-white rounded-md p-3 flex flex-col flex-1">
-                        <div className="border-2 border-sky-300 rounded-md p-2 flex-1">
+                        <div className="rounded-md p-2 flex-1">
                     <div className="overflow-auto h-full">
                         <div className="overflow-x-auto min-h-[360px]">
                         <table className="min-w-full">
@@ -128,9 +144,12 @@ function SupplierPayment() {
                                     ))}
                                 </tr>
                             </thead>
-                            <tbody className="bg-white">
-                                {sampleRows.map((r) => (
-                                    <tr key={r.id} className="border-b hover:bg-gray-50">
+                            <tbody className="bg-white divide-y divide-gray-100">
+                                {sampleRows.map((r, idx) => (
+                                    <tr key={r.id}
+                                        onClick={() => setSelectedIndex(idx)}
+                                        className={`cursor-pointer ${idx === selectedIndex ? 'bg-green-100 border-l-4 border-green-600' : 'hover:bg-green-50'}`}
+                                    >
                                         <td className="px-4 py-3 text-sm">{r.id}</td>
                                         <td className="px-4 py-3 text-sm">{r.name}</td>
                                         <td className="px-4 py-3 text-sm">{r.billNumber}</td>
