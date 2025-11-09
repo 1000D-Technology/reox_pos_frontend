@@ -9,7 +9,7 @@ import {
     Settings,
     LogOut,
     Truck,
-    ChevronDown, AudioWaveform, BadgePlus, FolderTree, Boxes, UserCog
+    ChevronDown, AudioWaveform, BadgePlus, FolderTree, Boxes, UserCog, FolderSymlink
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { useState } from "react";
@@ -78,6 +78,15 @@ export default function Sidebar({isOpen}: SidebarProps) {
             ],
         },
         {
+            label: "GRN",
+            path: "/grn",
+            icon: <FolderSymlink size={20} />,
+            children: [
+                {label: "Create GRN", path: "/grn/create-grn"},
+                {label: "GRN List", path: "/grn/grn-list"},
+            ],
+        },
+        {
             label: "Products",
             path: "/products",
             icon: <Boxes size={20}/>,
@@ -98,7 +107,7 @@ export default function Sidebar({isOpen}: SidebarProps) {
                 {label: "Manage Supplier", path: "/supplier/manage-supplier"},
                 {label: "Supplier GRN History", path: "/supplier/supplier-grn"},
                 {label: "Supplier Payments", path: "/supplier/supplier-payments"},
-                {label: "Bank Management", path: "/supplier/bank-management"},
+
             ],
         },
         {
@@ -133,8 +142,8 @@ export default function Sidebar({isOpen}: SidebarProps) {
 
     return (
         <aside
-            className={`p-3 transition-all duration-500 ease-in-out
-        ${isOpen ? "w-72" : "w-20"}`}
+            className={`py-3 ps-2 transition-all duration-500 ease-in-out
+        ${isOpen ? "w-76" : "w-20"}`}
         >
             <div className="h-full flex flex-col transition-all duration-500 rounded-xl bg-white">
                 {/* Logo */}
@@ -147,7 +156,7 @@ export default function Sidebar({isOpen}: SidebarProps) {
                 </div>
 
                 {/* Navigation */}
-                <nav className="flex-1 items-center overflow-y-auto ps-2 py-4">
+                <nav className="flex-1 items-center overflow-y-auto ps-2 py-4 hide-scrollbar">
                     <ul className="space-y-2">
                         {navItems.map((item, index) => (
                             <li key={index}>
@@ -159,7 +168,7 @@ export default function Sidebar({isOpen}: SidebarProps) {
                                                 isOpen ? "pr-2" : "justify-center"
                                             } gap-3 px-3 py-2 text-sm transition 
                                             ${(location.pathname === item.path || location.pathname.startsWith(item.path + "/"))
-                                                ? "bg-gradient-to-l from-emerald-200 font-semibold"
+                                                ? "bg-gradient-to-l from-emerald-200 font-semibold border-e-4 border-emerald-600"
                                                 : "text-gray-700 hover:bg-green-50"}`}
                                             onClick={(e) => toggleDropdown(item.label, e)}
                                         >
