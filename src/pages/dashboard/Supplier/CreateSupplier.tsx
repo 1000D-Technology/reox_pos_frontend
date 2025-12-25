@@ -3,8 +3,7 @@ import {
     ChevronRight,
     CirclePlus,
     Pencil,
-    Plus,
-    Trash,
+
     X,
 } from 'lucide-react';
 
