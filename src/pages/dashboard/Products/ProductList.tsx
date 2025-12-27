@@ -1,302 +1,563 @@
-import { useState } from "react";
-import { BreadcrumbItem, Breadcrumbs } from "@heroui/breadcrumbs";
-import {Pencil, Trash2, ClipboardList, SearchCheckIcon, RefreshCwIcon, X,} from "lucide-react";
+
+import {
+    Barcode,
+
+    ChevronLeft, ChevronRight,
+    FileText, Pencil,
+
+    RefreshCw,
+    SearchCheck, Trash, X,
+} from "lucide-react";
+import {useEffect, useState} from "react";
+import TypeableSelect from "../../../components/TypeableSelect.tsx";
 
 function ProductList() {
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [selectedImage, setSelectedImage] = useState(null);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [selectedProduct, setSelectedProduct] = useState<typeof salesData[0] | null>(null);
 
-    const toggleModal = () => setIsModalOpen(!isModalOpen);
+    const salesData = [
+        {
+            productID: "250929003",
+            productName: "Suger",
+            productCode: "TS425",
+            barcode: "742388563",
+            category: "Grocery",
+            brand: "Emerald",
+            unit: "Kg",
+            productType: "Sugar",
+            color: "Red",
+            size: "25000",
+            storage: "5",
+            createdOn: "2025.02.01",
+        },
+    ];
 
-    const handleImageChange = (e) => {
-        if (e.target.files && e.target.files[0]) {
-            setSelectedImage(URL.createObjectURL(e.target.files[0]));
-        }
+
+    type SelectOption = {
+        value: string;
+        label: string;
+    };
+    const [selected, setSelected] = useState<SelectOption | null>(null);
+
+    const types = [
+        {value: 'frank', label: 'Frank'},
+        {value: 'elsa', label: 'Elsa'},
+        {value: 'saman', label: 'Saman'},
+        {value: 'kumara', label: 'Kumara'},
+    ];
+
+
+
+
+
+
+    const brands = [
+        {value: "Emerald", label: "Emerald"},
+        {value: "elsa", label: "Elsa"},
+        {value: "saman", label: "Saman"},
+        {value: "kumara", label: "Kumara"},
+    ];
+
+    const units = [
+        {value: "kg", label: "Kilogram"},
+        {value: "ltr", label: "Litre"},
+        {value: "pcs", label: "Pieces"},
+    ];
+
+    const productType = [
+        {value: "suger", label: "Suger"},
+        {value: "fima", label: "Fima"},
+        {value: "snacks", label: "Snacks"},
+    ];
+
+    const categories = [
+        {value: "grocery", label: "Grocery"},
+        {value: "beverages", label: "Beverages"},
+        {value: "snacks", label: "Snacks"},
+    ];
+
+    const productName = [
+        {value: "suger", label: "Suger"},
+        {value: "fima", label: "Fima"},
+        {value: "snacks", label: "Snacks"},
+    ];
+
+    const color = [
+        {value: "red", label: "Red"},
+        {value: "yellow", label: "Yellow"},
+        {value: "green", label: "Green"},
+    ];
+
+    // 🔹 Selected row state
+    const [selectedIndex, setSelectedIndex] = useState(0);
+
+
+
+    const EditProductModal = () => {
+        if (!isEditModalOpen || !selectedProduct) return null;
+
+        return (
+            <div className="fixed inset-0  bg-opacity-50 flex items-center justify-center z-50 bg-white/10 backdrop-blur-sm">
+                <div className="bg-white rounded-lg p-6 w-full max-w-7xl max-h-[90vh] overflow-y-auto">
+                    <div className="flex justify-between items-center mb-4">
+                        <h2 className="text-2xl font-semibold">Edit Product</h2>
+                        <button onClick={() => setIsEditModalOpen(false)} className="p-1 hover:bg-gray-100 rounded">
+                            <X size={24} />
+                        </button>
+                    </div>
+
+                    <div className={"bg-white rounded-md p-4 flex flex-col"}>
+
+                        <span className="text-lg font-semibold my-4">Basic Product Information</span>
+
+                        <div className={"grid md:grid-cols-3 gap-4 "}>
+                            <div>
+                                <label
+                                    htmlFor="product name"
+                                    className="block text-sm font-medium text-gray-700 mb-1"
+                                >
+                                    Product Name
+                                </label>
+                                <TypeableSelect
+                                    options={productName}
+                                    value={selected?.value || null}
+                                    onChange={(opt) =>
+                                        opt
+                                            ? setSelected({
+                                                value: String(opt.value),
+                                                label: opt.label,
+                                            })
+                                            : setSelected(null)
+                                    }
+                                    placeholder="Type to search Product"
+                                    allowCreate={true}
+                                />
+                            </div>
+                            <div>
+                                <label
+                                    htmlFor="product code"
+                                    className="block text-sm font-medium text-gray-700 mb-1"
+                                >
+                                    Product Code
+                                </label>
+                                <input
+                                    type="text"
+                                    id="product code"
+                                    placeholder="Type to search Product Code"
+                                    className="w-full text-sm rounded-md py-2 px-2  border-2 border-gray-100 "
+                                />
+                            </div>
+                            <div>
+                                <label
+                                    htmlFor="barcode"
+                                    className="block text-sm font-medium text-gray-700 mb-1"
+                                >
+                                    Barcode
+                                </label>
+                                <input
+                                    type="text"
+                                    id="barcode"
+                                    placeholder="Enter Barcode"
+                                    className="w-full text-sm rounded-md py-2 px-2  border-2 border-gray-100 "
+                                />
+                            </div>
+
+                            <div>
+                                <label
+                                    htmlFor="category"
+                                    className="block text-sm font-medium text-gray-700 mb-1"
+                                >
+                                    Category
+                                </label>
+                                <TypeableSelect
+                                    options={categories}
+                                    value={selected?.value || null}
+                                    onChange={(opt) =>
+                                        opt
+                                            ? setSelected({
+                                                value: String(opt.value),
+                                                label: opt.label,
+                                            })
+                                            : setSelected(null)
+                                    }
+                                    placeholder="Type to search types"
+                                    allowCreate={true}
+                                />
+                            </div>
+
+                            <div>
+                                <label
+                                    htmlFor="brand"
+                                    className="block text-sm font-medium text-gray-700 mb-1"
+                                >
+                                    Brand </label>
+                                <TypeableSelect
+                                    options={brands}
+                                    value={selected?.value || null}
+                                    onChange={(opt) =>
+                                        opt
+                                            ? setSelected({
+                                                value: String(opt.value),
+                                                label: opt.label,
+                                            })
+                                            : setSelected(null)
+                                    }
+                                    placeholder="Type to search types"
+                                    allowCreate={true}
+                                />
+                            </div>
+
+                            <div>
+                                <label
+                                    htmlFor="unit"
+                                    className="block text-sm font-medium text-gray-700 mb-1"
+                                >
+                                    Unit
+                                </label>
+                                <TypeableSelect
+                                    options={units}
+                                    value={selected?.value || null}
+                                    onChange={(opt) =>
+                                        opt
+                                            ? setSelected({
+                                                value: String(opt.value),
+                                                label: opt.label,
+                                            })
+                                            : setSelected(null)
+                                    }
+                                    placeholder="Type to search Product"
+                                    allowCreate={true}
+                                />
+                            </div>
+
+                            <div>
+                                <label
+                                    htmlFor="product type"
+                                    className="block text-sm font-medium text-gray-700 mb-1"
+                                >
+                                    Product Type
+                                </label>
+                                <TypeableSelect
+                                    options={productType}
+                                    value={selected?.value || null}
+                                    onChange={(opt) =>
+                                        opt
+                                            ? setSelected({
+                                                value: String(opt.value),
+                                                label: opt.label,
+                                            })
+                                            : setSelected(null)
+                                    }
+                                    placeholder="Type to search types"
+                                    allowCreate={true}
+                                />
+                            </div>
+
+                        </div>
+                        <span className="text-lg font-semibold my-4">Product Variations (Optional)</span>
+
+                        <div className={"grid md:grid-cols-3 gap-4 "}>
+                            <div>
+                                <label
+                                    htmlFor="color"
+                                    className="block text-sm font-medium text-gray-700 mb-1"
+                                >
+                                    Color
+                                </label>
+                                <TypeableSelect
+                                    options={color}
+                                    value={selected?.value || null}
+                                    onChange={(opt) =>
+                                        opt
+                                            ? setSelected({
+                                                value: String(opt.value),
+                                                label: opt.label,
+                                            })
+                                            : setSelected(null)
+                                    }
+                                    placeholder="Type to search Product"
+                                    allowCreate={true}
+                                />
+                            </div>
+                            <div>
+                                <label
+                                    htmlFor="size"
+                                    className="block text-sm font-medium text-gray-700 mb-1"
+                                >
+                                    Size
+                                </label>
+                                <input
+                                    type="number"
+                                    id="size"
+                                    placeholder="Enter Size"
+                                    className="w-full text-sm rounded-md py-2 px-2  border-2 border-gray-100 "
+                                />
+                            </div>
+                            <div>
+                                <label
+                                    htmlFor="Storage/Capacity"
+                                    className="block text-sm font-medium text-gray-700 mb-1"
+                                >
+                                    Storage/Capacity
+                                </label>
+                                <input
+                                    type="number"
+                                    id="Storage/Capacity"
+                                    placeholder="Enter Storage/Capacity"
+                                    className="w-full text-sm rounded-md py-2 px-2  border-2 border-gray-100 "
+                                />
+                            </div>
+                        </div>
+                        <div
+                            className={
+                                "flex justify-end md:items-end items-start p-2 gap-2 text-white font-medium  pt-4"
+                            }
+                        >
+                            <button
+                                className={
+                                    "bg-emerald-600 p-2 rounded-md w-2/6 flex justify-center items-center cursor-pointer"
+                                }
+                            >
+                                Update Product &nbsp;<p className={'text-yellow-400'}>(Shift + Enter)</p>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
     };
 
+
+    // 🔹 Handle Up / Down arrow keys
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === "ArrowDown") {
+                setSelectedIndex((prev) => (prev < salesData.length - 1 ? prev + 1 : prev));
+            } else if (e.key === "ArrowUp") {
+                setSelectedIndex((prev) => (prev > 0 ? prev - 1 : prev));
+            }
+        };
+
+        window.addEventListener("keydown", handleKeyDown);
+        return () => window.removeEventListener("keydown", handleKeyDown);
+    }, [salesData.length]);
     return (
-        <div className="w-full ps-5 pr-5">
-            {/* Breadcrumb */}
-            <div className="mb-4">
-                <Breadcrumbs>
-                    <BreadcrumbItem>Pages</BreadcrumbItem>
-                    <BreadcrumbItem>Product List</BreadcrumbItem>
-                </Breadcrumbs>
-                <h1 className="text-3xl font-medium text-gray-600 mt-2">
-                    Product List
-                </h1>
-            </div>
+        <>
+            <div className={'flex flex-col gap-4 h-full'}>
+                <EditProductModal />
 
-            {/* Filter Section */}
-            <div className="bg-white p-4 rounded-2xl shadow-sm">
-                <div className="flex flex-wrap gap-3 items-end">
-                    {[
-                        { label: "Product Type", placeholder: "Type to search types" },
-                        { label: "Search Product", placeholder: "Type to search products" },
-                    ].map((input, i) => (
-                        <div key={i} className="flex flex-col">
-                            <label className="text-sm font-medium mb-1 text-gray-700">
-                                {input.label}
-                            </label>
-                            <input
-                                type="text"
-                                placeholder={input.placeholder}
-                                className="w-60 border border-gray-300 rounded-md p-2.5 focus:ring-green-500 focus:border-green-500 text-gray-800"
+                <div>
+                    <div className="text-sm text-gray-500 flex items-center">
+                        <span>Pages</span>
+                        <span className="mx-2">›</span>
+                        <span className="text-black">Product List</span>
+                    </div>
+                    <h1 className="text-3xl font-semibold text-gray-500">Product List</h1>
+                </div>
+
+                <div className={'bg-white rounded-md p-4 flex flex-col'}>
+
+                    <div className={'grid md:grid-cols-5 gap-4 '}>
+
+
+                        <div>
+                            <label htmlFor="supplier"
+                                   className="block text-sm font-medium text-gray-700 mb-1">Product Type</label>
+                            <TypeableSelect
+                                options={types}
+                                value={selected?.value || null}
+                                onChange={(opt) => opt ? setSelected({ value: String(opt.value), label: opt.label }) : setSelected(null)}
+                                placeholder="Search Product Types.."
+                                allowCreate={true}
                             />
+
                         </div>
-                    ))}
+                        <div>
+                            <label htmlFor="product"
+                                   className="block text-sm font-medium text-gray-700 mb-1">Product ID / Name</label>
+                            <input type="text" id="product" placeholder="Enter Invoice Number..."
+                                   className="w-full text-sm rounded-md py-2 px-2  border-2 border-gray-100 "/>
 
-                    <div className="flex gap-2 items-center">
-                        <button className="bg-[#059669] text-white py-2.5 px-4 rounded-md flex items-center hover:bg-green-700 transition-colors">
-                            <SearchCheckIcon className="w-4 h-4 mr-2" />
-                            Search
-                        </button>
-                        <button className="bg-gray-200 text-gray-700 py-2.5 px-4 rounded-md flex items-center hover:bg-gray-300 transition-colors">
-                            <RefreshCwIcon className="w-4 h-4 mr-2" />
-                            Clear
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            {/* Product Table */}
-            <div className="bg-white mt-5 rounded-2xl w-full">
-                <div className="grid grid-cols-14 gap-2 bg-[#059669] h-12 rounded-t-md items-center text-white text-xs font-semibold px-4">
-                    <div>Product ID</div>
-                    <div>Product Type</div>
-                    <div>Product Name</div>
-                    <div>Product Code</div>
-                    <div>Cabin Number</div>
-                    <div>Barcode</div>
-                    <div>Supplier</div>
-                    <div>Category</div>
-                    <div>Unit</div>
-                    <div>Color</div>
-                    <div>MRP</div>
-                    <div>Locked Price</div>
-                    <div>Image</div>
-                    <div>Actions</div>
-                </div>
-
-                {/* Example Row */}
-                <div className="grid grid-cols-14 gap-2 items-center text-xs font-medium px-4 py-3 border-b">
-                    <div>02458965</div>
-                    <div>Sugar</div>
-                    <div>Sugar</div>
-                    <div>T5425</div>
-                    <div>5</div>
-                    <div>742389863</div>
-                    <div>Jeewan</div>
-                    <div>Grocery</div>
-                    <div>Kg</div>
-                    <div>Red</div>
-                    <div>250.00</div>
-                    <div>260.00</div>
-                    <div>
-                        <img
-                            src="https://i.ibb.co/W0GyM5v/sample.jpg"
-                            alt="Product"
-                            className="w-8 h-8 rounded-md object-cover"
-                        />
-                    </div>
-                    <div className="flex gap-2">
-                        <button
-                            onClick={toggleModal}
-                            className="bg-blue-500 hover:bg-blue-600 text-white rounded-md p-1.5"
-                        >
-                            <Pencil className="w-4 h-4" />
-                        </button>
-
-                        <button
-
-                            className="bg-blue-500 hover:bg-blue-600 text-white rounded-md p-1.5"
-                        >
-                            <Pencil className="w-4 h-4" />
-                        </button>
-                        <button className="bg-red-500 hover:bg-red-600 text-white rounded-md p-1.5">
-                            <Trash2 className="w-4 h-4" />
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            {/* Pagination */}
-            <div className="bg-white mt-4 rounded-2xl h-20 flex items-center justify-center gap-5">
-                <div className="flex items-center gap-2 text-sm">
-                    <button className="px-4 py-2 bg-gray-300 rounded-l-md hover:bg-gray-400">
-                        Previous
-                    </button>
-                    <div className="hidden sm:flex items-center gap-1 px-2">
-                        <button className="px-3 py-1 bg-white border rounded">1</button>
-                        <button className="px-3 py-1 bg-white border rounded">2</button>
-                        <button className="px-3 py-1 bg-white border rounded">3</button>
-                    </div>
-                    <button className="px-4 py-2 bg-gray-300 rounded-r-md hover:bg-gray-400">
-                        Next
-                    </button>
-                </div>
-            </div>
-
-            {/* Export Buttons */}
-            <div className="bg-white mt-2 rounded-2xl w-full h-20 flex items-center justify-center gap-5">
-                <button className="bg-[#059669] rounded-2xl w-28 h-12 flex items-center justify-center text-white text-sm">
-                    <ClipboardList className="mr-2 h-4" /> Excel
-                </button>
-                <button className="bg-[#F59E0B] rounded-2xl w-28 h-12 flex items-center justify-center text-white text-sm">
-                    <ClipboardList className="mr-2 h-4" /> CSV
-                </button>
-                <button className="bg-[#EF4444] rounded-2xl w-28 h-12 flex items-center justify-center text-white text-sm">
-                    <ClipboardList className="mr-2 h-4" /> PDF
-                </button>
-            </div>
-
-            {isModalOpen && (
-                <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
-                    <div className="bg-white rounded-2xl p-8 w-[850px] shadow-xl relative">
-                        <button
-                            className="absolute top-5 right-5 text-gray-500 hover:text-gray-700"
-                            onClick={toggleModal}
-                        >
-                            <X className="w-5 h-5" />
-                        </button>
-
-                        <h2 className="text-2xl font-semibold mb-6 text-gray-800">
-                            Update Product
-                        </h2>
-
-                        {/* ---- Grid Layout (4 on top row, 3 on next) ---- */}
-                        <div className="grid grid-cols-4 gap-4">
-                            {/* Row 1 */}
-                            <div className="flex flex-col">
-                                <label className="text-sm font-medium text-gray-700 mb-1">Product Type</label>
-                                <input
-                                    type="text"
-                                    placeholder="Type to search types"
-                                    className="border border-gray-300 rounded-md p-2.5 focus:ring-green-500 focus:border-green-500 text-gray-800"
-                                />
-                            </div>
-                            <div className="flex flex-col">
-                                <label className="text-sm font-medium text-gray-700 mb-1">Product Name</label>
-                                <input
-                                    type="text"
-                                    placeholder="Enter Product Name"
-                                    className="border border-gray-300 rounded-md p-2.5 focus:ring-green-500 focus:border-green-500 text-gray-800"
-                                />
-                            </div>
-                            <div className="flex flex-col">
-                                <label className="text-sm font-medium text-gray-700 mb-1">Product Code</label>
-                                <input
-                                    type="text"
-                                    placeholder="Enter Product Code"
-                                    className="border border-gray-300 rounded-md p-2.5 focus:ring-green-500 focus:border-green-500 text-gray-800"
-                                />
-                            </div>
-                            <div className="flex flex-col">
-                                <label className="text-sm font-medium text-gray-700 mb-1">Cabin Number</label>
-                                <input
-                                    type="text"
-                                    placeholder="Enter Cabin Number"
-                                    className="border border-gray-300 rounded-md p-2.5 focus:ring-green-500 focus:border-green-500 text-gray-800"
-                                />
-                            </div>
-
-                            {/* Row 2 */}
-                            <div className="flex flex-col">
-                                <label className="text-sm font-medium text-gray-700 mb-1">Barcode</label>
-                                <input
-                                    type="text"
-                                    placeholder="Enter Barcode"
-                                    className="border border-gray-300 rounded-md p-2.5 focus:ring-green-500 focus:border-green-500 text-gray-800"
-                                />
-                            </div>
-                            <div className="flex flex-col">
-                                <label className="text-sm font-medium text-gray-700 mb-1">Supplier</label>
-                                <input
-                                    type="text"
-                                    placeholder="Type to search suppliers"
-                                    className="border border-gray-300 rounded-md p-2.5 focus:ring-green-500 focus:border-green-500 text-gray-800"
-                                />
-                            </div>
-                            <div className="flex flex-col">
-                                <label className="text-sm font-medium text-gray-700 mb-1">Category</label>
-                                <input
-                                    type="text"
-                                    placeholder="Type to search categories"
-                                    className="border border-gray-300 rounded-md p-2.5 focus:ring-green-500 focus:border-green-500 text-gray-800"
-                                />
-                            </div>
-                            <div className="flex flex-col">
-                                <label className="text-sm font-medium text-gray-700 mb-1">Unit</label>
-                                <input
-                                    type="text"
-                                    placeholder="Type to search units"
-                                    className="border border-gray-300 rounded-md p-2.5 focus:ring-green-500 focus:border-green-500 text-gray-800"
-                                />
-                            </div>
-
-                            {/* Row 3 */}
-                            <div className="flex flex-col">
-                                <label className="text-sm font-medium text-gray-700 mb-1">Color</label>
-                                <input
-                                    type="text"
-                                    placeholder="Type to search colors"
-                                    className="border border-gray-300 rounded-md p-2.5 focus:ring-green-500 focus:border-green-500 text-gray-800"
-                                />
-                            </div>
-
-                            {/* Image Upload */}
-                            <div className="flex flex-col">
-                                <label className="text-sm font-medium text-gray-700 mb-1">Image</label>
-                                <input
-                                    type="file"
-                                    accept="image/*"
-                                    onChange={handleImageChange}
-                                    className="border border-gray-300 rounded-md p-2.5 text-gray-800"
-                                />
-                                {selectedImage && (
-                                    <img
-                                        src={selectedImage}
-                                        alt="Preview"
-                                        className="w-20 h-20 rounded-md mt-2 object-cover border"
-                                    />
-                                )}
-                            </div>
-
-                            <div className="flex flex-col">
-                                <label className="text-sm font-medium text-gray-700 mb-1">MRP</label>
-                                <input
-                                    type="text"
-                                    placeholder="Enter MRP"
-                                    className="border border-gray-300 rounded-md p-2.5 focus:ring-green-500 focus:border-green-500 text-gray-800"
-                                />
-                            </div>
-                            <div className="flex flex-col">
-                                <label className="text-sm font-medium text-gray-700 mb-1">Locked Price</label>
-                                <input
-                                    type="text"
-                                    placeholder="Enter Locked Price"
-                                    className="border border-gray-300 rounded-md p-2.5 focus:ring-green-500 focus:border-green-500 text-gray-800"
-                                />
-                            </div>
                         </div>
+                        <div className={'grid grid-cols-2 md:items-end items-start gap-2 text-white font-medium'}>
+                            <button className={'bg-emerald-600 py-2 rounded-md flex items-center justify-center'}>
+                                <SearchCheck className="mr-2" size={14}/>Search
+                            </button>
+                            <button className={'bg-gray-500 py-2 rounded-md flex items-center justify-center'}><RefreshCw
+                                className="mr-2" size={14}/>Clear
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div className={'flex flex-col bg-white rounded-md h-full p-4 justify-between'}>
+                    <div
+                        className="overflow-y-auto max-h-md md:h-[320px] lg:h-[500px] rounded-md scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                        <table className="min-w-full divide-y divide-gray-200">
+                            <thead className="bg-emerald-600 sticky top-0 z-10">
+                            <tr>
+                                {[
+                                    "Product ID",
+                                    "Product Name",
+                                    "Product Code",
+                                    "Barcode",
+                                    "Category",
+                                    "Brand",
+                                    "Unit",
+                                    "Product Type",
+                                    "Color",
+                                    "Size",
+                                    "Storage/Capacity",
+                                    "Created On",
+                                    "Actions",
+                                ].map((header, i, arr) => (
+                                    <th
+                                        key={header}
+                                        scope="col"
+                                        className={`px-6 py-3 text-left text-sm font-medium text-white tracking-wider
+                            ${i === 0 ? "rounded-tl-lg" : ""}
+                            ${i === arr.length - 1 ? "rounded-tr-lg" : ""}`}
+                                    >
+                                        {header}
+                                    </th>
+                                ))}
+                            </tr>
+                            </thead>
 
-                        {/* Buttons */}
-                        <div className="flex justify-end gap-3 mt-8">
+                            <tbody className="bg-white divide-y divide-gray-200">
+                            {salesData.map((sale, index) => (
+                                <tr
+                                    key={index}
+                                    onClick={() => setSelectedIndex(index)}
+                                    className={`cursor-pointer ${
+                                        index === selectedIndex
+                                            ? "bg-green-100 border-l-4 border-green-600"
+                                            : "hover:bg-green-50"
+                                    }`}
+                                >
+                                    <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
+                                        {sale.productID}
+                                    </td>
+                                    <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
+                                        {sale.productName}
+                                    </td>
+                                    <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
+                                        {sale.productCode}
+                                    </td>
+                                    <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
+                                        {sale.barcode}
+                                    </td>
+                                    <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
+                                        {sale.category}
+                                    </td>
+                                    <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
+                                        {sale.brand}
+                                    </td>
+                                    <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
+                                        {sale.unit}
+                                    </td>
+                                    <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
+                                        {sale.productType}
+                                    </td>
+                                    <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
+                                        {sale.color}
+                                    </td>
+                                    <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
+                                        {sale.size}
+                                    </td>
+                                    <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
+                                        {sale.storage}
+                                    </td>
+                                    <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
+                                        {sale.createdOn}
+                                    </td>
+                                    <td className="px-6 py-2 whitespace-nowrap text-sm font-medium flex gap-2">
+                                        <div className="relative group">
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setSelectedProduct(sale);
+                                                    setIsEditModalOpen(true);
+                                                }}
+                                                className="p-2 bg-green-100 rounded-full text-green-700 hover:bg-green-200 transition-colors cursor-pointer">
+                                                <Pencil size={15} />
+                                            </button>
+
+                                            <span
+                                                className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max px-2 py-1 text-xs text-white bg-gray-900 rounded-md invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    Edit Product
+                                                </span>
+                                        </div>
+
+                                        <div className="relative group">
+                                            <button
+                                                className="p-2 bg-yellow-100 rounded-full text-yellow-700 hover:bg-yellow-200 transition-colors cursor-pointer">
+                                                <Barcode size={15}/>
+                                            </button>
+                                            <span
+                                                className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max px-2 py-1 text-xs text-white bg-gray-900 rounded-md invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    Print Barcode
+                                                </span>
+                                        </div>
+                                        <div className="relative group">
+                                            <button
+                                                className="p-2 bg-red-100 rounded-full text-red-700 hover:bg-red-200 transition-colors cursor-pointer">
+                                                <Trash size={15}/>
+                                            </button>
+                                            <span
+                                                className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max px-2 py-1 text-xs text-white bg-gray-900 rounded-md invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    Delete Product
+                                                </span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <nav className="bg-white flex items-center justify-center sm:px-6">
+                        <div className="flex items-center space-x-2">
                             <button
-                                onClick={toggleModal}
-                                className="bg-gray-300 text-gray-700 px-5 py-2 rounded-md hover:bg-gray-400"
-                            >
-                                Cancel
+                                className="flex items-center px-2 py-2 text-sm font-medium text-gray-500 hover:text-gray-700">
+                                <ChevronLeft className="mr-2 h-5 w-5"/> Previous
                             </button>
-                            <button className="bg-[#059669] text-white px-5 py-2 rounded-md hover:bg-green-700">
-                                Update Product
+                            <button
+                                className="px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white">
+                                1
+                            </button>
+                            <button
+                                className="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-gray-500 hover:bg-gray-100">
+                                2
+                            </button>
+                            <button
+                                className="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-gray-500 hover:bg-gray-100">
+                                3
+                            </button>
+                            <span className="text-gray-500 px-2">...</span>
+                            <button
+                                className="flex items-center px-2 py-2 text-sm font-medium text-gray-500 hover:text-gray-700">
+                                Next <ChevronRight className="ml-2 h-5 w-5"/>
                             </button>
                         </div>
-                    </div>
+                    </nav>
                 </div>
-            )}
 
-        </div>
+                <div className={'bg-white flex justify-center p-4 gap-4'}>
+                    <button
+                        className={'bg-emerald-600 px-6 py-2 font-medium text-white rounded-md flex gap-2 items-center shadow-sm'}>
+                        <FileText size={15}/>Exel
+                    </button>
+                    <button
+                        className={'bg-yellow-600 px-6 py-2 font-medium text-white rounded-md flex gap-2 items-center shadow-sm'}>
+                        <FileText size={15}/>CSV
+                    </button>
+                    <button
+                        className={'bg-red-500 px-6 py-2 font-medium text-white rounded-md flex gap-2 items-center shadow-sm'}>
+                        <FileText size={15}/>PDF
+                    </button>
+                </div>
+            </div>
+        </>
     );
 }
 

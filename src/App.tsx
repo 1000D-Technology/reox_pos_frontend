@@ -34,6 +34,7 @@ import AttendanceReport from "./pages/dashboard/Employee/Attendance Report.tsx";
 import EmployeeSalary from "./pages/dashboard/Employee/EmployeeSalary.tsx";
 import ManageUser from "./pages/dashboard/ManageUser.tsx";
 import CreateGrn from "./pages/dashboard/grn/CreateGrn.tsx";
+import ManageBrand from "./pages/dashboard/Products/ManageBrand.tsx";
 
 export default function App() {
     return (
@@ -61,6 +62,7 @@ export default function App() {
                     <Route path="/products/product-list" element={<ProductList />} />
                     <Route path="/products/manage-unit" element={<ManageUnit />} />
                     <Route path="/products/manage-category" element={<ManageCategory />} />
+                    <Route path="/products/manage-brand" element={<ManageBrand />} />
                     <Route path="/products/removed-products" element={<RemovedProducts />} />
                     <Route path="/supplier/create-supplier" element={<CreateSupplier />} />
                     <Route path="/supplier/manage-supplier" element={<ManageSupplier />} />
