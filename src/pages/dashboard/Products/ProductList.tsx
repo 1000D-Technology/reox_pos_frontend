@@ -46,11 +46,6 @@ function ProductList() {
         {value: 'kumara', label: 'Kumara'},
     ];
 
-
-
-
-
-
     const brands = [
         {value: "Emerald", label: "Emerald"},
         {value: "elsa", label: "Elsa"},
