@@ -241,22 +241,6 @@ function CreateProducts() {
                             />
                         </div>
 
-
-                        <div>
-                            <label
-                                htmlFor="product-image"
-                                className="block text-sm font-medium text-gray-700 mb-1"
-                            >
-                                Image
-                            </label>
-                            <input
-                                type="file"
-                                id="product-image"
-                                accept=".jpg,.jpeg,.png,image/jpeg,image/png,image/jpg"
-                                className="w-full text-sm rounded-md py-2 px-2 border-2 border-gray-100"
-                                placeholder="Select Image"
-                            />
-                        </div>
                     </div>
                     <span className="text-lg font-semibold my-4">Product Variations (Optional)</span>
 
