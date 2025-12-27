@@ -95,6 +95,7 @@ export default function Sidebar({isOpen}: SidebarProps) {
                 {label: "Product List", path: "/products/product-list"},
                 {label: "Manage Unit", path: "/products/manage-unit"},
                 {label: "Manage Category", path: "/products/manage-category"},
+                {label: "Manage Brand", path: "/products/manage-brand"},
                 {label: "Removed Products", path: "/products/removed-products"},
             ],
         },
