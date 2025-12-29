@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const productController = require('../controllers/productController');
+const validateProduct = require('../middleware/validateProduct');
 
 /**
  * @swagger
@@ -53,6 +54,6 @@ const productController = require('../controllers/productController');
  *       500:
  *         description: Server error
  */
-router.post('/create', productController.addProduct);
+router.post('/create', validateProduct, productController.addProduct);
 
 module.exports = router;

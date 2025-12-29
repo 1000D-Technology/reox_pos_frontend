@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const productRoutes = require('./routes/productRoutes');
+const commonRoutes = require('./routes/commonRoutes');
 require('dotenv').config();
 const swaggerJsDoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
@@ -10,6 +11,7 @@ app.use(cors());
 app.use(express.json());
 
 app.use('/api/products', productRoutes);
+app.use('/api/common', commonRoutes);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
