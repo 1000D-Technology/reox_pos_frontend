@@ -1,6 +1,12 @@
 const db = require('../config/db');
 
 class Product{
+
+    static async checkIdExists(tableName, idColumn, idValue) {
+        const [rows] = await db.execute(`SELECT 1 FROM ${tableName} WHERE ${idColumn} = ? LIMIT 1`, [idValue]);
+        return rows.length > 0;
+    }
+
     static async create(productData, variations){
         const connection = await db.getConnection();
         try{

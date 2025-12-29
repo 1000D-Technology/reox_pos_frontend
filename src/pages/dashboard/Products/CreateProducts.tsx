@@ -2,7 +2,42 @@ import {ChevronLeft, ChevronRight} from "lucide-react";
 import {useEffect, useState} from "react";
 import TypeableSelect from "../../../components/TypeableSelect.tsx";
 
+// Add this function before the CreateProducts component
+const generateBarcode = (): string => {
+    // Generate 12 random digits
+    let barcode = '';
+    for (let i = 0; i < 12; i++) {
+        barcode += Math.floor(Math.random() * 10);
+    }
+    
+    // Calculate check digit (EAN-13 standard)
+    let sum = 0;
+    for (let i = 0; i < 12; i++) {
+        const digit = parseInt(barcode[i]);
+        sum += (i % 2 === 0) ? digit : digit * 3;
+    }
+    const checkDigit = (10 - (sum % 10)) % 10;
+    
+    return barcode + checkDigit;
+};
+
 function CreateProducts() {
+    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+
+    // Form state
+    const [productData, setProductData] = useState({
+        name: "",
+        code: "",
+        barcode: "",
+        categoryId: "",
+        brandId: "",
+        unitId: "",
+        typeId: ""
+    });
+
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [errorMessage, setErrorMessage] = useState("");
+    const [successMessage, setSuccessMessage] = useState("");
     const salesData = [
         {
             productID: "250929003",
@@ -24,39 +59,16 @@ function CreateProducts() {
         value: string;
         label: string;
     };
-    const [selected, setSelected] = useState<SelectOption | null>(null);
+    const [selectedCategory, setSelectedCategory] = useState<SelectOption | null>(null);
+    const [selectedBrand, setSelectedBrand] = useState<SelectOption | null>(null);
+    const [selectedUnit, setSelectedUnit] = useState<SelectOption | null>(null);
+    const [selectedProductType, setSelectedProductType] = useState<SelectOption | null>(null);
 
-
-    const brands = [
-        {value: "Emerald", label: "Emerald"},
-        {value: "elsa", label: "Elsa"},
-        {value: "saman", label: "Saman"},
-        {value: "kumara", label: "Kumara"},
-    ];
-
-    const units = [
-        {value: "kg", label: "Kilogram"},
-        {value: "ltr", label: "Litre"},
-        {value: "pcs", label: "Pieces"},
-    ];
-
-    const productType = [
-        {value: "suger", label: "Suger"},
-        {value: "fima", label: "Fima"},
-        {value: "snacks", label: "Snacks"},
-    ];
-
-    const categories = [
-        {value: "grocery", label: "Grocery"},
-        {value: "beverages", label: "Beverages"},
-        {value: "snacks", label: "Snacks"},
-    ];
-
-    const productName = [
-        {value: "suger", label: "Suger"},
-        {value: "fima", label: "Fima"},
-        {value: "snacks", label: "Snacks"},
-    ];
+    // State for fetched data from backend
+    const [brands, setBrands] = useState<SelectOption[]>([]);
+    const [units, setUnits] = useState<SelectOption[]>([]);
+    const [categories, setCategories] = useState<SelectOption[]>([]);
+    const [productType, setProductType] = useState<SelectOption[]>([]);
 
     const color = [
         {value: "red", label: "Red"},
@@ -83,9 +95,71 @@ function CreateProducts() {
     });
 
     const handleAddVariation = () => {
+        // Remove the barcode requirement check since we'll auto-generate
         if (currentVariation.color || currentVariation.size || currentVariation.storage || currentVariation.barcode) {
             setVariations([...variations, currentVariation]);
             setCurrentVariation({ color: "", size: "", storage: "", barcode: "" });
+        }
+    };
+
+    // Submit product to backend
+    const handleSubmitProduct = async () => {
+        setErrorMessage("");
+        setSuccessMessage("");
+        setIsSubmitting(true);
+
+        try {
+            // Generate barcode for main product if not provided
+            const mainBarcode = productData.barcode.trim() || generateBarcode();
+            
+            // Generate barcodes for variations if not provided
+            const processedVariations = variations.map(v => ({
+                barcode: v.barcode.trim() || generateBarcode(),
+                color: v.color,
+                size: v.size,
+                capacity: v.storage,
+                statusId: 1
+            }));
+
+            const response = await fetch(`${API_BASE_URL}/api/products/create`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    productData: {
+                        name: productData.name,
+                        code: productData.code,
+                        barcode: mainBarcode,
+                        categoryId: parseInt(productData.categoryId) || 0,
+                        brandId: parseInt(productData.brandId) || 0,
+                        unitId: parseInt(productData.unitId) || 0,
+                        typeId: parseInt(productData.typeId) || 0
+                    },
+                    variations: processedVariations
+                }),
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                setSuccessMessage(result.message || "Product created successfully!");
+                
+                // Reload page after 2 seconds
+                setTimeout(() => {
+                    window.location.reload();
+                }, 2000);
+            } else {
+                setErrorMessage(result.message || "Failed to create product");
+                if (result.errors && result.errors.length > 0) {
+                    console.error("Validation errors:", result.errors);
+                }
+            }
+        } catch (error) {
+            console.error('Error creating product:', error);
+            setErrorMessage("An error occurred while creating the product. Please try again.");
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -93,7 +167,58 @@ function CreateProducts() {
         setVariations(variations.filter((_, i) => i !== index));
     };
 
-    // 🔹 Handle Up / Down arrow keys
+    // Fetch brands, units, and categories from backend
+    useEffect(() => {
+        const fetchDropdownData = async () => {
+            try {
+                // Fetch categories
+                const categoriesRes = await fetch(`${API_BASE_URL}/api/common/categories`);
+                const categoriesData = await categoriesRes.json();
+                if (categoriesData.success) {
+                    setCategories(categoriesData.data.map((item: any) => ({
+                        value: String(item.id),
+                        label: item.name
+                    })));
+                }
+
+                // Fetch brands
+                const brandsRes = await fetch(`${API_BASE_URL}/api/common/brands`);
+                const brandsData = await brandsRes.json();
+                if (brandsData.success) {
+                    setBrands(brandsData.data.map((item: any) => ({
+                        value: String(item.id),
+                        label: item.name
+                    })));
+                }
+
+                // Fetch units
+                const unitsRes = await fetch(`${API_BASE_URL}/api/common/units`);
+                const unitsData = await unitsRes.json();
+                if (unitsData.success) {
+                    setUnits(unitsData.data.map((item: any) => ({
+                        value: String(item.id),
+                        label: item.name
+                    })));
+                }
+
+                // Fetch product types
+                const productTypesRes = await fetch(`${API_BASE_URL}/api/common/product-types`);
+                const productTypesData = await productTypesRes.json();
+                if (productTypesData.success) {
+                    setProductType(productTypesData.data.map((item: any) => ({
+                        value: String(item.id),
+                        label: item.name
+                    })));
+                }
+            } catch (error) {
+                console.error('Error fetching dropdown data:', error);
+            }
+        };
+
+        fetchDropdownData();
+    }, []);
+
+    // 🔹 Handle Up / Down arrow keys and Shift+Enter
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === "ArrowDown") {
@@ -102,12 +227,17 @@ function CreateProducts() {
                 );
             } else if (e.key === "ArrowUp") {
                 setSelectedIndex((prev) => (prev > 0 ? prev - 1 : prev));
+            } else if (e.key === "Enter" && e.shiftKey) {
+                e.preventDefault();
+                if (!isSubmitting) {
+                    handleSubmitProduct();
+                }
             }
         };
 
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [salesData.length]);
+    }, [salesData.length, isSubmitting]);
     return (
         <>
             <div className={"flex flex-col gap-4 h-full"}>
@@ -124,6 +254,22 @@ function CreateProducts() {
 
                     <span className="text-lg font-semibold my-4">Basic Product Information</span>
 
+                    {/* Success Message */}
+                    {successMessage && (
+                        <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4" role="alert">
+                            <strong className="font-bold">Success! </strong>
+                            <span className="block sm:inline">{successMessage}</span>
+                        </div>
+                    )}
+
+                    {/* Error Message */}
+                    {errorMessage && (
+                        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+                            <strong className="font-bold">Error! </strong>
+                            <span className="block sm:inline">{errorMessage}</span>
+                        </div>
+                    )}
+
                     <div className={"grid md:grid-cols-5 gap-4 "}>
                         <div>
                             <label
@@ -132,19 +278,13 @@ function CreateProducts() {
                             >
                                 Product Name <span className="text-red-500">*</span>
                             </label>
-                            <TypeableSelect
-                                options={productName}
-                                value={selected?.value || null}
-                                onChange={(opt) =>
-                                    opt
-                                        ? setSelected({
-                                            value: String(opt.value),
-                                            label: opt.label,
-                                        })
-                                        : setSelected(null)
-                                }
-                                placeholder="Type to search Product"
-                                allowCreate={true}
+                            <input
+                                type="text"
+                                id="product name"
+                                value={productData.name}
+                                onChange={(e) => setProductData({...productData, name: e.target.value})}
+                                placeholder="Enter Product Name"
+                                className="w-full text-sm rounded-md py-2 px-2 border-2 border-gray-100"
                             />
                         </div>
                         <div>
@@ -157,6 +297,8 @@ function CreateProducts() {
                             <input
                                 type="text"
                                 id="product code"
+                                value={productData.code}
+                                onChange={(e) => setProductData({...productData, code: e.target.value})}
                                 placeholder="Type to search Product Code"
                                 className="w-full text-sm rounded-md py-2 px-2  border-2 border-gray-100 "
                             />
@@ -171,6 +313,8 @@ function CreateProducts() {
                             <input
                                 type="text"
                                 id="barcode"
+                                value={productData.barcode}
+                                onChange={(e) => setProductData({...productData, barcode: e.target.value})}
                                 placeholder="Enter Barcode"
                                 className="w-full text-sm rounded-md py-2 px-2  border-2 border-gray-100 "
                             />
@@ -185,15 +329,19 @@ function CreateProducts() {
                             </label>
                             <TypeableSelect
                                 options={categories}
-                                value={selected?.value || null}
-                                onChange={(opt) =>
-                                    opt
-                                        ? setSelected({
+                                value={selectedCategory?.value || null}
+                                onChange={(opt) => {
+                                    if (opt) {
+                                        setSelectedCategory({
                                             value: String(opt.value),
                                             label: opt.label,
-                                        })
-                                        : setSelected(null)
-                                }
+                                        });
+                                        setProductData({...productData, categoryId: String(opt.value)});
+                                    } else {
+                                        setSelectedCategory(null);
+                                        setProductData({...productData, categoryId: ""});
+                                    }
+                                }}
                                 placeholder="Type to search types"
                                 allowCreate={true}
                             />
@@ -208,15 +356,19 @@ function CreateProducts() {
                             </label>
                             <TypeableSelect
                                 options={brands}
-                                value={selected?.value || null}
-                                onChange={(opt) =>
-                                    opt
-                                        ? setSelected({
+                                value={selectedBrand?.value || null}
+                                onChange={(opt) => {
+                                    if (opt) {
+                                        setSelectedBrand({
                                             value: String(opt.value),
                                             label: opt.label,
-                                        })
-                                        : setSelected(null)
-                                }
+                                        });
+                                        setProductData({...productData, brandId: String(opt.value)});
+                                    } else {
+                                        setSelectedBrand(null);
+                                        setProductData({...productData, brandId: ""});
+                                    }
+                                }}
                                 placeholder="Type to search types"
                                 allowCreate={true}
                             />
@@ -231,15 +383,19 @@ function CreateProducts() {
                             </label>
                             <TypeableSelect
                                 options={units}
-                                value={selected?.value || null}
-                                onChange={(opt) =>
-                                    opt
-                                        ? setSelected({
+                                value={selectedUnit?.value || null}
+                                onChange={(opt) => {
+                                    if (opt) {
+                                        setSelectedUnit({
                                             value: String(opt.value),
                                             label: opt.label,
-                                        })
-                                        : setSelected(null)
-                                }
+                                        });
+                                        setProductData({...productData, unitId: String(opt.value)});
+                                    } else {
+                                        setSelectedUnit(null);
+                                        setProductData({...productData, unitId: ""});
+                                    }
+                                }}
                                 placeholder="Type to search Product"
                                 allowCreate={true}
                             />
@@ -254,15 +410,19 @@ function CreateProducts() {
                             </label>
                             <TypeableSelect
                                 options={productType}
-                                value={selected?.value || null}
-                                onChange={(opt) =>
-                                    opt
-                                        ? setSelected({
+                                value={selectedProductType?.value || null}
+                                onChange={(opt) => {
+                                    if (opt) {
+                                        setSelectedProductType({
                                             value: String(opt.value),
                                             label: opt.label,
-                                        })
-                                        : setSelected(null)
-                                }
+                                        });
+                                        setProductData({...productData, typeId: String(opt.value)});
+                                    } else {
+                                        setSelectedProductType(null);
+                                        setProductData({...productData, typeId: ""});
+                                    }
+                                }}
                                 placeholder="Type to search types"
                                 allowCreate={true}
                             />
@@ -457,11 +617,13 @@ function CreateProducts() {
                         }
                     >
                         <button
+                            onClick={handleSubmitProduct}
+                            disabled={isSubmitting}
                             className={
-                                "bg-emerald-600 p-2 rounded-md w-1/6 flex justify-center items-center cursor-pointer"
+                                `bg-emerald-600 p-2 rounded-md w-1/6 flex justify-center items-center cursor-pointer ${isSubmitting ? 'opacity-50 cursor-not-allowed' : 'hover:bg-emerald-700'}`
                             }
                         >
-                            Save Product &nbsp;<p className={'text-yellow-400'}>(Shift + Enter)</p>
+                            {isSubmitting ? 'Saving...' : 'Save Product'} &nbsp;<p className={'text-yellow-400'}>(Shift + Enter)</p>
                         </button>
                     </div>
                 </div>
