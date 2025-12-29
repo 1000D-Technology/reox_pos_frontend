@@ -130,7 +130,7 @@ function CreateProducts() {
                                 htmlFor="product name"
                                 className="block text-sm font-medium text-gray-700 mb-1"
                             >
-                                Product Name
+                                Product Name <span className="text-red-500">*</span>
                             </label>
                             <TypeableSelect
                                 options={productName}
@@ -161,14 +161,27 @@ function CreateProducts() {
                                 className="w-full text-sm rounded-md py-2 px-2  border-2 border-gray-100 "
                             />
                         </div>
-
+                        <div>
+                            <label
+                                htmlFor="barcode"
+                                className="block text-sm font-medium text-gray-700 mb-1"
+                            >
+                                Barcode
+                            </label>
+                            <input
+                                type="text"
+                                id="barcode"
+                                placeholder="Enter Barcode"
+                                className="w-full text-sm rounded-md py-2 px-2  border-2 border-gray-100 "
+                            />
+                        </div>
 
                         <div>
                             <label
                                 htmlFor="category"
                                 className="block text-sm font-medium text-gray-700 mb-1"
                             >
-                                Category
+                                Category <span className="text-red-500">*</span>
                             </label>
                             <TypeableSelect
                                 options={categories}
@@ -191,7 +204,8 @@ function CreateProducts() {
                                 htmlFor="brand"
                                 className="block text-sm font-medium text-gray-700 mb-1"
                             >
-                                Brand </label>
+                                Brand <span className="text-red-500">*</span>
+                            </label>
                             <TypeableSelect
                                 options={brands}
                                 value={selected?.value || null}
@@ -213,7 +227,7 @@ function CreateProducts() {
                                 htmlFor="unit"
                                 className="block text-sm font-medium text-gray-700 mb-1"
                             >
-                                Unit
+                                Unit <span className="text-red-500">*</span>
                             </label>
                             <TypeableSelect
                                 options={units}
@@ -236,7 +250,7 @@ function CreateProducts() {
                                 htmlFor="product type"
                                 className="block text-sm font-medium text-gray-700 mb-1"
                             >
-                                Product Type
+                                Product Type <span className="text-red-500">*</span>
                             </label>
                             <TypeableSelect
                                 options={productType}
@@ -253,7 +267,6 @@ function CreateProducts() {
                                 allowCreate={true}
                             />
                         </div>
-
                     </div>
                     <span className="text-lg font-semibold my-4">Product Variations (Optional)</span>
 
