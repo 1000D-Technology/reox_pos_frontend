@@ -35,6 +35,33 @@ class Product{
         }
     }
 
+    static async getAllProducts(){
+        const query = `
+            SELECT 
+            p.id AS productID,
+            p.product_name AS productName,
+            p.product_code AS productCode,
+            pv.barcode AS barcode,
+            c.name AS category,
+            b.name AS brand,
+            u.name AS unit,
+            pt.name AS productType,
+            pv.color AS color,
+            pv.size AS size,
+            pv.storage_capacity AS storage,
+            DATE_FORMAT(p.created_at, '%Y-%m-%d') AS createdOn
+            FROM product p
+            JOIN product_variations pv ON p.id = pv.product_id
+            LEFT JOIN category c ON p.category_id = c.idcategory
+            LEFT JOIN brand b ON p.brand_id = b.idbrand
+            LEFT JOIN unit_id u ON p.unit_id = u.idunit_id
+            LEFT JOIN product_type pt ON p.product_type_id = pt.idproduct_type
+            ORDER BY p.created_at DESC
+        `;
+        const [rows] = await db.execute(query);
+        return rows;
+    }
+
 }
 
 module.exports = Product;

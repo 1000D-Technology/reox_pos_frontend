@@ -55,5 +55,7 @@ const validateProduct = require('../middleware/validateProduct');
  *         description: Server error
  */
 router.post('/create', validateProduct, productController.addProduct);
+router.get('/', productController.getProducts);
+router.get('/list', productController.getProducts);
 
 module.exports = router;

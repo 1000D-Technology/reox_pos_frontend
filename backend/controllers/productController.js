@@ -47,3 +47,19 @@ exports.addProduct = async(req , res) => {
         res.status(500).json({ success: false, message: "Database Error", error: error.message });
     }
 }
+
+exports.getProducts = async (req, res) => {
+    try {
+        const products = await Product.getAllProducts();
+        res.status(200).json({
+            success: true,
+            data: products
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: "Error fetching products",
+            error: error.message
+        });
+    }
+};

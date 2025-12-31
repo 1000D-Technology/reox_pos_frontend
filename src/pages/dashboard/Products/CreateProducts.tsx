@@ -1,6 +1,8 @@
 import {ChevronLeft, ChevronRight} from "lucide-react";
 import {useEffect, useState} from "react";
 import TypeableSelect from "../../../components/TypeableSelect.tsx";
+import axiosInstance from "../../../api/axiosInstance";
+import { commonService } from "../../../services/commonService";
 
 // Add this function before the CreateProducts component
 const generateBarcode = (): string => {
@@ -38,22 +40,13 @@ function CreateProducts() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [errorMessage, setErrorMessage] = useState("");
     const [successMessage, setSuccessMessage] = useState("");
-    const salesData = [
-        {
-            productID: "250929003",
-            productName: "Suger",
-            productCode: "TS425",
-            barcode: "742388563",
-            category: "Grocery",
-            brand: "Emerald",
-            unit: "Kg",
-            productType: "Sugar",
-            color: "Red",
-            size: "25000",
-            storage: "5",
-            createdOn: "2025.02.01",
-        },
-    ];
+    
+    // Pagination and product data state
+    const [salesData, setSalesData] = useState<any[]>([]);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage] = useState(10);
+    const [totalItems, setTotalItems] = useState(0);
+    const [isLoadingProducts, setIsLoadingProducts] = useState(false);
 
     type SelectOption = {
         value: string;
@@ -121,26 +114,20 @@ function CreateProducts() {
                 statusId: 1
             }));
 
-            const response = await fetch(`${API_BASE_URL}/api/products/create`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
+            const response = await axiosInstance.post('/api/products/create', {
+                productData: {
+                    name: productData.name,
+                    code: productData.code,
+                    barcode: mainBarcode,
+                    categoryId: parseInt(productData.categoryId) || 0,
+                    brandId: parseInt(productData.brandId) || 0,
+                    unitId: parseInt(productData.unitId) || 0,
+                    typeId: parseInt(productData.typeId) || 0
                 },
-                body: JSON.stringify({
-                    productData: {
-                        name: productData.name,
-                        code: productData.code,
-                        barcode: mainBarcode,
-                        categoryId: parseInt(productData.categoryId) || 0,
-                        brandId: parseInt(productData.brandId) || 0,
-                        unitId: parseInt(productData.unitId) || 0,
-                        typeId: parseInt(productData.typeId) || 0
-                    },
-                    variations: processedVariations
-                }),
+                variations: processedVariations
             });
 
-            const result = await response.json();
+            const result = response.data;
 
             if (result.success) {
                 setSuccessMessage(result.message || "Product created successfully!");
@@ -171,41 +158,36 @@ function CreateProducts() {
     useEffect(() => {
         const fetchDropdownData = async () => {
             try {
-                // Fetch categories
-                const categoriesRes = await fetch(`${API_BASE_URL}/api/common/categories`);
-                const categoriesData = await categoriesRes.json();
-                if (categoriesData.success) {
-                    setCategories(categoriesData.data.map((item: any) => ({
+                const [categoriesRes, brandsRes, unitsRes, productTypesRes] = await Promise.all([
+                    commonService.getCategories(),
+                    commonService.getBrands(),
+                    commonService.getUnits(),
+                    commonService.getProductTypes(),
+                ]);
+
+                if (categoriesRes.data.success) {
+                    setCategories(categoriesRes.data.data.map((item: any) => ({
                         value: String(item.id),
                         label: item.name
                     })));
                 }
 
-                // Fetch brands
-                const brandsRes = await fetch(`${API_BASE_URL}/api/common/brands`);
-                const brandsData = await brandsRes.json();
-                if (brandsData.success) {
-                    setBrands(brandsData.data.map((item: any) => ({
+                if (brandsRes.data.success) {
+                    setBrands(brandsRes.data.data.map((item: any) => ({
                         value: String(item.id),
                         label: item.name
                     })));
                 }
 
-                // Fetch units
-                const unitsRes = await fetch(`${API_BASE_URL}/api/common/units`);
-                const unitsData = await unitsRes.json();
-                if (unitsData.success) {
-                    setUnits(unitsData.data.map((item: any) => ({
+                if (unitsRes.data.success) {
+                    setUnits(unitsRes.data.data.map((item: any) => ({
                         value: String(item.id),
                         label: item.name
                     })));
                 }
 
-                // Fetch product types
-                const productTypesRes = await fetch(`${API_BASE_URL}/api/common/product-types`);
-                const productTypesData = await productTypesRes.json();
-                if (productTypesData.success) {
-                    setProductType(productTypesData.data.map((item: any) => ({
+                if (productTypesRes.data.success) {
+                    setProductType(productTypesRes.data.data.map((item: any) => ({
                         value: String(item.id),
                         label: item.name
                     })));
@@ -218,12 +200,94 @@ function CreateProducts() {
         fetchDropdownData();
     }, []);
 
+    // Fetch products data
+    useEffect(() => {
+        const fetchProducts = async () => {
+            setIsLoadingProducts(true);
+            try {
+                const response = await axiosInstance.get('/api/products');
+                const result = response.data;
+                
+                if (result.success) {
+                    setSalesData(result.data);
+                    setTotalItems(result.data.length);
+                }
+            } catch (error) {
+                console.error('Error fetching products:', error);
+            } finally {
+                setIsLoadingProducts(false);
+            }
+        };
+
+        fetchProducts();
+    }, []);
+
+    // Calculate pagination values
+    const totalPages = Math.ceil(totalItems / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const currentPageData = salesData.slice(startIndex, endIndex);
+
+    // Pagination handlers
+    const goToPage = (page: number) => {
+        if (page >= 1 && page <= totalPages) {
+            setCurrentPage(page);
+            setSelectedIndex(0); // Reset selection to first item
+        }
+    };
+
+    const goToPreviousPage = () => {
+        if (currentPage > 1) {
+            setCurrentPage(currentPage - 1);
+            setSelectedIndex(0);
+        }
+    };
+
+    const goToNextPage = () => {
+        if (currentPage < totalPages) {
+            setCurrentPage(currentPage + 1);
+            setSelectedIndex(0);
+        }
+    };
+
+    // Generate page numbers to display
+    const getPageNumbers = () => {
+        const pages = [];
+        const maxPagesToShow = 5;
+        
+        if (totalPages <= maxPagesToShow) {
+            for (let i = 1; i <= totalPages; i++) {
+                pages.push(i);
+            }
+        } else {
+            if (currentPage <= 3) {
+                for (let i = 1; i <= 4; i++) pages.push(i);
+                pages.push('...');
+                pages.push(totalPages);
+            } else if (currentPage >= totalPages - 2) {
+                pages.push(1);
+                pages.push('...');
+                for (let i = totalPages - 3; i <= totalPages; i++) pages.push(i);
+            } else {
+                pages.push(1);
+                pages.push('...');
+                pages.push(currentPage - 1);
+                pages.push(currentPage);
+                pages.push(currentPage + 1);
+                pages.push('...');
+                pages.push(totalPages);
+            }
+        }
+        
+        return pages;
+    };
+
     // 🔹 Handle Up / Down arrow keys and Shift+Enter
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === "ArrowDown") {
                 setSelectedIndex((prev) =>
-                    prev < salesData.length - 1 ? prev + 1 : prev
+                    prev < currentPageData.length - 1 ? prev + 1 : prev
                 );
             } else if (e.key === "ArrowUp") {
                 setSelectedIndex((prev) => (prev > 0 ? prev - 1 : prev));
@@ -237,7 +301,7 @@ function CreateProducts() {
 
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [salesData.length, isSubmitting]);
+    }, [currentPageData.length, isSubmitting]);
     return (
         <>
             <div className={"flex flex-col gap-4 h-full"}>
@@ -666,7 +730,19 @@ function CreateProducts() {
                             </thead>
 
                             <tbody className="bg-white divide-y divide-gray-200">
-                            {salesData.map((sale, index) => (
+                            {isLoadingProducts ? (
+                                <tr>
+                                    <td colSpan={12} className="px-6 py-8 text-center text-gray-500">
+                                        Loading products...
+                                    </td>
+                                </tr>
+                            ) : currentPageData.length === 0 ? (
+                                <tr>
+                                    <td colSpan={12} className="px-6 py-8 text-center text-gray-500">
+                                        No products found
+                                    </td>
+                                </tr>
+                            ) : currentPageData.map((sale, index) => (
                                 <tr
                                     key={index}
                                     onClick={() => setSelectedIndex(index)}
@@ -718,27 +794,47 @@ function CreateProducts() {
                         </table>
                     </div>
 
-                    <nav className="bg-white flex items-center justify-center sm:px-6">
+                    <nav className="bg-white flex items-center justify-between sm:px-6 py-3">
+                        <div className="text-sm text-gray-700">
+                            Showing <span className="font-medium">{currentPageData.length === 0 ? 0 : startIndex + 1}</span> to <span className="font-medium">{Math.min(endIndex, totalItems)}</span> of <span className="font-medium">{totalItems}</span> products
+                        </div>
                         <div className="flex items-center space-x-2">
                             <button
-                                className="flex items-center px-2 py-2 text-sm font-medium text-gray-500 hover:text-gray-700">
+                                onClick={goToPreviousPage}
+                                disabled={currentPage === 1}
+                                className={`flex items-center px-2 py-2 text-sm font-medium rounded-md ${
+                                    currentPage === 1 
+                                        ? 'text-gray-300 cursor-not-allowed' 
+                                        : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                                }`}>
                                 <ChevronLeft className="mr-2 h-5 w-5"/> Previous
                             </button>
+                            
+                            {getPageNumbers().map((page, idx) => (
+                                typeof page === 'number' ? (
+                                    <button
+                                        key={idx}
+                                        onClick={() => goToPage(page)}
+                                        className={`px-4 py-2 text-sm font-medium rounded-md ${
+                                            currentPage === page
+                                                ? 'border border-emerald-600 bg-emerald-50 text-emerald-600'
+                                                : 'border border-transparent text-gray-500 hover:bg-gray-100'
+                                        }`}>
+                                        {page}
+                                    </button>
+                                ) : (
+                                    <span key={idx} className="text-gray-500 px-2">...</span>
+                                )
+                            ))}
+                            
                             <button
-                                className="px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white">
-                                1
-                            </button>
-                            <button
-                                className="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-gray-500 hover:bg-gray-100">
-                                2
-                            </button>
-                            <button
-                                className="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-gray-500 hover:bg-gray-100">
-                                3
-                            </button>
-                            <span className="text-gray-500 px-2">...</span>
-                            <button
-                                className="flex items-center px-2 py-2 text-sm font-medium text-gray-500 hover:text-gray-700">
+                                onClick={goToNextPage}
+                                disabled={currentPage === totalPages}
+                                className={`flex items-center px-2 py-2 text-sm font-medium rounded-md ${
+                                    currentPage === totalPages 
+                                        ? 'text-gray-300 cursor-not-allowed' 
+                                        : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                                }`}>
                                 Next <ChevronRight className="ml-2 h-5 w-5"/>
                             </button>
                         </div>
