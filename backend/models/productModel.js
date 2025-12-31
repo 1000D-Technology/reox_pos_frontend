@@ -1,44 +1,62 @@
-const db = require('../config/db');
+const db = require("../config/db");
 
-class Product{
+class Product {
+  static async checkIdExists(tableName, idColumn, idValue) {
+    const [rows] = await db.execute(
+      `SELECT 1 FROM ${tableName} WHERE ${idColumn} = ? LIMIT 1`,
+      [idValue]
+    );
+    return rows.length > 0;
+  }
 
-    static async checkIdExists(tableName, idColumn, idValue) {
-        const [rows] = await db.execute(`SELECT 1 FROM ${tableName} WHERE ${idColumn} = ? LIMIT 1`, [idValue]);
-        return rows.length > 0;
-    }
+  static async create(productData, variations) {
+    const connection = await db.getConnection();
+    try {
+      await connection.beginTransaction();
 
-    static async create(productData, variations){
-        const connection = await db.getConnection();
-        try{
-            await connection.beginTransaction();
-            
-            const [prodductResult] = await connection.execute(`INSERT INTO product (product_name, product_code, category_id, brand_id, unit_id, product_type_id) 
+      const [prodductResult] = await connection.execute(
+        `INSERT INTO product (product_name, product_code, category_id, brand_id, unit_id, product_type_id) 
                  VALUES (?, ?, ?, ?, ?, ?)`,
-                [productData.name, productData.code, productData.categoryId, productData.brandId, productData.unitId, productData.typeId]);
+        [
+          productData.name,
+          productData.code,
+          productData.categoryId,
+          productData.brandId,
+          productData.unitId,
+          productData.typeId,
+        ]
+      );
 
-            const productId = prodductResult.insertId;
+      const productId = prodductResult.insertId;
 
-            for (let variant of variations) {
-                await connection.execute(
-                    `INSERT INTO product_variations (product_id, barcode, color, size, storage_capacity, product_status_id) 
+      for (let variant of variations) {
+        await connection.execute(
+          `INSERT INTO product_variations (product_id, barcode, color, size, storage_capacity, product_status_id) 
                      VALUES (?, ?, ?, ?, ?, ?)`,
-                    [productId, variant.barcode, variant.color, variant.size, variant.capacity, variant.statusId]
-                );
-            }
-            await connection.commit();
-            return productId;
-        }catch(error){
-            await connection.rollback();
-            throw error;
-        } finally {
-            connection.release();
-        }
+          [
+            productId,
+            variant.barcode,
+            variant.color,
+            variant.size,
+            variant.capacity,
+            variant.statusId,
+          ]
+        );
+      }
+      await connection.commit();
+      return productId;
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
     }
+  }
 
-    static async getAllProducts(){
-        const query = `
+  static async getAllProducts() {
+    const query = `
             SELECT 
-            p.id AS productID,
+            pv.id AS productID,
             p.product_name AS productName,
             p.product_code AS productCode,
             pv.barcode AS barcode,
@@ -56,12 +74,63 @@ class Product{
             LEFT JOIN brand b ON p.brand_id = b.idbrand
             LEFT JOIN unit_id u ON p.unit_id = u.idunit_id
             LEFT JOIN product_type pt ON p.product_type_id = pt.idproduct_type
-            ORDER BY p.created_at DESC
+            ORDER BY p.created_at DESC, pv.id DESC
         `;
-        const [rows] = await db.execute(query);
-        return rows;
-    }
+    const [rows] = await db.execute(query);
+    return rows;
+  }
 
+  static async updateProductVariation(pvID, productData, variationData) {
+    const connection = await db.getConnection();
+    try {
+      await connection.beginTransaction();
+      const [varRow] = await connection.execute(
+        "SELECT product_id FROM product_variations WHERE id = ?",
+        [pvID]
+      ); //id
+
+      if (varRow.length === 0) {
+        throw new Error("Product variation not found");
+      }
+      const productId = varRow[0].product_id;
+
+      await connection.execute(
+        `UPDATE product SET 
+                    product_name = ?, product_code = ?, category_id = ?, 
+                    brand_id = ?, unit_id = ?, product_type_id = ? 
+                 WHERE id = ?`,
+        [
+          productData.name,
+          productData.code,
+          productData.categoryId,
+          productData.brandId,
+          productData.unitId,
+          productData.typeId,
+          productId,
+        ]
+      );
+      await connection.execute(
+        `UPDATE product_variations SET 
+                    barcode = ?, color = ?, size = ?, storage_capacity = ?, product_status_id = ?
+                 WHERE id = ?`,
+        [
+          variationData.barcode,
+          variationData.color,
+          variationData.size,
+          variationData.storage,
+          variationData.statusId || 1,
+          pvID,
+        ]
+      );
+      await connection.commit();
+      return true;
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
+  }
 }
 
 module.exports = Product;

@@ -142,9 +142,14 @@ function CreateProducts() {
                     console.error("Validation errors:", result.errors);
                 }
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error creating product:', error);
-            setErrorMessage("An error occurred while creating the product. Please try again.");
+            // Display backend error message if available
+            if (error.response && error.response.data && error.response.data.message) {
+                setErrorMessage(error.response.data.message);
+            } else {
+                setErrorMessage("An error occurred while creating the product. Please try again.");
+            }
         } finally {
             setIsSubmitting(false);
         }
