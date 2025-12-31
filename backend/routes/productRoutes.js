@@ -59,4 +59,6 @@ router.get('/', productController.getProducts);
 
 router.put('/update/:pvId', validateUpdateMiddleware, productController.updateProduct);
 
+router.get('/search' , productController.searchProducts);
+
 module.exports = router;

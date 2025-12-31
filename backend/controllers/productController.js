@@ -55,3 +55,16 @@ exports.updateProduct = async (req, res) => {
         res.status(500).json({success: false, message: "Error updating product", error: error.message});
     }
 }
+
+exports.searchProducts = async (req, res) =>{
+    try{
+
+        const {productTypeId, searchTerm} = req.query;
+        const products = await Product.searchProducts({productTypeId, searchTerm});
+
+        res.status(200).json({success: true, data: products});
+
+    }catch(error){
+        res.status(500).json({success: false, message: "Error searching products", error: error.message});
+    }
+}

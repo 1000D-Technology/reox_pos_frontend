@@ -53,6 +53,7 @@ function ProductList() {
         label: string;
     };
     const [selected, setSelected] = useState<SelectOption | null>(null);
+    const [searchTerm, setSearchTerm] = useState("");
 
     const color = [
         {value: "red", label: "Red"},
@@ -110,24 +111,61 @@ function ProductList() {
     }, []);
 
     // Fetch products data
-    useEffect(() => {
-        const fetchProducts = async () => {
-            setIsLoadingProducts(true);
-            try {
-                const response = await axiosInstance.get('/api/products');
-                const result = response.data;
-                
-                if (result.success) {
-                    setSalesData(result.data);
-                    setTotalItems(result.data.length);
-                }
-            } catch (error) {
-                console.error('Error fetching products:', error);
-            } finally {
-                setIsLoadingProducts(false);
+    const fetchProducts = async () => {
+        setIsLoadingProducts(true);
+        try {
+            const response = await axiosInstance.get('/api/products');
+            const result = response.data;
+            
+            if (result.success) {
+                setSalesData(result.data);
+                setTotalItems(result.data.length);
+                setCurrentPage(1);
+                setSelectedIndex(0);
             }
-        };
+        } catch (error) {
+            console.error('Error fetching products:', error);
+        } finally {
+            setIsLoadingProducts(false);
+        }
+    };
 
+    // Search products
+    const handleSearch = async () => {
+        setIsLoadingProducts(true);
+        try {
+            const params: any = {};
+            if (selected?.value) {
+                params.productTypeId = selected.value;
+            }
+            if (searchTerm.trim()) {
+                params.searchTerm = searchTerm.trim();
+            }
+
+            const response = await axiosInstance.get('/api/products/search', { params });
+            const result = response.data;
+            
+            if (result.success) {
+                setSalesData(result.data);
+                setTotalItems(result.data.length);
+                setCurrentPage(1);
+                setSelectedIndex(0);
+            }
+        } catch (error) {
+            console.error('Error searching products:', error);
+        } finally {
+            setIsLoadingProducts(false);
+        }
+    };
+
+    // Clear filters and fetch all products
+    const handleClear = () => {
+        setSelected(null);
+        setSearchTerm("");
+        fetchProducts();
+    };
+
+    useEffect(() => {
         fetchProducts();
     }, []);
 
@@ -545,8 +583,6 @@ function ProductList() {
                 <div className={'bg-white rounded-md p-4 flex flex-col'}>
 
                     <div className={'grid md:grid-cols-5 gap-4 '}>
-
-
                         <div>
                             <label htmlFor="supplier"
                                    className="block text-sm font-medium text-gray-700 mb-1">Product Type</label>
@@ -562,16 +598,26 @@ function ProductList() {
                         <div>
                             <label htmlFor="product"
                                    className="block text-sm font-medium text-gray-700 mb-1">Product ID / Name</label>
-                            <input type="text" id="product" placeholder="Enter Invoice Number..."
-                                   className="w-full text-sm rounded-md py-2 px-2  border-2 border-gray-100 "/>
+                            <input 
+                                type="text" 
+                                id="product" 
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                                placeholder="Enter Product ID, Name, Code or Barcode..."
+                                className="w-full text-sm rounded-md py-2 px-2  border-2 border-gray-100 "/>
 
                         </div>
                         <div className={'grid grid-cols-2 md:items-end items-start gap-2 text-white font-medium'}>
-                            <button className={'bg-emerald-600 py-2 rounded-md flex items-center justify-center'}>
+                            <button 
+                                onClick={handleSearch}
+                                className={'bg-emerald-600 py-2 rounded-md flex items-center justify-center hover:bg-emerald-700 cursor-pointer'}>
                                 <SearchCheck className="mr-2" size={14}/>Search
                             </button>
-                            <button className={'bg-gray-500 py-2 rounded-md flex items-center justify-center'}><RefreshCw
-                                className="mr-2" size={14}/>Clear
+                            <button 
+                                onClick={handleClear}
+                                className={'bg-gray-500 py-2 rounded-md flex items-center justify-center hover:bg-gray-600 cursor-pointer'}>
+                                <RefreshCw className="mr-2" size={14}/>Clear
                             </button>
                         </div>
                     </div>
