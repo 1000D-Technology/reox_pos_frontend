@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const productController = require('../controllers/productController');
-const validateProduct = require('../middleware/validateProduct');
+const { validateProduct, validateUpdateMiddleware} = require('../middleware/productValidator');
 
 /**
  * @swagger
@@ -55,5 +55,8 @@ const validateProduct = require('../middleware/validateProduct');
  *         description: Server error
  */
 router.post('/create', validateProduct, productController.addProduct);
+router.get('/', productController.getProducts);
+
+router.put('/update/:pvId', validateUpdateMiddleware, productController.updateProduct);
 
 module.exports = router;
