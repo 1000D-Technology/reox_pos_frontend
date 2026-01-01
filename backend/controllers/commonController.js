@@ -1,4 +1,5 @@
 const db = require('../config/db');
+const Product = require('../models/productModel');
 
 exports.searchCategories = async (req, res) => {
     try {
@@ -45,5 +46,38 @@ exports.searchProductTypes = async (req, res) => {
         res.json({ success: true, data: rows });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+exports.addUnit = async (req, res) => {
+    try {
+        const { name } = req.body;
+
+        if (!name) {
+            return res.status(400).json({
+                success: false,
+                message: "Unit name is required"
+            });
+        }
+
+        const unitId = await Product.createUnit(name);
+
+        res.status(201).json({
+            success: true,
+            message: "Unit added successfully!",
+            data: { id: unitId, name: name }
+        });
+    } catch (error) {
+        if (error.code === 'ER_DUP_ENTRY') {
+            return res.status(400).json({
+                success: false,
+                message: "This unit already exists!"
+            });
+        }
+        res.status(500).json({
+            success: false,
+            message: "Internal Server Error",
+            error: error.message
+        });
     }
 };

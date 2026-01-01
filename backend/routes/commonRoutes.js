@@ -7,4 +7,8 @@ router.get('/brands', commonController.searchBrands);
 router.get('/units', commonController.getUnits);
 router.get('/product-types', commonController.searchProductTypes);
 
+
+//add unit
+router.post('/units', commonController.addUnit);
+
 module.exports = router;

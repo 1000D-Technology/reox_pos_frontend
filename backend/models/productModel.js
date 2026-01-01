@@ -185,7 +185,11 @@ class Product {
     return result;
   }
 
-
+  static async createUnit(unitName) {
+    const query = `INSERT INTO unit_id (name) VALUES (?)`;
+    const [result] = await db.execute(query, [unitName]);
+    return result.insertId;
+  }
 
 }
 

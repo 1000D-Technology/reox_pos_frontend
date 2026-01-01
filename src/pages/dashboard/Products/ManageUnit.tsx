@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 
 import { useEffect, useState } from 'react';
+import axiosInstance from '../../../api/axiosInstance';
 
 
 interface Unit {
@@ -16,6 +17,8 @@ interface Unit {
 }
 
 function ManageUnit() {
+    const [newUnitName, setNewUnitName] = useState('');
+    const [isSaving, setIsSaving] = useState(false);
 
     const salesData: Unit[] = [
         {
@@ -71,6 +74,35 @@ function ManageUnit() {
         setSelectedUnit(null);
     };
 
+    const handleSaveUnit = async () => {
+        if (!newUnitName.trim()) {
+            alert('Please enter a unit name');
+            return;
+        }
+
+        setIsSaving(true);
+        try {
+            const response = await axiosInstance.post('/api/common/units', {
+                name: newUnitName.trim()
+            });
+
+            const result = response.data;
+
+            if (result.success) {
+                alert(result.message || 'Unit added successfully!');
+                setNewUnitName('');
+                // TODO: Refresh units list here
+            } else {
+                alert(result.message || 'Failed to add unit');
+            }
+        } catch (error: any) {
+            console.error('Error adding unit:', error);
+            const errorMsg = error.response?.data?.message || 'An error occurred while adding the unit. Please try again.';
+            alert(errorMsg);
+        } finally {
+            setIsSaving(false);
+        }
+    };
 
     return (
         <div className={'flex flex-col gap-4 h-full'}>
@@ -98,12 +130,22 @@ function ManageUnit() {
                     <div>
                         <label htmlFor="new-unit"
                                className="block text-sm font-medium text-gray-700 mb-1">Unit Name</label>
-                        <input type="text" id="new-unit" placeholder="Enter New Unit Name"
-                               className="w-full text-sm rounded-md py-2 px-2 border-2 border-gray-100 focus:border-emerald-500 focus:ring-emerald-500" />
+                        <input 
+                            type="text" 
+                            id="new-unit" 
+                            placeholder="Enter New Unit Name"
+                            value={newUnitName}
+                            onChange={(e) => setNewUnitName(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && handleSaveUnit()}
+                            disabled={isSaving}
+                            className="w-full text-sm rounded-md py-2 px-2 border-2 border-gray-100 focus:border-emerald-500 focus:ring-emerald-500" />
                     </div>
                     <div className={'grid  md:items-end items-start gap-2 text-white font-medium'}>
-                        <button className={'bg-emerald-600 py-2 rounded-md flex items-center justify-center hover:bg-emerald-700'}>
-                            Save Unit
+                        <button 
+                            onClick={handleSaveUnit}
+                            disabled={isSaving}
+                            className={'bg-emerald-600 py-2 rounded-md flex items-center justify-center hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed'}>
+                            {isSaving ? 'Saving...' : 'Save Unit'}
                         </button>
                     </div>
                 </div>
