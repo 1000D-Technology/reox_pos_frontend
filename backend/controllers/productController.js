@@ -68,3 +68,24 @@ exports.searchProducts = async (req, res) =>{
         res.status(500).json({success: false, message: "Error searching products", error: error.message});
     }
 }
+
+exports.deactivateProduct = async (req, res) => {
+    try{
+        const {pvId} = req.params;
+        const {statusId} = req.body; // status id expected 1= Active, 2= Inactive
+
+        const result = await Product.updateProductStatus(pvId, statusId);
+        if (result.affectedRows === 0) {
+            return res.status(404).json({
+                success: false,
+                message: "Product variation not found"
+            });
+        }
+        res.status(200).json({
+            success: true,
+            message: statusId == 1 ? "Product activated!" : "Product deactivated!"
+        });
+    }catch(error){
+        res.status(500).json({success: false, message: "Error updating product status", error: error.message});
+    }
+}

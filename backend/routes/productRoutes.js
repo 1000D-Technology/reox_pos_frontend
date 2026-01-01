@@ -58,6 +58,7 @@ router.post('/create', validateProduct, productController.addProduct);
 router.get('/', productController.getProducts);
 
 router.put('/update/:pvId', validateUpdateMiddleware, productController.updateProduct);
+router.patch('/status/:pvId', productController.deactivateProduct);
 
 router.get('/search' , productController.searchProducts);
 

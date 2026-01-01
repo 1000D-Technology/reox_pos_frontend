@@ -74,6 +74,7 @@ class Product {
             LEFT JOIN brand b ON p.brand_id = b.idbrand
             LEFT JOIN unit_id u ON p.unit_id = u.idunit_id
             LEFT JOIN product_type pt ON p.product_type_id = pt.idproduct_type
+            WHERE pv.product_status_id = 1
             ORDER BY p.created_at DESC, pv.id DESC
         `;
     const [rows] = await db.execute(query);
@@ -154,7 +155,7 @@ class Product {
         LEFT JOIN brand b ON p.brand_id = b.idbrand
         LEFT JOIN unit_id u ON p.unit_id = u.idunit_id
         LEFT JOIN product_type pt ON p.product_type_id = pt.idproduct_type
-        WHERE 1=1
+        WHERE pv.product_status_id = 1
     `;
 
     const params = [];
@@ -176,7 +177,16 @@ class Product {
     const [rows] = await db.execute(query, params);
     return rows;
 
-}
+  }
+
+  static async updateProductStatus(pvId, statusId) {
+    const query = `UPDATE product_variations SET product_status_id = ? WHERE id = ?`;
+    const [result] = await db.execute(query, [statusId, pvId]);
+    return result;
+  }
+
+
+
 }
 
 module.exports = Product;

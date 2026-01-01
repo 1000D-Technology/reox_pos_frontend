@@ -306,6 +306,43 @@ function ProductList() {
         }
     };
 
+    // Handle product deactivate/delete
+    const handleDeactivateProduct = async (product: any, e: React.MouseEvent) => {
+        e.stopPropagation();
+        
+        const confirmDeactivate = window.confirm(
+            `Are you sure you want to deactivate "${product.productName}"?`
+        );
+        
+        if (!confirmDeactivate) return;
+
+        try {
+            const response = await axiosInstance.patch(
+                `/api/products/status/${product.productID}`,
+                { statusId: 2 } // 2 = Inactive
+            );
+
+            const result = response.data;
+
+            if (result.success) {
+                alert(result.message || "Product deactivated successfully!");
+                
+                // Refresh products list
+                const productsResponse = await axiosInstance.get('/api/products');
+                if (productsResponse.data.success) {
+                    setSalesData(productsResponse.data.data);
+                    setTotalItems(productsResponse.data.data.length);
+                }
+            } else {
+                alert(result.message || "Failed to deactivate product");
+            }
+        } catch (error: any) {
+            console.error('Error deactivating product:', error);
+            const errorMsg = error.response?.data?.message || "An error occurred while deactivating the product. Please try again.";
+            alert(errorMsg);
+        }
+    };
+
     const EditProductModal = () => {
         if (!isEditModalOpen || !selectedProduct) return null;
 
@@ -745,6 +782,7 @@ function ProductList() {
                                         </div>
                                         <div className="relative group">
                                             <button
+                                                onClick={(e) => handleDeactivateProduct(sale, e)}
                                                 className="p-2 bg-red-100 rounded-full text-red-700 hover:bg-red-200 transition-colors cursor-pointer">
                                                 <Trash size={15}/>
                                             </button>
