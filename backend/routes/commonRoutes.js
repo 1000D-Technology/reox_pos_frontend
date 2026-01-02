@@ -20,4 +20,10 @@ router.get('/categories', commonController.getCategories);
 router.put('/categories/:id', commonController.updateCategory);
 router.delete('/categories/:id', commonController.deleteCategory);
 
+//add brand
+router.post('/brands', commonController.addBrand);
+router.get('/brands', commonController.getBrands);
+router.put('/brands/:id', commonController.updateBrand);
+router.delete('/brands/:id', commonController.deleteBrand);
+
 module.exports = router;
