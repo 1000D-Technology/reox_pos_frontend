@@ -2,11 +2,11 @@ const express = require('express');
 const router = express.Router();
 const commonController = require('../controllers/commonController');
 
-router.get('/categories', commonController.searchCategories);
-router.get('/brands', commonController.searchBrands);
-router.get('/units', commonController.getUnits);
-router.get('/product-types', commonController.searchProductTypes);
-
+// Search endpoints (with query and limit)
+router.get('/categories/search', commonController.searchCategories);
+router.get('/brands/search', commonController.searchBrands);
+router.get('/units/search', commonController.getUnits);
+router.get('/product-types/search', commonController.searchProductTypes);
 
 //add unit
 router.post('/units', commonController.addUnit);
