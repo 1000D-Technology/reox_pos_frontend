@@ -191,6 +191,62 @@ class Product {
     return result.insertId;
   }
 
+  static async getAllUnits() {
+    const query = `SELECT idunit_id AS id, name, created_at FROM unit_id ORDER BY name ASC`;
+    const [rows] = await db.execute(query);
+    return rows;
+  }
+
+  static async updateUnit(id, name) {
+    const query = `UPDATE unit_id SET name = ? WHERE idunit_id = ?`;
+    const [result] = await db.execute(query, [name, id]);
+    return result;
+  }
+
+  static async deleteUnit(id) {
+    const checkQuery = `SELECT 1 FROM product WHERE unit_id = ? LIMIT 1`;
+    const [rows] = await db.execute(checkQuery, [id]);
+
+    if (rows.length > 0) {
+      throw new Error("CANNOT_DELETE_USED_UNIT");
+    }
+
+    const deleteQuery = `DELETE FROM unit_id WHERE idunit_id = ?`;
+    return await db.execute(deleteQuery, [id]);
+  }
+
+
+  static async createCategory(categoryName) {
+    const query = `INSERT INTO category (name) VALUES (?)`;
+    const [result] = await db.execute(query, [categoryName]);
+    return result.insertId;
+  }
+
+  static async getAllCategory() {
+    const query = `SELECT idcategory AS id, name, DATE_FORMAT(created_at, '%Y-%m-%d') AS created_at FROM category ORDER BY name ASC`;
+    const [rows] = await db.execute(query);
+    return rows;
+  }
+
+  static async updateCategory(id, name) {
+    const query = `UPDATE category SET name = ? WHERE idcategory = ?`;
+    const [result] = await db.execute(query, [name, id]);
+    return result;
+  }
+
+  static async deleteCategory(id) {
+    const checkQuery = `SELECT 1 FROM product WHERE category_id = ? LIMIT 1`;
+    const [rows] = await db.execute(checkQuery, [id]);
+
+    if (rows.length > 0) {
+      throw new Error("CANNOT_DELETE_USED_CATEGORY");
+    }
+
+    const deleteQuery = `DELETE FROM category WHERE idcategory = ?`;
+    return await db.execute(deleteQuery, [id]);
+  }
+
+
 }
 
 module.exports = Product;

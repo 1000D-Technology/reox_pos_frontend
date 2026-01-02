@@ -11,6 +11,7 @@ import {useEffect, useState} from "react";
 import TypeableSelect from "../../../components/TypeableSelect.tsx";
 import axiosInstance from "../../../api/axiosInstance";
 import { commonService } from "../../../services/commonService";
+import ConfirmationModal from "../../../components/modals/ConfirmationModal";
 
 function ProductList() {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -46,6 +47,11 @@ function ProductList() {
     const [isUpdating, setIsUpdating] = useState(false);
     const [updateErrorMessage, setUpdateErrorMessage] = useState("");
     const [updateSuccessMessage, setUpdateSuccessMessage] = useState("");
+
+    // Confirmation modal state
+    const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+    const [productToDeactivate, setProductToDeactivate] = useState<any | null>(null);
+    const [isDeactivating, setIsDeactivating] = useState(false);
 
 
     type SelectOption = {
@@ -307,18 +313,21 @@ function ProductList() {
     };
 
     // Handle product deactivate/delete
-    const handleDeactivateProduct = async (product: any, e: React.MouseEvent) => {
+    const handleDeactivateProduct = (product: any, e: React.MouseEvent) => {
         e.stopPropagation();
+        setProductToDeactivate(product);
+        setIsConfirmModalOpen(true);
+    };
+
+    // Confirm product deactivation
+    const confirmDeactivateProduct = async () => {
+        if (!productToDeactivate) return;
         
-        const confirmDeactivate = window.confirm(
-            `Are you sure you want to deactivate "${product.productName}"?`
-        );
-        
-        if (!confirmDeactivate) return;
+        setIsDeactivating(true);
 
         try {
             const response = await axiosInstance.patch(
-                `/api/products/status/${product.productID}`,
+                `/api/products/status/${productToDeactivate.productID}`,
                 { statusId: 2 } // 2 = Inactive
             );
 
@@ -340,7 +349,17 @@ function ProductList() {
             console.error('Error deactivating product:', error);
             const errorMsg = error.response?.data?.message || "An error occurred while deactivating the product. Please try again.";
             alert(errorMsg);
+        } finally {
+            setIsDeactivating(false);
+            setIsConfirmModalOpen(false);
+            setProductToDeactivate(null);
         }
+    };
+
+    // Cancel product deactivation
+    const cancelDeactivateProduct = () => {
+        setIsConfirmModalOpen(false);
+        setProductToDeactivate(null);
     };
 
     const EditProductModal = () => {
@@ -607,6 +626,20 @@ function ProductList() {
         <>
             <div className={'flex flex-col gap-4 h-full'}>
                 <EditProductModal />
+                
+                <ConfirmationModal
+                    isOpen={isConfirmModalOpen}
+                    title="Deactivate Product"
+                    message="Are you sure you want to deactivate this {itemType}"
+                    itemName={productToDeactivate?.productName || ""}
+                    itemType="product"
+                    onConfirm={confirmDeactivateProduct}
+                    onCancel={cancelDeactivateProduct}
+                    isLoading={isDeactivating}
+                    confirmButtonText="Deactivate"
+                    loadingText="Deactivating..."
+                    isDanger={true}
+                />
 
                 <div>
                     <div className="text-sm text-gray-500 flex items-center">
