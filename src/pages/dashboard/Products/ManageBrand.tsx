@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 
 import { useEffect, useState } from 'react';
+import toast, { Toaster } from 'react-hot-toast';
 import axiosInstance from '../../../api/axiosInstance';
 import ConfirmationModal from '../../../components/modals/ConfirmationModal';
 
@@ -85,11 +86,11 @@ function ManageBrand() {
             if (response.data.success) {
                 setBrands(response.data.data);
             } else {
-                alert('Failed to fetch brands');
+                toast.error('Failed to fetch brands');
             }
         } catch (error: any) {
             console.error('Error fetching brands:', error);
-            alert('Error loading brands. Please try again.');
+            toast.error('Error loading brands. Please try again.');
         } finally {
             setIsLoading(false);
             setIsSearching(false);
@@ -140,32 +141,34 @@ function ManageBrand() {
 
     const handleSaveBrand = async () => {
         if (!newBrandName.trim()) {
-            alert('Please enter a brand name');
+            toast.error('Please enter a brand name');
             return;
         }
 
         setIsSaving(true);
+        
+        const createBrandPromise = axiosInstance.post('/api/common/brands', {
+            name: newBrandName.trim()
+        });
+
         try {
-            const response = await axiosInstance.post('/api/common/brands', {
-                name: newBrandName.trim()
-            });
-
-            const result = response.data;
-
-            if (result.success) {
-                alert(result.message || 'Brand added successfully!');
-                setNewBrandName('');
-                // Refresh brands list with current search
-                await fetchBrands(searchTerm);
-                // Reset to first page to see the new brand
-                setCurrentPage(1);
-            } else {
-                alert(result.message || 'Failed to add brand');
-            }
+            await toast.promise(
+                createBrandPromise,
+                {
+                    loading: 'Adding brand...',
+                    success: (res) => {
+                        setNewBrandName('');
+                        fetchBrands(searchTerm);
+                        setCurrentPage(1);
+                        return res.data.message || 'Brand added successfully!';
+                    },
+                    error: (err) => {
+                        return err.response?.data?.message || 'Failed to add brand';
+                    }
+                }
+            );
         } catch (error: any) {
             console.error('Error adding brand:', error);
-            const errorMsg = error.response?.data?.message || 'An error occurred while adding the brand. Please try again.';
-            alert(errorMsg);
         } finally {
             setIsSaving(false);
         }
@@ -173,35 +176,38 @@ function ManageBrand() {
 
     const handleUpdateBrand = async () => {
         if (!updateBrandName.trim()) {
-            alert('Please enter a brand name');
+            toast.error('Please enter a brand name');
             return;
         }
 
         if (!selectedBrand) {
-            alert('No brand selected');
+            toast.error('No brand selected');
             return;
         }
 
         setIsUpdating(true);
+        
+        const updateBrandPromise = axiosInstance.put(`/api/common/brands/${selectedBrand.id}`, {
+            name: updateBrandName.trim()
+        });
+
         try {
-            const response = await axiosInstance.put(`/api/common/brands/${selectedBrand.id}`, {
-                name: updateBrandName.trim()
-            });
-
-            const result = response.data;
-
-            if (result.success) {
-                alert(result.message || 'Brand updated successfully!');
-                handleCloseModal();
-                // Refresh brands list with current search
-                await fetchBrands(searchTerm);
-            } else {
-                alert(result.message || 'Failed to update brand');
-            }
+            await toast.promise(
+                updateBrandPromise,
+                {
+                    loading: 'Updating brand...',
+                    success: (res) => {
+                        handleCloseModal();
+                        fetchBrands(searchTerm);
+                        return res.data.message || 'Brand updated successfully!';
+                    },
+                    error: (err) => {
+                        return err.response?.data?.message || 'Failed to update brand';
+                    }
+                }
+            );
         } catch (error: any) {
             console.error('Error updating brand:', error);
-            const errorMsg = error.response?.data?.message || 'An error occurred while updating the brand. Please try again.';
-            alert(errorMsg);
         } finally {
             setIsUpdating(false);
         }
@@ -219,28 +225,29 @@ function ManageBrand() {
         if (!brandToDelete) return;
         
         setIsDeleting(true);
-        try {
-            const response = await axiosInstance.delete(`/api/common/brands/${brandToDelete.id}`);
-            const result = response.data;
+        
+        const deleteBrandPromise = axiosInstance.delete(`/api/common/brands/${brandToDelete.id}`);
 
-            if (result.success) {
-                alert(result.message || 'Brand deleted successfully!');
-                
-                // Refresh brands list with current search
-                await fetchBrands(searchTerm);
-                
-                // Adjust current page if necessary
-                const newTotalPages = Math.ceil((brands.length - 1) / itemsPerPage);
-                if (currentPage > newTotalPages && newTotalPages > 0) {
-                    setCurrentPage(newTotalPages);
+        try {
+            await toast.promise(
+                deleteBrandPromise,
+                {
+                    loading: 'Deleting brand...',
+                    success: (res) => {
+                        fetchBrands(searchTerm);
+                        const newTotalPages = Math.ceil((brands.length - 1) / itemsPerPage);
+                        if (currentPage > newTotalPages && newTotalPages > 0) {
+                            setCurrentPage(newTotalPages);
+                        }
+                        return res.data.message || 'Brand deleted successfully!';
+                    },
+                    error: (err) => {
+                        return err.response?.data?.message || 'Failed to delete brand';
+                    }
                 }
-            } else {
-                alert(result.message || 'Failed to delete brand');
-            }
+            );
         } catch (error: any) {
             console.error('Error deleting brand:', error);
-            const errorMsg = error.response?.data?.message || 'An error occurred while deleting the brand. Please try again.';
-            alert(errorMsg);
         } finally {
             setIsDeleting(false);
             setIsConfirmModalOpen(false);
@@ -256,7 +263,30 @@ function ManageBrand() {
 
 
     return (
-        <div className={'flex flex-col gap-4 h-full'}>
+        <>
+            <Toaster
+                position="top-right"
+                toastOptions={{
+                    duration: 4000,
+                    style: {
+                        background: '#363636',
+                        color: '#fff',
+                    },
+                    success: {
+                        duration: 3000,
+                        style: {
+                            background: '#10B981',
+                        },
+                    },
+                    error: {
+                        duration: 4000,
+                        style: {
+                            background: '#EF4444',
+                        },
+                    },
+                }}
+            />
+            <div className={'flex flex-col gap-4 h-full'}>
             <ConfirmationModal
                 isOpen={isConfirmModalOpen}
                 title="Delete Brand"
@@ -485,7 +515,8 @@ function ManageBrand() {
                     </div>
                 </div>
             )}
-        </div>
+            </div>
+        </>
     );
 }
 

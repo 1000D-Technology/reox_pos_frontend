@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 
 import { useEffect, useState } from 'react';
+import toast, { Toaster } from 'react-hot-toast';
 import axiosInstance from '../../../api/axiosInstance';
 import ConfirmationModal from '../../../components/modals/ConfirmationModal';
 
@@ -85,11 +86,11 @@ function ManageCategory() {
             if (response.data.success) {
                 setCategories(response.data.data);
             } else {
-                alert('Failed to fetch categories');
+                toast.error('Failed to fetch categories');
             }
         } catch (error: any) {
             console.error('Error fetching categories:', error);
-            alert('Error loading categories. Please try again.');
+            toast.error('Error loading categories. Please try again.');
         } finally {
             setIsLoading(false);
             setIsSearching(false);
@@ -143,32 +144,34 @@ function ManageCategory() {
 
     const handleSaveCategory = async () => {
         if (!newCategoryName.trim()) {
-            alert('Please enter a category name');
+            toast.error('Please enter a category name');
             return;
         }
 
         setIsSaving(true);
+        
+        const createCategoryPromise = axiosInstance.post('/api/common/categories', {
+            name: newCategoryName.trim()
+        });
+
         try {
-            const response = await axiosInstance.post('/api/common/categories', {
-                name: newCategoryName.trim()
-            });
-
-            const result = response.data;
-
-            if (result.success) {
-                alert(result.message || 'Category added successfully!');
-                setNewCategoryName('');
-                // Refresh categories list with current search
-                await fetchCategories(searchTerm);
-                // Reset to first page to see the new category
-                setCurrentPage(1);
-            } else {
-                alert(result.message || 'Failed to add category');
-            }
+            await toast.promise(
+                createCategoryPromise,
+                {
+                    loading: 'Adding category...',
+                    success: (res) => {
+                        setNewCategoryName('');
+                        fetchCategories(searchTerm);
+                        setCurrentPage(1);
+                        return res.data.message || 'Category added successfully!';
+                    },
+                    error: (err) => {
+                        return err.response?.data?.message || 'Failed to add category';
+                    }
+                }
+            );
         } catch (error: any) {
             console.error('Error adding category:', error);
-            const errorMsg = error.response?.data?.message || 'An error occurred while adding the category. Please try again.';
-            alert(errorMsg);
         } finally {
             setIsSaving(false);
         }
@@ -176,35 +179,38 @@ function ManageCategory() {
 
     const handleUpdateCategory = async () => {
         if (!updateCategoryName.trim()) {
-            alert('Please enter a category name');
+            toast.error('Please enter a category name');
             return;
         }
 
         if (!selectedCategory) {
-            alert('No category selected');
+            toast.error('No category selected');
             return;
         }
 
         setIsUpdating(true);
+        
+        const updateCategoryPromise = axiosInstance.put(`/api/common/categories/${selectedCategory.id}`, {
+            name: updateCategoryName.trim()
+        });
+
         try {
-            const response = await axiosInstance.put(`/api/common/categories/${selectedCategory.id}`, {
-                name: updateCategoryName.trim()
-            });
-
-            const result = response.data;
-
-            if (result.success) {
-                alert(result.message || 'Category updated successfully!');
-                handleCloseModal();
-                // Refresh categories list with current search
-                await fetchCategories(searchTerm);
-            } else {
-                alert(result.message || 'Failed to update category');
-            }
+            await toast.promise(
+                updateCategoryPromise,
+                {
+                    loading: 'Updating category...',
+                    success: (res) => {
+                        handleCloseModal();
+                        fetchCategories(searchTerm);
+                        return res.data.message || 'Category updated successfully!';
+                    },
+                    error: (err) => {
+                        return err.response?.data?.message || 'Failed to update category';
+                    }
+                }
+            );
         } catch (error: any) {
             console.error('Error updating category:', error);
-            const errorMsg = error.response?.data?.message || 'An error occurred while updating the category. Please try again.';
-            alert(errorMsg);
         } finally {
             setIsUpdating(false);
         }
@@ -222,28 +228,29 @@ function ManageCategory() {
         if (!categoryToDelete) return;
         
         setIsDeleting(true);
-        try {
-            const response = await axiosInstance.delete(`/api/common/categories/${categoryToDelete.id}`);
-            const result = response.data;
+        
+        const deleteCategoryPromise = axiosInstance.delete(`/api/common/categories/${categoryToDelete.id}`);
 
-            if (result.success) {
-                alert(result.message || 'Category deleted successfully!');
-                
-                // Refresh categories list with current search
-                await fetchCategories(searchTerm);
-                
-                // Adjust current page if necessary
-                const newTotalPages = Math.ceil((categories.length - 1) / itemsPerPage);
-                if (currentPage > newTotalPages && newTotalPages > 0) {
-                    setCurrentPage(newTotalPages);
+        try {
+            await toast.promise(
+                deleteCategoryPromise,
+                {
+                    loading: 'Deleting category...',
+                    success: (res) => {
+                        fetchCategories(searchTerm);
+                        const newTotalPages = Math.ceil((categories.length - 1) / itemsPerPage);
+                        if (currentPage > newTotalPages && newTotalPages > 0) {
+                            setCurrentPage(newTotalPages);
+                        }
+                        return res.data.message || 'Category deleted successfully!';
+                    },
+                    error: (err) => {
+                        return err.response?.data?.message || 'Failed to delete category';
+                    }
                 }
-            } else {
-                alert(result.message || 'Failed to delete category');
-            }
+            );
         } catch (error: any) {
             console.error('Error deleting category:', error);
-            const errorMsg = error.response?.data?.message || 'An error occurred while deleting the category. Please try again.';
-            alert(errorMsg);
         } finally {
             setIsDeleting(false);
             setIsConfirmModalOpen(false);
@@ -259,7 +266,30 @@ function ManageCategory() {
 
 
     return (
-        <div className={'flex flex-col gap-4 h-full'}>
+        <>
+            <Toaster
+                position="top-right"
+                toastOptions={{
+                    duration: 4000,
+                    style: {
+                        background: '#363636',
+                        color: '#fff',
+                    },
+                    success: {
+                        duration: 3000,
+                        style: {
+                            background: '#10B981',
+                        },
+                    },
+                    error: {
+                        duration: 4000,
+                        style: {
+                            background: '#EF4444',
+                        },
+                    },
+                }}
+            />
+            <div className={'flex flex-col gap-4 h-full'}>
             <ConfirmationModal
                 isOpen={isConfirmModalOpen}
                 title="Delete Category"
@@ -488,7 +518,8 @@ function ManageCategory() {
                     </div>
                 </div>
             )}
-        </div>
+            </div>
+        </>
     );
 }
 

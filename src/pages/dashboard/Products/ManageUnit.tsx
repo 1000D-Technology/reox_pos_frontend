@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 
 import { useEffect, useState } from 'react';
+import toast, { Toaster } from 'react-hot-toast';
 import axiosInstance from '../../../api/axiosInstance';
 import ConfirmationModal from '../../../components/modals/ConfirmationModal';
 
@@ -82,11 +83,11 @@ function ManageUnit() {
             if (response.data.success) {
                 setUnits(response.data.data);
             } else {
-                alert('Failed to fetch units');
+                toast.error('Failed to fetch units');
             }
         } catch (error: any) {
             console.error('Error fetching units:', error);
-            alert('Error loading units. Please try again.');
+            toast.error('Error loading units. Please try again.');
         } finally {
             setIsLoading(false);
             setIsSearching(false);
@@ -140,32 +141,36 @@ function ManageUnit() {
 
     const handleSaveUnit = async () => {
         if (!newUnitName.trim()) {
-            alert('Please enter a unit name');
+            toast.error('Please enter a unit name');
             return;
         }
 
         setIsSaving(true);
+        
+        const createUnitPromise = axiosInstance.post('/api/common/units', {
+            name: newUnitName.trim()
+        });
+
         try {
-            const response = await axiosInstance.post('/api/common/units', {
-                name: newUnitName.trim()
-            });
-
-            const result = response.data;
-
-            if (result.success) {
-                alert(result.message || 'Unit added successfully!');
-                setNewUnitName('');
-                // Refresh units list with current search
-                await fetchUnits(searchTerm);
-                // Reset to first page to see the new unit
-                setCurrentPage(1);
-            } else {
-                alert(result.message || 'Failed to add unit');
-            }
+            const response = await toast.promise(
+                createUnitPromise,
+                {
+                    loading: 'Adding unit...',
+                    success: (res) => {
+                        setNewUnitName('');
+                        // Refresh units list with current search
+                        fetchUnits(searchTerm);
+                        // Reset to first page to see the new unit
+                        setCurrentPage(1);
+                        return res.data.message || 'Unit added successfully!';
+                    },
+                    error: (err) => {
+                        return err.response?.data?.message || 'Failed to add unit';
+                    }
+                }
+            );
         } catch (error: any) {
             console.error('Error adding unit:', error);
-            const errorMsg = error.response?.data?.message || 'An error occurred while adding the unit. Please try again.';
-            alert(errorMsg);
         } finally {
             setIsSaving(false);
         }
@@ -173,35 +178,39 @@ function ManageUnit() {
 
     const handleUpdateUnit = async () => {
         if (!updateUnitName.trim()) {
-            alert('Please enter a unit name');
+            toast.error('Please enter a unit name');
             return;
         }
 
         if (!selectedUnit) {
-            alert('No unit selected');
+            toast.error('No unit selected');
             return;
         }
 
         setIsUpdating(true);
+        
+        const updateUnitPromise = axiosInstance.put(`/api/common/units/${selectedUnit.id}`, {
+            name: updateUnitName.trim()
+        });
+
         try {
-            const response = await axiosInstance.put(`/api/common/units/${selectedUnit.id}`, {
-                name: updateUnitName.trim()
-            });
-
-            const result = response.data;
-
-            if (result.success) {
-                alert(result.message || 'Unit updated successfully!');
-                handleCloseModal();
-                // Refresh units list with current search
-                await fetchUnits(searchTerm);
-            } else {
-                alert(result.message || 'Failed to update unit');
-            }
+            const response = await toast.promise(
+                updateUnitPromise,
+                {
+                    loading: 'Updating unit...',
+                    success: (res) => {
+                        handleCloseModal();
+                        // Refresh units list with current search
+                        fetchUnits(searchTerm);
+                        return res.data.message || 'Unit updated successfully!';
+                    },
+                    error: (err) => {
+                        return err.response?.data?.message || 'Failed to update unit';
+                    }
+                }
+            );
         } catch (error: any) {
             console.error('Error updating unit:', error);
-            const errorMsg = error.response?.data?.message || 'An error occurred while updating the unit. Please try again.';
-            alert(errorMsg);
         } finally {
             setIsUpdating(false);
         }
@@ -213,40 +222,67 @@ function ManageUnit() {
 
     const handleDeleteUnit = async () => {
         if (!unitToDelete) {
-            alert('No unit selected');
+            toast.error('No unit selected');
             return;
         }
 
         setIsDeleting(true);
+        
+        const deleteUnitPromise = axiosInstance.delete(`/api/common/units/${unitToDelete.id}`);
+
         try {
-            const response = await axiosInstance.delete(`/api/common/units/${unitToDelete.id}`);
-
-            const result = response.data;
-
-            if (result.success) {
-                alert(result.message || 'Unit deleted successfully!');
-                setUnitToDelete(null);
-                // Refresh units list with current search
-                await fetchUnits(searchTerm);
-                // Reset to first page if current page becomes empty
-                if (currentUnits.length === 1 && currentPage > 1) {
-                    setCurrentPage(currentPage - 1);
+            const response = await toast.promise(
+                deleteUnitPromise,
+                {
+                    loading: 'Deleting unit...',
+                    success: (res) => {
+                        setUnitToDelete(null);
+                        // Refresh units list with current search
+                        fetchUnits(searchTerm);
+                        // Reset to first page if current page becomes empty
+                        if (currentUnits.length === 1 && currentPage > 1) {
+                            setCurrentPage(currentPage - 1);
+                        }
+                        return res.data.message || 'Unit deleted successfully!';
+                    },
+                    error: (err) => {
+                        return err.response?.data?.message || 'Failed to delete unit';
+                    }
                 }
-            } else {
-                alert(result.message || 'Failed to delete unit');
-            }
+            );
         } catch (error: any) {
             console.error('Error deleting unit:', error);
-            const errorMsg = error.response?.data?.message || 'An error occurred while deleting the unit. Please try again.';
-            alert(errorMsg);
         } finally {
             setIsDeleting(false);
         }
     };
 
     return (
-        <div className={'flex flex-col gap-4 h-full'}>
-            <div>
+        <>
+            <Toaster
+                position="top-right"
+                toastOptions={{
+                    duration: 4000,
+                    style: {
+                        background: '#363636',
+                        color: '#fff',
+                    },
+                    success: {
+                        duration: 3000,
+                        style: {
+                            background: '#10B981',
+                        },
+                    },
+                    error: {
+                        duration: 4000,
+                        style: {
+                            background: '#EF4444',
+                        },
+                    },
+                }}
+            />
+            <div className={'flex flex-col gap-4 h-full'}>
+                <div>
                 <div className="text-sm text-gray-500 flex items-center">
                     <span>Pages</span>
                     <span className="mx-2">›</span>
@@ -492,7 +528,8 @@ function ManageUnit() {
                 confirmButtonText="Delete"
                 loadingText="Deleting..."
             />
-        </div>
+            </div>
+        </>
     );
 }
 

@@ -1,5 +1,6 @@
 import {ChevronLeft, ChevronRight} from "lucide-react";
 import {useEffect, useState} from "react";
+import toast, { Toaster } from 'react-hot-toast';
 import TypeableSelect from "../../../components/TypeableSelect.tsx";
 import axiosInstance from "../../../api/axiosInstance";
 import { commonService } from "../../../services/commonService";
@@ -38,8 +39,6 @@ function CreateProducts() {
     });
 
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [errorMessage, setErrorMessage] = useState("");
-    const [successMessage, setSuccessMessage] = useState("");
     
     // Pagination and product data state
     const [salesData, setSalesData] = useState<any[]>([]);
@@ -97,8 +96,37 @@ function CreateProducts() {
 
     // Submit product to backend
     const handleSubmitProduct = async () => {
-        setErrorMessage("");
-        setSuccessMessage("");
+        // Basic validation
+        if (!productData.name.trim()) {
+            toast.error('Product name is required');
+            return;
+        }
+
+        if (!productData.code.trim()) {
+            toast.error('Product code is required');
+            return;
+        }
+        
+        if (!productData.categoryId) {
+            toast.error('Category is required');
+            return;
+        }
+        
+        if (!productData.brandId) {
+            toast.error('Brand is required');
+            return;
+        }
+        
+        if (!productData.unitId) {
+            toast.error('Unit is required');
+            return;
+        }
+        
+        if (!productData.typeId) {
+            toast.error('Product type is required');
+            return;
+        }
+
         setIsSubmitting(true);
 
         try {
@@ -114,10 +142,10 @@ function CreateProducts() {
                 statusId: 1
             }));
 
-            const response = await axiosInstance.post('/api/products/create', {
+            const createProductPromise = axiosInstance.post('/api/products/create', {
                 productData: {
-                    name: productData.name,
-                    code: productData.code,
+                    name: productData.name.trim(),
+                    code: productData.code.trim(),
                     barcode: mainBarcode,
                     categoryId: parseInt(productData.categoryId) || 0,
                     brandId: parseInt(productData.brandId) || 0,
@@ -127,29 +155,44 @@ function CreateProducts() {
                 variations: processedVariations
             });
 
-            const result = response.data;
-
-            if (result.success) {
-                setSuccessMessage(result.message || "Product created successfully!");
-                
-                // Reload page after 2 seconds
-                setTimeout(() => {
-                    window.location.reload();
-                }, 2000);
-            } else {
-                setErrorMessage(result.message || "Failed to create product");
-                if (result.errors && result.errors.length > 0) {
-                    console.error("Validation errors:", result.errors);
+            const response = await toast.promise(
+                createProductPromise,
+                {
+                    loading: 'Creating product...',
+                    success: (res) => {
+                        // Refresh products list
+                        const fetchProducts = async () => {
+                            try {
+                                const response = await axiosInstance.get('/api/products');
+                                if (response.data.success) {
+                                    setSalesData(response.data.data);
+                                    setTotalItems(response.data.data.length);
+                                }
+                            } catch (error) {
+                                console.error('Error refreshing products:', error);
+                            }
+                        };
+                        fetchProducts();
+                        
+                        // Reload the page after successful creation
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 1000);
+                        
+                        return res.data.message || 'Product created successfully!';
+                    },
+                    error: (err) => {
+                        if (err.response?.data?.message) {
+                            return err.response.data.message;
+                        }
+                        return 'Failed to create product. Please try again.';
+                    }
                 }
-            }
-        } catch (error: any) {
+            );
+
+        } catch (error) {
+            // Error already handled by toast.promise
             console.error('Error creating product:', error);
-            // Display backend error message if available
-            if (error.response && error.response.data && error.response.data.message) {
-                setErrorMessage(error.response.data.message);
-            } else {
-                setErrorMessage("An error occurred while creating the product. Please try again.");
-            }
         } finally {
             setIsSubmitting(false);
         }
@@ -199,6 +242,7 @@ function CreateProducts() {
                 }
             } catch (error) {
                 console.error('Error fetching dropdown data:', error);
+                toast.error('Failed to load dropdown data. Please refresh the page.');
             }
         };
 
@@ -216,9 +260,12 @@ function CreateProducts() {
                 if (result.success) {
                     setSalesData(result.data);
                     setTotalItems(result.data.length);
+                } else {
+                    toast.error('Failed to load products data');
                 }
             } catch (error) {
                 console.error('Error fetching products:', error);
+                toast.error('Failed to load products. Please refresh the page.');
             } finally {
                 setIsLoadingProducts(false);
             }
@@ -306,9 +353,36 @@ function CreateProducts() {
 
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [currentPageData.length, isSubmitting]);
+    }, [currentPageData.length, isSubmitting, handleSubmitProduct]);
     return (
         <>
+            <Toaster
+                position="top-right"
+                toastOptions={{
+                    duration: 4000,
+                    style: {
+                        background: '#363636',
+                        color: '#fff',
+                    },
+                    success: {
+                        duration: 3000,
+                        style: {
+                            background: '#10B981',
+                        },
+                    },
+                    error: {
+                        duration: 4000,
+                        style: {
+                            background: '#EF4444',
+                        },
+                    },
+                    loading: {
+                        style: {
+                            background: '#3B82F6',
+                        },
+                    },
+                }}
+            />
             <div className={"flex flex-col gap-4 h-full"}>
                 <div>
                     <div className="text-sm text-gray-500 flex items-center">
@@ -322,22 +396,6 @@ function CreateProducts() {
                 <div className={"bg-white rounded-md p-4 flex flex-col"}>
 
                     <span className="text-lg font-semibold my-4">Basic Product Information</span>
-
-                    {/* Success Message */}
-                    {successMessage && (
-                        <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4" role="alert">
-                            <strong className="font-bold">Success! </strong>
-                            <span className="block sm:inline">{successMessage}</span>
-                        </div>
-                    )}
-
-                    {/* Error Message */}
-                    {errorMessage && (
-                        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
-                            <strong className="font-bold">Error! </strong>
-                            <span className="block sm:inline">{errorMessage}</span>
-                        </div>
-                    )}
 
                     <div className={"grid md:grid-cols-5 gap-4 "}>
                         <div>
