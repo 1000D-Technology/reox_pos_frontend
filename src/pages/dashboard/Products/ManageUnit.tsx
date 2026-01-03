@@ -26,6 +26,7 @@ function ManageUnit() {
     const [units, setUnits] = useState<Unit[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const [isSearching, setIsSearching] = useState(false);
     const [updateUnitName, setUpdateUnitName] = useState('');
     const [isUpdating, setIsUpdating] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
@@ -35,14 +36,11 @@ function ManageUnit() {
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage] = useState(10);
     
-    // Calculate pagination
-    const filteredUnits = units.filter(unit => 
-        unit.name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-    const totalPages = Math.ceil(filteredUnits.length / itemsPerPage);
+    // Use units directly (no more frontend filtering)
+    const totalPages = Math.ceil(units.length / itemsPerPage);
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
-    const currentUnits = filteredUnits.slice(startIndex, endIndex);
+    const currentUnits = units.slice(startIndex, endIndex);
     
     // Transform units for display
     const salesData: Unit[] = currentUnits.map((unit, index) => ({
@@ -65,11 +63,21 @@ function ManageUnit() {
     // 🔹 Selected row state
     const [selectedIndex, setSelectedIndex] = useState(0);
 
-    // Fetch units from API
-    const fetchUnits = async () => {
+    // Fetch units from API (regular or search)
+    const fetchUnits = async (searchQuery?: string) => {
         try {
             setIsLoading(true);
-            const response = await axiosInstance.get('/api/common/units');
+            
+            let response;
+            if (searchQuery && searchQuery.trim()) {
+                // Use search endpoint
+                setIsSearching(true);
+                response = await axiosInstance.get(`/api/common/units/search?q=${encodeURIComponent(searchQuery)}`);
+            } else {
+                // Use regular endpoint
+                setIsSearching(false);
+                response = await axiosInstance.get('/api/common/units');
+            }
             
             if (response.data.success) {
                 setUnits(response.data.data);
@@ -81,6 +89,7 @@ function ManageUnit() {
             alert('Error loading units. Please try again.');
         } finally {
             setIsLoading(false);
+            setIsSearching(false);
         }
     };
 
@@ -88,6 +97,16 @@ function ManageUnit() {
     useEffect(() => {
         fetchUnits();
     }, []);
+
+    // Handle search with debouncing
+    useEffect(() => {
+        const timeoutId = setTimeout(() => {
+            fetchUnits(searchTerm);
+            setCurrentPage(1); // Reset to first page when searching
+        }, 300); // 300ms debounce
+
+        return () => clearTimeout(timeoutId);
+    }, [searchTerm]);
 
     // 🔹 Handle Up / Down arrow keys
     useEffect(() => {
@@ -136,8 +155,8 @@ function ManageUnit() {
             if (result.success) {
                 alert(result.message || 'Unit added successfully!');
                 setNewUnitName('');
-                // Refresh units list
-                await fetchUnits();
+                // Refresh units list with current search
+                await fetchUnits(searchTerm);
                 // Reset to first page to see the new unit
                 setCurrentPage(1);
             } else {
@@ -174,8 +193,8 @@ function ManageUnit() {
             if (result.success) {
                 alert(result.message || 'Unit updated successfully!');
                 handleCloseModal();
-                // Refresh units list
-                await fetchUnits();
+                // Refresh units list with current search
+                await fetchUnits(searchTerm);
             } else {
                 alert(result.message || 'Failed to update unit');
             }
@@ -207,8 +226,8 @@ function ManageUnit() {
             if (result.success) {
                 alert(result.message || 'Unit deleted successfully!');
                 setUnitToDelete(null);
-                // Refresh units list
-                await fetchUnits();
+                // Refresh units list with current search
+                await fetchUnits(searchTerm);
                 // Reset to first page if current page becomes empty
                 if (currentUnits.length === 1 && currentPage > 1) {
                     setCurrentPage(currentPage - 1);
@@ -247,10 +266,7 @@ function ManageUnit() {
                             id="search-unit" 
                             placeholder="Search Unit..."
                             value={searchTerm}
-                            onChange={(e) => {
-                                setSearchTerm(e.target.value);
-                                setCurrentPage(1); // Reset to first page when searching
-                            }}
+                            onChange={(e) => setSearchTerm(e.target.value)}
                             className="w-full text-sm rounded-md py-2 px-2 border-2 border-gray-100 focus:border-emerald-500 focus:ring-emerald-500" />
                     </div>
 
@@ -281,9 +297,11 @@ function ManageUnit() {
 
                 <div
                     className="overflow-y-auto max-h-md md:h-[320px] lg:h-[690px] rounded-md scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-                    {isLoading ? (
+                    {isLoading || isSearching ? (
                         <div className="flex items-center justify-center h-32">
-                            <div className="text-gray-500">Loading units...</div>
+                            <div className="text-gray-500">
+                                {isSearching ? 'Searching units...' : 'Loading units...'}
+                            </div>
                         </div>
                     ) : salesData.length === 0 ? (
                         <div className="flex items-center justify-center h-32">
@@ -362,7 +380,8 @@ function ManageUnit() {
 
                 <nav className="bg-white flex items-center justify-between sm:px-6 pt-4">
                     <div className="text-sm text-gray-500">
-                        Showing {startIndex + 1} to {Math.min(endIndex, filteredUnits.length)} of {filteredUnits.length} units
+                        Showing {startIndex + 1} to {Math.min(endIndex, units.length)} of {units.length} units
+                        {searchTerm && <span className="ml-2 text-emerald-600">(filtered by: "{searchTerm}")</span>}
                     </div>
                     <div className="flex items-center space-x-2">
                         <button 

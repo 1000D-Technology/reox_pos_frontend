@@ -5,7 +5,7 @@ const commonController = require('../controllers/commonController');
 // Search endpoints (with query and limit)
 router.get('/categories/search', commonController.searchCategories);
 router.get('/brands/search', commonController.searchBrands);
-router.get('/units/search', commonController.getUnits);
+router.get('/units/search', commonController.searchUnits);
 router.get('/product-types/search', commonController.searchProductTypes);
 
 //add unit

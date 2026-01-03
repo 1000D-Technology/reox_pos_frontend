@@ -26,6 +26,7 @@ function ManageCategory() {
     const [categories, setCategories] = useState<Category[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const [isSearching, setIsSearching] = useState(false);
     const [updateCategoryName, setUpdateCategoryName] = useState('');
     const [isUpdating, setIsUpdating] = useState(false);
     
@@ -38,14 +39,11 @@ function ManageCategory() {
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage] = useState(10);
     
-    // Calculate pagination
-    const filteredCategories = categories.filter(category => 
-        category.name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-    const totalPages = Math.ceil(filteredCategories.length / itemsPerPage);
+    // Use categories directly (no more frontend filtering)
+    const totalPages = Math.ceil(categories.length / itemsPerPage);
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
-    const currentCategories = filteredCategories.slice(startIndex, endIndex);
+    const currentCategories = categories.slice(startIndex, endIndex);
     
     // Transform categories for display
     const salesData: Category[] = currentCategories.map((category, index) => ({
@@ -68,11 +66,21 @@ function ManageCategory() {
     // 🔹 Selected row state
     const [selectedIndex, setSelectedIndex] = useState(0);
 
-    // Fetch categories from API
-    const fetchCategories = async () => {
+    // Fetch categories from API (regular or search)
+    const fetchCategories = async (searchQuery?: string) => {
         try {
             setIsLoading(true);
-            const response = await axiosInstance.get('/api/common/categories');
+            
+            let response;
+            if (searchQuery && searchQuery.trim()) {
+                // Use search endpoint
+                setIsSearching(true);
+                response = await axiosInstance.get(`/api/common/categories/search?q=${encodeURIComponent(searchQuery)}`);
+            } else {
+                // Use regular endpoint
+                setIsSearching(false);
+                response = await axiosInstance.get('/api/common/categories');
+            }
             
             if (response.data.success) {
                 setCategories(response.data.data);
@@ -84,6 +92,7 @@ function ManageCategory() {
             alert('Error loading categories. Please try again.');
         } finally {
             setIsLoading(false);
+            setIsSearching(false);
         }
     };
 
@@ -91,6 +100,16 @@ function ManageCategory() {
     useEffect(() => {
         fetchCategories();
     }, []);
+
+    // Handle search with debouncing
+    useEffect(() => {
+        const timeoutId = setTimeout(() => {
+            fetchCategories(searchTerm);
+            setCurrentPage(1); // Reset to first page when searching
+        }, 300); // 300ms debounce
+
+        return () => clearTimeout(timeoutId);
+    }, [searchTerm]);
 
     // 🔹 Handle Up / Down arrow keys
     useEffect(() => {
@@ -139,8 +158,8 @@ function ManageCategory() {
             if (result.success) {
                 alert(result.message || 'Category added successfully!');
                 setNewCategoryName('');
-                // Refresh categories list
-                await fetchCategories();
+                // Refresh categories list with current search
+                await fetchCategories(searchTerm);
                 // Reset to first page to see the new category
                 setCurrentPage(1);
             } else {
@@ -177,8 +196,8 @@ function ManageCategory() {
             if (result.success) {
                 alert(result.message || 'Category updated successfully!');
                 handleCloseModal();
-                // Refresh categories list
-                await fetchCategories();
+                // Refresh categories list with current search
+                await fetchCategories(searchTerm);
             } else {
                 alert(result.message || 'Failed to update category');
             }
@@ -210,11 +229,11 @@ function ManageCategory() {
             if (result.success) {
                 alert(result.message || 'Category deleted successfully!');
                 
-                // Refresh categories list
-                await fetchCategories();
+                // Refresh categories list with current search
+                await fetchCategories(searchTerm);
                 
                 // Adjust current page if necessary
-                const newTotalPages = Math.ceil((filteredCategories.length - 1) / itemsPerPage);
+                const newTotalPages = Math.ceil((categories.length - 1) / itemsPerPage);
                 if (currentPage > newTotalPages && newTotalPages > 0) {
                     setCurrentPage(newTotalPages);
                 }
@@ -275,10 +294,7 @@ function ManageCategory() {
                             id="search-category" 
                             placeholder="Search Category..."
                             value={searchTerm}
-                            onChange={(e) => {
-                                setSearchTerm(e.target.value);
-                                setCurrentPage(1); // Reset to first page when searching
-                            }}
+                            onChange={(e) => setSearchTerm(e.target.value)}
                             className="w-full text-sm rounded-md py-2 px-2 border-2 border-gray-100 focus:border-emerald-500 focus:ring-emerald-500" />
                     </div>
 
@@ -374,7 +390,8 @@ function ManageCategory() {
 
                 <nav className="bg-white flex items-center justify-between sm:px-6 pt-4">
                     <div className="text-sm text-gray-500">
-                        Showing {startIndex + 1} to {Math.min(endIndex, filteredCategories.length)} of {filteredCategories.length} categories
+                        Showing {startIndex + 1} to {Math.min(endIndex, categories.length)} of {categories.length} categories
+                        {searchTerm && <span className="ml-2 text-emerald-600">(filtered by: "{searchTerm}")</span>}
                     </div>
                     <div className="flex items-center space-x-2">
                         <button 

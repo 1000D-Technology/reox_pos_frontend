@@ -5,7 +5,7 @@ exports.searchCategories = async (req, res) => {
     try {
         const query = req.query.q || '';
         const [rows] = await db.execute(
-            "SELECT idcategory AS id, name FROM category WHERE name LIKE ? LIMIT 10",
+            "SELECT idcategory AS id, name, created_at FROM category WHERE name LIKE ? LIMIT 10",
             [`%${query}%`]
         );
         res.json({ success: true, data: rows });
@@ -18,7 +18,7 @@ exports.searchBrands = async (req, res) => {
     try {
         const query = req.query.q || '';
         const [rows] = await db.execute(
-            "SELECT idbrand AS id, name FROM brand WHERE name LIKE ? LIMIT 10",
+            "SELECT idbrand AS id, name, created_at FROM brand WHERE name LIKE ? LIMIT 10",
             [`%${query}%`]
         );
         res.json({ success: true, data: rows });
@@ -27,9 +27,13 @@ exports.searchBrands = async (req, res) => {
     }
 };
 
-exports.getUnits = async (req, res) => {
+exports.searchUnits = async (req, res) => {
     try {
-        const [rows] = await db.execute("SELECT idunit_id AS id, name FROM unit_id");
+        const query = req.query.q || '';
+        const [rows] = await db.execute(
+            "SELECT idunit_id AS id, name, created_at FROM unit_id WHERE name LIKE ? LIMIT 10",
+            [`%${query}%`]
+        );
         res.json({ success: true, data: rows });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });

@@ -26,6 +26,7 @@ function ManageBrand() {
     const [brands, setBrands] = useState<Brand[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const [isSearching, setIsSearching] = useState(false);
     const [updateBrandName, setUpdateBrandName] = useState('');
     const [isUpdating, setIsUpdating] = useState(false);
     
@@ -38,14 +39,11 @@ function ManageBrand() {
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage] = useState(10);
     
-    // Calculate pagination
-    const filteredBrands = brands.filter(brand => 
-        brand.name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-    const totalPages = Math.ceil(filteredBrands.length / itemsPerPage);
+    // Use brands directly (no more frontend filtering)
+    const totalPages = Math.ceil(brands.length / itemsPerPage);
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
-    const currentBrands = filteredBrands.slice(startIndex, endIndex);
+    const currentBrands = brands.slice(startIndex, endIndex);
     
     // Transform brands for display
     const salesData: Brand[] = currentBrands.map((brand, index) => ({
@@ -68,11 +66,21 @@ function ManageBrand() {
     // 🔹 Selected row state
     const [selectedIndex, setSelectedIndex] = useState(0);
 
-    // Fetch brands from API
-    const fetchBrands = async () => {
+    // Fetch brands from API (regular or search)
+    const fetchBrands = async (searchQuery?: string) => {
         try {
             setIsLoading(true);
-            const response = await axiosInstance.get('/api/common/brands');
+            
+            let response;
+            if (searchQuery && searchQuery.trim()) {
+                // Use search endpoint
+                setIsSearching(true);
+                response = await axiosInstance.get(`/api/common/brands/search?q=${encodeURIComponent(searchQuery)}`);
+            } else {
+                // Use regular endpoint
+                setIsSearching(false);
+                response = await axiosInstance.get('/api/common/brands');
+            }
             
             if (response.data.success) {
                 setBrands(response.data.data);
@@ -84,6 +92,7 @@ function ManageBrand() {
             alert('Error loading brands. Please try again.');
         } finally {
             setIsLoading(false);
+            setIsSearching(false);
         }
     };
 
@@ -91,6 +100,16 @@ function ManageBrand() {
     useEffect(() => {
         fetchBrands();
     }, []);
+
+    // Handle search with debouncing
+    useEffect(() => {
+        const timeoutId = setTimeout(() => {
+            fetchBrands(searchTerm);
+            setCurrentPage(1); // Reset to first page when searching
+        }, 300); // 300ms debounce
+
+        return () => clearTimeout(timeoutId);
+    }, [searchTerm]);
 
     // 🔹 Handle Up / Down arrow keys
     useEffect(() => {
@@ -136,8 +155,8 @@ function ManageBrand() {
             if (result.success) {
                 alert(result.message || 'Brand added successfully!');
                 setNewBrandName('');
-                // Refresh brands list
-                await fetchBrands();
+                // Refresh brands list with current search
+                await fetchBrands(searchTerm);
                 // Reset to first page to see the new brand
                 setCurrentPage(1);
             } else {
@@ -174,8 +193,8 @@ function ManageBrand() {
             if (result.success) {
                 alert(result.message || 'Brand updated successfully!');
                 handleCloseModal();
-                // Refresh brands list
-                await fetchBrands();
+                // Refresh brands list with current search
+                await fetchBrands(searchTerm);
             } else {
                 alert(result.message || 'Failed to update brand');
             }
@@ -207,11 +226,11 @@ function ManageBrand() {
             if (result.success) {
                 alert(result.message || 'Brand deleted successfully!');
                 
-                // Refresh brands list
-                await fetchBrands();
+                // Refresh brands list with current search
+                await fetchBrands(searchTerm);
                 
                 // Adjust current page if necessary
-                const newTotalPages = Math.ceil((filteredBrands.length - 1) / itemsPerPage);
+                const newTotalPages = Math.ceil((brands.length - 1) / itemsPerPage);
                 if (currentPage > newTotalPages && newTotalPages > 0) {
                     setCurrentPage(newTotalPages);
                 }
@@ -272,10 +291,7 @@ function ManageBrand() {
                             id="search-brand" 
                             placeholder="Search Brand..."
                             value={searchTerm}
-                            onChange={(e) => {
-                                setSearchTerm(e.target.value);
-                                setCurrentPage(1); // Reset to first page when searching
-                            }}
+                            onChange={(e) => setSearchTerm(e.target.value)}
                             className="w-full text-sm rounded-md py-2 px-2 border-2 border-gray-100 focus:border-emerald-500 focus:ring-emerald-500" />
                     </div>
 
@@ -371,7 +387,8 @@ function ManageBrand() {
 
                 <nav className="bg-white flex items-center justify-between sm:px-6 pt-4">
                     <div className="text-sm text-gray-500">
-                        Showing {startIndex + 1} to {Math.min(endIndex, filteredBrands.length)} of {filteredBrands.length} brands
+                        Showing {startIndex + 1} to {Math.min(endIndex, brands.length)} of {brands.length} brands
+                        {searchTerm && <span className="ml-2 text-emerald-600">(filtered by: "{searchTerm}")</span>}
                     </div>
                     <div className="flex items-center space-x-2">
                         <button 
