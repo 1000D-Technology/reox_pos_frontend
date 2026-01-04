@@ -30,6 +30,9 @@ export const supplierService = {
         axiosInstance.get('/api/suppliers/banks')
     ]),
     
+    // Get all suppliers
+    getSuppliers: () => axiosInstance.get('/api/suppliers/list'),
+    
     // Get company by id (placeholder for future use)
     getCompanyById: (id: number) => axiosInstance.get(`/api/suppliers/companies/${id}`),
     

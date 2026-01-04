@@ -23,6 +23,26 @@ class Supplier {
         ]);
         return result.insertId;
     }
+
+    static async getAllSuppliers() {
+        const query = `
+            SELECT 
+                s.id,
+                s.supplier_name AS supplierName,
+                s.email,
+                s.contact_number AS contactNumber,
+                c.company_name AS companyName,
+                b.bank_name AS bankName,
+                s.account_number AS accountNumber,
+                DATE_FORMAT(s.created_at, '%Y-%m-%d') AS joinedDate
+            FROM supplier s
+            LEFT JOIN company c ON s.company_id = c.id
+            LEFT JOIN bank b ON s.bank_id = b.id
+            ORDER BY s.id DESC
+        `;
+        const [rows] = await db.execute(query);
+        return rows;
+    }
 }
 
 module.exports = Supplier;

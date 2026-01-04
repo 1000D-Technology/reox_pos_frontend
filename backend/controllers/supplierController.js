@@ -135,3 +135,20 @@ exports.addSupplier = async (req, res) => {
         });
     }
 };
+
+exports.getSuppliers = async (req, res) => {
+    try {
+        const suppliers = await Supplier.getAllSuppliers();
+        
+        res.status(200).json({
+            success: true,
+            data: suppliers
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: "Failed to fetch suppliers",
+            error: error.message
+        });
+    }
+};
