@@ -8,6 +8,16 @@ export const supplierService = {
         contact: string;
     }) => axiosInstance.post('/api/suppliers/companies', companyData),
     
+    // Add new supplier
+    addSupplier: (supplierData: {
+        supplierName: string;
+        email?: string;
+        contactNumber: string;
+        companyId: number;
+        bankId?: number;
+        accountNumber?: string;
+    }) => axiosInstance.post('/api/suppliers/add', supplierData),
+    
     // Get all companies
     getCompanies: () => axiosInstance.get('/api/suppliers/companies'),
     

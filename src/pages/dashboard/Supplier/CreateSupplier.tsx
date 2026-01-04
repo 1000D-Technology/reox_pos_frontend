@@ -41,6 +41,15 @@ function CreateSupplier() {
     const [banks, setBanks] = useState<{value: string, label: string}[]>([]);
     const [selectedBank, setSelectedBank] = useState<{value: string, label: string} | null>(null);
     const [isLoadingBanks, setIsLoadingBanks] = useState(false);
+    
+    // State for supplier form
+    const [supplierData, setSupplierData] = useState({
+        supplierName: '',
+        email: '',
+        contactNumber: '',
+        accountNumber: ''
+    });
+    const [isSubmittingSupplier, setIsSubmittingSupplier] = useState(false);
 
     const salesData: Category[] = [
         {
@@ -170,24 +179,42 @@ function CreateSupplier() {
 
                 <div className={'grid md:grid-cols-5 gap-4'}>
                     <div>
-                        <label htmlFor="search-category"
-                            className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-                        <input type="text" id="search-category" placeholder="Type to search types"
-                            className="w-full text-sm rounded-md py-2 px-2 border-2 border-gray-100 focus:border-emerald-500 focus:ring-emerald-500" />
+                        <label htmlFor="supplier-name"
+                            className="block text-sm font-medium text-gray-700 mb-1">Name <span className="text-red-500">*</span></label>
+                        <input 
+                            type="text" 
+                            id="supplier-name" 
+                            placeholder="Enter supplier name"
+                            value={supplierData.supplierName}
+                            onChange={(e) => setSupplierData({...supplierData, supplierName: e.target.value})}
+                            className="w-full text-sm rounded-md py-2 px-2 border-2 border-gray-100 focus:border-emerald-500 focus:ring-emerald-500" 
+                        />
                     </div>
 
                     <div>
-                        <label htmlFor="search-category"
+                        <label htmlFor="supplier-email"
                             className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                        <input type="text" id="search-category" placeholder="Type to search Product"
-                            className="w-full text-sm rounded-md py-2 px-2 border-2 border-gray-100 focus:border-emerald-500 focus:ring-emerald-500" />
+                        <input 
+                            type="email" 
+                            id="supplier-email" 
+                            placeholder="Enter supplier email"
+                            value={supplierData.email}
+                            onChange={(e) => setSupplierData({...supplierData, email: e.target.value})}
+                            className="w-full text-sm rounded-md py-2 px-2 border-2 border-gray-100 focus:border-emerald-500 focus:ring-emerald-500" 
+                        />
                     </div>
 
                     <div>
-                        <label htmlFor="search-category"
-                            className="block text-sm font-medium text-gray-700 mb-1">Product Code</label>
-                        <input type="text" id="search-category" placeholder="Type to search Product Code"
-                            className="w-full text-sm rounded-md py-2 px-2 border-2 border-gray-100 focus:border-emerald-500 focus:ring-emerald-500" />
+                        <label htmlFor="supplier-contact"
+                            className="block text-sm font-medium text-gray-700 mb-1">Contact Number <span className="text-red-500">*</span></label>
+                        <input 
+                            type="text" 
+                            id="supplier-contact" 
+                            placeholder="Enter contact number (10 digits)"
+                            value={supplierData.contactNumber}
+                            onChange={(e) => setSupplierData({...supplierData, contactNumber: e.target.value})}
+                            className="w-full text-sm rounded-md py-2 px-2 border-2 border-gray-100 focus:border-emerald-500 focus:ring-emerald-500" 
+                        />
                     </div>
 
                     <div>
@@ -383,17 +410,101 @@ function CreateSupplier() {
                     </div>
 
                     <div>
-                        <label htmlFor="new-category"
+                        <label htmlFor="account-number"
                             className="block text-sm font-medium text-gray-700 mb-1">Account Number</label>
-                        <input type="text" id="new-category" placeholder="Select Bank"
-                            className="w-full text-sm rounded-md py-2 px-2 border-2 border-gray-100 focus:border-emerald-500 focus:ring-emerald-500" />
+                        <input 
+                            type="text" 
+                            id="account-number" 
+                            placeholder="Enter account number"
+                            value={supplierData.accountNumber}
+                            onChange={(e) => setSupplierData({...supplierData, accountNumber: e.target.value})}
+                            className="w-full text-sm rounded-md py-2 px-2 border-2 border-gray-100 focus:border-emerald-500 focus:ring-emerald-500" 
+                        />
                     </div>
 
                 </div>
 
                 <div className={'flex justify-end border-b-1 mt-[-13px]'}>
-                    <button className={'bg-emerald-600 py-2 px-10 rounded-md font-semibold text-white hover:bg-emerald-700 mb-4'}>
-                        Save Suplier
+                    <button 
+                        onClick={async () => {
+                            // Validation
+                            if (!supplierData.supplierName.trim()) {
+                                toast.error('Supplier name is required');
+                                return;
+                            }
+                            
+                            if (!supplierData.contactNumber.trim()) {
+                                toast.error('Contact number is required');
+                                return;
+                            }
+                            
+                            if (supplierData.contactNumber.length !== 10) {
+                                toast.error('Contact number must be exactly 10 digits');
+                                return;
+                            }
+                            
+                            if (!selectedCompany) {
+                                toast.error('Please select a company');
+                                return;
+                            }
+
+                            setIsSubmittingSupplier(true);
+
+                            try {
+                                toast.loading('Creating supplier...');
+
+                                const response = await supplierService.addSupplier({
+                                    supplierName: supplierData.supplierName.trim(),
+                                    email: supplierData.email.trim() || undefined,
+                                    contactNumber: supplierData.contactNumber.trim(),
+                                    companyId: parseInt(selectedCompany.value),
+                                    bankId: selectedBank ? parseInt(selectedBank.value) : undefined,
+                                    accountNumber: supplierData.accountNumber.trim() || undefined
+                                });
+
+                                toast.dismiss();
+                                
+                                if (response.data.success) {
+                                    toast.success(response.data.message || 'Supplier created successfully!');
+                                    
+                                    // Reset form
+                                    setSupplierData({ 
+                                        supplierName: '', 
+                                        email: '', 
+                                        contactNumber: '', 
+                                        accountNumber: '' 
+                                    });
+                                    setSelectedCompany(null);
+                                    setSelectedBank(null);
+                                    
+                                    // Reload page after successful creation
+                                    setTimeout(() => {
+                                        window.location.reload();
+                                    }, 1000);
+                                } else {
+                                    toast.error(response.data.message || 'Failed to create supplier');
+                                }
+
+                            } catch (error: any) {
+                                console.error('Error creating supplier:', error);
+                                toast.dismiss();
+                                
+                                if (error.response?.data?.message) {
+                                    toast.error(error.response.data.message);
+                                } else {
+                                    toast.error('Failed to create supplier. Please try again.');
+                                }
+                            } finally {
+                                setIsSubmittingSupplier(false);
+                            }
+                        }}
+                        disabled={isSubmittingSupplier}
+                        className={`py-2 px-10 rounded-md font-semibold text-white mb-4 ${
+                            isSubmittingSupplier 
+                                ? 'bg-gray-400 cursor-not-allowed' 
+                                : 'bg-emerald-600 hover:bg-emerald-700'
+                        }`}>
+                        {isSubmittingSupplier ? 'Creating...' : 'Save Supplier'}
                     </button>
                 </div>
 

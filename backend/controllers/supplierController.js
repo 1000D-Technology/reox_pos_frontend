@@ -86,3 +86,52 @@ exports.searchBank = async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 };
+
+exports.addSupplier = async (req, res) => {
+    try {
+        const { supplierName, email, contactNumber, companyId, bankId, accountNumber } = req.body;
+        
+        if (!supplierName || !contactNumber || !companyId) {
+            return res.status(400).json({
+                success: false,
+                message: "Supplier name, contact, and company are required."
+            });
+        }
+
+        if (contactNumber.length !== 10) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid contact number. Must be 10 digits."
+            });
+        }
+
+        const supplierId = await Supplier.createSupplier({
+            supplierName, email, contactNumber, companyId, bankId, accountNumber
+        });
+
+        res.status(201).json({
+            success: true,
+            message: "Supplier added successfully!",
+            supplierId: supplierId
+        });
+
+    } catch (error) {
+        if (error.code === 'ER_DUP_ENTRY') {
+            return res.status(400).json({
+                success: false,
+                message: "This email or contact number already exists!"
+            });
+        }
+        if (error.code === 'ER_NO_REFERENCED_ROW_2') {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid Company or Bank selection."
+            });
+        }
+        res.status(500).json({
+            success: false,
+            message: "Internal Server Error",
+            error: error.message
+        });
+    }
+};
