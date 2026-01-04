@@ -8,6 +8,9 @@ import {
 } from 'lucide-react';
 
 import { useEffect, useState } from 'react';
+import toast, { Toaster } from 'react-hot-toast';
+import { supplierService } from '../../../services/supplierService';
+import TypeableSelect from '../../../components/TypeableSelect';
 
 
 interface Category {
@@ -21,6 +24,23 @@ interface Category {
 }
 
 function CreateSupplier() {
+    // State for company form
+    const [companyData, setCompanyData] = useState({
+        name: '',
+        email: '',
+        contact: ''
+    });
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    
+    // State for company selection
+    const [companies, setCompanies] = useState<{value: string, label: string}[]>([]);
+    const [selectedCompany, setSelectedCompany] = useState<{value: string, label: string} | null>(null);
+    const [isLoadingCompanies, setIsLoadingCompanies] = useState(false);
+    
+    // State for bank selection
+    const [banks, setBanks] = useState<{value: string, label: string}[]>([]);
+    const [selectedBank, setSelectedBank] = useState<{value: string, label: string} | null>(null);
+    const [isLoadingBanks, setIsLoadingBanks] = useState(false);
 
     const salesData: Category[] = [
         {
@@ -59,6 +79,41 @@ function CreateSupplier() {
         return () => window.removeEventListener("keydown", handleKeyDown);
     }, [salesData.length]);
 
+    // Function to search companies and banks
+    const searchCompaniesAndBanks = async () => {
+        setIsLoadingCompanies(true);
+        setIsLoadingBanks(true);
+        try {
+            const [companiesResponse, banksResponse] = await supplierService.getCompaniesAndBanks();
+            if (companiesResponse.data.success) {
+                const companyOptions = companiesResponse.data.data.map((company: any) => ({
+                    value: company.id.toString(),
+                    label: company.company_name
+                }));
+                setCompanies(companyOptions);
+            }
+            
+            if (banksResponse.data.success) {
+                const bankOptions = banksResponse.data.data.map((bank: any) => ({
+                    value: bank.id.toString(),
+                    label: bank.bank_name
+                }));
+                setBanks(bankOptions);
+            }
+        } catch (error) {
+            console.error('Error fetching data:', error);
+            toast.error('Failed to load data');
+        } finally {
+            setIsLoadingCompanies(false);
+            setIsLoadingBanks(false);
+        }
+    };
+
+    // Load companies and banks on component mount
+    useEffect(() => {
+        searchCompaniesAndBanks();
+    }, []);
+
 
     const handleEditClick = (category: Category) => {
         setSelectedCategory(category);
@@ -73,7 +128,35 @@ function CreateSupplier() {
 
 
     return (
-        <div className={'flex flex-col gap-4 h-full'}>
+        <>
+            <Toaster
+                position="top-right"
+                toastOptions={{
+                    duration: 4000,
+                    style: {
+                        background: '#363636',
+                        color: '#fff',
+                    },
+                    success: {
+                        duration: 3000,
+                        style: {
+                            background: '#10B981',
+                        },
+                    },
+                    error: {
+                        duration: 4000,
+                        style: {
+                            background: '#EF4444',
+                        },
+                    },
+                    loading: {
+                        style: {
+                            background: '#3B82F6',
+                        },
+                    },
+                }}
+            />
+            <div className={'flex flex-col gap-4 h-full'}>
             <div>
                 <div className="text-sm text-gray-500 flex items-center">
                     <span>Pages</span>
@@ -131,12 +214,14 @@ function CreateSupplier() {
                                         <div className="space-y-3">
                                             <div>
                                                 <label htmlFor="new-company-name" className="block text-sm font-medium text-gray-700 mb-1">
-                                                    Company Name
+                                                    Company Name <span className="text-red-500">*</span>
                                                 </label>
                                                 <input
                                                     id="new-company-name"
                                                     type="text"
                                                     placeholder="Enter company name"
+                                                    value={companyData.name}
+                                                    onChange={(e) => setCompanyData({...companyData, name: e.target.value})}
                                                     className="w-full text-sm rounded-md py-2 px-3 border border-gray-300 focus:border-emerald-500 focus:ring-emerald-500"
                                                 />
                                             </div>
@@ -149,6 +234,22 @@ function CreateSupplier() {
                                                     id="new-company-email"
                                                     type="email"
                                                     placeholder="Enter company email"
+                                                    value={companyData.email}
+                                                    onChange={(e) => setCompanyData({...companyData, email: e.target.value})}
+                                                    className="w-full text-sm rounded-md py-2 px-3 border border-gray-300 focus:border-emerald-500 focus:ring-emerald-500"
+                                                />
+                                            </div>
+
+                                            <div>
+                                                <label htmlFor="new-company-contact" className="block text-sm font-medium text-gray-700 mb-1">
+                                                    Contact Number <span className="text-red-500">*</span>
+                                                </label>
+                                                <input
+                                                    id="new-company-contact"
+                                                    type="text"
+                                                    placeholder="Enter contact number (e.g., 0771234567)"
+                                                    value={companyData.contact}
+                                                    onChange={(e) => setCompanyData({...companyData, contact: e.target.value})}
                                                     className="w-full text-sm rounded-md py-2 px-3 border border-gray-300 focus:border-emerald-500 focus:ring-emerald-500"
                                                 />
                                             </div>
@@ -157,22 +258,82 @@ function CreateSupplier() {
                                         <div className="mt-6 flex justify-end gap-2">
                                             <button
                                                 type="button"
-                                                onClick={(e) => {
-                                                    const details = e.currentTarget.closest('details') as HTMLDetailsElement;
-                                                    const name = (details.querySelector('#new-company-name') as HTMLInputElement).value;
-                                                    const email = (details.querySelector('#new-company-email') as HTMLInputElement).value;
-                                                    // replace with real save logic
-                                                    console.log('Add company:', { name, email });
-                                                    details.removeAttribute('open');
+                                                disabled={isSubmitting}
+                                                onClick={async (e) => {
+                                                    // Capture modal reference before async operations
+                                                    const detailsElement = e.currentTarget.closest('details') as HTMLDetailsElement;
+                                                    
+                                                    // Basic validation
+                                                    if (!companyData.name.trim()) {
+                                                        toast.error('Company name is required');
+                                                        return;
+                                                    }
+                                                    
+                                                    if (!companyData.contact.trim()) {
+                                                        toast.error('Contact number is required');
+                                                        return;
+                                                    }
+
+                                                    setIsSubmitting(true);
+
+                                                    try {
+                                                        const createCompanyPromise = supplierService.createCompany({
+                                                            name: companyData.name.trim(),
+                                                            email: companyData.email.trim() || undefined,
+                                                            contact: companyData.contact.trim()
+                                                        });
+
+                                                        toast.loading('Creating company...');
+
+                                                        const response = await createCompanyPromise;
+                                                        toast.dismiss();
+                                                        
+                                                        if (response.data.success) {
+                                                            toast.success(response.data.message || 'Company created successfully!');
+                                                            
+                                                            // Reset form
+                                                            setCompanyData({ name: '', email: '', contact: '' });
+                                                            
+                                                            // Refresh companies list
+                                                            searchCompaniesAndBanks();
+                                                            
+                                                            // Close modal using captured reference
+                                                            if (detailsElement) {
+                                                                detailsElement.removeAttribute('open');
+                                                            }
+                                                        } else {
+                                                            toast.error(response.data.message || 'Failed to create company');
+                                                        }
+
+                                                    } catch (error: any) {
+                                                        console.error('Error creating company:', error);
+                                                        toast.dismiss();
+                                                        
+                                                        if (error.response?.data?.message) {
+                                                            toast.error(error.response.data.message);
+                                                        } else {
+                                                            toast.error('Failed to create company. Please try again.');
+                                                        }
+                                                    } finally {
+                                                        setIsSubmitting(false);
+                                                    }
                                                 }}
-                                                className="bg-emerald-600 text-white py-2 px-4 rounded-md font-semibold hover:bg-emerald-700">
-                                                Save Company
+                                                className={`py-2 px-4 rounded-md font-semibold text-white ${
+                                                    isSubmitting 
+                                                        ? 'bg-gray-400 cursor-not-allowed' 
+                                                        : 'bg-emerald-600 hover:bg-emerald-700'
+                                                }`}>
+                                                {isSubmitting ? 'Creating...' : 'Save Company'}
                                             </button>
 
                                             <button
                                                 type="button"
-                                                onClick={(e) => (e.currentTarget.closest('details') as HTMLDetailsElement).removeAttribute('open')}
-                                                className="py-2 px-4 rounded-md border">
+                                                disabled={isSubmitting}
+                                                onClick={(e) => {
+                                                    setCompanyData({ name: '', email: '', contact: '' });
+                                                    (e.currentTarget.closest('details') as HTMLDetailsElement).removeAttribute('open');
+                                                }}
+                                                className="py-2 px-4 rounded-md border hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
                                                 Cancel
                                             </button>
                                         </div>
@@ -181,16 +342,44 @@ function CreateSupplier() {
                             </details>
                         </div>
                         
-                        <input type="text" id="search-category" placeholder="Enter Cabin Number"
-                            className="w-full text-sm rounded-md py-2 px-2 border-2 border-gray-100 focus:border-emerald-500 focus:ring-emerald-500" />
+                        <TypeableSelect
+                            options={companies}
+                            value={selectedCompany?.value || null}
+                            onChange={(opt) => {
+                                if (opt) {
+                                    setSelectedCompany({
+                                        value: String(opt.value),
+                                        label: opt.label,
+                                    });
+                                } else {
+                                    setSelectedCompany(null);
+                                }
+                            }}
+                            placeholder="Type to search company"
+                            allowCreate={false}
+                        />
                       
                     </div>
 
                     <div>
                         <label htmlFor="new-category"
                             className="block text-sm font-medium text-gray-700 mb-1">Bank</label>
-                        <input type="text" id="new-category" placeholder="Select Bank"
-                            className="w-full text-sm rounded-md py-2 px-2 border-2 border-gray-100 focus:border-emerald-500 focus:ring-emerald-500" />
+                        <TypeableSelect
+                            options={banks}
+                            value={selectedBank?.value || null}
+                            onChange={(opt) => {
+                                if (opt) {
+                                    setSelectedBank({
+                                        value: String(opt.value),
+                                        label: opt.label,
+                                    });
+                                } else {
+                                    setSelectedBank(null);
+                                }
+                            }}
+                            placeholder="Type to search bank"
+                            allowCreate={false}
+                        />
                     </div>
 
                     <div>
@@ -323,7 +512,8 @@ function CreateSupplier() {
             )}
 
 
-        </div>
+            </div>
+        </>
     );
 }
 export default CreateSupplier
