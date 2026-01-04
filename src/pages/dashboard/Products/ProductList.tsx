@@ -11,6 +11,7 @@ import {useEffect, useState} from "react";
 import TypeableSelect from "../../../components/TypeableSelect.tsx";
 import axiosInstance from "../../../api/axiosInstance";
 import { commonService } from "../../../services/commonService";
+import ConfirmationModal from "../../../components/modals/ConfirmationModal";
 
 function ProductList() {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -47,12 +48,18 @@ function ProductList() {
     const [updateErrorMessage, setUpdateErrorMessage] = useState("");
     const [updateSuccessMessage, setUpdateSuccessMessage] = useState("");
 
+    // Confirmation modal state
+    const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+    const [productToDeactivate, setProductToDeactivate] = useState<any | null>(null);
+    const [isDeactivating, setIsDeactivating] = useState(false);
+
 
     type SelectOption = {
         value: string;
         label: string;
     };
     const [selected, setSelected] = useState<SelectOption | null>(null);
+    const [searchTerm, setSearchTerm] = useState("");
 
     const color = [
         {value: "red", label: "Red"},
@@ -110,24 +117,61 @@ function ProductList() {
     }, []);
 
     // Fetch products data
-    useEffect(() => {
-        const fetchProducts = async () => {
-            setIsLoadingProducts(true);
-            try {
-                const response = await axiosInstance.get('/api/products');
-                const result = response.data;
-                
-                if (result.success) {
-                    setSalesData(result.data);
-                    setTotalItems(result.data.length);
-                }
-            } catch (error) {
-                console.error('Error fetching products:', error);
-            } finally {
-                setIsLoadingProducts(false);
+    const fetchProducts = async () => {
+        setIsLoadingProducts(true);
+        try {
+            const response = await axiosInstance.get('/api/products');
+            const result = response.data;
+            
+            if (result.success) {
+                setSalesData(result.data);
+                setTotalItems(result.data.length);
+                setCurrentPage(1);
+                setSelectedIndex(0);
             }
-        };
+        } catch (error) {
+            console.error('Error fetching products:', error);
+        } finally {
+            setIsLoadingProducts(false);
+        }
+    };
 
+    // Search products
+    const handleSearch = async () => {
+        setIsLoadingProducts(true);
+        try {
+            const params: any = {};
+            if (selected?.value) {
+                params.productTypeId = selected.value;
+            }
+            if (searchTerm.trim()) {
+                params.searchTerm = searchTerm.trim();
+            }
+
+            const response = await axiosInstance.get('/api/products/search', { params });
+            const result = response.data;
+            
+            if (result.success) {
+                setSalesData(result.data);
+                setTotalItems(result.data.length);
+                setCurrentPage(1);
+                setSelectedIndex(0);
+            }
+        } catch (error) {
+            console.error('Error searching products:', error);
+        } finally {
+            setIsLoadingProducts(false);
+        }
+    };
+
+    // Clear filters and fetch all products
+    const handleClear = () => {
+        setSelected(null);
+        setSearchTerm("");
+        fetchProducts();
+    };
+
+    useEffect(() => {
         fetchProducts();
     }, []);
 
@@ -266,6 +310,56 @@ function ProductList() {
         } finally {
             setIsUpdating(false);
         }
+    };
+
+    // Handle product deactivate/delete
+    const handleDeactivateProduct = (product: any, e: React.MouseEvent) => {
+        e.stopPropagation();
+        setProductToDeactivate(product);
+        setIsConfirmModalOpen(true);
+    };
+
+    // Confirm product deactivation
+    const confirmDeactivateProduct = async () => {
+        if (!productToDeactivate) return;
+        
+        setIsDeactivating(true);
+
+        try {
+            const response = await axiosInstance.patch(
+                `/api/products/status/${productToDeactivate.productID}`,
+                { statusId: 2 } // 2 = Inactive
+            );
+
+            const result = response.data;
+
+            if (result.success) {
+                alert(result.message || "Product deactivated successfully!");
+                
+                // Refresh products list
+                const productsResponse = await axiosInstance.get('/api/products');
+                if (productsResponse.data.success) {
+                    setSalesData(productsResponse.data.data);
+                    setTotalItems(productsResponse.data.data.length);
+                }
+            } else {
+                alert(result.message || "Failed to deactivate product");
+            }
+        } catch (error: any) {
+            console.error('Error deactivating product:', error);
+            const errorMsg = error.response?.data?.message || "An error occurred while deactivating the product. Please try again.";
+            alert(errorMsg);
+        } finally {
+            setIsDeactivating(false);
+            setIsConfirmModalOpen(false);
+            setProductToDeactivate(null);
+        }
+    };
+
+    // Cancel product deactivation
+    const cancelDeactivateProduct = () => {
+        setIsConfirmModalOpen(false);
+        setProductToDeactivate(null);
     };
 
     const EditProductModal = () => {
@@ -532,6 +626,20 @@ function ProductList() {
         <>
             <div className={'flex flex-col gap-4 h-full'}>
                 <EditProductModal />
+                
+                <ConfirmationModal
+                    isOpen={isConfirmModalOpen}
+                    title="Deactivate Product"
+                    message="Are you sure you want to deactivate this {itemType}"
+                    itemName={productToDeactivate?.productName || ""}
+                    itemType="product"
+                    onConfirm={confirmDeactivateProduct}
+                    onCancel={cancelDeactivateProduct}
+                    isLoading={isDeactivating}
+                    confirmButtonText="Deactivate"
+                    loadingText="Deactivating..."
+                    isDanger={true}
+                />
 
                 <div>
                     <div className="text-sm text-gray-500 flex items-center">
@@ -545,8 +653,6 @@ function ProductList() {
                 <div className={'bg-white rounded-md p-4 flex flex-col'}>
 
                     <div className={'grid md:grid-cols-5 gap-4 '}>
-
-
                         <div>
                             <label htmlFor="supplier"
                                    className="block text-sm font-medium text-gray-700 mb-1">Product Type</label>
@@ -562,16 +668,26 @@ function ProductList() {
                         <div>
                             <label htmlFor="product"
                                    className="block text-sm font-medium text-gray-700 mb-1">Product ID / Name</label>
-                            <input type="text" id="product" placeholder="Enter Invoice Number..."
-                                   className="w-full text-sm rounded-md py-2 px-2  border-2 border-gray-100 "/>
+                            <input 
+                                type="text" 
+                                id="product" 
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                                placeholder="Enter Product ID, Name, Code or Barcode..."
+                                className="w-full text-sm rounded-md py-2 px-2  border-2 border-gray-100 "/>
 
                         </div>
                         <div className={'grid grid-cols-2 md:items-end items-start gap-2 text-white font-medium'}>
-                            <button className={'bg-emerald-600 py-2 rounded-md flex items-center justify-center'}>
+                            <button 
+                                onClick={handleSearch}
+                                className={'bg-emerald-600 py-2 rounded-md flex items-center justify-center hover:bg-emerald-700 cursor-pointer'}>
                                 <SearchCheck className="mr-2" size={14}/>Search
                             </button>
-                            <button className={'bg-gray-500 py-2 rounded-md flex items-center justify-center'}><RefreshCw
-                                className="mr-2" size={14}/>Clear
+                            <button 
+                                onClick={handleClear}
+                                className={'bg-gray-500 py-2 rounded-md flex items-center justify-center hover:bg-gray-600 cursor-pointer'}>
+                                <RefreshCw className="mr-2" size={14}/>Clear
                             </button>
                         </div>
                     </div>
@@ -699,6 +815,7 @@ function ProductList() {
                                         </div>
                                         <div className="relative group">
                                             <button
+                                                onClick={(e) => handleDeactivateProduct(sale, e)}
                                                 className="p-2 bg-red-100 rounded-full text-red-700 hover:bg-red-200 transition-colors cursor-pointer">
                                                 <Trash size={15}/>
                                             </button>

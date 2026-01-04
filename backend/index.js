@@ -5,6 +5,7 @@ const commonRoutes = require('./routes/commonRoutes');
 require('dotenv').config();
 const swaggerJsDoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
+const seedDatabase = require('./config/dbInit');
 
 const app = express();
 app.use(cors());
@@ -14,8 +15,12 @@ app.use('/api/products', productRoutes);
 app.use('/api/common', commonRoutes);
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
+seedDatabase().then(() => {
+    app.listen(PORT, () => {
+        console.log(`Server is running on port ${PORT}`);
+    });
+}).catch(err => {
+    console.error("Failed to seed database, server not started:", err);
 });
 
 // Swagger definition
