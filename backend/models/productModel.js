@@ -53,7 +53,7 @@ class Product {
     }
   }
 
-  static async getAllProducts() {
+  static async getProductsByStatus(statusId = 1) {
     const query = `
             SELECT 
             pv.id AS productID,
@@ -74,10 +74,10 @@ class Product {
             LEFT JOIN brand b ON p.brand_id = b.idbrand
             LEFT JOIN unit_id u ON p.unit_id = u.idunit_id
             LEFT JOIN product_type pt ON p.product_type_id = pt.idproduct_type
-            WHERE pv.product_status_id = 1
+            WHERE pv.product_status_id = ?
             ORDER BY p.created_at DESC, pv.id DESC
         `;
-    const [rows] = await db.execute(query);
+    const [rows] = await db.execute(query, [statusId]);
     return rows;
   }
 
@@ -133,8 +133,8 @@ class Product {
     }
   }
 
-  //search product type or name / ID
-  static async searchProducts(filter) {
+  //search product type or name / ID with status filter
+  static async searchProducts(filter, statusId = 1) {
     let query = `
         SELECT 
             pv.id AS productID,
@@ -155,10 +155,10 @@ class Product {
         LEFT JOIN brand b ON p.brand_id = b.idbrand
         LEFT JOIN unit_id u ON p.unit_id = u.idunit_id
         LEFT JOIN product_type pt ON p.product_type_id = pt.idproduct_type
-        WHERE pv.product_status_id = 1
+        WHERE pv.product_status_id = ?
     `;
 
-    const params = [];
+    const params = [statusId];
 
     //search by product type
     if (filter.productTypeId) {

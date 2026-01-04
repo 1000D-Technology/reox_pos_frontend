@@ -437,10 +437,12 @@ const { validateProduct, validateUpdateMiddleware} = require('../middleware/prod
  */
 router.post('/create', validateProduct, productController.addProduct);
 router.get('/', productController.getProducts);
+router.get('/deactive', productController.getDeactiveProducts);
 
 router.put('/update/:pvId', validateUpdateMiddleware, productController.updateProduct);
-router.patch('/status/:pvId', productController.deactivateProduct);
+router.patch('/status/:pvId', productController.chnageProductStatus);
 
 router.get('/search' , productController.searchProducts);
+router.get('/search/deactive' , productController.searchDeactiveProducts);
 
 module.exports = router;
