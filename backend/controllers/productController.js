@@ -27,7 +27,7 @@ exports.addProduct = async(req , res) => {
 
 exports.getProducts = async (req, res) => {
     try {
-        const products = await Product.getAllProducts();
+        const products = await Product.getProductsByStatus(1); // 1 = Active products
         res.status(200).json({
             success: true,
             data: products
@@ -58,9 +58,8 @@ exports.updateProduct = async (req, res) => {
 
 exports.searchProducts = async (req, res) =>{
     try{
-
         const {productTypeId, searchTerm} = req.query;
-        const products = await Product.searchProducts({productTypeId, searchTerm});
+        const products = await Product.searchProducts({productTypeId, searchTerm}, 1); // 1 = Active products
 
         res.status(200).json({success: true, data: products});
 
@@ -69,7 +68,19 @@ exports.searchProducts = async (req, res) =>{
     }
 }
 
-exports.deactivateProduct = async (req, res) => {
+exports.searchDeactiveProducts = async (req, res) =>{
+    try{
+        const {productTypeId, searchTerm} = req.query;
+        const products = await Product.searchProducts({productTypeId, searchTerm}, 2); // 2 = Inactive products
+
+        res.status(200).json({success: true, data: products});
+
+    }catch(error){
+        res.status(500).json({success: false, message: "Error searching deactive products", error: error.message});
+    }
+}
+
+exports.chnageProductStatus = async (req, res) => {
     try{
         const {pvId} = req.params;
         const {statusId} = req.body; // status id expected 1= Active, 2= Inactive
@@ -89,3 +100,19 @@ exports.deactivateProduct = async (req, res) => {
         res.status(500).json({success: false, message: "Error updating product status", error: error.message});
     }
 }
+
+exports.getDeactiveProducts = async (req, res) => {
+    try {
+        const products = await Product.getProductsByStatus(2); // 2 = Inactive products
+        res.status(200).json({
+            success: true,
+            data: products
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: "Error fetching deactive products",
+            error: error.message
+        });
+    }
+};
