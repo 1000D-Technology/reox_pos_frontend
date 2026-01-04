@@ -1,11 +1,7 @@
 import {
     ChevronLeft,
     ChevronRight,
-    CirclePlus,
     Pencil,
-
-    TableConfigIcon,
-
     ToggleLeft,
 
     X,
@@ -92,7 +88,7 @@ function ManageSupplier() {
             <div className={'flex flex-col bg-white rounded-md  p-4 justify-between gap-8'}>
 
                 <div
-                    className="overflow-y-auto max-h-md md:h-[320px] lg:h-[500px] rounded-md scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                    className="overflow-y-auto max-h-md md:h-[320px] lg:h-[720px] rounded-md scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
                     <table className="min-w-full divide-y divide-gray-200">
                         <thead className="bg-emerald-600 sticky top-0 z-10">
                             <tr>
