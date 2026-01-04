@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const productRoutes = require('./routes/productRoutes');
 const commonRoutes = require('./routes/commonRoutes');
+const supplierRoutes = require('./routes/supplierRoutes');
 require('dotenv').config();
 const swaggerJsDoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
@@ -13,6 +14,7 @@ app.use(express.json());
 
 app.use('/api/products', productRoutes);
 app.use('/api/common', commonRoutes);
+app.use('/api/suppliers', supplierRoutes);
 
 const PORT = process.env.PORT || 5000;
 seedDatabase().then(() => {
