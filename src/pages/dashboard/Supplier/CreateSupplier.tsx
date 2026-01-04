@@ -368,6 +368,17 @@ function CreateSupplier() {
                                                     className="w-full text-sm rounded-md py-2 px-3 border border-gray-300 focus:border-emerald-500 focus:ring-emerald-500"
                                                 />
                                             </div>
+                                            <div>
+                                                <label htmlFor="new-company-email" className="block text-sm font-medium text-gray-700 mb-1">
+                                                    Contact Number
+                                                </label>
+                                                <input
+                                                    id="new-company-email"
+                                                    type="number"
+                                                    placeholder="Enter company Contact Number"
+                                                    className="w-full text-sm rounded-md py-2 px-3 border border-gray-300 focus:border-emerald-500 focus:ring-emerald-500"
+                                                />
+                                            </div>
                                         </div>
 
                                         <div className="mt-6 flex justify-end gap-2">
