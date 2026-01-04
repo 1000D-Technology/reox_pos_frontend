@@ -1,4 +1,3 @@
-
 import {
     Barcode,
 
@@ -10,27 +9,49 @@ import {
 } from "lucide-react";
 import {useEffect, useState} from "react";
 import TypeableSelect from "../../../components/TypeableSelect.tsx";
+import axiosInstance from "../../../api/axiosInstance";
+import { commonService } from "../../../services/commonService";
+import ConfirmationModal from "../../../components/modals/ConfirmationModal";
 
 function ProductList() {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-    const [selectedProduct, setSelectedProduct] = useState<typeof salesData[0] | null>(null);
+    const [selectedProduct, setSelectedProduct] = useState<any | null>(null);
 
-    const salesData = [
-        {
-            productID: "250929003",
-            productName: "Suger",
-            productCode: "TS425",
-            barcode: "742388563",
-            category: "Grocery",
-            brand: "Emerald",
-            unit: "Kg",
-            productType: "Sugar",
-            color: "Red",
-            size: "25000",
-            storage: "5",
-            createdOn: "2025.02.01",
-        },
-    ];
+    // Pagination and product data state
+    const [salesData, setSalesData] = useState<any[]>([]);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage] = useState(10);
+    const [totalItems, setTotalItems] = useState(0);
+    const [isLoadingProducts, setIsLoadingProducts] = useState(false);
+
+    // State for fetched dropdown data from backend
+    const [brands, setBrands] = useState<SelectOption[]>([]);
+    const [units, setUnits] = useState<SelectOption[]>([]);
+    const [categories, setCategories] = useState<SelectOption[]>([]);
+    const [productType, setProductType] = useState<SelectOption[]>([]);
+
+    // Edit form state
+    const [editFormData, setEditFormData] = useState({
+        productName: "",
+        productCode: "",
+        barcode: "",
+        categoryId: "",
+        brandId: "",
+        unitId: "",
+        typeId: "",
+        color: "",
+        size: "",
+        storage: ""
+    });
+
+    const [isUpdating, setIsUpdating] = useState(false);
+    const [updateErrorMessage, setUpdateErrorMessage] = useState("");
+    const [updateSuccessMessage, setUpdateSuccessMessage] = useState("");
+
+    // Confirmation modal state
+    const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+    const [productToDeactivate, setProductToDeactivate] = useState<any | null>(null);
+    const [isDeactivating, setIsDeactivating] = useState(false);
 
 
     type SelectOption = {
@@ -38,44 +59,7 @@ function ProductList() {
         label: string;
     };
     const [selected, setSelected] = useState<SelectOption | null>(null);
-
-    const types = [
-        {value: 'frank', label: 'Frank'},
-        {value: 'elsa', label: 'Elsa'},
-        {value: 'saman', label: 'Saman'},
-        {value: 'kumara', label: 'Kumara'},
-    ];
-
-    const brands = [
-        {value: "Emerald", label: "Emerald"},
-        {value: "elsa", label: "Elsa"},
-        {value: "saman", label: "Saman"},
-        {value: "kumara", label: "Kumara"},
-    ];
-
-    const units = [
-        {value: "kg", label: "Kilogram"},
-        {value: "ltr", label: "Litre"},
-        {value: "pcs", label: "Pieces"},
-    ];
-
-    const productType = [
-        {value: "suger", label: "Suger"},
-        {value: "fima", label: "Fima"},
-        {value: "snacks", label: "Snacks"},
-    ];
-
-    const categories = [
-        {value: "grocery", label: "Grocery"},
-        {value: "beverages", label: "Beverages"},
-        {value: "snacks", label: "Snacks"},
-    ];
-
-    const productName = [
-        {value: "suger", label: "Suger"},
-        {value: "fima", label: "Fima"},
-        {value: "snacks", label: "Snacks"},
-    ];
+    const [searchTerm, setSearchTerm] = useState("");
 
     const color = [
         {value: "red", label: "Red"},
@@ -86,7 +70,297 @@ function ProductList() {
     // 🔹 Selected row state
     const [selectedIndex, setSelectedIndex] = useState(0);
 
+    // Fetch dropdown data
+    useEffect(() => {
+        const fetchDropdownData = async () => {
+            try {
+                const [categoriesRes, brandsRes, unitsRes, productTypesRes] = await Promise.all([
+                    commonService.getCategories(),
+                    commonService.getBrands(),
+                    commonService.getUnits(),
+                    commonService.getProductTypes(),
+                ]);
 
+                if (categoriesRes.data.success) {
+                    setCategories(categoriesRes.data.data.map((item: any) => ({
+                        value: String(item.id),
+                        label: item.name
+                    })));
+                }
+
+                if (brandsRes.data.success) {
+                    setBrands(brandsRes.data.data.map((item: any) => ({
+                        value: String(item.id),
+                        label: item.name
+                    })));
+                }
+
+                if (unitsRes.data.success) {
+                    setUnits(unitsRes.data.data.map((item: any) => ({
+                        value: String(item.id),
+                        label: item.name
+                    })));
+                }
+
+                if (productTypesRes.data.success) {
+                    setProductType(productTypesRes.data.data.map((item: any) => ({
+                        value: String(item.id),
+                        label: item.name
+                    })));
+                }
+            } catch (error) {
+                console.error('Error fetching dropdown data:', error);
+            }
+        };
+
+        fetchDropdownData();
+    }, []);
+
+    // Fetch products data
+    const fetchProducts = async () => {
+        setIsLoadingProducts(true);
+        try {
+            const response = await axiosInstance.get('/api/products');
+            const result = response.data;
+            
+            if (result.success) {
+                setSalesData(result.data);
+                setTotalItems(result.data.length);
+                setCurrentPage(1);
+                setSelectedIndex(0);
+            }
+        } catch (error) {
+            console.error('Error fetching products:', error);
+        } finally {
+            setIsLoadingProducts(false);
+        }
+    };
+
+    // Search products
+    const handleSearch = async () => {
+        setIsLoadingProducts(true);
+        try {
+            const params: any = {};
+            if (selected?.value) {
+                params.productTypeId = selected.value;
+            }
+            if (searchTerm.trim()) {
+                params.searchTerm = searchTerm.trim();
+            }
+
+            const response = await axiosInstance.get('/api/products/search', { params });
+            const result = response.data;
+            
+            if (result.success) {
+                setSalesData(result.data);
+                setTotalItems(result.data.length);
+                setCurrentPage(1);
+                setSelectedIndex(0);
+            }
+        } catch (error) {
+            console.error('Error searching products:', error);
+        } finally {
+            setIsLoadingProducts(false);
+        }
+    };
+
+    // Clear filters and fetch all products
+    const handleClear = () => {
+        setSelected(null);
+        setSearchTerm("");
+        fetchProducts();
+    };
+
+    useEffect(() => {
+        fetchProducts();
+    }, []);
+
+    // Calculate pagination values
+    const totalPages = Math.ceil(totalItems / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const currentPageData = salesData.slice(startIndex, endIndex);
+
+    // Pagination handlers
+    const goToPage = (page: number) => {
+        if (page >= 1 && page <= totalPages) {
+            setCurrentPage(page);
+            setSelectedIndex(0);
+        }
+    };
+
+    const goToPreviousPage = () => {
+        if (currentPage > 1) {
+            setCurrentPage(currentPage - 1);
+            setSelectedIndex(0);
+        }
+    };
+
+    const goToNextPage = () => {
+        if (currentPage < totalPages) {
+            setCurrentPage(currentPage + 1);
+            setSelectedIndex(0);
+        }
+    };
+
+    // Generate page numbers to display
+    const getPageNumbers = () => {
+        const pages = [];
+        const maxPagesToShow = 5;
+        
+        if (totalPages <= maxPagesToShow) {
+            for (let i = 1; i <= totalPages; i++) {
+                pages.push(i);
+            }
+        } else {
+            if (currentPage <= 3) {
+                for (let i = 1; i <= 4; i++) pages.push(i);
+                pages.push('...');
+                pages.push(totalPages);
+            } else if (currentPage >= totalPages - 2) {
+                pages.push(1);
+                pages.push('...');
+                for (let i = totalPages - 3; i <= totalPages; i++) pages.push(i);
+            } else {
+                pages.push(1);
+                pages.push('...');
+                pages.push(currentPage - 1);
+                pages.push(currentPage);
+                pages.push(currentPage + 1);
+                pages.push('...');
+                pages.push(totalPages);
+            }
+        }
+        
+        return pages;
+    };
+
+    // Populate form when a product is selected for editing
+    useEffect(() => {
+        if (selectedProduct && isEditModalOpen) {
+            // Find IDs from names
+            const categoryMatch = categories.find(c => c.label === selectedProduct.category);
+            const brandMatch = brands.find(b => b.label === selectedProduct.brand);
+            const unitMatch = units.find(u => u.label === selectedProduct.unit);
+            const typeMatch = productType.find(t => t.label === selectedProduct.productType);
+
+            setEditFormData({
+                productName: selectedProduct.productName || "",
+                productCode: selectedProduct.productCode || "",
+                barcode: selectedProduct.barcode || "",
+                categoryId: categoryMatch?.value || "",
+                brandId: brandMatch?.value || "",
+                unitId: unitMatch?.value || "",
+                typeId: typeMatch?.value || "",
+                color: selectedProduct.color || "",
+                size: selectedProduct.size || "",
+                storage: selectedProduct.storage || ""
+            });
+        }
+    }, [selectedProduct, isEditModalOpen, categories, brands, units, productType]);
+
+    // Handle product update
+    const handleUpdateProduct = async () => {
+        setUpdateErrorMessage("");
+        setUpdateSuccessMessage("");
+        setIsUpdating(true);
+
+        try {
+            const response = await axiosInstance.put(`/api/products/update/${selectedProduct.productID}`, {
+                productData: {
+                    name: editFormData.productName,
+                    code: editFormData.productCode,
+                    categoryId: parseInt(editFormData.categoryId) || 0,
+                    brandId: parseInt(editFormData.brandId) || 0,
+                    unitId: parseInt(editFormData.unitId) || 0,
+                    typeId: parseInt(editFormData.typeId) || 0
+                },
+                variationData: {
+                    barcode: editFormData.barcode,
+                    color: editFormData.color,
+                    size: editFormData.size,
+                    storage: editFormData.storage
+                }
+            });
+
+            const result = response.data;
+
+            if (result.success) {
+                setUpdateSuccessMessage(result.message || "Product updated successfully!");
+                
+                // Refresh products list
+                const productsResponse = await axiosInstance.get('/api/products');
+                if (productsResponse.data.success) {
+                    setSalesData(productsResponse.data.data);
+                    setTotalItems(productsResponse.data.data.length);
+                }
+
+                // Close modal after 2 seconds
+                setTimeout(() => {
+                    setIsEditModalOpen(false);
+                    setUpdateSuccessMessage("");
+                }, 2000);
+            } else {
+                setUpdateErrorMessage(result.message || "Failed to update product");
+            }
+        } catch (error: any) {
+            console.error('Error updating product:', error);
+            const errorMsg = error.response?.data?.message || "An error occurred while updating the product. Please try again.";
+            setUpdateErrorMessage(errorMsg);
+        } finally {
+            setIsUpdating(false);
+        }
+    };
+
+    // Handle product deactivate/delete
+    const handleDeactivateProduct = (product: any, e: React.MouseEvent) => {
+        e.stopPropagation();
+        setProductToDeactivate(product);
+        setIsConfirmModalOpen(true);
+    };
+
+    // Confirm product deactivation
+    const confirmDeactivateProduct = async () => {
+        if (!productToDeactivate) return;
+        
+        setIsDeactivating(true);
+
+        try {
+            const response = await axiosInstance.patch(
+                `/api/products/status/${productToDeactivate.productID}`,
+                { statusId: 2 } // 2 = Inactive
+            );
+
+            const result = response.data;
+
+            if (result.success) {
+                alert(result.message || "Product deactivated successfully!");
+                
+                // Refresh products list
+                const productsResponse = await axiosInstance.get('/api/products');
+                if (productsResponse.data.success) {
+                    setSalesData(productsResponse.data.data);
+                    setTotalItems(productsResponse.data.data.length);
+                }
+            } else {
+                alert(result.message || "Failed to deactivate product");
+            }
+        } catch (error: any) {
+            console.error('Error deactivating product:', error);
+            const errorMsg = error.response?.data?.message || "An error occurred while deactivating the product. Please try again.";
+            alert(errorMsg);
+        } finally {
+            setIsDeactivating(false);
+            setIsConfirmModalOpen(false);
+            setProductToDeactivate(null);
+        }
+    };
+
+    // Cancel product deactivation
+    const cancelDeactivateProduct = () => {
+        setIsConfirmModalOpen(false);
+        setProductToDeactivate(null);
+    };
 
     const EditProductModal = () => {
         if (!isEditModalOpen || !selectedProduct) return null;
@@ -105,6 +379,22 @@ function ProductList() {
 
                         <span className="text-lg font-semibold my-4">Basic Product Information</span>
 
+                        {/* Success Message */}
+                        {updateSuccessMessage && (
+                            <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4" role="alert">
+                                <strong className="font-bold">Success! </strong>
+                                <span className="block sm:inline">{updateSuccessMessage}</span>
+                            </div>
+                        )}
+
+                        {/* Error Message */}
+                        {updateErrorMessage && (
+                            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+                                <strong className="font-bold">Error! </strong>
+                                <span className="block sm:inline">{updateErrorMessage}</span>
+                            </div>
+                        )}
+
                         <div className={"grid md:grid-cols-3 gap-4 "}>
                             <div>
                                 <label
@@ -113,19 +403,13 @@ function ProductList() {
                                 >
                                     Product Name
                                 </label>
-                                <TypeableSelect
-                                    options={productName}
-                                    value={selected?.value || null}
-                                    onChange={(opt) =>
-                                        opt
-                                            ? setSelected({
-                                                value: String(opt.value),
-                                                label: opt.label,
-                                            })
-                                            : setSelected(null)
-                                    }
-                                    placeholder="Type to search Product"
-                                    allowCreate={true}
+                                <input
+                                    type="text"
+                                    id="product name"
+                                    value={editFormData.productName}
+                                    onChange={(e) => setEditFormData({...editFormData, productName: e.target.value})}
+                                    placeholder="Enter Product Name"
+                                    className="w-full text-sm rounded-md py-2 px-2 border-2 border-gray-100"
                                 />
                             </div>
                             <div>
@@ -138,7 +422,9 @@ function ProductList() {
                                 <input
                                     type="text"
                                     id="product code"
-                                    placeholder="Type to search Product Code"
+                                    value={editFormData.productCode}
+                                    onChange={(e) => setEditFormData({...editFormData, productCode: e.target.value})}
+                                    placeholder="Enter Product Code"
                                     className="w-full text-sm rounded-md py-2 px-2  border-2 border-gray-100 "
                                 />
                             </div>
@@ -152,6 +438,8 @@ function ProductList() {
                                 <input
                                     type="text"
                                     id="barcode"
+                                    value={editFormData.barcode}
+                                    onChange={(e) => setEditFormData({...editFormData, barcode: e.target.value})}
                                     placeholder="Enter Barcode"
                                     className="w-full text-sm rounded-md py-2 px-2  border-2 border-gray-100 "
                                 />
@@ -166,14 +454,12 @@ function ProductList() {
                                 </label>
                                 <TypeableSelect
                                     options={categories}
-                                    value={selected?.value || null}
+                                    value={editFormData.categoryId || null}
                                     onChange={(opt) =>
-                                        opt
-                                            ? setSelected({
-                                                value: String(opt.value),
-                                                label: opt.label,
-                                            })
-                                            : setSelected(null)
+                                        setEditFormData({
+                                            ...editFormData,
+                                            categoryId: opt ? String(opt.value) : ""
+                                        })
                                     }
                                     placeholder="Type to search types"
                                     allowCreate={true}
@@ -188,14 +474,12 @@ function ProductList() {
                                     Brand </label>
                                 <TypeableSelect
                                     options={brands}
-                                    value={selected?.value || null}
+                                    value={editFormData.brandId || null}
                                     onChange={(opt) =>
-                                        opt
-                                            ? setSelected({
-                                                value: String(opt.value),
-                                                label: opt.label,
-                                            })
-                                            : setSelected(null)
+                                        setEditFormData({
+                                            ...editFormData,
+                                            brandId: opt ? String(opt.value) : ""
+                                        })
                                     }
                                     placeholder="Type to search types"
                                     allowCreate={true}
@@ -211,14 +495,12 @@ function ProductList() {
                                 </label>
                                 <TypeableSelect
                                     options={units}
-                                    value={selected?.value || null}
+                                    value={editFormData.unitId || null}
                                     onChange={(opt) =>
-                                        opt
-                                            ? setSelected({
-                                                value: String(opt.value),
-                                                label: opt.label,
-                                            })
-                                            : setSelected(null)
+                                        setEditFormData({
+                                            ...editFormData,
+                                            unitId: opt ? String(opt.value) : ""
+                                        })
                                     }
                                     placeholder="Type to search Product"
                                     allowCreate={true}
@@ -234,14 +516,12 @@ function ProductList() {
                                 </label>
                                 <TypeableSelect
                                     options={productType}
-                                    value={selected?.value || null}
+                                    value={editFormData.typeId || null}
                                     onChange={(opt) =>
-                                        opt
-                                            ? setSelected({
-                                                value: String(opt.value),
-                                                label: opt.label,
-                                            })
-                                            : setSelected(null)
+                                        setEditFormData({
+                                            ...editFormData,
+                                            typeId: opt ? String(opt.value) : ""
+                                        })
                                     }
                                     placeholder="Type to search types"
                                     allowCreate={true}
@@ -261,16 +541,11 @@ function ProductList() {
                                 </label>
                                 <TypeableSelect
                                     options={color}
-                                    value={selected?.value || null}
+                                    value={editFormData.color || null}
                                     onChange={(opt) =>
-                                        opt
-                                            ? setSelected({
-                                                value: String(opt.value),
-                                                label: opt.label,
-                                            })
-                                            : setSelected(null)
+                                        setEditFormData({ ...editFormData, color: opt?.label || "" })
                                     }
-                                    placeholder="Type to search Product"
+                                    placeholder="Type to search Color"
                                     allowCreate={true}
                                 />
                             </div>
@@ -284,6 +559,8 @@ function ProductList() {
                                 <input
                                     type="number"
                                     id="size"
+                                    value={editFormData.size}
+                                    onChange={(e) => setEditFormData({ ...editFormData, size: e.target.value })}
                                     placeholder="Enter Size"
                                     className="w-full text-sm rounded-md py-2 px-2  border-2 border-gray-100 "
                                 />
@@ -298,6 +575,8 @@ function ProductList() {
                                 <input
                                     type="number"
                                     id="Storage/Capacity"
+                                    value={editFormData.storage}
+                                    onChange={(e) => setEditFormData({ ...editFormData, storage: e.target.value })}
                                     placeholder="Enter Storage/Capacity"
                                     className="w-full text-sm rounded-md py-2 px-2  border-2 border-gray-100 "
                                 />
@@ -309,11 +588,13 @@ function ProductList() {
                             }
                         >
                             <button
+                                onClick={handleUpdateProduct}
+                                disabled={isUpdating}
                                 className={
-                                    "bg-emerald-600 p-2 rounded-md w-2/6 flex justify-center items-center cursor-pointer"
+                                    `bg-emerald-600 p-2 rounded-md w-2/6 flex justify-center items-center cursor-pointer ${isUpdating ? 'opacity-50 cursor-not-allowed' : 'hover:bg-emerald-700'}`
                                 }
                             >
-                                Update Product &nbsp;<p className={'text-yellow-400'}>(Shift + Enter)</p>
+                                {isUpdating ? 'Updating...' : 'Update Product'} &nbsp;<p className={'text-yellow-400'}>(Shift + Enter)</p>
                             </button>
                         </div>
                     </div>
@@ -327,19 +608,38 @@ function ProductList() {
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === "ArrowDown") {
-                setSelectedIndex((prev) => (prev < salesData.length - 1 ? prev + 1 : prev));
+                setSelectedIndex((prev) => (prev < currentPageData.length - 1 ? prev + 1 : prev));
             } else if (e.key === "ArrowUp") {
                 setSelectedIndex((prev) => (prev > 0 ? prev - 1 : prev));
+            } else if (e.key === "Enter" && e.shiftKey && isEditModalOpen) {
+                e.preventDefault();
+                if (!isUpdating) {
+                    handleUpdateProduct();
+                }
             }
         };
 
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [salesData.length]);
+    }, [currentPageData.length, isEditModalOpen, isUpdating]);
     return (
         <>
             <div className={'flex flex-col gap-4 h-full'}>
                 <EditProductModal />
+                
+                <ConfirmationModal
+                    isOpen={isConfirmModalOpen}
+                    title="Deactivate Product"
+                    message="Are you sure you want to deactivate this {itemType}"
+                    itemName={productToDeactivate?.productName || ""}
+                    itemType="product"
+                    onConfirm={confirmDeactivateProduct}
+                    onCancel={cancelDeactivateProduct}
+                    isLoading={isDeactivating}
+                    confirmButtonText="Deactivate"
+                    loadingText="Deactivating..."
+                    isDanger={true}
+                />
 
                 <div>
                     <div className="text-sm text-gray-500 flex items-center">
@@ -353,13 +653,11 @@ function ProductList() {
                 <div className={'bg-white rounded-md p-4 flex flex-col'}>
 
                     <div className={'grid md:grid-cols-5 gap-4 '}>
-
-
                         <div>
                             <label htmlFor="supplier"
                                    className="block text-sm font-medium text-gray-700 mb-1">Product Type</label>
                             <TypeableSelect
-                                options={types}
+                                options={productType}
                                 value={selected?.value || null}
                                 onChange={(opt) => opt ? setSelected({ value: String(opt.value), label: opt.label }) : setSelected(null)}
                                 placeholder="Search Product Types.."
@@ -370,16 +668,26 @@ function ProductList() {
                         <div>
                             <label htmlFor="product"
                                    className="block text-sm font-medium text-gray-700 mb-1">Product ID / Name</label>
-                            <input type="text" id="product" placeholder="Enter Invoice Number..."
-                                   className="w-full text-sm rounded-md py-2 px-2  border-2 border-gray-100 "/>
+                            <input 
+                                type="text" 
+                                id="product" 
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                                placeholder="Enter Product ID, Name, Code or Barcode..."
+                                className="w-full text-sm rounded-md py-2 px-2  border-2 border-gray-100 "/>
 
                         </div>
                         <div className={'grid grid-cols-2 md:items-end items-start gap-2 text-white font-medium'}>
-                            <button className={'bg-emerald-600 py-2 rounded-md flex items-center justify-center'}>
+                            <button 
+                                onClick={handleSearch}
+                                className={'bg-emerald-600 py-2 rounded-md flex items-center justify-center hover:bg-emerald-700 cursor-pointer'}>
                                 <SearchCheck className="mr-2" size={14}/>Search
                             </button>
-                            <button className={'bg-gray-500 py-2 rounded-md flex items-center justify-center'}><RefreshCw
-                                className="mr-2" size={14}/>Clear
+                            <button 
+                                onClick={handleClear}
+                                className={'bg-gray-500 py-2 rounded-md flex items-center justify-center hover:bg-gray-600 cursor-pointer'}>
+                                <RefreshCw className="mr-2" size={14}/>Clear
                             </button>
                         </div>
                     </div>
@@ -419,7 +727,19 @@ function ProductList() {
                             </thead>
 
                             <tbody className="bg-white divide-y divide-gray-200">
-                            {salesData.map((sale, index) => (
+                            {isLoadingProducts ? (
+                                <tr>
+                                    <td colSpan={13} className="px-6 py-8 text-center text-gray-500">
+                                        Loading products...
+                                    </td>
+                                </tr>
+                            ) : currentPageData.length === 0 ? (
+                                <tr>
+                                    <td colSpan={13} className="px-6 py-8 text-center text-gray-500">
+                                        No products found
+                                    </td>
+                                </tr>
+                            ) : currentPageData.map((sale, index) => (
                                 <tr
                                     key={index}
                                     onClick={() => setSelectedIndex(index)}
@@ -495,6 +815,7 @@ function ProductList() {
                                         </div>
                                         <div className="relative group">
                                             <button
+                                                onClick={(e) => handleDeactivateProduct(sale, e)}
                                                 className="p-2 bg-red-100 rounded-full text-red-700 hover:bg-red-200 transition-colors cursor-pointer">
                                                 <Trash size={15}/>
                                             </button>
@@ -510,27 +831,47 @@ function ProductList() {
                         </table>
                     </div>
 
-                    <nav className="bg-white flex items-center justify-center sm:px-6">
+                    <nav className="bg-white flex items-center justify-between sm:px-6 py-3">
+                        <div className="text-sm text-gray-700">
+                            Showing <span className="font-medium">{currentPageData.length === 0 ? 0 : startIndex + 1}</span> to <span className="font-medium">{Math.min(endIndex, totalItems)}</span> of <span className="font-medium">{totalItems}</span> products
+                        </div>
                         <div className="flex items-center space-x-2">
                             <button
-                                className="flex items-center px-2 py-2 text-sm font-medium text-gray-500 hover:text-gray-700">
+                                onClick={goToPreviousPage}
+                                disabled={currentPage === 1}
+                                className={`flex items-center px-2 py-2 text-sm font-medium rounded-md ${
+                                    currentPage === 1 
+                                        ? 'text-gray-300 cursor-not-allowed' 
+                                        : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                                }`}>
                                 <ChevronLeft className="mr-2 h-5 w-5"/> Previous
                             </button>
+                            
+                            {getPageNumbers().map((page, idx) => (
+                                typeof page === 'number' ? (
+                                    <button
+                                        key={idx}
+                                        onClick={() => goToPage(page)}
+                                        className={`px-4 py-2 text-sm font-medium rounded-md ${
+                                            currentPage === page
+                                                ? 'border border-emerald-600 bg-emerald-50 text-emerald-600'
+                                                : 'border border-transparent text-gray-500 hover:bg-gray-100'
+                                        }`}>
+                                        {page}
+                                    </button>
+                                ) : (
+                                    <span key={idx} className="text-gray-500 px-2">...</span>
+                                )
+                            ))}
+                            
                             <button
-                                className="px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white">
-                                1
-                            </button>
-                            <button
-                                className="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-gray-500 hover:bg-gray-100">
-                                2
-                            </button>
-                            <button
-                                className="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-gray-500 hover:bg-gray-100">
-                                3
-                            </button>
-                            <span className="text-gray-500 px-2">...</span>
-                            <button
-                                className="flex items-center px-2 py-2 text-sm font-medium text-gray-500 hover:text-gray-700">
+                                onClick={goToNextPage}
+                                disabled={currentPage === totalPages}
+                                className={`flex items-center px-2 py-2 text-sm font-medium rounded-md ${
+                                    currentPage === totalPages 
+                                        ? 'text-gray-300 cursor-not-allowed' 
+                                        : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                                }`}>
                                 Next <ChevronRight className="ml-2 h-5 w-5"/>
                             </button>
                         </div>

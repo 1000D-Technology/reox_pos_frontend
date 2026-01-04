@@ -35,6 +35,7 @@ import EmployeeSalary from "./pages/dashboard/Employee/EmployeeSalary.tsx";
 import ManageUser from "./pages/dashboard/ManageUser.tsx";
 import CreateGrn from "./pages/dashboard/grn/CreateGrn.tsx";
 import ManageBrand from "./pages/dashboard/Products/ManageBrand.tsx";
+import GrnList from "./pages/dashboard/grn/GrnList.tsx";
 
 export default function App() {
     return (
@@ -56,7 +57,7 @@ export default function App() {
                     <Route path="/stock/damaged-stock" element={<DamagedStock />} />
                     <Route path="/stock/low-stock" element={<LowStock />} />
                     <Route path="/grn/create-grn" element={<CreateGrn />} />
-                    <Route path="/grn/create-grn" element={<CreateGrn />} />
+                    <Route path="/grn/grn-list" element={<GrnList />} />
 
                     <Route path="/products/create-product" element={<CreateProducts />} />
                     <Route path="/products/product-list" element={<ProductList />} />
