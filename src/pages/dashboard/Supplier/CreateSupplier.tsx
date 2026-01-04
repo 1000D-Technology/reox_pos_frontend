@@ -102,7 +102,7 @@ function CreateSupplier() {
 
                     <div>
                         <label htmlFor="search-category"
-                            className="block text-sm font-medium text-gray-700 mb-1">Product Code</label>
+                            className="block text-sm font-medium text-gray-700 mb-1">Contact Number</label>
                         <input type="text" id="search-category" placeholder="Type to search Product Code"
                             className="w-full text-sm rounded-md py-2 px-2 border-2 border-gray-100 focus:border-emerald-500 focus:ring-emerald-500" />
                     </div>
@@ -149,6 +149,17 @@ function CreateSupplier() {
                                                     id="new-company-email"
                                                     type="email"
                                                     placeholder="Enter company email"
+                                                    className="w-full text-sm rounded-md py-2 px-3 border border-gray-300 focus:border-emerald-500 focus:ring-emerald-500"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label htmlFor="new-company-email" className="block text-sm font-medium text-gray-700 mb-1">
+                                                    Contact Number
+                                                </label>
+                                                <input
+                                                    id="new-company-email"
+                                                    type="number"
+                                                    placeholder="Enter company Contact Number"
                                                     className="w-full text-sm rounded-md py-2 px-3 border border-gray-300 focus:border-emerald-500 focus:ring-emerald-500"
                                                 />
                                             </div>
