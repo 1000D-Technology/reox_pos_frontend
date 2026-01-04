@@ -15,11 +15,11 @@ import { useEffect, useState } from "react";
 function SupplierGrn() {
 
     const summaryCards = [
-        { title: 'Total Bills', value: '50', icon: <FileSpreadsheet size={20} /> },
-        { title: 'Total Amount', value: 'LKR.154250.00', icon: <DollarSign size={20} /> },
-        { title: 'Total Paid', value: 'LKR.1540250.00', icon: <Download size={20} /> },
-        { title: 'Total Balance', value: 'LKR.1540250.00', icon: <DollarSign size={20} /> },
-        { title: 'Open Bills', value: '20', icon: <BookmarkCheck size={20} /> },
+        { title: 'Total Bills', value: '50', icon: <FileSpreadsheet size={20} />, backgroundColor: 'bg-emerald-200', iconColor: 'text-emerald-700' },
+        { title: 'Total Amount', value: 'LKR.154250.00', icon: <DollarSign size={20} />, backgroundColor: 'bg-purple-200', iconColor: 'text-purple-700' },
+        { title: 'Total Paid', value: 'LKR.1540250.00', icon: <Download size={20} />, backgroundColor: 'bg-yellow-200', iconColor: 'text-yellow-700' },
+        { title: 'Total Balance', value: 'LKR.1540250.00', icon: <DollarSign size={20} />, backgroundColor: 'bg-red-200', iconColor: 'text-red-700' },
+        { title: 'Open Bills', value: '20', icon: <BookmarkCheck size={20} />, backgroundColor: 'bg-blue-200', iconColor: 'text-blue-700' },
 
     ];
     const InvoiceData = [
@@ -67,8 +67,8 @@ function SupplierGrn() {
                 <div className={' rounded-md grid md:grid-cols-5 grid-cols-5 gap-4'}>
                     {summaryCards.map((card, index) => (
                         <div key={index} className="bg-white p-5 rounded-xl  flex items-center space-x-4 ">
-                            <div className="bg-[#BBF7D0] p-3 rounded-full">
-                                <span className="text-gray-700">{card.icon}</span>
+                            <div className={`${card.backgroundColor} p-3 rounded-full`}>
+                                <span className={`${card.iconColor}`}>{card.icon}</span>
                             </div>
                             <div className='border-l-2 border-[#D9D9D9] pl-2'>
                                 <p className="text-sm text-gray-400 ">{card.title}</p>
