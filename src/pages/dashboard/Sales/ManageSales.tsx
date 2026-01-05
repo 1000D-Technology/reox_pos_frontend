@@ -1,6 +1,8 @@
 import {
     ChartLine,
-    ChartNoAxesCombined, ChevronLeft, ChevronRight,
+    ChartNoAxesCombined,
+    ChevronLeft,
+    ChevronRight,
     CreditCard,
     Eye,
     Printer,
@@ -9,18 +11,52 @@ import {
     SearchCheck,
     Users
 } from "lucide-react";
-import {useEffect, useState} from "react";
-
+import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
 
 function ManageSales() {
     const summaryCards = [
-        {title: 'Cash Amount', value: 'LKR.500000.00', icon: <ChartNoAxesCombined size={20}/>},
-        {title: 'Card Payments', value: '50', icon: <CreditCard size={20}/>},
-        {title: 'Total Sales', value: 'LKR.10250.00', icon: <ChartLine size={20}/>},
-        {title: 'Customers', value: '50', icon: <Users size={20}/>},
-        {title: 'Total Discount', value: '50', icon: <Scale size={20}/>},
+        {
+            title: 'Cash Amount',
+            value: 'LKR.500000.00',
+            icon: <ChartNoAxesCombined size={20}/>,
+            bgColor: 'bg-gradient-to-br from-emerald-400 to-emerald-500',
+            iconBg: 'bg-emerald-100',
+            iconColor: 'text-emerald-600'
+        },
+        {
+            title: 'Card Payments',
+            value: '50',
+            icon: <CreditCard size={20}/>,
+            bgColor: 'bg-gradient-to-br from-blue-400 to-blue-500',
+            iconBg: 'bg-blue-100',
+            iconColor: 'text-blue-600'
+        },
+        {
+            title: 'Total Sales',
+            value: 'LKR.10250.00',
+            icon: <ChartLine size={20}/>,
+            bgColor: 'bg-gradient-to-br from-purple-400 to-purple-500',
+            iconBg: 'bg-purple-100',
+            iconColor: 'text-purple-600'
+        },
+        {
+            title: 'Customers',
+            value: '50',
+            icon: <Users size={20}/>,
+            bgColor: 'bg-gradient-to-br from-orange-400 to-orange-500',
+            iconBg: 'bg-orange-100',
+            iconColor: 'text-orange-600'
+        },
+        {
+            title: 'Total Discount',
+            value: '50',
+            icon: <Scale size={20}/>,
+            bgColor: 'bg-gradient-to-br from-red-400 to-red-500',
+            iconBg: 'bg-red-100',
+            iconColor: 'text-red-600'
+        },
     ];
-
 
     const salesData = [
         {
@@ -48,98 +84,6 @@ function ManageSales() {
             issuedAt: '9/29/2025, 9:15:20 AM',
         },
         {
-            invoiceId: '250929004',
-            grossAmount: '30000.00',
-            customer: 'John Doe',
-            discount: '100.00',
-            netAmount: '29900.00',
-            cashPay: '10000.00',
-            cardPay: '19900.00',
-            balance: '0.00',
-            cashier: 'Nimal Perera',
-            issuedAt: '9/29/2025, 9:15:20 AM',
-        },
-        {
-            invoiceId: '250929004',
-            grossAmount: '30000.00',
-            customer: 'John Doe',
-            discount: '100.00',
-            netAmount: '29900.00',
-            cashPay: '10000.00',
-            cardPay: '19900.00',
-            balance: '0.00',
-            cashier: 'Nimal Perera',
-            issuedAt: '9/29/2025, 9:15:20 AM',
-        },
-
-        {
-            invoiceId: '250929005',
-            grossAmount: '12000.00',
-            customer: 'Jane Smith',
-            discount: '0.00',
-            netAmount: '12000.00',
-            cashPay: '12000.00',
-            cardPay: '0.00',
-            balance: '0.00',
-            cashier: 'Kamal Silva',
-            issuedAt: '9/29/2025, 10:02:40 AM',
-        },{
-            invoiceId: '250929005',
-            grossAmount: '12000.00',
-            customer: 'Jane Smith',
-            discount: '0.00',
-            netAmount: '12000.00',
-            cashPay: '12000.00',
-            cardPay: '0.00',
-            balance: '0.00',
-            cashier: 'Kamal Silva',
-            issuedAt: '9/29/2025, 10:02:40 AM',
-        },{
-            invoiceId: '250929005',
-            grossAmount: '12000.00',
-            customer: 'Jane Smith',
-            discount: '0.00',
-            netAmount: '12000.00',
-            cashPay: '12000.00',
-            cardPay: '0.00',
-            balance: '0.00',
-            cashier: 'Kamal Silva',
-            issuedAt: '9/29/2025, 10:02:40 AM',
-        },{
-            invoiceId: '250929005',
-            grossAmount: '12000.00',
-            customer: 'Jane Smith',
-            discount: '0.00',
-            netAmount: '12000.00',
-            cashPay: '12000.00',
-            cardPay: '0.00',
-            balance: '0.00',
-            cashier: 'Kamal Silva',
-            issuedAt: '9/29/2025, 10:02:40 AM',
-        },
-        {
-            invoiceId: '250929005',
-            grossAmount: '12000.00',
-            customer: 'Jane Smith',
-            discount: '0.00',
-            netAmount: '12000.00',
-            cashPay: '12000.00',
-            cardPay: '0.00',
-            balance: '0.00',
-            cashier: 'Kamal Silva',
-            issuedAt: '9/29/2025, 10:02:40 AM',
-        },{
-            invoiceId: '250929005',
-            grossAmount: '12000.00',
-            customer: 'Jane Smith',
-            discount: '0.00',
-            netAmount: '12000.00',
-            cashPay: '12000.00',
-            cardPay: '0.00',
-            balance: '0.00',
-            cashier: 'Kamal Silva',
-            issuedAt: '9/29/2025, 10:02:40 AM',
-        },{
             invoiceId: '250929005',
             grossAmount: '12000.00',
             customer: 'Jane Smith',
@@ -152,15 +96,16 @@ function ManageSales() {
             issuedAt: '9/29/2025, 10:02:40 AM',
         },
     ];
-    // 🔹 Selected row state
+
     const [selectedIndex, setSelectedIndex] = useState(0);
 
-    // 🔹 Handle Up / Down arrow keys
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === "ArrowDown") {
+                e.preventDefault();
                 setSelectedIndex((prev) => (prev < salesData.length - 1 ? prev + 1 : prev));
             } else if (e.key === "ArrowUp") {
+                e.preventDefault();
                 setSelectedIndex((prev) => (prev > 0 ? prev - 1 : prev));
             }
         };
@@ -172,85 +117,105 @@ function ManageSales() {
     return (
         <div className={'flex flex-col gap-4 h-full'}>
             <div>
-                <div className="text-sm text-gray-500 flex items-center">
-                    <span>Pages</span>
+                <div className="text-sm text-gray-400 flex items-center">
+                    <span>Sales</span>
                     <span className="mx-2">›</span>
-                    <span className="text-black">Sales Management</span>
+                    <span className="text-gray-700 font-medium">Sales Management</span>
                 </div>
-                <h1 className="text-3xl font-semibold text-gray-500">Sales Management</h1>
+                <h1 className="text-3xl font-semibold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
+                    Sales Management
+                </h1>
             </div>
-            <div className={' rounded-md grid md:grid-cols-5 grid-cols-3 gap-4'}>
+
+            <div className={'rounded-md grid md:grid-cols-5 grid-cols-3 gap-4'}>
                 {summaryCards.map((card, index) => (
-                    <div key={index} className="bg-white p-5 rounded-xl  flex items-center space-x-4 ">
-                        <div className="bg-[#BBF7D0] p-3 rounded-full">
-                            <span className="text-gray-700">{card.icon}</span>
+                    <motion.div
+                        key={index}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.1 }}
+                        whileHover={{ scale: 1.03, y: -2 }}
+                        className="bg-white p-5 rounded-xl shadow-lg hover:shadow-xl transition-all flex items-center space-x-4"
+                    >
+                        <div className={`${card.iconBg} p-3 rounded-full`}>
+                            <span className={card.iconColor}>{card.icon}</span>
                         </div>
-                        <div className='border-l-2 border-[#D9D9D9] pl-2'>
-                            <p className="text-sm text-gray-400 ">{card.title}</p>
-                            <p className="text-lg font-semibold text-gray-900">{card.value}</p>
+                        <div className='border-l-2 border-gray-200 pl-2'>
+                            <p className="text-sm text-gray-500">{card.title}</p>
+                            <p className="text-lg font-semibold text-gray-800">{card.value}</p>
                         </div>
-                    </div>
+                    </motion.div>
                 ))}
             </div>
-            <div className={'bg-white rounded-md p-4 flex flex-col'}>
-                <h2 className="text-xl font-semibold text-gray-400">Filter</h2>
-                <div className={'grid md:grid-cols-4 gap-4 '}>
-                    <div>
-                        <label htmlFor="invoice-number"
-                               className="block text-sm font-medium text-gray-700 mb-1">Invoice Number</label>
-                        <input type="text" id="invoice-number" placeholder="Enter Invoice Number..."
-                               className="w-full text-sm rounded-md py-2 px-2  border-2 border-gray-100 "/>
 
+            <div className={'bg-white rounded-xl p-4 flex flex-col shadow-lg'}>
+                <h2 className="text-xl font-semibold text-gray-700 mb-3">Filter</h2>
+                <div className={'grid md:grid-cols-4 gap-4'}>
+                    <div>
+                        <label htmlFor="invoice-id" className="block text-sm font-medium text-gray-700 mb-1">
+                            Invoice ID
+                        </label>
+                        <input
+                            type="text"
+                            id="invoice-id"
+                            placeholder="Enter Invoice ID..."
+                            className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-400 focus:outline-none transition-all"
+                        />
                     </div>
                     <div>
-                        <label htmlFor="from-date"
-                               className="block text-sm font-medium text-gray-700 mb-1">From Date</label>
-                        <input type="date" id="from-date" placeholder="Enter Invoice Number..."
-                               className="w-full text-sm rounded-md py-2 px-2  border-2 border-gray-100 "/>
-
+                        <label htmlFor="from-date" className="block text-sm font-medium text-gray-700 mb-1">
+                            From Date
+                        </label>
+                        <input
+                            type="date"
+                            id="from-date"
+                            className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-400 focus:outline-none transition-all"
+                        />
                     </div>
                     <div>
-                        <label htmlFor="to-date"
-                               className="block text-sm font-medium text-gray-700 mb-1">To Date</label>
-                        <input type="date" id="to-date" placeholder="Enter Invoice Number..."
-                               className="w-full text-sm rounded-md py-2 px-2  border-2 border-gray-100 "/>
-
+                        <label htmlFor="to-date" className="block text-sm font-medium text-gray-700 mb-1">
+                            To Date
+                        </label>
+                        <input
+                            type="date"
+                            id="to-date"
+                            className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-400 focus:outline-none transition-all"
+                        />
                     </div>
                     <div className={'grid grid-cols-2 md:items-end items-start gap-2 text-white font-medium'}>
-                        <button className={'bg-emerald-600 py-2 rounded-md flex items-center justify-center'}>
+                        <button className={'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 py-2 rounded-lg flex items-center justify-center shadow-lg shadow-emerald-200 hover:shadow-xl transition-all'}>
                             <SearchCheck className="mr-2" size={14}/>Search
                         </button>
-                        <button className={'bg-gray-500 py-2 rounded-md flex items-center justify-center'}><RefreshCw
-                            className="mr-2" size={14}/>Cancel
+                        <button className={'bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 py-2 rounded-lg flex items-center justify-center shadow-lg shadow-gray-200 hover:shadow-xl transition-all'}>
+                            <RefreshCw className="mr-2" size={14}/>Cancel
                         </button>
                     </div>
                 </div>
             </div>
-            <div className={'flex flex-col bg-white rounded-md h-full p-4 justify-between'}>
-                <div
-                    className="overflow-y-auto max-h-md md:h-[320px] lg:h-[500px] rounded-md scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+
+            <div className={'flex flex-col bg-white rounded-xl h-full p-4 justify-between shadow-lg'}>
+                <div className="overflow-y-auto max-h-md md:h-[320px] lg:h-[500px] rounded-lg scrollbar-thin scrollbar-thumb-emerald-300 scrollbar-track-gray-100">
                     <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-emerald-600 sticky top-0 z-10">
+                        <thead className="bg-gradient-to-r from-emerald-500 to-emerald-600 sticky top-0 z-10">
                         <tr>
                             {[
                                 'Invoice ID',
-                                'Gross Amount (LKR)',
+                                'Gross Amount',
                                 'Customer',
                                 'Discount',
-                                'NET Amount',
+                                'Net Amount',
                                 'Cash Pay',
                                 'Card Pay',
                                 'Balance',
-                                'Issued Cashier',
+                                'Cashier',
                                 'Issued At',
                                 'Actions'
                             ].map((header, i, arr) => (
                                 <th
-                                    key={header}
-                                    scope="col"
-                                    className={`px-6 py-3 text-left text-sm font-medium text-white tracking-wider
-                            ${i === 0 ? "rounded-tl-lg" : ""}
-                            ${i === arr.length - 1 ? "rounded-tr-lg" : ""}`}
+                                    key={i}
+                                    className={`px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider ${
+                                        i === 0 ? 'rounded-tl-lg' : i === arr.length - 1 ? 'rounded-tr-lg' : ''
+                                    }`}
                                 >
                                     {header}
                                 </th>
@@ -260,105 +225,88 @@ function ManageSales() {
 
                         <tbody className="bg-white divide-y divide-gray-200">
                         {salesData.map((sale, index) => (
-                            <tr
+                            <motion.tr
                                 key={index}
+                                initial={{ opacity: 0, x: -20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: 0.05 * index }}
                                 onClick={() => setSelectedIndex(index)}
-                                className={`cursor-pointer ${
-                                    index === selectedIndex
-                                        ? "bg-green-100 border-l-4 border-green-600"
-                                        : "hover:bg-green-50"
+                                whileHover={{ backgroundColor: "rgba(16,185,129,0.05)" }}
+                                className={`cursor-pointer transition-all ${
+                                    selectedIndex === index
+                                        ? 'bg-emerald-50 border-l-4 border-emerald-500'
+                                        : 'hover:bg-gray-50'
                                 }`}
                             >
-                                <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
+                                <td className="px-6 py-2 whitespace-nowrap text-sm font-semibold text-gray-800">
                                     {sale.invoiceId}
                                 </td>
-                                <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
-                                    {sale.grossAmount}
+                                <td className="px-6 py-2 whitespace-nowrap text-sm font-bold text-emerald-600">
+                                    LKR {sale.grossAmount}
                                 </td>
-                                <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
+                                <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-gray-700">
                                     {sale.customer}
                                 </td>
-                                <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
-                                    {sale.discount}
+                                <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-red-600">
+                                    LKR {sale.discount}
                                 </td>
-                                <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
-                                    {sale.netAmount}
+                                <td className="px-6 py-2 whitespace-nowrap text-sm font-bold text-blue-600">
+                                    LKR {sale.netAmount}
                                 </td>
-                                <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
-                                    {sale.cashPay}
+                                <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-gray-600">
+                                    LKR {sale.cashPay}
                                 </td>
-                                <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
-                                    {sale.cardPay}
+                                <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-gray-600">
+                                    LKR {sale.cardPay}
                                 </td>
-                                <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
-                                    {sale.balance}
+                                <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-gray-600">
+                                    LKR {sale.balance}
                                 </td>
-                                <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
+                                <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-gray-700">
                                     {sale.cashier}
                                 </td>
-                                <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
+                                <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-500">
                                     {sale.issuedAt}
                                 </td>
                                 <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
-                                    <div className="flex items-center space-x-2">
-                                        <div className="relative group">
-                                            <button
-                                                className="p-2 bg-green-100 rounded-full text-green-700 hover:bg-green-200 transition-colors">
-                                                <Printer className="w-5 h-5"/>
-                                            </button>
-                                            <span
-                                                className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max px-2 py-1 text-xs text-white bg-gray-900 rounded-md invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-opacity">
-                                        Print Invoice
-                                    </span>
-                                        </div>
-                                        <div className="relative group">
-                                            <button
-                                                className="p-2 bg-yellow-100 rounded-full text-yellow-700 hover:bg-yellow-200 transition-colors">
-                                                <Eye className="w-5 h-5"/>
-                                            </button>
-                                            <span
-                                                className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max px-2 py-1 text-xs text-white bg-gray-900 rounded-md invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-opacity">
-                                        View Invoice
-                                    </span>
-                                        </div>
+                                    <div className="flex space-x-2">
+                                        <button className="p-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all shadow-md">
+                                            <Eye size={16}/>
+                                        </button>
+                                        <button className="p-2 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-lg hover:from-emerald-600 hover:to-emerald-700 transition-all shadow-md">
+                                            <Printer size={16}/>
+                                        </button>
                                     </div>
                                 </td>
-                            </tr>
+                            </motion.tr>
                         ))}
                         </tbody>
                     </table>
                 </div>
 
-                <nav className="bg-white flex items-center justify-center sm:px-6">
+                <nav className="bg-white flex items-center justify-center sm:px-6 pt-4 border-t-2 border-gray-100">
                     <div className="flex items-center space-x-2">
-                        <button
-                            className="flex items-center px-2 py-2 text-sm font-medium text-gray-500 hover:text-gray-700">
+                        <button className="flex items-center px-3 py-2 text-sm font-medium text-gray-600 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all">
                             <ChevronLeft className="mr-2 h-5 w-5"/> Previous
                         </button>
-                        <button
-                            className="px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white">
+                        <button className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-emerald-600 text-sm font-semibold rounded-lg text-white shadow-md">
                             1
                         </button>
-                        <button
-                            className="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-gray-500 hover:bg-gray-100">
+                        <button className="px-4 py-2 text-sm font-medium rounded-lg text-gray-600 hover:bg-emerald-50 hover:text-emerald-600 transition-all">
                             2
                         </button>
-                        <button
-                            className="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-gray-500 hover:bg-gray-100">
+                        <button className="px-4 py-2 text-sm font-medium rounded-lg text-gray-600 hover:bg-emerald-50 hover:text-emerald-600 transition-all">
                             3
                         </button>
-                        <span className="text-gray-500 px-2">...</span>
-                        <button
-                            className="flex items-center px-2 py-2 text-sm font-medium text-gray-500 hover:text-gray-700">
+                        <span className="text-gray-400 px-2">...</span>
+                        <button className="flex items-center px-3 py-2 text-sm font-medium text-gray-600 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all">
                             Next <ChevronRight className="ml-2 h-5 w-5"/>
                         </button>
                     </div>
                 </nav>
             </div>
-
-
         </div>
-    )
+    );
 }
 
-export default ManageSales
+export default ManageSales;
