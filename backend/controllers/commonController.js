@@ -5,7 +5,7 @@ exports.searchCategories = async (req, res) => {
     try {
         const query = req.query.q || '';
         const [rows] = await db.execute(
-            "SELECT idcategory AS id, name, created_at FROM category WHERE name LIKE ? LIMIT 10",
+            "SELECT idcategory AS id, name, created_at FROM category WHERE name LIKE ? LIMIT 100",
             [`%${query}%`]
         );
         res.json({ success: true, data: rows });
@@ -18,7 +18,7 @@ exports.searchBrands = async (req, res) => {
     try {
         const query = req.query.q || '';
         const [rows] = await db.execute(
-            "SELECT idbrand AS id, name, created_at FROM brand WHERE name LIKE ? LIMIT 10",
+            "SELECT idbrand AS id, name, created_at FROM brand WHERE name LIKE ? LIMIT 100",
             [`%${query}%`]
         );
         res.json({ success: true, data: rows });
@@ -31,7 +31,7 @@ exports.searchUnits = async (req, res) => {
     try {
         const query = req.query.q || '';
         const [rows] = await db.execute(
-            "SELECT idunit_id AS id, name, created_at FROM unit_id WHERE name LIKE ? LIMIT 10",
+            "SELECT idunit_id AS id, name, created_at FROM unit_id WHERE name LIKE ? LIMIT 100",
             [`%${query}%`]
         );
         res.json({ success: true, data: rows });
@@ -44,7 +44,7 @@ exports.searchProductTypes = async (req, res) => {
     try {
         const query = req.query.q || '';
         const [rows] = await db.execute(
-            "SELECT idproduct_type AS id, name FROM product_type WHERE name LIKE ? LIMIT 10",
+            "SELECT idproduct_type AS id, name FROM product_type WHERE name LIKE ? LIMIT 100",
             [`%${query}%`]
         );
         res.json({ success: true, data: rows });
