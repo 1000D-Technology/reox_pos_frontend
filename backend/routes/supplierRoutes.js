@@ -11,5 +11,6 @@ router.get('/banks', supplierController.searchBank);
 //add supplier and get suppliers
 router.post('/add', supplierController.addSupplier);
 router.get('/list', supplierController.getSuppliers);
+router.patch('/update-contact/:id', supplierController.updateSupplierContact);
 
 module.exports = router;
