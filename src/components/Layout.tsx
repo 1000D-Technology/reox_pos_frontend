@@ -1,19 +1,28 @@
 import { useState, useEffect } from "react";
 import Sidebar from "./Sidebar";
 import { Bell, Calculator, ClipboardPlus, PanelLeft, Power, RotateCcw } from "lucide-react";
-import { Link, Outlet } from "react-router-dom";
+import { Link, Outlet, useLocation } from "react-router-dom";
 import InvoiceModal from "./models/InvoiceModal.tsx";
 import { AnimatePresence, motion } from "framer-motion";
 import QuotationModal from "./models/QuotationsModel.tsx";
+import PosCashBalance from "./models/PosCashBalance.tsx";
 
 const OPEN_INVOICE_MODAL_EVENT = "openInvoiceModal";
 const OPEN_QUOTATION_MODAL_EVENT = "openQuotationModal";
 
 export default function Layout() {
+    const location = useLocation();
     const [isOpen, setIsOpen] = useState(true);
     const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
     const [isQuotationModalOpen, setIsQuotationModalOpen] = useState(false);
     const [isScrolled, setIsScrolled] = useState(false);
+    const [isPosCashBalanceOpen, setIsPosCashBalanceOpen] = useState(false);
+
+    useEffect(() => {
+        if (location.pathname === '/pos') {
+            setIsOpen(false);
+        }
+    }, [location.pathname]);
 
     useEffect(() => {
         const handleScroll = (e: Event) => {
@@ -53,9 +62,13 @@ export default function Layout() {
                     </button>
 
                     <div className="flex items-center justify-between gap-3 bg-white px-3 py-2 rounded-full">
-                        <Link to={"#"} className="px-7 py-2 bg-gray-800 text-white rounded-full flex items-center gap-4">
+                        <button
+                            onClick={() => setIsPosCashBalanceOpen(true)}
+                            className="px-7 py-2 bg-gray-800 text-white rounded-full flex items-center gap-4 hover:bg-gray-900 transition"
+                        >
                             <ClipboardPlus size={18} />POS
-                        </Link>
+                        </button>
+
                         <div className={'flex items-center gap-3 text-gray-400'}>
                             <Link to={'#'}>
                                 <Calculator size={15} />
@@ -127,6 +140,28 @@ export default function Layout() {
                                 className={'w-full h-full'}
                             >
                                 <QuotationModal onClose={() => setIsQuotationModalOpen(false)} />
+                            </motion.div>
+                        </motion.div>
+                    )}
+                    {isPosCashBalanceOpen && (
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+                            onClick={() => setIsPosCashBalanceOpen(false)}
+                        >
+                            <motion.div
+                                initial={{ scale: 0.7, y: 50 }}
+                                animate={{ scale: 1, y: 0 }}
+                                exit={{ scale: 0.7, y: 50 }}
+                                transition={{ type: "spring", damping: 20 }}
+                                onClick={e => e.stopPropagation()}
+                            >
+                                <PosCashBalance
+                                    onClose={() => setIsPosCashBalanceOpen(false)}
+                                    onNavigateToPOS={() => setIsOpen(false)}
+                                />
                             </motion.div>
                         </motion.div>
                     )}
