@@ -36,6 +36,7 @@ import ManageUser from "./pages/dashboard/ManageUser.tsx";
 import CreateGrn from "./pages/dashboard/grn/CreateGrn.tsx";
 import ManageBrand from "./pages/dashboard/Products/ManageBrand.tsx";
 import GrnList from "./pages/dashboard/grn/GrnList.tsx";
+import POS from "./pages/dashboard/POS.tsx";
 
 export default function App() {
     return (
@@ -47,40 +48,47 @@ export default function App() {
                 {/* Dashboard layout */}
                 <Route element={<Layout />}>
                     <Route path="/" element={<Dashboard />} />
+                    <Route path="/sales" element={<ManageInvoice />} />
                     <Route path="/sales/manage-invoice" element={<ManageInvoice />} />
                     <Route path="/sales/manage-sales" element={<ManageSales />} />
                     <Route path="/sales/manage-user-sales" element={<ManageUserSales />} />
+                    <Route path="/quotation" element={<CreateQuotation />} />
                     <Route path="/quotation/create-quotation" element={<CreateQuotation />} />
                     <Route path="/quotation/quotation-list" element={<QuatationList />} />
+                    <Route path="/stock" element={<StockList />} />
                     <Route path="/stock/stock-list" element={<StockList />} />
                     <Route path="/stock/out-of-stock" element={<OutOfStock />} />
                     <Route path="/stock/damaged-stock" element={<DamagedStock />} />
                     <Route path="/stock/low-stock" element={<LowStock />} />
+                    <Route path="/grn" element={<CreateGrn />} />
                     <Route path="/grn/create-grn" element={<CreateGrn />} />
                     <Route path="/grn/grn-list" element={<GrnList />} />
-
+                    <Route path="/products" element={<CreateProducts />} />
                     <Route path="/products/create-product" element={<CreateProducts />} />
                     <Route path="/products/product-list" element={<ProductList />} />
                     <Route path="/products/manage-unit" element={<ManageUnit />} />
                     <Route path="/products/manage-category" element={<ManageCategory />} />
                     <Route path="/products/manage-brand" element={<ManageBrand />} />
                     <Route path="/products/removed-products" element={<RemovedProducts />} />
+                    <Route path="/supplier" element={<CreateSupplier />} />
                     <Route path="/supplier/create-supplier" element={<CreateSupplier />} />
                     <Route path="/supplier/manage-supplier" element={<ManageSupplier />} />
                     <Route path="/supplier/supplier-grn" element={<SupplierGRN />} />
                     <Route path="/supplier/supplier-payments" element={<SupplierPayment />} />
-
+                    <Route path="/customer" element={<ManageCustomer />} />
                     <Route path="/customer/manage-customer" element={<ManageCustomer />} />
                     <Route path="/customer/customer-sales" element={<CustomerSales />} />
+                    <Route path="/employee" element={<ManageEmployee />} />
                     <Route path="/employee/manage-employee" element={<ManageEmployee />} />
                     <Route path="/employee/attendance-mark" element={<AttendanceMark />} />
                     <Route path="/employee/attendance-mark" element={<AttendanceMark />} />
                     <Route path="/employee/attendance-report" element={<AttendanceReport />} />
-                    <Route path="/employeeemployee-salary" element={<EmployeeSalary />} />
+                    <Route path="/employee/employee-salary" element={<EmployeeSalary />} />
                     <Route path="/manage-users" element={<ManageUser />} />
                     <Route path="/accounts" element={<Accounts />} />
                     <Route path="/reports" element={<Reports />} />
                     <Route path="/setting" element={<Setting />} />
+                    <Route path="/pos" element={<POS />} />
                 </Route>
             </Routes>
         </Router>
