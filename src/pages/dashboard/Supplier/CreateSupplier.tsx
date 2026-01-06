@@ -63,6 +63,8 @@ function CreateSupplier() {
 
     // 2. Specify that the state can be a 'Category' object or 'null'
     const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
+    const [newContactNumber, setNewContactNumber] = useState('');
+    const [isUpdatingContact, setIsUpdatingContact] = useState(false);
 
     // 🔹 Selected row state
     const [selectedIndex, setSelectedIndex] = useState(0);
@@ -221,6 +223,8 @@ function CreateSupplier() {
     const handleCloseModal = () => {
         setIsModalOpen(false);
         setSelectedCategory(null);
+        setNewContactNumber('');
+        setIsUpdatingContact(false);
     };
 
 
@@ -800,10 +804,10 @@ function CreateSupplier() {
                         <h2 className="text-3xl font-bold text-[#525252] mb-10">Update Supplier</h2>
 
                         <div className="space-y-2">
-                            <p className='text-teal-600'>Saman</p>
+                            <p className='text-teal-600'>{selectedCategory.name}</p>
                             <p className="text-sm text-gray-600">
                                 Current Supplier Contact Number :
-                                <span className="font-semibold text-teal-600 ml-2">{selectedCategory.name}</span>
+                                <span className="font-semibold text-teal-600 ml-2">{selectedCategory.contact}</span>
                             </p>
                             <div>
                                 <label htmlFor="update-category-name" className="block text-sm font-bold text-gray-700 mb-1">
@@ -813,14 +817,95 @@ function CreateSupplier() {
                                     type="text"
                                     id="update-category-name"
                                     placeholder="Enter Supplier Contact Number"
+                                    value={newContactNumber}
+                                    onChange={(e) => {
+                                        const value = e.target.value.replace(/[^0-9]/g, ''); // Only allow numbers
+                                        if (value.length <= 10) {
+                                            setNewContactNumber(value);
+                                        }
+                                    }}
+                                    maxLength={10}
                                     className="w-full text-sm rounded-md py-2 px-3 border border-gray-300 focus:border-emerald-500 focus:ring-emerald-500"
                                 />
                             </div>
                         </div>
 
                         <div className="mt-10 flex justify-end">
-                            <button className="w-1/2  bg-emerald-600 text-white font-semibold py-2.5 rounded-lg hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500">
-                                Update Contact
+                            <button 
+                                onClick={async () => {
+                                    // Validation
+                                    if (!newContactNumber.trim()) {
+                                        toast.error('Contact number is required');
+                                        return;
+                                    }
+                                    
+                                    if (newContactNumber.length !== 10) {
+                                        toast.error('Contact number must be exactly 10 digits');
+                                        return;
+                                    }
+                                    
+                                    if (newContactNumber === selectedCategory?.contact) {
+                                        toast.error('New contact number is the same as current contact number');
+                                        return;
+                                    }
+                                    
+                                    setIsUpdatingContact(true);
+                                    
+                                    try {
+                                        toast.loading('Updating contact number...');
+                                        
+                                        const response = await supplierService.updateSupplierContact(
+                                            parseInt(selectedCategory!.no), 
+                                            newContactNumber.trim()
+                                        );
+                                        
+                                        toast.dismiss();
+                                        
+                                        if (response.data.success) {
+                                            toast.success(response.data.message || 'Contact number updated successfully!');
+                                            
+                                            // Refresh suppliers list
+                                            const suppliersResponse = await supplierService.getSuppliers();
+                                            if (suppliersResponse.data.success) {
+                                                const formattedData: Category[] = suppliersResponse.data.data.map((supplier: any, index: number) => ({
+                                                    no: supplier.id.toString(),
+                                                    name: supplier.supplierName || 'N/A',
+                                                    email: supplier.email || 'N/A',
+                                                    contact: supplier.contactNumber || 'N/A',
+                                                    company: supplier.companyName || 'N/A',
+                                                    bank: supplier.bankName || 'N/A',
+                                                    account: supplier.accountNumber || 'N/A',
+                                                }));
+                                                setSalesData(formattedData);
+                                                setTotalItems(formattedData.length);
+                                            }
+                                            
+                                            // Close modal
+                                            handleCloseModal();
+                                        } else {
+                                            toast.error(response.data.message || 'Failed to update contact number');
+                                        }
+                                        
+                                    } catch (error: any) {
+                                        console.error('Error updating contact number:', error);
+                                        toast.dismiss();
+                                        
+                                        if (error.response?.data?.message) {
+                                            toast.error(error.response.data.message);
+                                        } else {
+                                            toast.error('Failed to update contact number. Please try again.');
+                                        }
+                                    } finally {
+                                        setIsUpdatingContact(false);
+                                    }
+                                }}
+                                disabled={isUpdatingContact}
+                                className={`w-1/2 font-semibold py-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 ${
+                                    isUpdatingContact 
+                                        ? 'bg-gray-400 text-gray-600 cursor-not-allowed' 
+                                        : 'bg-emerald-600 text-white hover:bg-emerald-700'
+                                }`}>
+                                {isUpdatingContact ? 'Updating...' : 'Update Contact'}
                             </button>
                         </div>
                     </div>
