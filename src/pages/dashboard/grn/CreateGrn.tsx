@@ -195,38 +195,36 @@ function CreateGrn() {
         toast.success('Item removed from GRN');
     };
 
-    // Fetch products
-    const fetchProducts = async () => {
+    // Fetch all initial data using Promise.all
+    const fetchInitialData = async () => {
         setIsLoadingProducts(true);
+        setIsLoadingSuppliers(true);
+        setIsLoadingPaymentTypes(true);
+        
         try {
-            const response = await productService.getProductsForDropdown();
-            if (response.data.success && response.data.data) {
-                const productOptions = response.data.data
-                    .filter((product: any) => product && product.id && product.product_name) // Safety filter
+            const [productsResponse, suppliersResponse, paymentTypesResponse] = await Promise.all([
+                productService.getProductsForDropdown(),
+                supplierService.getSuppliers(),
+                axiosInstance.get('/api/grn/payment-types')
+            ]);
+
+            // Handle products response
+            if (productsResponse.data.success && productsResponse.data.data) {
+                const productOptions = productsResponse.data.data
+                    .filter((product: any) => product && product.id && product.product_name)
                     .map((product: any) => ({
                         value: product.id.toString(),
                         label: product.product_name
                     }));
                 setProducts(productOptions);
             } else {
-                console.error('Invalid response structure:', response.data);
-                toast.error('Invalid response from server');
+                console.error('Invalid products response structure:', productsResponse.data);
+                toast.error('Invalid response from products server');
             }
-        } catch (error) {
-            console.error('Error fetching products:', error);
-            toast.error('Failed to load products');
-        } finally {
-            setIsLoadingProducts(false);
-        }
-    };
 
-    // Fetch suppliers
-    const fetchSuppliers = async () => {
-        setIsLoadingSuppliers(true);
-        try {
-            const response = await supplierService.getSuppliers();
-            if (response.data.success) {
-                const supplierOptions = response.data.data.map((supplier: any) => ({
+            // Handle suppliers response
+            if (suppliersResponse.data.success) {
+                const supplierOptions = suppliersResponse.data.data.map((supplier: any) => ({
                     value: supplier.id.toString(),
                     label: supplier.companyName 
                         ? `${supplier.supplierName} - ${supplier.companyName}`
@@ -235,11 +233,27 @@ function CreateGrn() {
                 }));
                 setSuppliers(supplierOptions);
             }
+
+            // Handle payment types response
+            if (paymentTypesResponse.data && paymentTypesResponse.data.success) {
+                const paymentOptions = paymentTypesResponse.data.data
+                    .filter((paymentType: any) => paymentType && paymentType.id && paymentType.payment_types)
+                    .map((paymentType: any) => ({
+                        value: paymentType.id.toString(),
+                        label: paymentType.payment_types
+                    }));
+                setPaymentTypes(paymentOptions);
+            } else {
+                toast.error('Invalid response from payment types API');
+            }
+
         } catch (error) {
-            console.error('Error fetching suppliers:', error);
-            toast.error('Failed to load suppliers');
+            console.error('Error fetching initial data:', error);
+            toast.error('Failed to load initial data');
         } finally {
+            setIsLoadingProducts(false);
             setIsLoadingSuppliers(false);
+            setIsLoadingPaymentTypes(false);
         }
     };
 
@@ -269,31 +283,6 @@ function CreateGrn() {
             setProductVariants([]);
         } finally {
             setIsLoadingVariants(false);
-        }
-    };
-
-    // Fetch payment types
-    const fetchPaymentTypes = async () => {
-        setIsLoadingPaymentTypes(true);
-        try {
-            const response = await axiosInstance.get('/api/grn/payment-types');
-            
-            if (response.data && response.data.success) {
-                const paymentOptions = response.data.data
-                    .filter((paymentType: any) => paymentType && paymentType.id && paymentType.payment_types)
-                    .map((paymentType: any) => ({
-                        value: paymentType.id.toString(),
-                        label: paymentType.payment_types
-                    }));
-                
-                setPaymentTypes(paymentOptions);
-            } else {
-                toast.error('Invalid response from payment types API');
-            }
-        } catch (error) {
-            console.error('Error fetching payment types:', error);
-        } finally {
-            setIsLoadingPaymentTypes(false);
         }
     };
 
@@ -365,9 +354,7 @@ function CreateGrn() {
 
     // Load initial data
     useEffect(() => {
-        fetchProducts();
-        fetchSuppliers();
-        fetchPaymentTypes();
+        fetchInitialData();
         setBillNumber(generateBillNumber()); // Generate bill number on component mount
     }, []);
 
