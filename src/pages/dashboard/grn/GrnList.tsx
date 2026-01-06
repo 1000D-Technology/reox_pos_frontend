@@ -11,15 +11,26 @@ import {
 } from "lucide-react";
 import {useEffect, useState} from "react";
 import TypeableSelect from "../../../components/TypeableSelect.tsx";
+import axiosInstance from "../../../api/axiosInstance.ts";
+import toast, { Toaster } from 'react-hot-toast';
 
 
 function GrnList() {
-    const summaryCards = [
-        {title: 'Total GRN', value: '22', icon: <FileSpreadsheet size={20}/>,backgroundColor:'bg-emerald-200',iconColor:'text-emerald-700'},
-        {title: 'Total Amount', value: 'LKR.10250.00', icon: <BadgeDollarSign size={20}/>,backgroundColor:'bg-purple-200',iconColor:'text-purple-700'},
-        {title: 'Total Paid', value: 'LKR.10250.00', icon: <Download size={20}/>,backgroundColor:'bg-yellow-200',iconColor:'text-yellow-700'},
-        {title: 'Total Balance', value: '50', icon: <Scale size={20}/>,backgroundColor:'bg-red-200',iconColor:'text-red-700'},
-        {title: 'Total Discount', value: '50', icon: <CheckCheck size={20}/>,backgroundColor:'bg-blue-200',iconColor:'text-blue-700'},
+    // Summary data state
+    const [summaryData, setSummaryData] = useState({
+        totalGrn: 0,
+        totalAmount: 0,
+        totalPaid: 0,
+        totalBalance: 0
+    });
+    const [isLoadingSummary, setIsLoadingSummary] = useState(false);
+
+    // Summary cards configuration (without discount)
+    const getSummaryCards = () => [
+        {title: 'Total GRN', value: summaryData.totalGrn.toString(), icon: <FileSpreadsheet size={20}/>,backgroundColor:'bg-emerald-200',iconColor:'text-emerald-700'},
+        {title: 'Total Amount', value: `LKR.${summaryData.totalAmount.toFixed(2)}`, icon: <BadgeDollarSign size={20}/>,backgroundColor:'bg-purple-200',iconColor:'text-purple-700'},
+        {title: 'Total Paid', value: `LKR.${summaryData.totalPaid.toFixed(2)}`, icon: <Download size={20}/>,backgroundColor:'bg-yellow-200',iconColor:'text-yellow-700'},
+        {title: 'Total Balance', value: `LKR.${summaryData.totalBalance.toFixed(2)}`, icon: <Scale size={20}/>,backgroundColor:'bg-red-200',iconColor:'text-red-700'},
     ];
 
     const salesData = [
@@ -47,8 +58,31 @@ function GrnList() {
         {value: "Jagath", label: "Jagath"},
     ];
 
+    // Fetch GRN summary data
+    const fetchGrnSummary = async () => {
+        setIsLoadingSummary(true);
+        try {
+            const response = await axiosInstance.get('/api/grn/summary');
+            if (response.data.success) {
+                setSummaryData(response.data.data);
+            } else {
+                toast.error('Failed to load GRN summary');
+            }
+        } catch (error) {
+            console.error('Error fetching GRN summary:', error);
+            toast.error('Failed to load GRN summary');
+        } finally {
+            setIsLoadingSummary(false);
+        }
+    };
+
     // 🔹 Selected row state
     const [selectedIndex, setSelectedIndex] = useState(0);
+
+    // Load summary data on component mount
+    useEffect(() => {
+        fetchGrnSummary();
+    }, []);
 
     // 🔹 Handle Up / Down arrow keys
     useEffect(() => {
@@ -65,7 +99,35 @@ function GrnList() {
     }, [salesData.length]);
 
     return (
-        <div className={'flex flex-col gap-4 h-full'}>
+        <>
+            <Toaster
+                position="top-right"
+                toastOptions={{
+                    duration: 4000,
+                    style: {
+                        background: '#363636',
+                        color: '#fff',
+                    },
+                    success: {
+                        duration: 3000,
+                        style: {
+                            background: '#10B981',
+                        },
+                    },
+                    error: {
+                        duration: 4000,
+                        style: {
+                            background: '#EF4444',
+                        },
+                    },
+                    loading: {
+                        style: {
+                            background: '#3B82F6',
+                        },
+                    },
+                }}
+            />
+            <div className={'flex flex-col gap-4 h-full'}>
             <div>
                 <div className="text-sm text-gray-500 flex items-center">
                     <span>Pages</span>
@@ -74,8 +136,8 @@ function GrnList() {
                 </div>
                 <h1 className="text-3xl font-semibold text-gray-500">GRN List</h1>
             </div>
-            <div className={' rounded-md grid md:grid-cols-5 grid-cols-3 gap-4'}>
-                {summaryCards.map((card, index) => (
+            <div className={' rounded-md grid md:grid-cols-4 grid-cols-2 gap-4'}>
+                {getSummaryCards().map((card, index) => (
                     <div key={index} className="bg-white p-5 rounded-xl  flex items-center space-x-4 ">
                         <div className={`p-3 rounded-full ${card.backgroundColor}`}>
                             <span className={`${card.iconColor}`}>{card.icon}</span>
@@ -275,7 +337,8 @@ function GrnList() {
             </div>
 
 
-        </div>
+            </div>
+        </>
     )
 }
 
