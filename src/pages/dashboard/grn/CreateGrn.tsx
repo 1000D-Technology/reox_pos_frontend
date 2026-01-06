@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { Plus, Trash2, ShoppingCart, Package, Calendar, DollarSign } from 'lucide-react';
+import { motion } from 'framer-motion';
 import TypeableSelect from "../../../components/TypeableSelect.tsx";
 import { productService } from "../../../services/productService.ts";
 import { supplierService } from "../../../services/supplierService.ts";
@@ -29,7 +31,6 @@ function CreateGrn() {
     };
 
     const [grnData, setGrnData] = useState<GrnItem[]>([]);
-
     const [selectedIndex, setSelectedIndex] = useState(0);
 
     // Separate states for different selections
@@ -51,7 +52,7 @@ function CreateGrn() {
     const [selectedPaymentType, setSelectedPaymentType] = useState<SelectOption | null>(null);
     const [billNumber, setBillNumber] = useState<string>('');
     const [batchNumber, setBatchNumber] = useState<string>('');
-    
+
     // Form fields state
     const [barcode, setBarcode] = useState<string>('');
     const [mfDate, setMfDate] = useState<string>('');
@@ -67,7 +68,7 @@ function CreateGrn() {
 
     // Generate bill number
     const generateBillNumber = (): string => {
-        const randomNum = Math.floor(Math.random() * 90000000) + 10000000; // Generate 8 digit random number (10000000-99999999)
+        const randomNum = Math.floor(Math.random() * 90000000) + 10000000;
         return `BILL-${randomNum}`;
     };
 
@@ -80,20 +81,17 @@ function CreateGrn() {
         const month = monthNames[now.getMonth()];
         const date = String(now.getDate()).padStart(2, '0');
 
-        // Clean company name - remove spaces and special characters, take first 8 chars
         const cleanCompanyName = companyName.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().substring(0, 8);
 
         return `${date}${month}${year}-${cleanCompanyName}`;
     };
 
     const generateBarcode = (): string => {
-        // Generate 12 random digits
         let barcode = '';
         for (let i = 0; i < 12; i++) {
             barcode += Math.floor(Math.random() * 10);
         }
 
-        // Calculate check digit (EAN-13 standard)
         let sum = 0;
         for (let i = 0; i < 12; i++) {
             const digit = parseInt(barcode[i]);
@@ -107,7 +105,6 @@ function CreateGrn() {
     // Add item to GRN
     const addToGrn = () => {
         try {
-            // Validation
             if (!selectedProduct) {
                 toast.error('Please select a product');
                 return;
@@ -133,10 +130,8 @@ function CreateGrn() {
                 return;
             }
 
-            // Generate barcode if empty
             const finalBarcode = barcode.trim() || generateBarcode();
 
-            // Create new GRN item
             const newItem = {
                 productName: selectedProduct.label,
                 productVariant: selectedVariant.label,
@@ -153,12 +148,8 @@ function CreateGrn() {
                 free: freeQty || '0',
             };
 
-            // Add to GRN data
             setGrnData(prevData => [...prevData, newItem]);
-
-            // Clear form fields
             clearForm();
-            
             toast.success('Item added to GRN successfully');
         } catch (error) {
             toast.error('An error occurred while adding item to GRN');
@@ -178,13 +169,12 @@ function CreateGrn() {
         setWsp('');
         setQty('');
         setFreeQty('');
-        setFormKey(prev => prev + 1); // Force TypeableSelect to remount and clear
+        setFormKey(prev => prev + 1);
     };
 
     // Remove item from GRN
     const removeItem = (index: number) => {
         setGrnData(prevData => prevData.filter((_, i) => i !== index));
-        // Adjust selectedIndex if needed
         if (index === selectedIndex && grnData.length > 1) {
             setSelectedIndex(prev => prev > 0 ? prev - 1 : 0);
         } else if (index < selectedIndex) {
@@ -226,7 +216,7 @@ function CreateGrn() {
             if (suppliersResponse.data.success) {
                 const supplierOptions = suppliersResponse.data.data.map((supplier: any) => ({
                     value: supplier.id.toString(),
-                    label: supplier.companyName 
+                    label: supplier.companyName
                         ? `${supplier.supplierName} - ${supplier.companyName}`
                         : supplier.supplierName,
                     companyName: supplier.companyName
@@ -268,8 +258,7 @@ function CreateGrn() {
                     label: `${variant.variant_name} - ${variant.size || 'N/A'}`
                 }));
                 setProductVariants(variantOptions);
-                
-                // Auto-select first variant if available
+
                 if (variantOptions.length > 0) {
                     setSelectedVariant({
                         value: variantOptions[0].value,
@@ -289,7 +278,6 @@ function CreateGrn() {
     // Create GRN function
     const createGrn = async () => {
         try {
-            // Validation
             if (!selectedSupplier) {
                 toast.error('Please select a supplier');
                 return;
@@ -307,7 +295,6 @@ function CreateGrn() {
                 return;
             }
 
-            // Prepare data for backend
             const grnPayload = {
                 billNumber: billNumber,
                 supplierId: parseInt(selectedSupplier.value),
@@ -330,14 +317,11 @@ function CreateGrn() {
                 }))
             };
 
-            console.log('Creating GRN with data:', grnPayload);
-
             const response = await axiosInstance.post('/api/grn/add', grnPayload);
 
             if (response.data.success) {
                 toast.success(`GRN created successfully! GRN ID: ${response.data.grnId}`);
-                
-                // Reset form
+
                 setGrnData([]);
                 setSelectedSupplier(null);
                 setSelectedPaymentType(null);
@@ -361,7 +345,7 @@ function CreateGrn() {
     // Load variants when product changes
     useEffect(() => {
         if (selectedProduct) {
-            setSelectedVariant(null); // Reset variant selection
+            setSelectedVariant(null);
             fetchProductVariants(selectedProduct.value);
         } else {
             setProductVariants([]);
@@ -373,21 +357,20 @@ function CreateGrn() {
     useEffect(() => {
         if (selectedSupplier) {
             let companyName = selectedSupplier.companyName;
-            
-            // If companyName is not available, try to extract it from the label
+
             if (!companyName && selectedSupplier.label.includes(' - ')) {
-                companyName = selectedSupplier.label.split(' - ')[1]; // Get the part after " - "
+                companyName = selectedSupplier.label.split(' - ')[1];
             } else if (!companyName) {
-                companyName = selectedSupplier.label; // Fallback to supplier name if no company name
+                companyName = selectedSupplier.label;
             }
-            
+
             setBatchNumber(generateBatchNumber(companyName));
         } else {
             setBatchNumber('');
         }
     }, [selectedSupplier]);
 
-    // 🔹 Handle Up / Down arrow keys
+    // Handle Up / Down arrow keys
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === "ArrowDown") {
@@ -396,12 +379,18 @@ function CreateGrn() {
                 );
             } else if (e.key === "ArrowUp") {
                 setSelectedIndex((prev) => (prev > 0 ? prev - 1 : prev));
+            } else if (e.key === "Enter") {
+                e.preventDefault();
+                addToGrn();
+            } else if (e.key === "Enter" && e.shiftKey) {
+                e.preventDefault();
+                createGrn();
             }
         };
 
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [grnData.length]);
+    }, [grnData.length, selectedProduct, selectedVariant, costPrice, mrp, rsp, qty]);
 
     // Calculate totals
     const totalItems = grnData.length;
@@ -423,56 +412,54 @@ function CreateGrn() {
                     success: {
                         duration: 3000,
                         style: {
-                            background: '#10B981',
+                            background: '#10b981',
                         },
                     },
                     error: {
                         duration: 4000,
                         style: {
-                            background: '#EF4444',
-                        },
-                    },
-                    loading: {
-                        style: {
-                            background: '#3B82F6',
+                            background: '#ef4444',
                         },
                     },
                 }}
             />
             <div className={'flex flex-col gap-4 h-full'}>
                 <div>
-                    <div className="text-sm text-gray-500 flex items-center">
-                        <span>Pages</span>
+                    <div className="text-sm text-gray-400 flex items-center">
+                        <span>GRN</span>
                         <span className="mx-2">›</span>
-                        <span className="text-black">Create GRN</span>
+                        <span className="text-gray-700 font-medium">Create GRN</span>
                     </div>
-                    <h1 className="text-3xl font-semibold text-gray-500">Create GRN</h1>
+                    <h1 className="text-3xl font-semibold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
+                        Create Goods Received Note
+                    </h1>
                 </div>
 
-                <div className={'bg-white rounded-md p-4 flex flex-col'}>
-                    <span className="text-lg font-semibold my-4">Basic Bill Information</span>
-                    <div className={'grid md:grid-cols-5 gap-4 '}>
+                {/* Basic Bill Information */}
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className={'bg-white rounded-xl p-6 shadow-lg'}
+                >
+                    <div className="flex items-center gap-2 mb-4">
+                        <ShoppingCart className="text-emerald-600" size={24} />
+                        <span className="text-lg font-semibold text-gray-800">Basic Bill Information</span>
+                    </div>
+                    <div className={'grid md:grid-cols-5 gap-4'}>
                         <div>
-                            <label
-                                htmlFor="billnumber"
-                                className="block text-sm font-medium text-gray-700 mb-1"
-                            >
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
                                 Bill Number <span className="text-red-500">*</span>
                             </label>
                             <input
                                 type="text"
-                                id="billnumber"
                                 value={billNumber}
                                 onChange={(e) => setBillNumber(e.target.value)}
                                 placeholder="Enter Bill Number"
-                                className="w-full text-sm rounded-md py-2 px-2 border-2 border-gray-100"
+                                className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-400 focus:outline-none transition-all"
                             />
                         </div>
-                        <div>
-                            <label
-                                htmlFor="supplier"
-                                className="block text-sm font-medium text-gray-700 mb-1"
-                            >
+                        <div className="md:col-span-2">
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
                                 Select Supplier <span className="text-red-500">*</span>
                             </label>
                             <TypeableSelect
@@ -490,15 +477,23 @@ function CreateGrn() {
                                 allowCreate={false}
                             />
                         </div>
-
                     </div>
-                    <span className="text-lg font-semibold my-4">Basic GRN Information</span>
-                    <div className={'grid md:grid-cols-5 gap-4 '}>
+                </motion.div>
+
+                {/* GRN Item Details */}
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.1 }}
+                    className={'bg-white rounded-xl p-6 shadow-lg'}
+                >
+                    <div className="flex items-center gap-2 mb-4">
+                        <Package className="text-emerald-600" size={24} />
+                        <span className="text-lg font-semibold text-gray-800">Add Product Details</span>
+                    </div>
+                    <div className={'grid md:grid-cols-5 gap-4'}>
                         <div>
-                            <label
-                                htmlFor="supplier"
-                                className="block text-sm font-medium text-gray-700 mb-1"
-                            >
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
                                 Select Product <span className="text-red-500">*</span>
                             </label>
                             <TypeableSelect
@@ -518,14 +513,10 @@ function CreateGrn() {
                             />
                         </div>
                         <div>
-                            <label
-                                htmlFor="productvariants"
-                                className="block text-sm font-medium text-gray-700 mb-1"
-                            >
-                                Select Product Variants <span className="text-red-500">*</span>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Select Variant <span className="text-red-500">*</span>
                             </label>
                             <select
-                                id="productvariants"
                                 value={selectedVariant?.value || ""}
                                 onChange={(e) => {
                                     const value = e.target.value;
@@ -542,7 +533,7 @@ function CreateGrn() {
                                     }
                                 }}
                                 disabled={!selectedProduct || isLoadingVariants}
-                                className="w-full text-sm rounded-md py-2 px-2 border-2 border-gray-100 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-400 focus:outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 <option value="">
                                     {isLoadingVariants ? "Loading variants..." :
@@ -557,290 +548,268 @@ function CreateGrn() {
                             </select>
                         </div>
                         <div>
-                            <label
-                                htmlFor="barcode"
-                                className="block text-sm font-medium text-gray-700 mb-1"
-                            >
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
                                 Barcode
                             </label>
                             <input
                                 type="text"
-                                id="barcode"
                                 value={barcode}
                                 onChange={(e) => setBarcode(e.target.value)}
-                                placeholder="Enter Barcode (auto-generated if empty)"
-                                className="w-full text-sm rounded-md py-2 px-2  border-2 border-gray-100 "
+                                placeholder="Auto-generated if empty"
+                                className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-400 focus:outline-none transition-all"
                             />
                         </div>
                         <div>
-                            <label
-                                htmlFor="batchnumber"
-                                className="block text-sm font-medium text-gray-700 mb-1"
-                            >
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
                                 Batch Number
                             </label>
                             <input
                                 type="text"
-                                id="batchnumber"
                                 value={batchNumber}
                                 onChange={(e) => setBatchNumber(e.target.value)}
                                 placeholder="Enter Batch Number"
-                                className="w-full text-sm rounded-md py-2 px-2  border-2 border-gray-100 "
+                                className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-400 focus:outline-none transition-all"
                             />
                         </div>
                         <div>
-                            <label
-                                htmlFor="mfdate"
-                                className="block text-sm font-medium text-gray-700 mb-1"
-                            >
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                <Calendar size={14} className="inline mr-1" />
                                 Manufacture Date
                             </label>
                             <input
                                 type="date"
-                                id="mfdate"
                                 value={mfDate}
                                 onChange={(e) => setMfDate(e.target.value)}
-                                className="w-full text-sm rounded-md py-2 px-2  border-2 border-gray-100 "
+                                className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-400 focus:outline-none transition-all"
                             />
                         </div>
                         <div>
-                            <label
-                                htmlFor="exdate"
-                                className="block text-sm font-medium text-gray-700 mb-1"
-                            >
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                <Calendar size={14} className="inline mr-1" />
                                 Expire Date
                             </label>
                             <input
                                 type="date"
-                                id="exdate"
                                 value={exDate}
                                 onChange={(e) => setExDate(e.target.value)}
-                                className="w-full text-sm rounded-md py-2 px-2  border-2 border-gray-100 "
+                                className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-400 focus:outline-none transition-all"
                             />
                         </div>
                         <div>
-                            <label
-                                htmlFor="coprice"
-                                className="block text-sm font-medium text-gray-700 mb-1"
-                            >
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                <DollarSign size={14} className="inline mr-1" />
                                 Cost Price <span className="text-red-500">*</span>
                             </label>
                             <input
                                 type="number"
-                                id="coprice"
                                 value={costPrice}
                                 onChange={(e) => setCostPrice(e.target.value)}
-                                placeholder="Enter Cost Price"
-                                className="w-full text-sm rounded-md py-2 px-2  border-2 border-gray-100 "
+                                placeholder="0.00"
+                                className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-400 focus:outline-none transition-all"
                             />
                         </div>
                         <div>
-                            <label
-                                htmlFor="mrpprice"
-                                className="block text-sm font-medium text-gray-700 mb-1"
-                            >
-                                Manufacture Retail Price <span className="text-red-500">*</span>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                MRP <span className="text-red-500">*</span>
                             </label>
                             <input
                                 type="number"
-                                id="mrpprice"
                                 value={mrp}
                                 onChange={(e) => setMrp(e.target.value)}
-                                placeholder="Enter Manufacture Retail Price"
-                                className="w-full text-sm rounded-md py-2 px-2  border-2 border-gray-100 "
+                                placeholder="0.00"
+                                className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-400 focus:outline-none transition-all"
                             />
                         </div>
                         <div>
-                            <label
-                                htmlFor="rsprice"
-                                className="block text-sm font-medium text-gray-700 mb-1"
-                            >
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
                                 Retail Selling Price <span className="text-red-500">*</span>
                             </label>
                             <input
                                 type="number"
-                                id="rsprice"
                                 value={rsp}
                                 onChange={(e) => setRsp(e.target.value)}
-                                placeholder="Enter Retail Selling Price"
-                                className="w-full text-sm rounded-md py-2 px-2  border-2 border-gray-100 "
+                                placeholder="0.00"
+                                className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-400 focus:outline-none transition-all"
                             />
                         </div>
                         <div>
-                            <label
-                                htmlFor="wprice"
-                                className="block text-sm font-medium text-gray-700 mb-1"
-                            >
-                                Wholesale Selling Price
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Wholesale Price
                             </label>
                             <input
                                 type="number"
-                                id="wprice"
                                 value={wsp}
                                 onChange={(e) => setWsp(e.target.value)}
-                                placeholder="Enter Wholesale Selling Price"
-                                className="w-full text-sm rounded-md py-2 px-2  border-2 border-gray-100 "
+                                placeholder="0.00"
+                                className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-400 focus:outline-none transition-all"
                             />
                         </div>
                         <div>
-                            <label
-                                htmlFor="qty"
-                                className="block text-sm font-medium text-gray-700 mb-1"
-                            >
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
                                 Quantity <span className="text-red-500">*</span>
                             </label>
                             <input
                                 type="number"
-                                id="qty"
                                 value={qty}
                                 onChange={(e) => setQty(e.target.value)}
-                                placeholder="Enter Quantity"
-                                className="w-full text-sm rounded-md py-2 px-2  border-2 border-gray-100 "
+                                placeholder="0"
+                                className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-400 focus:outline-none transition-all"
                             />
                         </div>
                         <div>
-                            <label
-                                htmlFor="freeqty"
-                                className="block text-sm font-medium text-gray-700 mb-1"
-                            >
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
                                 Free Quantity
                             </label>
                             <input
                                 type="number"
-                                id="freeqty"
                                 value={freeQty}
                                 onChange={(e) => setFreeQty(e.target.value)}
-                                placeholder="Enter Free Quantity"
-                                className="w-full text-sm rounded-md py-2 px-2  border-2 border-gray-100 "
+                                placeholder="0"
+                                className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-400 focus:outline-none transition-all"
                             />
                         </div>
                         <div className={'flex justify-center items-end'}>
-                            <button 
+                            <button
                                 onClick={addToGrn}
-                                className={'bg-emerald-600 w-full rounded-sm p-2 text-white font-semibold cursor-pointer hover:bg-emerald-500'}
+                                className={'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 w-full rounded-lg p-2 text-white font-semibold shadow-lg shadow-emerald-200 hover:shadow-xl transition-all flex items-center justify-center gap-2'}
                             >
-                                ADD TO GRN ( Enter )
+                                <Plus size={18} /> Add to GRN
                             </button>
-
                         </div>
                     </div>
-                    <span className="text-lg font-semibold mt-4">GRN Items</span>
-                    <div
-                        className={
-                            "flex flex-col bg-white rounded-md h-full py-4 justify-between"
-                        }
-                    >
-                        <div
-                            className="overflow-y-auto max-h-md md:h-[320px] lg:h-[320px] rounded-md bg-gray-50 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-                            <table className="min-w-full divide-y divide-gray-200">
-                                <thead className="bg-emerald-600 sticky top-0 z-10">
-                                    <tr>
-                                        {[
+                </motion.div>
 
-                                            "Product Name",
-                                            "Product Variants ID",
-                                            "Barcode",
-                                            "Batch Number",
-                                            "MFD",
-                                            "EXP",
-                                            "Cost Price",
-                                            "MRP",
-                                            "RSP",
-                                            "WSP",
-                                            "QTY",
-                                            "Free QTY",
-                                            "Actions",
-                                        ].map((header, i, arr) => (
-                                            <th
-                                                key={header}
-                                                scope="col"
-                                                className={`px-6 py-3 text-left text-sm font-medium text-white tracking-wider
-                            ${i === 0 ? "rounded-tl-lg" : ""}
-                            ${i === arr.length - 1 ? "rounded-tr-lg" : ""}`}
-                                            >
-                                                {header}
-                                            </th>
-                                        ))}
-                                    </tr>
-                                </thead>
-
-                                <tbody className="bg-white divide-y divide-gray-200">
-                                    {grnData.map((sale, index) => (
-                                        <tr
-                                            key={index}
-                                            onClick={() => setSelectedIndex(index)}
-                                            className={`cursor-pointer ${index === selectedIndex
-                                                    ? "bg-green-100 border-l-4 border-green-600"
-                                                    : "hover:bg-green-50"
-                                                }`}
-                                        >
-                                            <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
-                                                {sale.productName}
-                                            </td>
-                                            <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
-                                                {sale.productVariant}
-                                            </td>
-                                            <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
-                                                {sale.barcode}
-                                            </td>
-                                            <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
-                                                {sale.batch}
-                                            </td>
-                                            <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
-                                                {sale.mfd}
-                                            </td>
-                                            <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
-                                                {sale.exp}
-                                            </td>
-                                            <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
-                                                {sale.cost}
-                                            </td>
-                                            <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
-                                                {sale.mrp}
-                                            </td>
-                                            <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
-                                                {sale.rsp}
-                                            </td>
-                                            <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
-                                                {sale.wsp}
-                                            </td>
-                                            <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
-                                                {sale.qty}
-                                            </td>
-                                            <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
-                                                {sale.free}
-                                            </td>
-                                            <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation(); // Prevent row selection when clicking button
-                                                        removeItem(index);
-                                                    }}
-                                                    className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-xs font-medium transition-colors duration-200"
-                                                >
-                                                    Remove
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-
-
-                    </div>
-                    <div className={'flex justify-between mt-2'}>
-                        <div className={'w-3/5'}>
-                            <div className={'grid md:grid-cols-3 gap-4 '}>
-                                <div>
-                                    <label
-                                        htmlFor="supplier"
-                                        className="block text-sm font-medium text-gray-700 mb-1"
+                {/* GRN Items Table */}
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2 }}
+                    className={'bg-white rounded-xl p-6 shadow-lg'}
+                >
+                    <span className="text-lg font-semibold text-gray-800 block mb-4">GRN Items</span>
+                    <div className="overflow-y-auto max-h-md md:h-[320px] lg:h-[320px] rounded-lg scrollbar-thin scrollbar-thumb-emerald-300 scrollbar-track-gray-100">
+                        <table className="min-w-full divide-y divide-gray-200">
+                            <thead className="bg-gradient-to-r from-emerald-500 to-emerald-600 sticky top-0 z-10">
+                            <tr>
+                                {[
+                                    "Product Name",
+                                    "Variant",
+                                    "Barcode",
+                                    "Batch",
+                                    "MFD",
+                                    "EXP",
+                                    "Cost",
+                                    "MRP",
+                                    "RSP",
+                                    "WSP",
+                                    "QTY",
+                                    "Free",
+                                    "Actions",
+                                ].map((header, i, arr) => (
+                                    <th
+                                        key={header}
+                                        className={`px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider ${
+                                            i === 0 ? 'rounded-tl-lg' : i === arr.length - 1 ? 'rounded-tr-lg' : ''
+                                        }`}
                                     >
-                                        Payment Type<span className="text-red-500">*</span>
+                                        {header}
+                                    </th>
+                                ))}
+                            </tr>
+                            </thead>
+                            <tbody className="bg-white divide-y divide-gray-200">
+                            {grnData.length === 0 ? (
+                                <tr>
+                                    <td colSpan={13} className="px-6 py-8 text-center text-gray-500">
+                                        No items added yet. Add products to create GRN.
+                                    </td>
+                                </tr>
+                            ) : (
+                                grnData.map((sale, index) => (
+                                    <motion.tr
+                                        key={index}
+                                        initial={{ opacity: 0, x: -20 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        transition={{ delay: 0.05 * index }}
+                                        onClick={() => setSelectedIndex(index)}
+                                        whileHover={{ backgroundColor: "rgba(16,185,129,0.05)" }}
+                                        className={`cursor-pointer transition-all ${
+                                            index === selectedIndex
+                                                ? 'bg-emerald-50 border-l-4 border-emerald-500'
+                                                : 'hover:bg-gray-50'
+                                        }`}
+                                    >
+                                        <td className="px-6 py-3 whitespace-nowrap text-sm font-medium text-gray-800">
+                                            {sale.productName}
+                                        </td>
+                                        <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-700">
+                                            {sale.productVariant}
+                                        </td>
+                                        <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-600">
+                                            {sale.barcode}
+                                        </td>
+                                        <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-600">
+                                            {sale.batch}
+                                        </td>
+                                        <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-600">
+                                            {sale.mfd || '-'}
+                                        </td>
+                                        <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-600">
+                                            {sale.exp || '-'}
+                                        </td>
+                                        <td className="px-6 py-3 whitespace-nowrap text-sm font-semibold text-gray-800">
+                                            {sale.cost}
+                                        </td>
+                                        <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-600">
+                                            {sale.mrp}
+                                        </td>
+                                        <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-600">
+                                            {sale.rsp}
+                                        </td>
+                                        <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-600">
+                                            {sale.wsp}
+                                        </td>
+                                        <td className="px-6 py-3 whitespace-nowrap text-sm font-semibold text-emerald-600">
+                                            {sale.qty}
+                                        </td>
+                                        <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-600">
+                                            {sale.free}
+                                        </td>
+                                        <td className="px-6 py-3 whitespace-nowrap text-sm">
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    removeItem(index);
+                                                }}
+                                                className="p-2 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all"
+                                            >
+                                                <Trash2 size={16} />
+                                            </button>
+                                        </td>
+                                    </motion.tr>
+                                ))
+                            )}
+                            </tbody>
+                        </table>
+                    </div>
+                </motion.div>
+
+                {/* Payment & Summary */}
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3 }}
+                    className={'bg-white rounded-xl p-6 shadow-lg'}
+                >
+                    <div className={'flex justify-between gap-6'}>
+                        <div className={'w-1/2'}>
+                            <span className="text-lg font-semibold text-gray-800 block mb-4">Payment Details</span>
+                            <div className={'grid md:grid-cols-2 gap-4'}>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Payment Type <span className="text-red-500">*</span>
                                     </label>
                                     <select
-                                        id="paymenttype"
                                         value={selectedPaymentType?.value || ""}
                                         onChange={(e) => {
                                             const value = e.target.value;
@@ -857,10 +826,10 @@ function CreateGrn() {
                                             }
                                         }}
                                         disabled={isLoadingPaymentTypes}
-                                        className="w-full text-sm rounded-md py-2 px-2 border-2 border-gray-100 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                                        className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-400 focus:outline-none transition-all disabled:opacity-50"
                                     >
                                         <option value="">
-                                            {isLoadingPaymentTypes ? "Loading payment types..." : "Select Payment Type"}
+                                            {isLoadingPaymentTypes ? "Loading..." : "Select Payment Type"}
                                         </option>
                                         {paymentTypes.map((paymentType) => (
                                             <option key={paymentType.value} value={paymentType.value}>
@@ -870,64 +839,52 @@ function CreateGrn() {
                                     </select>
                                 </div>
                                 <div>
-                                    <label
-                                        htmlFor="wprice"
-                                        className="block text-sm font-medium text-gray-700 mb-1"
-                                    >
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
                                         Paid Amount <span className="text-red-500">*</span>
                                     </label>
                                     <input
                                         type="number"
-                                        id="wprice"
                                         value={paidAmount}
                                         onChange={(e) => setPaidAmount(e.target.value)}
-                                        placeholder="Enter Paid Amount"
-                                        className="w-full text-sm rounded-md py-2 px-2  border-2 border-gray-100 "
+                                        placeholder="0.00"
+                                        className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-400 focus:outline-none transition-all"
                                     />
                                 </div>
-
-
                             </div>
                         </div>
-                        <div className={'w-2/5'}>
-                            <div className={'flex flex-col gap-2'}>
-                                <div className={'flex justify-between'}>
-                                    <span className={'font-semibold'}>Total Items :</span>
-                                    <span>{totalItems}</span>
+                        <div className={'w-1/2'}>
+                            <span className="text-lg font-semibold text-gray-800 block mb-4">Summary</span>
+                            <div className={'flex flex-col gap-3'}>
+                                <div className={'flex justify-between items-center p-3 bg-gray-50 rounded-lg'}>
+                                    <span className={'font-medium text-gray-700'}>Total Items:</span>
+                                    <span className={'font-bold text-gray-800'}>{totalItems}</span>
                                 </div>
-                                <div className={'flex justify-between'}>
-                                    <span className={'font-semibold'}>Total Quantity :</span>
-                                    <span>{totalQuantity}</span>
+                                <div className={'flex justify-between items-center p-3 bg-gray-50 rounded-lg'}>
+                                    <span className={'font-medium text-gray-700'}>Total Quantity:</span>
+                                    <span className={'font-bold text-gray-800'}>{totalQuantity}</span>
                                 </div>
-                                <div className={'flex justify-between'}>
-                                    <span className={'font-semibold'}>Total Cost :</span>
-                                    <span>{totalCost.toFixed(2)}</span>
+                                <div className={'flex justify-between items-center p-3 bg-emerald-50 rounded-lg'}>
+                                    <span className={'font-semibold text-emerald-700'}>Grand Total:</span>
+                                    <span className={'font-bold text-emerald-600 text-lg'}>Rs. {totalCost.toFixed(2)}</span>
                                 </div>
-                                <div className={'flex justify-between border-t pt-2 font-bold text-lg'}>
-                                    <span>GRN Total :</span>
-                                    <span>{totalCost.toFixed(2)}</span>
+                                <div className={'flex justify-between items-center p-3 bg-red-50 rounded-lg'}>
+                                    <span className={'font-semibold text-red-700'}>Paid Amount:</span>
+                                    <span className={'font-bold text-red-600'}>- Rs. {paidAmountNum.toFixed(2)}</span>
                                 </div>
-                                <div className={'flex justify-between  pt-2 font-bold text-lg text-red-500'}>
-                                    <span>Paid Amount :</span>
-                                    <span>-{paidAmountNum.toFixed(2)}</span>
+                                <div className={'flex justify-between items-center p-3 bg-blue-50 rounded-lg border-2 border-blue-200'}>
+                                    <span className={'font-bold text-blue-700'}>Balance:</span>
+                                    <span className={'font-bold text-blue-600 text-lg'}>Rs. {balance.toFixed(2)}</span>
                                 </div>
-                                <div className={'flex justify-between border-y pt-2 font-bold text-lg text-emerald-600'}>
-                                    <span>Balance :</span>
-                                    <span>{balance.toFixed(2)}</span>
-                                </div>
-                            </div>
-                            <div>
-                                <button 
+                                <button
                                     onClick={createGrn}
-                                    className={'bg-emerald-600 w-full rounded-sm p-2 mt-4 text-white font-semibold cursor-pointer hover:bg-emerald-500'}
+                                    className={'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 w-full rounded-lg p-3 mt-2 text-white font-bold shadow-lg shadow-emerald-200 hover:shadow-xl transition-all'}
                                 >
-                                    CREATE GRN ( Shift+Enter )
+                                    CREATE GRN (Shift+Enter)
                                 </button>
                             </div>
                         </div>
                     </div>
-                </div>
-
+                </motion.div>
             </div>
         </>
     );
