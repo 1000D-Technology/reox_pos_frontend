@@ -3,6 +3,8 @@ import axiosInstance from '../api/axiosInstance';
 export const productService = {
     // Get all active products
     getProducts: () => axiosInstance.get('/api/products'),
+
+    getProductsForDropdown: () => axiosInstance.get('/api/products/dropdown'),
     
     // Get deactive/removed products
     getDeactiveProducts: () => axiosInstance.get('/api/products/deactive'),
@@ -25,4 +27,8 @@ export const productService = {
     // Search deactive/removed products
     searchDeactiveProducts: (params: { productTypeId?: number; searchTerm?: string }) => 
         axiosInstance.get('/api/products/search/deactive', { params }),
+    
+    // Get product variants by product ID
+    getProductVariants: (productId: number) => 
+        axiosInstance.get(`/api/products/${productId}/variants`),
 };

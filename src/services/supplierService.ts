@@ -33,6 +33,10 @@ export const supplierService = {
     // Get all suppliers
     getSuppliers: () => axiosInstance.get('/api/suppliers/list'),
     
+    // Update supplier contact number
+    updateSupplierContact: (id: number, contactNumber: string) => 
+        axiosInstance.patch(`/api/suppliers/update-contact/${id}`, { contactNumber }),
+    
     // Get company by id (placeholder for future use)
     getCompanyById: (id: number) => axiosInstance.get(`/api/suppliers/companies/${id}`),
     

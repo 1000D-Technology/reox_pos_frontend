@@ -80,6 +80,45 @@ class Product {
     const [rows] = await db.execute(query, [statusId]);
     return rows;
   }
+  
+  static async getProductsForDropdown(statusId = 1) {
+    const query = `
+            SELECT DISTINCT
+            p.id,
+            p.product_name,
+            p.product_code
+            FROM product p
+            JOIN product_variations pv ON p.id = pv.product_id
+            WHERE pv.product_status_id = ?
+            ORDER BY p.product_name ASC
+        `;
+    const [rows] = await db.execute(query, [statusId]);
+    return rows;
+  }
+  
+  static async getProductVariantsByProductId(productId) {
+    const query = `
+            SELECT 
+            pv.id,
+            pv.product_id,
+            pv.barcode,
+            pv.color,
+            pv.size,
+            pv.storage_capacity
+            FROM product_variations pv
+            WHERE pv.product_id = ? AND pv.product_status_id = 1
+            ORDER BY pv.id ASC
+        `;
+    const [rows] = await db.execute(query, [productId]);
+    
+    // Add variant_name after fetching to avoid CONCAT issues
+    const processedRows = rows.map(row => ({
+        ...row,
+        variant_name: `${row.color || 'Default'} - ${row.size || 'Default'} - ${row.storage_capacity || 'N/A'}`
+    }));
+    
+    return processedRows;
+  }
 
   static async updateProductVariation(pvID, productData, variationData) {
     const connection = await db.getConnection();
