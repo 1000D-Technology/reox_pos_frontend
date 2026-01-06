@@ -15,6 +15,7 @@ function CreateGrn() {
     type GrnItem = {
         productName: string;
         productVariant: string;
+        variantId: string;
         barcode: string;
         batch: string;
         mfd: string;
@@ -139,6 +140,7 @@ function CreateGrn() {
             const newItem = {
                 productName: selectedProduct.label,
                 productVariant: selectedVariant.label,
+                variantId: selectedVariant.value,
                 barcode: finalBarcode,
                 batch: batchNumber,
                 mfd: mfDate,
@@ -295,7 +297,71 @@ function CreateGrn() {
         }
     };
 
+    // Create GRN function
+    const createGrn = async () => {
+        try {
+            // Validation
+            if (!selectedSupplier) {
+                toast.error('Please select a supplier');
+                return;
+            }
+            if (!selectedPaymentType) {
+                toast.error('Please select a payment type');
+                return;
+            }
+            if (grnData.length === 0) {
+                toast.error('Please add at least one item to the GRN');
+                return;
+            }
+            if (!paidAmount || parseFloat(paidAmount) < 0) {
+                toast.error('Please enter a valid paid amount');
+                return;
+            }
 
+            // Prepare data for backend
+            const grnPayload = {
+                billNumber: billNumber,
+                supplierId: parseInt(selectedSupplier.value),
+                grandTotal: totalCost,
+                paidAmount: parseFloat(paidAmount),
+                balance: balance,
+                paymentMethodId: parseInt(selectedPaymentType.value),
+                items: grnData.map(item => ({
+                    variantId: parseInt(item.variantId),
+                    barcode: item.barcode,
+                    batchIdentifier: item.batch,
+                    mfd: item.mfd || null,
+                    exp: item.exp || null,
+                    costPrice: parseFloat(item.cost),
+                    mrp: parseFloat(item.mrp),
+                    rsp: parseFloat(item.rsp),
+                    wsp: parseFloat(item.wsp),
+                    qty: parseInt(item.qty),
+                    freeQty: parseInt(item.free)
+                }))
+            };
+
+            console.log('Creating GRN with data:', grnPayload);
+
+            const response = await axiosInstance.post('/api/grn/add', grnPayload);
+
+            if (response.data.success) {
+                toast.success(`GRN created successfully! GRN ID: ${response.data.grnId}`);
+                
+                // Reset form
+                setGrnData([]);
+                setSelectedSupplier(null);
+                setSelectedPaymentType(null);
+                setPaidAmount('');
+                setBillNumber(generateBillNumber());
+                clearForm();
+            } else {
+                toast.error('Failed to create GRN');
+            }
+        } catch (error) {
+            console.error('Error creating GRN:', error);
+        }
+    };
 
     // Load initial data
     useEffect(() => {
@@ -864,7 +930,12 @@ function CreateGrn() {
                                 </div>
                             </div>
                             <div>
-                                <button className={'bg-emerald-600 w-full rounded-sm p-2 mt-4 text-white font-semibold cursor-pointer hover:bg-emerald-500'}>CREATE GRN ( Shift+Enter )</button>
+                                <button 
+                                    onClick={createGrn}
+                                    className={'bg-emerald-600 w-full rounded-sm p-2 mt-4 text-white font-semibold cursor-pointer hover:bg-emerald-500'}
+                                >
+                                    CREATE GRN ( Shift+Enter )
+                                </button>
                             </div>
                         </div>
                     </div>
