@@ -362,11 +362,8 @@ function ManageUnit() {
                                 </tr>
                             ) : (
                                 salesData.map((unit, index) => (
-                                    <motion.tr
+                                    <tr
                                         key={unit.id}
-                                        initial={{ opacity: 0, x: -20 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        transition={{ delay: 0.05 * index }}
                                         onClick={() => setSelectedIndex(index)}
                                         whileHover={{ backgroundColor: "rgba(16,185,129,0.05)" }}
                                         className={`cursor-pointer transition-all ${
@@ -400,7 +397,7 @@ function ManageUnit() {
                                                 </button>
                                             </div>
                                         </td>
-                                    </motion.tr>
+                                    </tr>
                                 ))
                             )}
                             </tbody>
