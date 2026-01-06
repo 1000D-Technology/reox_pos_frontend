@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Trash2, Package } from "lucide-react";
 import { useEffect, useState } from "react";
 import toast, { Toaster } from 'react-hot-toast';
 import TypeableSelect from "../../../components/TypeableSelect.tsx";
@@ -22,6 +22,33 @@ const generateBarcode = (): string => {
     return barcode + checkDigit;
 };
 
+interface Product {
+    productID: number;
+    productName: string;
+    productCode: string;
+    barcode: string;
+    category: string;
+    brand: string;
+    unit: string;
+    productType: string;
+    color: string;
+    size: string;
+    storage: string;
+    createdOn: string;
+}
+
+type SelectOption = {
+    value: string;
+    label: string;
+};
+
+type Variation = {
+    color: string;
+    size: string;
+    storage: string;
+    barcode: string;
+};
+
 function CreateProducts() {
     const [productData, setProductData] = useState({
         name: "",
@@ -34,16 +61,12 @@ function CreateProducts() {
     });
 
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [salesData, setSalesData] = useState<any[]>([]);
+    const [salesData, setSalesData] = useState<Product[]>([]);
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage] = useState(10);
     const [totalItems, setTotalItems] = useState(0);
     const [isLoadingProducts, setIsLoadingProducts] = useState(false);
 
-    type SelectOption = {
-        value: string;
-        label: string;
-    };
     const [selectedCategory, setSelectedCategory] = useState<SelectOption | null>(null);
     const [selectedBrand, setSelectedBrand] = useState<SelectOption | null>(null);
     const [selectedUnit, setSelectedUnit] = useState<SelectOption | null>(null);
@@ -55,13 +78,6 @@ function CreateProducts() {
     const [productType, setProductType] = useState<SelectOption[]>([]);
 
     const [selectedIndex, setSelectedIndex] = useState(0);
-
-    type Variation = {
-        color: string;
-        size: string;
-        storage: string;
-        barcode: string;
-    };
 
     const [variations, setVariations] = useState<Variation[]>([]);
     const [currentVariation, setCurrentVariation] = useState<Variation>({
@@ -75,6 +91,29 @@ function CreateProducts() {
         if (currentVariation.color || currentVariation.size || currentVariation.storage || currentVariation.barcode) {
             setVariations([...variations, currentVariation]);
             setCurrentVariation({ color: "", size: "", storage: "", barcode: "" });
+            toast.success('Variation added successfully');
+        } else {
+            toast.error('Please fill at least one variation field');
+        }
+    };
+
+    const fetchProducts = async () => {
+        setIsLoadingProducts(true);
+        try {
+            const response = await axiosInstance.get('/api/products');
+            const result = response.data;
+
+            if (result.success) {
+                setSalesData(result.data);
+                setTotalItems(result.data.length);
+                setCurrentPage(1);
+                setSelectedIndex(0);
+            }
+        } catch (error) {
+            console.error('Error fetching products:', error);
+            toast.error('Failed to load products');
+        } finally {
+            setIsLoadingProducts(false);
         }
     };
 
@@ -124,13 +163,14 @@ function CreateProducts() {
 
             const createProductPromise = axiosInstance.post('/api/products/create', {
                 productData: {
-                    name: productData.name.trim(),
-                    code: productData.code.trim(),
+                    name: productData.name,
+                    code: productData.code,
                     barcode: mainBarcode,
                     categoryId: parseInt(productData.categoryId) || 0,
                     brandId: parseInt(productData.brandId) || 0,
                     unitId: parseInt(productData.unitId) || 0,
-                    typeId: parseInt(productData.typeId) || 0
+                    typeId: parseInt(productData.typeId) || 0,
+                    statusId: 1
                 },
                 variations: processedVariations
             });
@@ -139,8 +179,11 @@ function CreateProducts() {
                 createProductPromise,
                 {
                     loading: 'Creating product...',
-                    success: 'Product created successfully!',
-                    error: 'Failed to create product'
+                    success: (res) => {
+                        fetchProducts();
+                        return res.data.message || 'Product created successfully!';
+                    },
+                    error: (err) => err.response?.data?.message || 'Failed to create product'
                 }
             );
 
@@ -168,6 +211,7 @@ function CreateProducts() {
 
     const handleRemoveVariation = (index: number) => {
         setVariations(variations.filter((_, i) => i !== index));
+        toast.success('Variation removed');
     };
 
     useEffect(() => {
@@ -181,62 +225,39 @@ function CreateProducts() {
                 ]);
 
                 if (categoriesRes.data.success) {
-                    setCategories(categoriesRes.data.data.map((item: any) => ({
-                        value: item.id.toString(),
+                    setCategories(categoriesRes.data.data.map((item: { id: number; name: string }) => ({
+                        value: String(item.id),
                         label: item.name
                     })));
                 }
 
                 if (brandsRes.data.success) {
-                    setBrands(brandsRes.data.data.map((item: any) => ({
-                        value: item.id.toString(),
+                    setBrands(brandsRes.data.data.map((item: { id: number; name: string }) => ({
+                        value: String(item.id),
                         label: item.name
                     })));
                 }
 
                 if (unitsRes.data.success) {
-                    setUnits(unitsRes.data.data.map((item: any) => ({
-                        value: item.id.toString(),
+                    setUnits(unitsRes.data.data.map((item: { id: number; name: string }) => ({
+                        value: String(item.id),
                         label: item.name
                     })));
                 }
 
                 if (productTypesRes.data.success) {
-                    setProductType(productTypesRes.data.data.map((item: any) => ({
-                        value: item.id.toString(),
+                    setProductType(productTypesRes.data.data.map((item: { id: number; name: string }) => ({
+                        value: String(item.id),
                         label: item.name
                     })));
                 }
             } catch (error) {
                 console.error('Error fetching dropdown data:', error);
-                toast.error('Failed to load dropdown data. Please refresh the page.');
+                toast.error('Failed to load dropdown data');
             }
         };
 
         fetchDropdownData();
-    }, []);
-
-    useEffect(() => {
-        const fetchProducts = async () => {
-            setIsLoadingProducts(true);
-            try {
-                const response = await axiosInstance.get('/api/products');
-                const result = response.data;
-
-                if (result.success) {
-                    setSalesData(result.data || []);
-                    setTotalItems(result.data?.length || 0);
-                } else {
-                    toast.error('Failed to load products');
-                }
-            } catch (error) {
-                console.error('Error fetching products:', error);
-                toast.error('Failed to load products. Please refresh the page.');
-            } finally {
-                setIsLoadingProducts(false);
-            }
-        };
-
         fetchProducts();
     }, []);
 
@@ -267,7 +288,7 @@ function CreateProducts() {
     };
 
     const getPageNumbers = () => {
-        const pages = [];
+        const pages: (number | string)[] = [];
         const maxPagesToShow = 5;
 
         if (totalPages <= maxPagesToShow) {
@@ -315,7 +336,7 @@ function CreateProducts() {
 
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [currentPageData.length, isSubmitting]);
+    }, [currentPageData.length, isSubmitting, productData, variations]);
 
     return (
         <>
@@ -349,7 +370,7 @@ function CreateProducts() {
                         <span className="text-gray-700 font-medium">Create Product</span>
                     </div>
                     <h1 className="text-3xl font-semibold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
-                        Create Product
+                        Create New Product
                     </h1>
                 </div>
 
@@ -358,44 +379,55 @@ function CreateProducts() {
                     animate={{ opacity: 1, y: 0 }}
                     className={"bg-white rounded-xl p-6 flex flex-col shadow-lg"}
                 >
-                    <h2 className="text-xl font-semibold text-gray-700 mb-4">Basic Product Information</h2>
+                    <div className="flex items-center gap-2 mb-4">
+                        <Package className="text-emerald-600" size={24} />
+                        <h2 className="text-xl font-semibold text-gray-700">Product Information</h2>
+                    </div>
 
                     <div className={"grid md:grid-cols-5 gap-4"}>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Product Name</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Product Name
+                            </label>
                             <input
                                 type="text"
                                 value={productData.name}
                                 onChange={(e) => setProductData({...productData, name: e.target.value})}
-                                placeholder="Enter product name..."
-                                className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-400 focus:outline-none transition-all"
+                                placeholder="Enter Product Name"
+                                className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all outline-none"
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Product Code</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Product Code
+                            </label>
                             <input
                                 type="text"
                                 value={productData.code}
                                 onChange={(e) => setProductData({...productData, code: e.target.value})}
-                                placeholder="Enter product code..."
-                                className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-400 focus:outline-none transition-all"
+                                placeholder="Enter Product Code"
+                                className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all outline-none"
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Barcode</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Barcode (Optional)
+                            </label>
                             <input
                                 type="text"
                                 value={productData.barcode}
                                 onChange={(e) => setProductData({...productData, barcode: e.target.value})}
                                 placeholder="Auto-generated if empty"
-                                className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-400 focus:outline-none transition-all"
+                                className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all outline-none"
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Category
+                            </label>
                             <TypeableSelect
                                 options={categories}
-                                value={selectedCategory}
+                                value={selectedCategory?.value || null}
                                 onChange={(option) => {
                                     setSelectedCategory(option);
                                     setProductData({...productData, categoryId: option?.value || ""});
@@ -404,10 +436,12 @@ function CreateProducts() {
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Brand</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Brand
+                            </label>
                             <TypeableSelect
                                 options={brands}
-                                value={selectedBrand}
+                                value={selectedBrand?.value || null}
                                 onChange={(option) => {
                                     setSelectedBrand(option);
                                     setProductData({...productData, brandId: option?.value || ""});
@@ -416,10 +450,12 @@ function CreateProducts() {
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Unit</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Unit
+                            </label>
                             <TypeableSelect
                                 options={units}
-                                value={selectedUnit}
+                                value={selectedUnit?.value || null}
                                 onChange={(option) => {
                                     setSelectedUnit(option);
                                     setProductData({...productData, unitId: option?.value || ""});
@@ -428,10 +464,12 @@ function CreateProducts() {
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Product Type</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Product Type
+                            </label>
                             <TypeableSelect
                                 options={productType}
-                                value={selectedProductType}
+                                value={selectedProductType?.value || null}
                                 onChange={(option) => {
                                     setSelectedProductType(option);
                                     setProductData({...productData, typeId: option?.value || ""});
@@ -445,110 +483,83 @@ function CreateProducts() {
 
                     <div className="grid md:grid-cols-5 gap-4">
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Color</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Color
+                            </label>
                             <input
                                 type="text"
                                 value={currentVariation.color}
                                 onChange={(e) => setCurrentVariation({...currentVariation, color: e.target.value})}
-                                placeholder="Enter color..."
-                                className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-400 focus:outline-none transition-all"
+                                placeholder="Enter Color"
+                                className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all outline-none"
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Size</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Size
+                            </label>
                             <input
                                 type="text"
                                 value={currentVariation.size}
                                 onChange={(e) => setCurrentVariation({...currentVariation, size: e.target.value})}
-                                placeholder="Enter size..."
-                                className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-400 focus:outline-none transition-all"
+                                placeholder="Enter Size"
+                                className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all outline-none"
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Storage/Capacity</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Storage/Capacity
+                            </label>
                             <input
                                 type="text"
                                 value={currentVariation.storage}
                                 onChange={(e) => setCurrentVariation({...currentVariation, storage: e.target.value})}
-                                placeholder="Enter storage..."
-                                className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-400 focus:outline-none transition-all"
+                                placeholder="Enter Storage"
+                                className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all outline-none"
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Barcode</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Barcode (Optional)
+                            </label>
                             <input
                                 type="text"
                                 value={currentVariation.barcode}
                                 onChange={(e) => setCurrentVariation({...currentVariation, barcode: e.target.value})}
                                 placeholder="Auto-generated if empty"
-                                className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-400 focus:outline-none transition-all"
+                                className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all outline-none"
                             />
                         </div>
-                        <div className="flex items-end justify-end">
+                        <div className="flex items-end">
                             <button
                                 onClick={handleAddVariation}
-                                className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white py-2 rounded-lg flex items-center justify-center shadow-lg shadow-blue-200 hover:shadow-xl transition-all font-medium"
+                                className="flex items-center justify-center gap-2 w-full py-2 px-4 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-medium rounded-lg shadow-lg shadow-blue-200 transition-all"
                             >
-                                <Plus size={18} className="mr-2"/>Add Variation
+                                <Plus size={16} />
+                                Add Variation
                             </button>
                         </div>
                     </div>
 
                     {variations.length > 0 && (
-                        <div className="mt-6">
-                            <div className="flex items-center justify-between mb-4">
-                                <h3 className="text-lg font-semibold text-gray-700">
-                                    Added Variations <span className="ml-2 px-3 py-1 bg-emerald-100 text-emerald-600 rounded-full text-sm font-bold">{variations.length}</span>
-                                </h3>
-                            </div>
-
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                        <div className="mt-4">
+                            <h3 className="text-sm font-semibold text-gray-700 mb-2">Added Variations:</h3>
+                            <div className="space-y-2">
                                 {variations.map((variation, index) => (
-                                    <motion.div
-                                        key={index}
-                                        initial={{ opacity: 0, scale: 0.9 }}
-                                        animate={{ opacity: 1, scale: 1 }}
-                                        exit={{ opacity: 0, scale: 0.9 }}
-                                        className="bg-gradient-to-br from-gray-50 to-gray-100 p-4 rounded-xl border-2 border-gray-200 hover:border-emerald-400 transition-all shadow-sm hover:shadow-md"
-                                    >
-                                        <div className="flex justify-between items-start mb-3">
-                                            <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded">
-                                                Variation {index + 1}
-                                            </span>
-                                            <button
-                                                onClick={() => handleRemoveVariation(index)}
-                                                className="p-1.5 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-all"
-                                            >
-                                                <Trash2 size={14}/>
-                                            </button>
+                                    <div key={index} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg border border-gray-200">
+                                        <div className="flex gap-4 text-sm">
+                                            {variation.color && <span><strong>Color:</strong> {variation.color}</span>}
+                                            {variation.size && <span><strong>Size:</strong> {variation.size}</span>}
+                                            {variation.storage && <span><strong>Storage:</strong> {variation.storage}</span>}
+                                            {variation.barcode && <span><strong>Barcode:</strong> {variation.barcode}</span>}
                                         </div>
-                                        <div className="space-y-2 text-sm">
-                                            {variation.color && (
-                                                <div className="flex items-center">
-                                                    <span className="text-gray-500 font-medium w-20">Color:</span>
-                                                    <span className="text-gray-800 font-semibold">{variation.color}</span>
-                                                </div>
-                                            )}
-                                            {variation.size && (
-                                                <div className="flex items-center">
-                                                    <span className="text-gray-500 font-medium w-20">Size:</span>
-                                                    <span className="text-gray-800 font-semibold">{variation.size}</span>
-                                                </div>
-                                            )}
-                                            {variation.storage && (
-                                                <div className="flex items-center">
-                                                    <span className="text-gray-500 font-medium w-20">Storage:</span>
-                                                    <span className="text-gray-800 font-semibold">{variation.storage}</span>
-                                                </div>
-                                            )}
-                                            {variation.barcode && (
-                                                <div className="flex items-center">
-                                                    <span className="text-gray-500 font-medium w-20">Barcode:</span>
-                                                    <span className="text-gray-800 font-mono text-xs">{variation.barcode}</span>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </motion.div>
+                                        <button
+                                            onClick={() => handleRemoveVariation(index)}
+                                            className="p-2 hover:bg-red-100 text-red-600 rounded-lg transition-colors"
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
+                                    </div>
                                 ))}
                             </div>
                         </div>
@@ -558,11 +569,12 @@ function CreateProducts() {
                         <button
                             onClick={handleSubmitProduct}
                             disabled={isSubmitting}
-                            className={`px-8 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white rounded-lg font-semibold shadow-lg shadow-emerald-200 hover:shadow-xl transition-all ${
+                            className={`flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-medium rounded-lg shadow-lg shadow-emerald-200 transition-all ${
                                 isSubmitting ? 'opacity-50 cursor-not-allowed' : ''
                             }`}
                         >
-                            {isSubmitting ? 'Creating Product...' : 'Create Product (Shift+Enter)'}
+                            {isSubmitting ? 'Creating...' : 'Create Product'}
+                            <span className="text-xs text-emerald-100">(Shift + Enter)</span>
                         </button>
                     </div>
                 </motion.div>
@@ -573,14 +585,15 @@ function CreateProducts() {
                     transition={{ delay: 0.2 }}
                     className={"flex flex-col bg-white rounded-xl h-full p-6 justify-between shadow-lg"}
                 >
+                    <span className="text-lg font-semibold text-gray-800 block mb-4">Product List</span>
                     <div className="overflow-y-auto max-h-md md:h-[320px] lg:h-[320px] rounded-lg scrollbar-thin scrollbar-thumb-emerald-300 scrollbar-track-gray-100">
                         <table className="min-w-full divide-y divide-gray-200">
-                            <thead className="bg-gradient-to-r from-emerald-500 to-emerald-600 sticky top-0 z-10">
+                            <thead className="bg-gradient-to-r from-emerald-600 to-emerald-700 sticky top-0 z-10">
                             <tr>
-                                {['Product Name', 'Code', 'Barcode', 'Category', 'Brand', 'Unit', 'Type'].map((header, i, arr) => (
+                                {['Product ID', 'Product Name', 'Code', 'Barcode', 'Category', 'Brand', 'Unit', 'Type', 'Color', 'Size', 'Storage', 'Created On'].map((header, i, arr) => (
                                     <th
                                         key={i}
-                                        className={`px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider ${
+                                        className={`px-6 py-3 text-left text-sm font-medium text-white tracking-wider ${
                                             i === 0 ? 'rounded-tl-lg' : i === arr.length - 1 ? 'rounded-tr-lg' : ''
                                         }`}
                                     >
@@ -590,47 +603,51 @@ function CreateProducts() {
                             </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
-                            {currentPageData.map((product, index) => (
-                                <tr
-                                    key={index}
-                                    onClick={() => setSelectedIndex(index)}
-                                    className={`cursor-pointer transition-all ${
-                                        selectedIndex === index
-                                            ? 'bg-emerald-50 border-l-4 border-emerald-500'
-                                            : 'hover:bg-gray-50'
-                                    }`}
-                                >
-                                    <td className="px-6 py-2 whitespace-nowrap text-sm font-semibold text-gray-800">
-                                        {product.name}
-                                    </td>
-                                    <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-gray-600">
-                                        {product.code}
-                                    </td>
-                                    <td className="px-6 py-2 whitespace-nowrap text-sm font-mono text-gray-600">
-                                        {product.barcode}
-                                    </td>
-                                    <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-600">
-                                        {product.category}
-                                    </td>
-                                    <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-600">
-                                        {product.brand}
-                                    </td>
-                                    <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-600">
-                                        {product.unit}
-                                    </td>
-                                    <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-600">
-                                        {product.type}
+                            {isLoadingProducts ? (
+                                <tr>
+                                    <td colSpan={12} className="px-6 py-8 text-center text-gray-500">
+                                        Loading products...
                                     </td>
                                 </tr>
-                            ))}
+                            ) : currentPageData.length === 0 ? (
+                                <tr>
+                                    <td colSpan={12} className="px-6 py-8 text-center text-gray-500">
+                                        No products found
+                                    </td>
+                                </tr>
+                            ) : (
+                                currentPageData.map((product, index) => (
+                                    <tr
+                                        key={product.productID}
+                                        onClick={() => setSelectedIndex(index)}
+                                        className={`cursor-pointer transition-colors ${
+                                            selectedIndex === index
+                                                ? "bg-emerald-50 border-l-4 border-emerald-600"
+                                                : "hover:bg-emerald-50/50"
+                                        }`}
+                                    >
+                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">{product.productID}</td>
+                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">{product.productName}</td>
+                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">{product.productCode}</td>
+                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">{product.barcode}</td>
+                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">{product.category}</td>
+                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">{product.brand}</td>
+                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">{product.unit}</td>
+                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">{product.productType}</td>
+                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">{product.color}</td>
+                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">{product.size}</td>
+                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">{product.storage}</td>
+                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">{product.createdOn}</td>
+                                    </tr>
+                                ))
+                            )}
                             </tbody>
                         </table>
                     </div>
 
                     <nav className="bg-white flex items-center justify-between sm:px-6 pt-4 border-t-2 border-gray-100">
                         <div className="text-sm text-gray-600">
-                            Showing <span className="font-bold text-gray-800">{startIndex + 1}-{Math.min(endIndex, totalItems)}</span> of{' '}
-                            <span className="font-bold text-gray-800">{totalItems}</span> products
+                            Showing <span className="font-medium text-emerald-600">{currentPageData.length === 0 ? 0 : startIndex + 1}</span> to <span className="font-medium text-emerald-600">{Math.min(endIndex, totalItems)}</span> of <span className="font-medium text-emerald-600">{totalItems}</span> products
                         </div>
                         <div className="flex items-center space-x-2">
                             <button
@@ -638,39 +655,41 @@ function CreateProducts() {
                                 disabled={currentPage === 1}
                                 className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${
                                     currentPage === 1
-                                        ? 'text-gray-400 cursor-not-allowed'
-                                        : 'text-gray-600 hover:text-emerald-600 hover:bg-emerald-50'
+                                        ? 'text-gray-300 cursor-not-allowed'
+                                        : 'text-gray-600 hover:bg-emerald-50 hover:text-emerald-600'
                                 }`}
                             >
-                                <ChevronLeft className="mr-2 h-5 w-5"/> Previous
+                                <ChevronLeft className="mr-1 h-4 w-4"/> Previous
                             </button>
-                            {getPageNumbers().map((page, index) =>
-                                page === '...' ? (
-                                    <span key={`ellipsis-${index}`} className="text-gray-400 px-2">...</span>
-                                ) : (
+
+                            {getPageNumbers().map((page, idx) => (
+                                typeof page === 'number' ? (
                                     <button
-                                        key={index}
-                                        onClick={() => goToPage(page as number)}
+                                        key={idx}
+                                        onClick={() => goToPage(page)}
                                         className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
                                             currentPage === page
-                                                ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-md'
-                                                : 'text-gray-600 hover:bg-emerald-50 hover:text-emerald-600'
+                                                ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-200'
+                                                : 'text-gray-600 hover:bg-emerald-50'
                                         }`}
                                     >
                                         {page}
                                     </button>
+                                ) : (
+                                    <span key={idx} className="text-gray-400 px-2">...</span>
                                 )
-                            )}
+                            ))}
+
                             <button
                                 onClick={goToNextPage}
                                 disabled={currentPage === totalPages}
                                 className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${
                                     currentPage === totalPages
-                                        ? 'text-gray-400 cursor-not-allowed'
-                                        : 'text-gray-600 hover:text-emerald-600 hover:bg-emerald-50'
+                                        ? 'text-gray-300 cursor-not-allowed'
+                                        : 'text-gray-600 hover:bg-emerald-50 hover:text-emerald-600'
                                 }`}
                             >
-                                Next <ChevronRight className="ml-2 h-5 w-5"/>
+                                Next <ChevronRight className="ml-1 h-4 w-4"/>
                             </button>
                         </div>
                     </nav>
