@@ -85,6 +85,66 @@ class GRN {
         const [rows] = await db.execute(query);
         return rows[0];
     }
+
+    static async getAllGRNs() {
+        const query = `
+        SELECT 
+            g.id AS id,
+            s.supplier_name AS supplierName,
+            g.bill_number AS billNumber,
+            g.total AS totalAmount,
+            g.paid_amount AS paidAmount,
+            g.balance AS balanceAmount,
+            DATE_FORMAT(g.create_at, '%Y.%m.%d %h:%i %p') AS grnDate,
+            st.ststus AS statusName
+        FROM grn g
+        JOIN supplier s ON g.supplier_id = s.id
+        JOIN status st ON g.grn_status_id = st.id
+        ORDER BY g.id DESC
+    `;
+        const [rows] = await db.execute(query);
+        return rows;
+    }
+
+    static async searchGRNs(filters) {
+        let query = `
+        SELECT 
+            g.id AS id,
+            s.supplier_name AS supplierName,
+            g.bill_number AS billNumber,
+            g.total AS totalAmount,
+            g.paid_amount AS paidAmount,
+            g.balance AS balanceAmount,
+            DATE_FORMAT(g.create_at, '%Y.%m.%d %h:%i %p') AS grnDate,
+            st.ststus AS statusName
+        FROM grn g
+        JOIN supplier s ON g.supplier_id = s.id
+        JOIN status st ON g.grn_status_id = st.id
+        WHERE 1=1
+    `;
+
+        const queryParams = [];
+
+        if (filters.supplierName) {
+            query += ` AND s.supplier_name LIKE ?`;
+            queryParams.push(`%${filters.supplierName}%`);
+        }
+
+        if (filters.billNumber) {
+            query += ` AND g.bill_number LIKE ?`;
+            queryParams.push(`%${filters.billNumber}%`);
+        }
+
+        if (filters.fromDate && filters.toDate) {
+            query += ` AND DATE(g.create_at) BETWEEN ? AND ?`;
+            queryParams.push(filters.fromDate, filters.toDate);
+        }
+
+        query += ` ORDER BY g.id DESC`;
+
+        const [rows] = await db.execute(query, queryParams);
+        return rows;
+    }
 }
 
 module.exports = GRN;

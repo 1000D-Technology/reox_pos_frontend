@@ -59,3 +59,44 @@ exports.getStats = async (req, res) => {
         });
     }
 };
+
+exports.getGRNList = async (req, res) => {
+    try {
+        const grns = await Grn.getAllGRNs();
+        
+        res.status(200).json({
+            success: true,
+            data: grns
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: "Error fetching GRN list",
+            error: error.message
+        });
+    }
+};
+
+exports.searchGRNList = async (req, res) => {
+    try {
+        const { supplierName, fromDate, toDate, billNumber } = req.query;
+
+        const grns = await Grn.searchGRNs({
+            supplierName,
+            fromDate,
+            toDate,
+            billNumber
+        });
+
+        res.status(200).json({
+            success: true,
+            data: grns
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: "Search failed",
+            error: error.message
+        });
+    }
+};
