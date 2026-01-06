@@ -2,40 +2,46 @@ import {
     CalendarDays,
     ChartNoAxesCombined,
     ChevronLeft,
-    ChevronRight, Eye, FileSpreadsheet,
+    ChevronRight,
+    Eye,
+    FileSpreadsheet,
     Printer,
     RefreshCw,
-    SearchCheck
+    SearchCheck,
+    ArrowUpRight,
+    ArrowDownRight,
 } from "lucide-react";
-import {useEffect, useState} from "react";
-
+import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
 
 function ManageInvoice() {
-
     const summaryCards = [
         {
-            title: 'Total Sales',
-            value: 'LKR.500000.00',
-            icon: <ChartNoAxesCombined size={20}/>,
-            bgColor: 'bg-gradient-to-br from-emerald-400 to-emerald-500',
-            iconBg: 'bg-emerald-100',
-            iconColor: 'text-emerald-600'
+            icon: ChartNoAxesCombined,
+            label: 'Total Sales',
+            value: 'LKR 500,000.00',
+            trend: '+12%',
+            color: 'bg-gradient-to-br from-emerald-400 to-emerald-500',
+            iconColor: 'text-white',
+            bgGlow: 'shadow-emerald-200'
         },
         {
-            title: 'Total Invoice',
+            icon: FileSpreadsheet,
+            label: 'Total Invoice',
             value: '50',
-            icon: <FileSpreadsheet size={20}/>,
-            bgColor: 'bg-gradient-to-br from-blue-400 to-blue-500',
-            iconBg: 'bg-blue-100',
-            iconColor: 'text-blue-600'
+            trend: '+8%',
+            color: 'bg-gradient-to-br from-blue-400 to-blue-500',
+            iconColor: 'text-white',
+            bgGlow: 'shadow-blue-200'
         },
         {
-            title: 'Date Range',
+            icon: CalendarDays,
+            label: 'Date Range',
             value: '6 Days',
-            icon: <CalendarDays size={20}/>,
-            bgColor: 'bg-gradient-to-br from-purple-400 to-purple-500',
-            iconBg: 'bg-purple-100',
-            iconColor: 'text-purple-600'
+            trend: '-3%',
+            color: 'bg-gradient-to-br from-purple-400 to-purple-500',
+            iconColor: 'text-white',
+            bgGlow: 'shadow-purple-200'
         },
     ];
 
@@ -91,17 +97,35 @@ function ManageInvoice() {
                     </h1>
                 </div>
 
-                <div className={'rounded-md grid md:grid-cols-3 grid-cols-3 gap-4'}>
-                    {summaryCards.map((card, index) => (
-                        <div key={index} className="bg-white p-5 rounded-xl shadow-lg hover:shadow-xl transition-all flex items-center space-x-4">
-                            <div className={`${card.iconBg} p-3 rounded-full`}>
-                                <span className={card.iconColor}>{card.icon}</span>
+                <div className={'grid md:grid-cols-3 grid-cols-1 gap-4'}>
+                    {summaryCards.map((stat, i) => (
+                        <motion.div
+                            key={i}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: i * 0.1 }}
+                            whileHover={{ scale: 1.05, y: -2 }}
+                            className={`flex items-center p-4 space-x-3 transition-all bg-white rounded-2xl shadow-lg hover:shadow-xl ${stat.bgGlow} cursor-pointer group relative overflow-hidden`}
+                        >
+                            <div className="absolute inset-0 bg-gradient-to-br from-transparent via-gray-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+
+                            <div className={`p-3 rounded-full ${stat.color} shadow-md relative z-10`}>
+                                <stat.icon className={`w-6 h-6 ${stat.iconColor}`} />
                             </div>
-                            <div className='border-l-2 border-gray-200 pl-2'>
-                                <p className="text-sm text-gray-500">{card.title}</p>
-                                <p className="text-lg font-semibold text-gray-800">{card.value}</p>
+
+                            <div className="w-px h-10 bg-gray-200"></div>
+
+                            <div className="relative z-10 flex-1">
+                                <div className="flex items-center justify-between">
+                                    <p className="text-sm text-gray-500">{stat.label}</p>
+                                    <div className={`flex items-center gap-0.5 text-[10px] font-semibold ${stat.trend.startsWith('+') ? 'text-emerald-600' : 'text-red-600'}`}>
+                                        {stat.trend.startsWith('+') ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
+                                        {stat.trend}
+                                    </div>
+                                </div>
+                                <p className="text-sm font-bold text-gray-700">{stat.value}</p>
                             </div>
-                        </div>
+                        </motion.div>
                     ))}
                 </div>
 
@@ -143,18 +167,18 @@ function ManageInvoice() {
                             <thead className="bg-gradient-to-r from-emerald-500 to-emerald-600 sticky top-0 z-10">
                             <tr>
                                 {[
-                                    'Invoice ID',
-                                    'Total Amount (LKR)',
+                                    'Invoice Number',
+                                    'Total Amount',
                                     'Issued Date',
-                                    'Issued Cashier',
-                                    'Actions',
+                                    'Cashier',
+                                    'Action'
                                 ].map((header, i, arr) => (
                                     <th
-                                        key={header}
+                                        key={i}
                                         scope="col"
-                                        className={`px-6 py-3 text-left text-sm font-semibold text-white tracking-wider
-                                        ${i === 0 ? "rounded-tl-lg" : ""}
-                                        ${i === arr.length - 1 ? "rounded-tr-lg" : ""}`}
+                                        className={`px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider ${
+                                            i === 0 ? 'rounded-tl-lg' : i === arr.length - 1 ? 'rounded-tr-lg' : ''
+                                        }`}
                                     >
                                         {header}
                                     </th>
@@ -168,16 +192,16 @@ function ManageInvoice() {
                                     key={index}
                                     onClick={() => setSelectedIndex(index)}
                                     className={`cursor-pointer transition-all ${
-                                        index === selectedIndex
-                                            ? "bg-emerald-50 border-l-4 border-emerald-600"
-                                            : "hover:bg-emerald-50/50"
+                                        selectedIndex === index
+                                            ? 'bg-emerald-50 border-l-4 border-l-emerald-500'
+                                            : 'hover:bg-gray-50'
                                     }`}
                                 >
                                     <td className="px-6 py-2 whitespace-nowrap text-sm font-semibold text-gray-800">
                                         {invoice.invoiceID}
                                     </td>
                                     <td className="px-6 py-2 whitespace-nowrap text-sm font-bold text-emerald-600">
-                                        {invoice.totalAmount}
+                                        LKR {invoice.totalAmount}
                                     </td>
                                     <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-gray-600">
                                         {invoice.issuedDate}
@@ -186,26 +210,13 @@ function ManageInvoice() {
                                         {invoice.cashier}
                                     </td>
                                     <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
-                                        <div className="flex items-center space-x-2">
-                                            <div className="relative group">
-                                                <button className="p-2 bg-gradient-to-br from-emerald-100 to-emerald-200 rounded-full text-emerald-700 hover:from-emerald-200 hover:to-emerald-300 transition-all shadow-md hover:shadow-lg">
-                                                    <Printer className="w-5 h-5"/>
-                                                </button>
-                                                <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max px-2 py-1 text-xs text-white bg-gray-900 rounded-md invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    Print Invoice
-                                                </span>
-                                            </div>
-                                            <div className="relative group">
-                                                <button
-                                                    className="p-2 bg-gradient-to-br from-blue-100 to-blue-200 rounded-full text-blue-700 hover:from-blue-200 hover:to-blue-300 transition-all shadow-md hover:shadow-lg"
-                                                    onClick={() => window.dispatchEvent(new CustomEvent("openInvoiceModal"))}
-                                                >
-                                                    <Eye className="w-5 h-5"/>
-                                                </button>
-                                                <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max px-2 py-1 text-xs text-white bg-gray-900 rounded-md invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    View Invoice
-                                                </span>
-                                            </div>
+                                        <div className="flex gap-2">
+                                            <button className="p-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all">
+                                                <Eye size={16}/>
+                                            </button>
+                                            <button className="p-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all">
+                                                <Printer size={16}/>
+                                            </button>
                                         </div>
                                     </td>
                                 </tr>
@@ -237,7 +248,7 @@ function ManageInvoice() {
                 </div>
             </div>
         </>
-    )
+    );
 }
 
-export default ManageInvoice
+export default ManageInvoice;

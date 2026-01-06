@@ -37,6 +37,7 @@ import CreateGrn from "./pages/dashboard/grn/CreateGrn.tsx";
 import ManageBrand from "./pages/dashboard/Products/ManageBrand.tsx";
 import GrnList from "./pages/dashboard/grn/GrnList.tsx";
 import POS from "./pages/dashboard/POS.tsx";
+import ManageProductType from "./pages/dashboard/Products/ManageProductType.tsx";
 
 export default function App() {
     return (
@@ -66,6 +67,7 @@ export default function App() {
                     <Route path="/products" element={<CreateProducts />} />
                     <Route path="/products/create-product" element={<CreateProducts />} />
                     <Route path="/products/product-list" element={<ProductList />} />
+                    <Route path="/products/manage-product-type" element={<ManageProductType />} />
                     <Route path="/products/manage-unit" element={<ManageUnit />} />
                     <Route path="/products/manage-category" element={<ManageCategory />} />
                     <Route path="/products/manage-brand" element={<ManageBrand />} />
