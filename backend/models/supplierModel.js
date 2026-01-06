@@ -43,6 +43,13 @@ class Supplier {
         const [rows] = await db.execute(query);
         return rows;
     }
+
+    static async updateContact(supplierId, newContact) {
+        const query = `UPDATE supplier SET contact_number = ? WHERE id = ?`;
+        const [result] = await db.execute(query, [newContact, supplierId]);
+        return result;
+    }
+
 }
 
 module.exports = Supplier;

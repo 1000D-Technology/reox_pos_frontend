@@ -152,3 +152,38 @@ exports.getSuppliers = async (req, res) => {
         });
     }
 };
+
+exports.updateSupplierContact = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { contactNumber } = req.body;
+
+        if (!contactNumber || contactNumber.length !== 10) {
+            return res.status(400).json({
+                success: false,
+                message: "A valid 10-digit contact number is required."
+            });
+        }
+        
+        const result = await Supplier.updateContact(id, contactNumber);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({
+                success: false,
+                message: "Supplier not found."
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: "Contact number updated successfully!"
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: "Error updating contact number",
+            error: error.message
+        });
+    }
+};

@@ -13,6 +13,7 @@ interface TypeableSelectProps {
     placeholder?: string;
     allowCreate?: boolean;
     className?: string;
+    disabled?: boolean;
 }
 
 export default function TypeableSelect({
@@ -21,7 +22,8 @@ export default function TypeableSelect({
                                            onChange = () => {},
                                            placeholder = 'Select or type...',
                                            allowCreate = true,
-                                           className = ''
+                                           className = "",
+                                           disabled = false
                                        }: TypeableSelectProps) {
     const [open, setOpen] = useState(false);
     const [query, setQuery] = useState('');
@@ -55,10 +57,10 @@ export default function TypeableSelect({
     }, []);
 
     const filtered = options.filter(o =>
-        o.label.toLowerCase().includes(query.trim().toLowerCase())
+        o && o.label && o.label.toLowerCase().includes(query.trim().toLowerCase())
     );
 
-    const canCreate = allowCreate && query.trim() && !filtered.some(f => f.label.toLowerCase() === query.trim().toLowerCase());
+    const canCreate = allowCreate && query.trim() && !filtered.some(f => f && f.label && f.label.toLowerCase() === query.trim().toLowerCase());
 
     function handleSelect(option: SelectOption) {
         setSelected(option);
@@ -115,11 +117,12 @@ export default function TypeableSelect({
                 <input
                     ref={inputRef}
                     type="text"
-                    className="w-full text-sm rounded-md py-2 px-2  border-2 border-gray-100 bg-white"
+                    className={`w-full text-sm rounded-md py-2 px-2  border-2 border-gray-100 bg-white ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
                     placeholder={placeholder}
                     value={query}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => { setQuery(e.target.value); }}
                     onKeyDown={onKeyDown}
+                    disabled={disabled}
                 />
                 {selected && (
                     <button

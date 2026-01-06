@@ -40,6 +40,38 @@ exports.getProducts = async (req, res) => {
         });
     }
 };
+exports.getProductsForDropdown = async (req, res) => {
+    try {
+        const products = await Product.getProductsForDropdown(1); // 1 = Active products
+        res.status(200).json({
+            success: true,
+            data: products
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: "Error fetching products",
+            error: error.message
+        });
+    }
+};
+
+exports.getProductVariants = async (req, res) => {
+    try {
+        const { productId } = req.params;
+        const variants = await Product.getProductVariantsByProductId(productId);
+        res.status(200).json({
+            success: true,
+            data: variants
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: "Error fetching product variants",
+            error: error.message
+        });
+    }
+};
 
 exports.updateProduct = async (req, res) => {
     try{
