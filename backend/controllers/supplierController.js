@@ -1,189 +1,130 @@
 const Supplier = require("../models/supplierModel");
 const db = require("../config/db");
+const catchAsync = require("../utils/catchAsync");
+const { AppError } = require("../middleware/errorHandler");
 
-exports.addCompany = async (req, res) => {
-    try {
-        const {name, email, contact} = req.body;
-        
-        if(!name || name.trim() === "") {
-           return res.status(400).json({
-                success: false,
-                message: "Company name is required"
-            });
-        }
+/**
+ * @desc    Add a new company
+ * @route   POST /api/suppliers/company
+ */
+exports.addCompany = catchAsync(async (req, res, next) => {
+    const { name, email, contact } = req.body;
 
-        if(email && email.trim() !== "" ) {
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            if(!emailRegex.test(email)) {
-                return res.status(400).json({
-                    success: false,
-                    message: "Invalid email format"
-                });
-            }
-        }
-        
-        if(!contact || contact.trim() === "") {
-            return res.status(400).json({
-                success: false,
-                message: "Company contact is required"
-            });
-        }
-        
-        // Sri Lankan mobile number validation regex
-        const sriLankanMobileRegex = /^(\+94|0)?7[0-9]{8}$/;
-        
-        if(!sriLankanMobileRegex.test(contact.replace(/\s/g, ''))) {
-            return res.status(400).json({
-                success: false,
-                message: "Invalid Sri Lankan mobile number format. Use +94xxxxxxxx, 0xxxxxxxx, or xxxxxxxx format"
-            });
-        }
-        
-        const companyId = await Supplier.createCompany({ name, email, contact });
-        
-        res.status(201).json({
-            success: true,
-            message: "Company added successfully!",
-            data: { id: companyId, name, email, contact }
-        });
-    } catch (error) {
-        if (error.code === 'ER_DUP_ENTRY') {
-            return res.status(400).json({
-                success: false,
-                message: "This company details already exist!"
-            });
-        }
-        res.status(500).json({
-            success: false,
-            message: "Internal Server Error",
-            error: error.message
-        });
+    // Basic validation for required fields
+    if (!name || name.trim() === "") return next(new AppError("Company name is required", 400));
+    if (!contact || contact.trim() === "") return next(new AppError("Company contact is required", 400));
+
+    // Validate email format if provided
+    if (email && email.trim() !== "") {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) return next(new AppError("Invalid email format", 400));
     }
-};
 
-exports.searchCompany = async (req, res) => {
-    try {
-        const query = req.query.q || '';
-        const [rows] = await db.execute(
-            "SELECT id, company_name FROM company WHERE company_name LIKE ? LIMIT 100",
-            [`%${query}%`]
-        );
-        res.json({ success: true, data: rows });
-    } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+    // Validate Sri Lankan mobile number format
+    const sriLankanMobileRegex = /^(\+94|0)?7[0-9]{8}$/;
+    if (!sriLankanMobileRegex.test(contact.replace(/\s/g, ''))) {
+        return next(new AppError("Invalid Sri Lankan mobile number format.", 400));
     }
-};
 
-exports.searchBank = async (req, res) => {
-    try{
-        const query = req.query.q || '';
-        const [rows] = await db.execute(
-            "SELECT id, bank_name FROM bank WHERE bank_name LIKE ? LIMIT 100",
-            [`%${query}%`]
-        );
-        res.json({ success: true, data: rows });
-    }catch(error){
-        res.status(500).json({ success: false, message: error.message });
+    // Create company in the database
+    const companyId = await Supplier.createCompany({ name, email, contact });
+
+    res.status(201).json({
+        success: true,
+        message: "Company added successfully!",
+        data: { id: companyId, name, email, contact }
+    });
+});
+
+/**
+ * @desc    Search companies by name
+ * @route   GET /api/suppliers/search-company
+ */
+exports.searchCompany = catchAsync(async (req, res, next) => {
+    const query = req.query.q || '';
+    const [rows] = await db.execute(
+        "SELECT id, company_name FROM company WHERE company_name LIKE ? LIMIT 100",
+        [`%${query}%`]
+    );
+    res.status(200).json({ success: true, data: rows });
+});
+
+/**
+ * @desc    Search banks by name
+ * @route   GET /api/suppliers/search-bank
+ */
+exports.searchBank = catchAsync(async (req, res, next) => {
+    const query = req.query.q || '';
+    const [rows] = await db.execute(
+        "SELECT id, bank_name FROM bank WHERE bank_name LIKE ? LIMIT 100",
+        [`%${query}%`]
+    );
+    res.status(200).json({ success: true, data: rows });
+});
+
+/**
+ * @desc    Add a new supplier
+ * @route   POST /api/suppliers/add
+ */
+exports.addSupplier = catchAsync(async (req, res, next) => {
+    const { supplierName, email, contactNumber, companyId, bankId, accountNumber } = req.body;
+
+    // Check for mandatory fields
+    if (!supplierName || !contactNumber || !companyId) {
+        return next(new AppError("Supplier name, contact, and company are required.", 400));
     }
-};
 
-exports.addSupplier = async (req, res) => {
-    try {
-        const { supplierName, email, contactNumber, companyId, bankId, accountNumber } = req.body;
-        
-        if (!supplierName || !contactNumber || !companyId) {
-            return res.status(400).json({
-                success: false,
-                message: "Supplier name, contact, and company are required."
-            });
-        }
-
-        if (contactNumber.length !== 10) {
-            return res.status(400).json({
-                success: false,
-                message: "Invalid contact number. Must be 10 digits."
-            });
-        }
-
-        const supplierId = await Supplier.createSupplier({
-            supplierName, email, contactNumber, companyId, bankId, accountNumber
-        });
-
-        res.status(201).json({
-            success: true,
-            message: "Supplier added successfully!",
-            supplierId: supplierId
-        });
-
-    } catch (error) {
-        if (error.code === 'ER_DUP_ENTRY') {
-            return res.status(400).json({
-                success: false,
-                message: "This email or contact number already exists!"
-            });
-        }
-        if (error.code === 'ER_NO_REFERENCED_ROW_2') {
-            return res.status(400).json({
-                success: false,
-                message: "Invalid Company or Bank selection."
-            });
-        }
-        res.status(500).json({
-            success: false,
-            message: "Internal Server Error",
-            error: error.message
-        });
+    // Ensure contact number is exactly 10 digits
+    if (contactNumber.length !== 10) {
+        return next(new AppError("Invalid contact number. Must be 10 digits.", 400));
     }
-};
 
-exports.getSuppliers = async (req, res) => {
-    try {
-        const suppliers = await Supplier.getAllSuppliers();
-        
-        res.status(200).json({
-            success: true,
-            data: suppliers
-        });
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: "Failed to fetch suppliers",
-            error: error.message
-        });
+    // Create supplier in the database
+    const supplierId = await Supplier.createSupplier({
+        supplierName, email, contactNumber, companyId, bankId, accountNumber
+    });
+
+    res.status(201).json({
+        success: true,
+        message: "Supplier added successfully!",
+        supplierId: supplierId
+    });
+});
+
+/**
+ * @desc    Get list of all suppliers
+ * @route   GET /api/suppliers
+ */
+exports.getSuppliers = catchAsync(async (req, res, next) => {
+    const suppliers = await Supplier.getAllSuppliers();
+    res.status(200).json({
+        success: true,
+        data: suppliers
+    });
+});
+
+/**
+ * @desc    Update supplier contact number
+ * @route   PATCH /api/suppliers/:id/contact
+ */
+exports.updateSupplierContact = catchAsync(async (req, res, next) => {
+    const { id } = req.params;
+    const { contactNumber } = req.body;
+
+    // Validate updated contact number
+    if (!contactNumber || contactNumber.length !== 10) {
+        return next(new AppError("A valid 10-digit contact number is required.", 400));
     }
-};
 
-exports.updateSupplierContact = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { contactNumber } = req.body;
+    const result = await Supplier.updateContact(id, contactNumber);
 
-        if (!contactNumber || contactNumber.length !== 10) {
-            return res.status(400).json({
-                success: false,
-                message: "A valid 10-digit contact number is required."
-            });
-        }
-        
-        const result = await Supplier.updateContact(id, contactNumber);
-
-        if (result.affectedRows === 0) {
-            return res.status(404).json({
-                success: false,
-                message: "Supplier not found."
-            });
-        }
-
-        res.status(200).json({
-            success: true,
-            message: "Contact number updated successfully!"
-        });
-
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: "Error updating contact number",
-            error: error.message
-        });
+    // Return 404 if no supplier was found with the given ID
+    if (result.affectedRows === 0) {
+        return next(new AppError("Supplier not found.", 404));
     }
-};
+
+    res.status(200).json({
+        success: true,
+        message: "Contact number updated successfully!"
+    });
+});

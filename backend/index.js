@@ -1,22 +1,41 @@
 const express = require('express');
 const cors = require('cors');
+const { globalErrorHandler, AppError } = require('./middleware/errorHandler');
 const productRoutes = require('./routes/productRoutes');
-const commonRoutes = require('./routes/commonRoutes');
 const supplierRoutes = require('./routes/supplierRoutes');
 const grnRoutes = require('./routes/grnRouters');
+const brandRoutes = require('./routes/brandRoutes');
+const categoryRoutes = require('./routes/categoryRoutes');
+const unitRoutes = require('./routes/unitRoutes');
+const productTypeRoutes = require('./routes/productTypeRoutes');
+
+
 require('dotenv').config();
 const swaggerJsDoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
 const seedDatabase = require('./config/dbInit');
 
+// Middleware
 const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Routes
 app.use('/api/products', productRoutes);
-app.use('/api/common', commonRoutes);
 app.use('/api/suppliers', supplierRoutes);
 app.use('/api/grn', grnRoutes);
+app.use('/api/brands', brandRoutes);
+app.use('/api/categories', categoryRoutes);
+app.use('/api/units', unitRoutes);
+app.use('/api/product-types', productTypeRoutes);
+
+// Handle undefined routes
+app.use((req, res, next) => {
+    next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404));
+});
+
+// Global error handling middleware (MUST BE LAST)
+app.use(globalErrorHandler);
 
 const PORT = process.env.PORT || 5000;
 seedDatabase().then(() => {

@@ -1,150 +1,154 @@
 const Product = require('../models/productModel');
+const catchAsync = require('../utils/catchAsync');
+const { AppError } = require('../middleware/errorHandler');
 
-exports.addProduct = async(req , res) => {
-    try {
-        const { productData, variations } = req.body;
+/**
+ * @desc    Add a new product with its variations
+ * @route   POST /api/products/add
+ */
+exports.addProduct = catchAsync(async (req, res, next) => {
+    const { productData, variations } = req.body;
 
-        let finalVariations = [];
-        if (!variations || variations.length === 0) {
-            finalVariations.push({
-                barcode: productData.barcode,
-                color: 'Default', size: 'Default', capacity: 'N/A', statusId: 1
-            });
-        } else {
-            finalVariations = variations;
-        }
-
-        const id = await Product.create(productData, finalVariations);
-        res.status(201).json({ success: true, message: "Product saved successfully!" });
-
-    } catch (error) {
-        if (error.code === 'ER_DUP_ENTRY') {
-            return res.status(400).json({ success: false, message: "Barcode or Product Code already exists!", errors: [{ field: "code/barcode", message: "Already exists!" }] });
-        }
-        res.status(500).json({ success: false, message: "Database Error", error: error.message });
+    // Basic validation for product data
+    if (!productData || !productData.productName) {
+        return next(new AppError("Product data is missing or incomplete", 400));
     }
-}
 
-exports.getProducts = async (req, res) => {
-    try {
-        const products = await Product.getProductsByStatus(1); // 1 = Active products
-        res.status(200).json({
-            success: true,
-            data: products
+    let finalVariations = [];
+    // If no variations are provided, create a default variation
+    if (!variations || variations.length === 0) {
+        finalVariations.push({
+            barcode: productData.barcode,
+            color: 'Default', 
+            size: 'Default', 
+            capacity: 'N/A', 
+            statusId: 1
         });
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: "Error fetching products",
-            error: error.message
-        });
+    } else {
+        finalVariations = variations;
     }
-};
-exports.getProductsForDropdown = async (req, res) => {
-    try {
-        const products = await Product.getProductsForDropdown(1); // 1 = Active products
-        res.status(200).json({
-            success: true,
-            data: products
-        });
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: "Error fetching products",
-            error: error.message
-        });
+
+    await Product.create(productData, finalVariations);
+    
+    res.status(201).json({ 
+        success: true, 
+        message: "Product saved successfully!" 
+    });
+});
+
+/**
+ * @desc    Get all active products (Status 1)
+ * @route   GET /api/products
+ */
+exports.getProducts = catchAsync(async (req, res, next) => {
+    const products = await Product.getProductsByStatus(1);
+    
+    res.status(200).json({
+        success: true,
+        data: products
+    });
+});
+
+/**
+ * @desc    Get active products list for selection dropdowns
+ * @route   GET /api/products/dropdown
+ */
+exports.getProductsForDropdown = catchAsync(async (req, res, next) => {
+    const products = await Product.getProductsForDropdown(1);
+    
+    res.status(200).json({
+        success: true,
+        data: products
+    });
+});
+
+/**
+ * @desc    Get all variations for a specific product ID
+ * @route   GET /api/products/variants/:productId
+ */
+exports.getProductVariants = catchAsync(async (req, res, next) => {
+    const { productId } = req.params;
+    const variants = await Product.getProductVariantsByProductId(productId);
+    
+    res.status(200).json({
+        success: true,
+        data: variants
+    });
+});
+
+/**
+ * @desc    Update a specific product variation and its parent product
+ * @route   PUT /api/products/update/:pvId
+ */
+exports.updateProduct = catchAsync(async (req, res, next) => {
+    const { pvId } = req.params;
+    const { productData, variationData } = req.body;
+
+    await Product.updateProductVariation(pvId, productData, variationData);
+    
+    res.status(200).json({ 
+        success: true, 
+        message: "Product updated successfully!" 
+    });
+});
+
+/**
+ * @desc    Search active products by type or search term
+ * @route   GET /api/products/search
+ */
+exports.searchProducts = catchAsync(async (req, res, next) => {
+    const { productTypeId, searchTerm } = req.query;
+    const products = await Product.searchProducts({ productTypeId, searchTerm }, 1);
+
+    res.status(200).json({ 
+        success: true, 
+        data: products 
+    });
+});
+
+/**
+ * @desc    Search inactive products by type or search term
+ * @route   GET /api/products/search-deactive
+ */
+exports.searchDeactiveProducts = catchAsync(async (req, res, next) => {
+    const { productTypeId, searchTerm } = req.query;
+    const products = await Product.searchProducts({ productTypeId, searchTerm }, 2);
+
+    res.status(200).json({ 
+        success: true, 
+        data: products 
+    });
+});
+
+/**
+ * @desc    Activate or Deactivate a product variation
+ * @route   PATCH /api/products/status/:pvId
+ */
+exports.chnageProductStatus = catchAsync(async (req, res, next) => {
+    const { pvId } = req.params;
+    const { statusId } = req.body; // 1 = Active, 2 = Inactive
+
+    const result = await Product.updateProductStatus(pvId, statusId);
+    
+    if (result.affectedRows === 0) {
+        return next(new AppError("Product variation not found", 404));
     }
-};
+    
+    res.status(200).json({
+        success: true,
+        message: statusId == 1 ? "Product activated!" : "Product deactivated!"
+    });
+});
 
-exports.getProductVariants = async (req, res) => {
-    try {
-        const { productId } = req.params;
-        const variants = await Product.getProductVariantsByProductId(productId);
-        res.status(200).json({
-            success: true,
-            data: variants
-        });
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: "Error fetching product variants",
-            error: error.message
-        });
-    }
-};
-
-exports.updateProduct = async (req, res) => {
-    try{
-        const {pvId} = req.params;
-        const {productData, variationData} = req.body;
-
-        await Product.updateProductVariation(pvId, productData, variationData);
-        res.status(200).json({success: true, message: "Product updated successfully!"});
-    }catch(error){
-        if(error.code === 'ER_DUP_ENTRY'){
-            return res.status(400).json({success: false, message: "Barcode or Product Code already exists!", errors: [{field: "code/barcode", message: "Already exists!"}]});
-        }
-        res.status(500).json({success: false, message: "Error updating product", error: error.message});
-    }
-}
-
-exports.searchProducts = async (req, res) =>{
-    try{
-        const {productTypeId, searchTerm} = req.query;
-        const products = await Product.searchProducts({productTypeId, searchTerm}, 1); // 1 = Active products
-
-        res.status(200).json({success: true, data: products});
-
-    }catch(error){
-        res.status(500).json({success: false, message: "Error searching products", error: error.message});
-    }
-}
-
-exports.searchDeactiveProducts = async (req, res) =>{
-    try{
-        const {productTypeId, searchTerm} = req.query;
-        const products = await Product.searchProducts({productTypeId, searchTerm}, 2); // 2 = Inactive products
-
-        res.status(200).json({success: true, data: products});
-
-    }catch(error){
-        res.status(500).json({success: false, message: "Error searching deactive products", error: error.message});
-    }
-}
-
-exports.chnageProductStatus = async (req, res) => {
-    try{
-        const {pvId} = req.params;
-        const {statusId} = req.body; // status id expected 1= Active, 2= Inactive
-
-        const result = await Product.updateProductStatus(pvId, statusId);
-        if (result.affectedRows === 0) {
-            return res.status(404).json({
-                success: false,
-                message: "Product variation not found"
-            });
-        }
-        res.status(200).json({
-            success: true,
-            message: statusId == 1 ? "Product activated!" : "Product deactivated!"
-        });
-    }catch(error){
-        res.status(500).json({success: false, message: "Error updating product status", error: error.message});
-    }
-}
-
-exports.getDeactiveProducts = async (req, res) => {
-    try {
-        const products = await Product.getProductsByStatus(2); // 2 = Inactive products
-        res.status(200).json({
-            success: true,
-            data: products
-        });
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: "Error fetching deactive products",
-            error: error.message
-        });
-    }
-};
+/**
+ * @desc    Get all inactive products (Status 2)
+ * @route   GET /api/products/deactive
+ */
+exports.getDeactiveProducts = catchAsync(async (req, res, next) => {
+    const products = await Product.getProductsByStatus(2);
+    
+    res.status(200).json({
+        success: true,
+        data: products
+    });
+});
