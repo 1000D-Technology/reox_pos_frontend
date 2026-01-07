@@ -9,11 +9,6 @@ const { AppError } = require('../middleware/errorHandler');
 exports.addProduct = catchAsync(async (req, res, next) => {
     const { productData, variations } = req.body;
 
-    // Basic validation for product data
-    if (!productData || !productData.productName) {
-        return next(new AppError("Product data is missing or incomplete", 400));
-    }
-
     let finalVariations = [];
     // If no variations are provided, create a default variation
     if (!variations || variations.length === 0) {
@@ -68,6 +63,13 @@ exports.getProductsForDropdown = catchAsync(async (req, res, next) => {
  */
 exports.getProductVariants = catchAsync(async (req, res, next) => {
     const { productId } = req.params;
+    
+    // Check if product exists
+    const productExists = await Product.checkIdExists('product', 'id', productId);
+    if (!productExists) {
+        return next(new AppError("Product not found", 404));
+    }
+
     const variants = await Product.getProductVariantsByProductId(productId);
     
     res.status(200).json({
@@ -83,6 +85,12 @@ exports.getProductVariants = catchAsync(async (req, res, next) => {
 exports.updateProduct = catchAsync(async (req, res, next) => {
     const { pvId } = req.params;
     const { productData, variationData } = req.body;
+
+    // Check if product variation exists
+    const productExists = await Product.checkIdExists('product_variations', 'id', pvId);
+    if (!productExists) {
+        return next(new AppError("Product variation not found", 404));
+    }
 
     await Product.updateProductVariation(pvId, productData, variationData);
     
@@ -124,9 +132,15 @@ exports.searchDeactiveProducts = catchAsync(async (req, res, next) => {
  * @desc    Activate or Deactivate a product variation
  * @route   PATCH /api/products/status/:pvId
  */
-exports.chnageProductStatus = catchAsync(async (req, res, next) => {
+exports.changeProductStatus = catchAsync(async (req, res, next) => {
     const { pvId } = req.params;
     const { statusId } = req.body; // 1 = Active, 2 = Inactive
+
+    // Check if product variation exists
+    const productExists = await Product.checkIdExists('product_variations', 'id', pvId);
+    if (!productExists) {
+        return next(new AppError("Product variation not found", 404));
+    }
 
     const result = await Product.updateProductStatus(pvId, statusId);
     

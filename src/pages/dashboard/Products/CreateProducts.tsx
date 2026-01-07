@@ -2,8 +2,11 @@ import { ChevronLeft, ChevronRight, Plus, Trash2, Package } from "lucide-react";
 import { useEffect, useState } from "react";
 import toast, { Toaster } from 'react-hot-toast';
 import TypeableSelect from "../../../components/TypeableSelect.tsx";
-import axiosInstance from "../../../api/axiosInstance";
-import { commonService } from "../../../services/commonService";
+import { categoryService } from "../../../services/categoryService";
+import { brandService } from "../../../services/brandService";
+import { unitService } from "../../../services/unitService";
+import { productTypeService } from "../../../services/productTypeService";
+import { productService } from "../../../services/productService";
 import { motion } from "framer-motion";
 
 const generateBarcode = (): string => {
@@ -38,7 +41,7 @@ interface Product {
 }
 
 type SelectOption = {
-    value: string;
+    value: string | number;
     label: string;
 };
 
@@ -100,7 +103,7 @@ function CreateProducts() {
     const fetchProducts = async () => {
         setIsLoadingProducts(true);
         try {
-            const response = await axiosInstance.get('/api/products');
+            const response = await productService.getProducts();
             const result = response.data;
 
             if (result.success) {
@@ -161,7 +164,7 @@ function CreateProducts() {
                 statusId: 1
             }));
 
-            const createProductPromise = axiosInstance.post('/api/products/create', {
+            const createProductPromise = productService.createProduct({
                 productData: {
                     name: productData.name,
                     code: productData.code,
@@ -218,10 +221,10 @@ function CreateProducts() {
         const fetchDropdownData = async () => {
             try {
                 const [categoriesRes, brandsRes, unitsRes, productTypesRes] = await Promise.all([
-                    commonService.getCategories(),
-                    commonService.getBrands(),
-                    commonService.getUnits(),
-                    commonService.getProductTypes(),
+                    categoryService.getCategories(),
+                    brandService.getBrands(),
+                    unitService.getUnits(),
+                    productTypeService.getProductTypes(),
                 ]);
 
                 if (categoriesRes.data.success) {
@@ -430,7 +433,7 @@ function CreateProducts() {
                                 value={selectedCategory?.value || null}
                                 onChange={(option) => {
                                     setSelectedCategory(option);
-                                    setProductData({...productData, categoryId: option?.value || ""});
+                                    setProductData({...productData, categoryId: option?.value ? String(option.value) : ""});
                                 }}
                                 placeholder="Select category..."
                             />
@@ -444,7 +447,7 @@ function CreateProducts() {
                                 value={selectedBrand?.value || null}
                                 onChange={(option) => {
                                     setSelectedBrand(option);
-                                    setProductData({...productData, brandId: option?.value || ""});
+                                    setProductData({...productData, brandId: option?.value ? String(option.value) : ""});
                                 }}
                                 placeholder="Select brand..."
                             />
@@ -458,7 +461,7 @@ function CreateProducts() {
                                 value={selectedUnit?.value || null}
                                 onChange={(option) => {
                                     setSelectedUnit(option);
-                                    setProductData({...productData, unitId: option?.value || ""});
+                                    setProductData({...productData, unitId: option?.value ? String(option.value) : ""});
                                 }}
                                 placeholder="Select unit..."
                             />
@@ -472,7 +475,7 @@ function CreateProducts() {
                                 value={selectedProductType?.value || null}
                                 onChange={(option) => {
                                     setSelectedProductType(option);
-                                    setProductData({...productData, typeId: option?.value || ""});
+                                    setProductData({...productData, typeId: option?.value ? String(option.value) : ""});
                                 }}
                                 placeholder="Select type..."
                             />

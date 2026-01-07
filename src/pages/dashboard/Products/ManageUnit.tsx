@@ -11,7 +11,7 @@ import {
 import { useEffect, useState } from 'react';
 import toast, { Toaster } from 'react-hot-toast';
 import { motion } from 'framer-motion';
-import axiosInstance from '../../../api/axiosInstance';
+import { unitService } from '../../../services/unitService';
 import ConfirmationModal from '../../../components/modals/ConfirmationModal';
 
 interface Unit {
@@ -61,9 +61,9 @@ function ManageUnit() {
             setIsLoading(true);
             let response;
             if (searchQuery && searchQuery.trim()) {
-                response = await axiosInstance.get(`/api/common/units/search?q=${searchQuery}`);
+                response = await unitService.searchUnits(searchQuery);
             } else {
-                response = await axiosInstance.get('/api/common/units');
+                response = await unitService.getUnits();
             }
 
             if (response.data.success) {
@@ -126,7 +126,7 @@ function ManageUnit() {
         }
 
         setIsSaving(true);
-        const createUnitPromise = axiosInstance.post('/api/common/units', {
+        const createUnitPromise = unitService.createUnit({
             name: newUnitName.trim()
         });
 
@@ -159,7 +159,7 @@ function ManageUnit() {
         }
 
         setIsUpdating(true);
-        const updateUnitPromise = axiosInstance.put(`/api/common/units/${selectedUnit.id}`, {
+        const updateUnitPromise = unitService.updateUnit(selectedUnit.id, {
             name: updateUnitName.trim()
         });
 
@@ -191,7 +191,7 @@ function ManageUnit() {
         }
 
         setIsDeleting(true);
-        const deleteUnitPromise = axiosInstance.delete(`/api/common/units/${unitToDelete.id}`);
+        const deleteUnitPromise = unitService.deleteUnit(unitToDelete.id);
 
         try {
             await toast.promise(deleteUnitPromise, {
@@ -362,14 +362,13 @@ function ManageUnit() {
                                 </tr>
                             ) : (
                                 salesData.map((unit, index) => (
-                                    <tr
+                                    <motion.tr
                                         key={unit.id}
                                         onClick={() => setSelectedIndex(index)}
-                                        whileHover={{ backgroundColor: "rgba(16,185,129,0.05)" }}
                                         className={`cursor-pointer transition-all ${
                                             selectedIndex === index
                                                 ? 'bg-emerald-50 border-l-4 border-emerald-500'
-                                                : 'hover:bg-gray-50'
+                                                : 'hover:bg-emerald-50/10'
                                         }`}
                                     >
                                         <td className="px-6 py-3 whitespace-nowrap text-sm font-semibold text-gray-800">
@@ -397,7 +396,7 @@ function ManageUnit() {
                                                 </button>
                                             </div>
                                         </td>
-                                    </tr>
+                                    </motion.tr>
                                 ))
                             )}
                             </tbody>

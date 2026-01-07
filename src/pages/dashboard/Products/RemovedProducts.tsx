@@ -4,7 +4,6 @@ import { motion } from "framer-motion";
 import toast, { Toaster } from 'react-hot-toast';
 import TypeableSelect from "../../../components/TypeableSelect.tsx";
 import { productService } from "../../../services/productService";
-import { commonService } from "../../../services/commonService";
 
 interface Product {
     productID: number;
