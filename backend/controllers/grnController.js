@@ -1,5 +1,4 @@
 const Grn = require("../models/grnModel");
-const db = require("../config/db");
 const catchAsync = require("../utils/catchAsync");
 const { AppError } = require("../middleware/errorHandler");
 
@@ -10,21 +9,6 @@ exports.saveGRN = catchAsync(async (req, res, next) => {
         success: true,
         message: "GRN successfully processed and stock updated!",
         grnId: grnId
-    });
-});
-
-exports.getPaymentTypes = catchAsync(async (req, res, next) => {
-    const [rows] = await db.execute(
-        "SELECT id, payment_types FROM payment_types ORDER BY payment_types"
-    );
-    
-    if (!rows.length) {
-        return next(new AppError('No payment types found', 404));
-    }
-    
-    res.status(200).json({
-        success: true,
-        data: rows
     });
 });
 
