@@ -77,6 +77,19 @@ class Supplier {
         return rows;
     }
 
+    static async getSupplierDropdownList() {
+        const query = `
+            SELECT 
+                s.id,
+                s.supplier_name AS supplierName
+            FROM supplier s
+            WHERE s.status_id = 1
+            ORDER BY s.supplier_name ASC
+        `;
+        const [rows] = await db.execute(query);
+        return rows;
+    }
+
     static async updateContact(supplierId, newContact) {
         const query = `UPDATE supplier SET contact_number = ? WHERE id = ?`;
         const [result] = await db.execute(query, [newContact, supplierId]);

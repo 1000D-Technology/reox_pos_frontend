@@ -15,6 +15,8 @@ import {
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import TypeableSelect from "../../../components/TypeableSelect.tsx";
+import { stockService } from "../../../services/stockService.ts";
+import toast, { Toaster } from 'react-hot-toast';
 
 function StockList() {
     const summaryCards = [
@@ -65,84 +67,111 @@ function StockList() {
         },
     ];
 
-    const salesData = [
-        {
-            productID: '250929003',
-            productName: 'Sugar',
-            unit: 'Kg',
-            discountAmount: '0.00',
-            costPrice: '650.00',
-            MRP: '650.00',
-            Price: '650.00',
-            supplier: 'Saman Silva',
-            stockQty: '50',
-        },
-        {
-            productID: '250929004',
-            productName: 'Rice',
-            unit: 'Kg',
-            discountAmount: '50.00',
-            costPrice: '150.00',
-            MRP: '200.00',
-            Price: '180.00',
-            supplier: 'Frank Traders',
-            stockQty: '120',
-        },
-        {
-            productID: '250929005',
-            productName: 'Cooking Oil',
-            unit: 'Ltr',
-            discountAmount: '25.00',
-            costPrice: '350.00',
-            MRP: '400.00',
-            Price: '375.00',
-            supplier: 'Elsa Exports',
-            stockQty: '35',
-        },
-    ];
+    // Stock data state
+    const [stockData, setStockData] = useState<any[]>([]);
+    const [isLoadingStock, setIsLoadingStock] = useState(false);
 
     type SelectOption = {
-        value: string;
+        value: string | number;
         label: string;
     };
 
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
     const [selectedUnit, setSelectedUnit] = useState<string | null>(null);
     const [selectedSupplier, setSelectedSupplier] = useState<string | null>(null);
+    
+    // Dropdown options state
+    const [suppliers, setSuppliers] = useState<SelectOption[]>([]);
+    const [units, setUnits] = useState<SelectOption[]>([]);
+    const [categories, setCategories] = useState<SelectOption[]>([]);
+    const [isLoadingDropdowns, setIsLoadingDropdowns] = useState(false);
 
-    const suppliers = [
-        { value: 'frank', label: 'Frank Traders' },
-        { value: 'elsa', label: 'Elsa Exports' },
-        { value: 'saman', label: 'Saman Silva' },
-        { value: 'kumara', label: 'Kumara Stores' },
-    ];
+    // Load stock data
+    const loadStockData = async () => {
+        setIsLoadingStock(true);
+        try {
+            const response = await stockService.getStockList();
+            if (response.data?.success) {
+                setStockData(response.data.data);
+            } else {
+                toast.error('Failed to load stock data');
+            }
+        } catch (error) {
+            console.error('Error loading stock data:', error);
+            toast.error('Failed to load stock data');
+        } finally {
+            setIsLoadingStock(false);
+        }
+    };
 
-    const units = [
-        { value: 'kg', label: 'Kilogram' },
-        { value: 'ltr', label: 'Litre' },
-        { value: 'pcs', label: 'Pieces' },
-    ];
+    // Load all dropdown data
+    const loadDropdownData = async () => {
+        setIsLoadingDropdowns(true);
+        try {
+            const [categoriesResponse, unitsResponse, suppliersResponse] = await stockService.getStockFilterData();
 
-    const categories = [
-        { value: 'grocery', label: 'Grocery' },
-        { value: 'beverages', label: 'Beverages' },
-        { value: 'snacks', label: 'Snacks' },
-    ];
+            // Transform categories
+            if (categoriesResponse.data?.success) {
+                const categoryOptions = categoriesResponse.data.data.map((category: any) => ({
+                    value: category.id.toString(),
+                    label: category.name || category.category_name
+                }));
+                setCategories(categoryOptions);
+            }
+
+            // Transform units
+            if (unitsResponse.data?.success) {
+                const unitOptions = unitsResponse.data.data.map((unit: any) => ({
+                    value: unit.id.toString(),
+                    label: unit.name || unit.unit_name
+                }));
+                setUnits(unitOptions);
+            }
+
+            // Transform suppliers
+            if (suppliersResponse.data?.success) {
+                const supplierOptions = suppliersResponse.data.data.map((supplier: any) => ({
+                    value: supplier.id.toString(),
+                    label: supplier.supplierName
+                }));
+                setSuppliers(supplierOptions);
+            }
+
+        
+
+        } catch (error) {
+            console.error('Error loading dropdown data:', error);
+            toast.error('Failed to load filter options');
+        } finally {
+            setIsLoadingDropdowns(false);
+        }
+    };
+
+    // Refresh all data
+    const handleRefresh = async () => {
+        await Promise.all([loadDropdownData(), loadStockData()]);
+        toast.success('Data refreshed successfully');
+    };
 
     const [selectedIndex, setSelectedIndex] = useState(0);
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage] = useState(10);
 
-    const totalPages = Math.ceil(salesData.length / itemsPerPage);
+    const totalPages = Math.ceil(stockData.length / itemsPerPage);
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
-    const currentSalesData = salesData.slice(startIndex, endIndex);
+    const currentStockData = stockData.slice(startIndex, endIndex);
+
+    useEffect(() => {
+        loadDropdownData();
+        loadStockData();
+    }, []);
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === "ArrowDown") {
                 e.preventDefault();
-                setSelectedIndex((prev) => (prev < currentSalesData.length - 1 ? prev + 1 : prev));
+                setSelectedIndex((prev) => (prev < currentStockData.length - 1 ? prev + 1 : prev));
             } else if (e.key === "ArrowUp") {
                 e.preventDefault();
                 setSelectedIndex((prev) => (prev > 0 ? prev - 1 : prev));
@@ -151,7 +180,7 @@ function StockList() {
 
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [currentSalesData.length]);
+    }, [currentStockData.length]);
 
     const goToPage = (page: number) => {
         if (page >= 1 && page <= totalPages) {
@@ -268,7 +297,8 @@ function StockList() {
                                 options={categories}
                                 value={selectedCategory}
                                 onChange={(opt) => setSelectedCategory(opt?.value as string || null)}
-                                placeholder="Search categories.."
+                                placeholder={isLoadingDropdowns ? "Loading..." : "Search categories.."}
+                                disabled={isLoadingDropdowns}
                             />
                         </div>
                         <div>
@@ -279,7 +309,8 @@ function StockList() {
                                 options={units}
                                 value={selectedUnit}
                                 onChange={(opt) => setSelectedUnit(opt?.value as string || null)}
-                                placeholder="Search units.."
+                                placeholder={isLoadingDropdowns ? "Loading..." : "Search units.."}
+                                disabled={isLoadingDropdowns}
                             />
                         </div>
                         <div>
@@ -290,7 +321,8 @@ function StockList() {
                                 options={suppliers}
                                 value={selectedSupplier}
                                 onChange={(opt) => setSelectedSupplier(opt?.value as string || null)}
-                                placeholder="Search suppliers.."
+                                placeholder={isLoadingDropdowns ? "Loading..." : "Search suppliers.."}
+                                disabled={isLoadingDropdowns}
                             />
                         </div>
                         <div>
@@ -308,8 +340,12 @@ function StockList() {
                             <button className={'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 py-2 rounded-lg flex items-center justify-center shadow-lg shadow-emerald-200 hover:shadow-xl transition-all'}>
                                 <SearchCheck className="mr-2" size={14} />Search
                             </button>
-                            <button className={'bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 py-2 rounded-lg flex items-center justify-center shadow-lg shadow-gray-200 hover:shadow-xl transition-all'}>
-                                <RefreshCw className="mr-2" size={14} />Clear
+                            <button 
+                                onClick={handleRefresh}
+                                disabled={isLoadingDropdowns || isLoadingStock}
+                                className={'bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 py-2 rounded-lg flex items-center justify-center shadow-lg shadow-gray-200 hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed'}>
+                                <RefreshCw className={`mr-2 ${(isLoadingDropdowns || isLoadingStock) ? 'animate-spin' : ''}`} size={14} />
+                                {(isLoadingDropdowns || isLoadingStock) ? 'Refreshing...' : 'Refresh'}
                             </button>
                         </div>
                     </div>
@@ -351,14 +387,14 @@ function StockList() {
                             </thead>
 
                             <tbody className="bg-white divide-y divide-gray-200">
-                            {currentSalesData.length === 0 ? (
+                            {currentStockData.length === 0 ? (
                                 <tr>
                                     <td colSpan={9} className="px-6 py-8 text-center text-gray-500">
-                                        No stock records found
+                                        {isLoadingStock ? 'Loading stock data...' : 'No stock records found'}
                                     </td>
                                 </tr>
                             ) : (
-                                currentSalesData.map((sale, index) => (
+                                currentStockData.map((sale, index) => (
                                     <tr
                                         key={index}
                                         onClick={() => setSelectedIndex(index)}
@@ -411,8 +447,8 @@ function StockList() {
                     <nav className="bg-white flex items-center justify-between sm:px-6 pt-4 border-t-2 border-gray-100">
                         <div className="text-sm text-gray-600">
                             Showing <span className="font-semibold text-gray-800">{startIndex + 1}</span> to{' '}
-                            <span className="font-semibold text-gray-800">{Math.min(endIndex, salesData.length)}</span> of{' '}
-                            <span className="font-semibold text-gray-800">{salesData.length}</span> results
+                            <span className="font-semibold text-gray-800">{Math.min(endIndex, stockData.length)}</span> of{' '}
+                            <span className="font-semibold text-gray-800">{stockData.length}</span> results
                         </div>
                         <div className="flex items-center space-x-2">
                             <button
@@ -480,6 +516,29 @@ function StockList() {
                     </button>
                 </motion.div>
             </div>
+            
+            <Toaster
+                position="top-right"
+                toastOptions={{
+                    duration: 4000,
+                    style: {
+                        background: '#363636',
+                        color: '#fff',
+                    },
+                    success: {
+                        duration: 3000,
+                        style: {
+                            background: '#10b981',
+                        },
+                    },
+                    error: {
+                        duration: 4000,
+                        style: {
+                            background: '#ef4444',
+                        },
+                    },
+                }}
+            />
         </>
     );
 }

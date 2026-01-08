@@ -63,6 +63,11 @@ exports.getSuppliers = catchAsync(async (req, res, next) => {
     res.status(200).json({ success: true, data: suppliers });
 });
 
+exports.getSupplierDropdownList = catchAsync(async (req, res, next) => {
+    const suppliers = await Supplier.getSupplierDropdownList();
+    res.status(200).json({ success: true, data: suppliers });
+});
+
 exports.updateSupplierContact = catchAsync(async (req, res, next) => {
     const { id } = req.params;
     const { contactNumber } = req.body;
