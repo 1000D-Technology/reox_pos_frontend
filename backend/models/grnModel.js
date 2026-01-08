@@ -3,7 +3,7 @@ const db = require("../config/db");
 class GRN {
 
     static async createGRN(data) {
-        const connection = await db.getConnection();
+        const connection = (await db.getConnection());
         try {
             await connection.beginTransaction();
 

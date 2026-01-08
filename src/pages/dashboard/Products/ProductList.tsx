@@ -14,8 +14,11 @@ import { motion } from "framer-motion";
 import toast, { Toaster } from "react-hot-toast";
 import TypeableSelect from "../../../components/TypeableSelect.tsx";
 import axiosInstance from "../../../api/axiosInstance";
-import { commonService } from "../../../services/commonService";
 import ConfirmationModal from "../../../components/modals/ConfirmationModal";
+import { categoryService } from "../../../services/categoryService";
+import { brandService } from "../../../services/brandService";
+import { unitService } from "../../../services/unitService";
+import { productTypeService } from "../../../services/productTypeService";
 
 interface Product {
     productID: number;
@@ -75,9 +78,9 @@ function ProductList() {
     const [searchTerm, setSearchTerm] = useState("");
 
     const color = [
-        {value: "red", label: "Red"},
-        {value: "yellow", label: "Yellow"},
-        {value: "green", label: "Green"},
+        { value: "red", label: "Red" },
+        { value: "yellow", label: "Yellow" },
+        { value: "green", label: "Green" },
     ];
 
     const [selectedIndex, setSelectedIndex] = useState(0);
@@ -86,10 +89,10 @@ function ProductList() {
         const fetchDropdownData = async () => {
             try {
                 const [categoriesRes, brandsRes, unitsRes, productTypesRes] = await Promise.all([
-                    commonService.getCategories(),
-                    commonService.getBrands(),
-                    commonService.getUnits(),
-                    commonService.getProductTypes(),
+                    categoryService.getCategories(),
+                    brandService.getBrands(),
+                    unitService.getUnits(),
+                    productTypeService.getProductTypes(),
                 ]);
 
                 if (categoriesRes.data.success) {
@@ -374,7 +377,7 @@ function ProductList() {
                                 <input
                                     type="text"
                                     value={editFormData.productName}
-                                    onChange={(e) => setEditFormData({...editFormData, productName: e.target.value})}
+                                    onChange={(e) => setEditFormData({ ...editFormData, productName: e.target.value })}
                                     placeholder="Enter Product Name"
                                     className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all outline-none"
                                 />
@@ -386,7 +389,7 @@ function ProductList() {
                                 <input
                                     type="text"
                                     value={editFormData.productCode}
-                                    onChange={(e) => setEditFormData({...editFormData, productCode: e.target.value})}
+                                    onChange={(e) => setEditFormData({ ...editFormData, productCode: e.target.value })}
                                     placeholder="Enter Product Code"
                                     className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all outline-none"
                                 />
@@ -398,7 +401,7 @@ function ProductList() {
                                 <input
                                     type="text"
                                     value={editFormData.barcode}
-                                    onChange={(e) => setEditFormData({...editFormData, barcode: e.target.value})}
+                                    onChange={(e) => setEditFormData({ ...editFormData, barcode: e.target.value })}
                                     placeholder="Enter Barcode"
                                     className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all outline-none"
                                 />
@@ -417,7 +420,7 @@ function ProductList() {
                                         })
                                     }
                                     placeholder="Type to search categories"
-                                    allowCreate={true}
+                                    
                                 />
                             </div>
                             <div>
@@ -434,7 +437,7 @@ function ProductList() {
                                         })
                                     }
                                     placeholder="Type to search brands"
-                                    allowCreate={true}
+                                   
                                 />
                             </div>
                             <div>
@@ -451,7 +454,7 @@ function ProductList() {
                                         })
                                     }
                                     placeholder="Type to search units"
-                                    allowCreate={true}
+                                   
                                 />
                             </div>
                             <div>
@@ -468,7 +471,7 @@ function ProductList() {
                                         })
                                     }
                                     placeholder="Type to search types"
-                                    allowCreate={true}
+                                    
                                 />
                             </div>
                         </div>
@@ -487,7 +490,7 @@ function ProductList() {
                                         setEditFormData({ ...editFormData, color: opt?.label || "" })
                                     }
                                     placeholder="Type to search Color"
-                                    allowCreate={true}
+                                    
                                 />
                             </div>
                             <div>
@@ -526,9 +529,8 @@ function ProductList() {
                             <button
                                 onClick={handleUpdateProduct}
                                 disabled={isUpdating}
-                                className={`flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-medium rounded-lg shadow-lg shadow-emerald-200 transition-all ${
-                                    isUpdating ? 'opacity-50 cursor-not-allowed' : ''
-                                }`}
+                                className={`flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-medium rounded-lg shadow-lg shadow-emerald-200 transition-all ${isUpdating ? 'opacity-50 cursor-not-allowed' : ''
+                                    }`}
                             >
                                 {isUpdating ? 'Updating...' : 'Update Product'}
                                 <span className="text-xs text-emerald-100">(Shift + Enter)</span>
@@ -625,7 +627,7 @@ function ProductList() {
                                 value={selected?.value || null}
                                 onChange={(opt) => opt ? setSelected({ value: String(opt.value), label: opt.label }) : setSelected(null)}
                                 placeholder="Search Product Types..."
-                                allowCreate={true}
+                                
                             />
                         </div>
                         <div className="md:col-span-2">
@@ -670,134 +672,132 @@ function ProductList() {
                     <div className="overflow-y-auto max-h-md md:h-[320px] lg:h-[520px] rounded-lg scrollbar-thin scrollbar-thumb-emerald-300 scrollbar-track-gray-100">
                         <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-gradient-to-r from-emerald-600 to-emerald-700 sticky top-0 z-10">
-                            <tr>
-                                {[
-                                    "Product ID",
-                                    "Product Name",
-                                    "Product Code",
-                                    "Barcode",
-                                    "Category",
-                                    "Brand",
-                                    "Unit",
-                                    "Product Type",
-                                    "Color",
-                                    "Size",
-                                    "Storage/Capacity",
-                                    "Created On",
-                                    "Actions",
-                                ].map((header, i, arr) => (
-                                    <th
-                                        key={header}
-                                        scope="col"
-                                        className={`px-6 py-3 text-left text-sm font-medium text-white tracking-wider ${
-                                            i === 0 ? "rounded-tl-lg" : ""
-                                        } ${i === arr.length - 1 ? "rounded-tr-lg" : ""}`}
-                                    >
-                                        {header}
-                                    </th>
-                                ))}
-                            </tr>
+                                <tr>
+                                    {[
+                                        "Product ID",
+                                        "Product Name",
+                                        "Product Code",
+                                        "Barcode",
+                                        "Category",
+                                        "Brand",
+                                        "Unit",
+                                        "Product Type",
+                                        "Color",
+                                        "Size",
+                                        "Storage/Capacity",
+                                        "Created On",
+                                        "Actions",
+                                    ].map((header, i, arr) => (
+                                        <th
+                                            key={header}
+                                            scope="col"
+                                            className={`px-6 py-3 text-left text-sm font-medium text-white tracking-wider ${i === 0 ? "rounded-tl-lg" : ""
+                                                } ${i === arr.length - 1 ? "rounded-tr-lg" : ""}`}
+                                        >
+                                            {header}
+                                        </th>
+                                    ))}
+                                </tr>
                             </thead>
 
                             <tbody className="bg-white divide-y divide-gray-200">
-                            {isLoadingProducts ? (
-                                <tr>
-                                    <td colSpan={13} className="px-6 py-8 text-center text-gray-500">
-                                        Loading products...
-                                    </td>
-                                </tr>
-                            ) : currentPageData.length === 0 ? (
-                                <tr>
-                                    <td colSpan={13} className="px-6 py-8 text-center text-gray-500">
-                                        No products found
-                                    </td>
-                                </tr>
-                            ) : currentPageData.map((sale, index) => (
-                                <tr
-                                    key={index}
-                                    onClick={() => setSelectedIndex(index)}
-                                    className={`cursor-pointer transition-colors ${
-                                        index === selectedIndex
-                                            ? "bg-emerald-50 border-l-4 border-emerald-600"
-                                            : "hover:bg-emerald-50/50"
-                                    }`}
-                                >
-                                    <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
-                                        {sale.productID}
-                                    </td>
-                                    <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
-                                        {sale.productName}
-                                    </td>
-                                    <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
-                                        {sale.productCode}
-                                    </td>
-                                    <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
-                                        {sale.barcode}
-                                    </td>
-                                    <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
-                                        {sale.category}
-                                    </td>
-                                    <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
-                                        {sale.brand}
-                                    </td>
-                                    <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
-                                        {sale.unit}
-                                    </td>
-                                    <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
-                                        {sale.productType}
-                                    </td>
-                                    <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
-                                        {sale.color}
-                                    </td>
-                                    <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
-                                        {sale.size}
-                                    </td>
-                                    <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
-                                        {sale.storage}
-                                    </td>
-                                    <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
-                                        {sale.createdOn}
-                                    </td>
-                                    <td className="px-6 py-2 whitespace-nowrap text-sm font-medium flex gap-2">
-                                        <div className="relative group">
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    setSelectedProduct(sale);
-                                                    setIsEditModalOpen(true);
-                                                }}
-                                                className="p-2 bg-gradient-to-r from-blue-100 to-blue-200 rounded-lg text-blue-700 hover:from-blue-200 hover:to-blue-300 transition-all shadow-sm"
-                                            >
-                                                <Pencil size={15} />
-                                            </button>
-                                            <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max px-2 py-1 text-xs text-white bg-gray-900 rounded-md invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-opacity">
-                                                Edit Product
-                                            </span>
-                                        </div>
+                                {isLoadingProducts ? (
+                                    <tr>
+                                        <td colSpan={13} className="px-6 py-8 text-center text-gray-500">
+                                            Loading products...
+                                        </td>
+                                    </tr>
+                                ) : currentPageData.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={13} className="px-6 py-8 text-center text-gray-500">
+                                            No products found
+                                        </td>
+                                    </tr>
+                                ) : currentPageData.map((sale, index) => (
+                                    <tr
+                                        key={index}
+                                        onClick={() => setSelectedIndex(index)}
+                                        className={`cursor-pointer transition-colors ${index === selectedIndex
+                                                ? "bg-emerald-50 border-l-4 border-emerald-600"
+                                                : "hover:bg-emerald-50/50"
+                                            }`}
+                                    >
+                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
+                                            {sale.productID}
+                                        </td>
+                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
+                                            {sale.productName}
+                                        </td>
+                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
+                                            {sale.productCode}
+                                        </td>
+                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
+                                            {sale.barcode}
+                                        </td>
+                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
+                                            {sale.category}
+                                        </td>
+                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
+                                            {sale.brand}
+                                        </td>
+                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
+                                            {sale.unit}
+                                        </td>
+                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
+                                            {sale.productType}
+                                        </td>
+                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
+                                            {sale.color}
+                                        </td>
+                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
+                                            {sale.size}
+                                        </td>
+                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
+                                            {sale.storage}
+                                        </td>
+                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
+                                            {sale.createdOn}
+                                        </td>
+                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium flex gap-2">
+                                            <div className="relative group">
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setSelectedProduct(sale);
+                                                        setIsEditModalOpen(true);
+                                                    }}
+                                                    className="p-2 bg-gradient-to-r from-blue-100 to-blue-200 rounded-lg text-blue-700 hover:from-blue-200 hover:to-blue-300 transition-all shadow-sm"
+                                                >
+                                                    <Pencil size={15} />
+                                                </button>
+                                                <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max px-2 py-1 text-xs text-white bg-gray-900 rounded-md invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    Edit Product
+                                                </span>
+                                            </div>
 
-                                        <div className="relative group">
-                                            <button className="p-2 bg-gradient-to-r from-yellow-100 to-yellow-200 rounded-lg text-yellow-700 hover:from-yellow-200 hover:to-yellow-300 transition-all shadow-sm">
-                                                <Barcode size={15}/>
-                                            </button>
-                                            <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max px-2 py-1 text-xs text-white bg-gray-900 rounded-md invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-opacity">
-                                                Print Barcode
-                                            </span>
-                                        </div>
+                                            <div className="relative group">
+                                                <button className="p-2 bg-gradient-to-r from-yellow-100 to-yellow-200 rounded-lg text-yellow-700 hover:from-yellow-200 hover:to-yellow-300 transition-all shadow-sm">
+                                                    <Barcode size={15} />
+                                                </button>
+                                                <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max px-2 py-1 text-xs text-white bg-gray-900 rounded-md invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    Print Barcode
+                                                </span>
+                                            </div>
 
-                                        <div className="relative group">
-                                            <button
-                                                onClick={(e) => handleDeactivateProduct(sale, e)}
-                                                className="p-2 bg-gradient-to-r from-red-100 to-red-200 rounded-lg text-red-700 hover:from-red-200 hover:to-red-300 transition-all shadow-sm"
-                                            >
-                                                <Trash size={15}/>
-                                            </button>
-                                            <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max px-2 py-1 text-xs text-white bg-gray-900 rounded-md invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-opacity">
-                                                Delete Product
-                                            </span>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))}
+                                            <div className="relative group">
+                                                <button
+                                                    onClick={(e) => handleDeactivateProduct(sale, e)}
+                                                    className="p-2 bg-gradient-to-r from-red-100 to-red-200 rounded-lg text-red-700 hover:from-red-200 hover:to-red-300 transition-all shadow-sm"
+                                                >
+                                                    <Trash size={15} />
+                                                </button>
+                                                <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max px-2 py-1 text-xs text-white bg-gray-900 rounded-md invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    Delete Product
+                                                </span>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
                             </tbody>
                         </table>
                     </div>
@@ -810,13 +810,12 @@ function ProductList() {
                             <button
                                 onClick={goToPreviousPage}
                                 disabled={currentPage === 1}
-                                className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${
-                                    currentPage === 1
+                                className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${currentPage === 1
                                         ? 'text-gray-300 cursor-not-allowed'
                                         : 'text-gray-600 hover:bg-emerald-50 hover:text-emerald-600'
-                                }`}
+                                    }`}
                             >
-                                <ChevronLeft className="mr-1 h-4 w-4"/> Previous
+                                <ChevronLeft className="mr-1 h-4 w-4" /> Previous
                             </button>
 
                             {getPageNumbers().map((page, idx) => (
@@ -824,11 +823,10 @@ function ProductList() {
                                     <button
                                         key={idx}
                                         onClick={() => goToPage(page)}
-                                        className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
-                                            currentPage === page
+                                        className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${currentPage === page
                                                 ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-200'
                                                 : 'text-gray-600 hover:bg-emerald-50'
-                                        }`}
+                                            }`}
                                     >
                                         {page}
                                     </button>
@@ -840,13 +838,12 @@ function ProductList() {
                             <button
                                 onClick={goToNextPage}
                                 disabled={currentPage === totalPages}
-                                className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${
-                                    currentPage === totalPages
+                                className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${currentPage === totalPages
                                         ? 'text-gray-300 cursor-not-allowed'
                                         : 'text-gray-600 hover:bg-emerald-50 hover:text-emerald-600'
-                                }`}
+                                    }`}
                             >
-                                Next <ChevronRight className="ml-1 h-4 w-4"/>
+                                Next <ChevronRight className="ml-1 h-4 w-4" />
                             </button>
                         </div>
                     </nav>
@@ -858,15 +855,15 @@ function ProductList() {
                     className="bg-white flex justify-center p-4 gap-4 rounded-xl shadow-lg"
                 >
                     <button className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-medium rounded-lg shadow-lg shadow-emerald-200 hover:shadow-xl transition-all">
-                        <FileText size={20}/>
+                        <FileText size={20} />
                         Export to Excel
                     </button>
                     <button className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-medium rounded-lg shadow-lg shadow-blue-200 hover:shadow-xl transition-all">
-                        <FileText size={20}/>
+                        <FileText size={20} />
                         Export to CSV
                     </button>
                     <button className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-medium rounded-lg shadow-lg shadow-red-200 hover:shadow-xl transition-all">
-                        <FileText size={20}/>
+                        <FileText size={20} />
                         Export to PDF
                     </button>
 

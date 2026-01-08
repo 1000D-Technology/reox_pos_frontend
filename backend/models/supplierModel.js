@@ -38,7 +38,7 @@ class Supplier {
             FROM supplier s
             LEFT JOIN company c ON s.company_id = c.id
             LEFT JOIN bank b ON s.bank_id = b.id
-            ORDER BY s.id DESC
+            ORDER BY s.created_at DESCල්
         `;
         const [rows] = await db.execute(query);
         return rows;

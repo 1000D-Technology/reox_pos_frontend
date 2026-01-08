@@ -442,7 +442,7 @@ router.get('/:productId/variants', productController.getProductVariants);
 router.get('/deactive', productController.getDeactiveProducts);
 
 router.put('/update/:pvId', validateUpdateMiddleware, productController.updateProduct);
-router.patch('/status/:pvId', productController.chnageProductStatus);
+router.patch('/status/:pvId', productController.changeProductStatus);
 
 router.get('/search' , productController.searchProducts);
 router.get('/search/deactive' , productController.searchDeactiveProducts);
