@@ -302,12 +302,13 @@ function CreateSupplier() {
                         <label htmlFor="supplier-contact"
                             className="block text-sm font-medium text-gray-700 mb-1">Contact Number <span className="text-red-500">*</span></label>
                         <input 
-                            type="text" 
+                            type="tel" 
                             id="supplier-contact" 
                             placeholder="Enter contact number (10 digits)"
                             value={supplierData.contactNumber}
                             onChange={(e) => setSupplierData({...supplierData, contactNumber: e.target.value})}
-                            className="w-full text-sm rounded-md py-2 px-2 border-2 border-gray-100 focus:border-emerald-500 focus:ring-emerald-500" 
+                            className="w-full text-sm rounded-md py-2 px-2 border-2 border-gray-100 focus:border-emerald-500 focus:ring-emerald-500 appearance-none" 
+                            maxLength={10}
                         />
                     </div>
 
