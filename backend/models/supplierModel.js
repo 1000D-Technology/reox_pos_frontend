@@ -1,10 +1,40 @@
 const db = require("../config/db");
 
 class Supplier {
+    static async checkCompanyExists(companyName) {
+        const query = "SELECT id FROM company WHERE LOWER(company_name) = LOWER(?)";
+        const [rows] = await db.execute(query, [companyName.trim()]);
+        return rows.length > 0;
+    }
+
+    static async checkCompanyExistsById(companyId) {
+        const query = "SELECT id FROM company WHERE id = ?";
+        const [rows] = await db.execute(query, [companyId]);
+        return rows.length > 0;
+    }
+
+    static async checkBankExistsById(bankId) {
+        const query = "SELECT id FROM bank WHERE id = ?";
+        const [rows] = await db.execute(query, [bankId]);
+        return rows.length > 0;
+    }
+
     static async createCompany(companyData) {
         const query = `INSERT INTO company (company_name, company_email, company_contact) VALUES (?, ?, ?)`;
         const [result] = await db.execute(query, [companyData.name, companyData.email || null, companyData.contact]);
         return result.insertId;
+    }
+
+    static async searchCompanies(searchTerm) {
+        const query = "SELECT id, company_name FROM company WHERE company_name LIKE ? LIMIT 100";
+        const [rows] = await db.execute(query, [`%${searchTerm}%`]);
+        return rows;
+    }
+
+    static async searchBanks(searchTerm) {
+        const query = "SELECT id, bank_name FROM bank WHERE bank_name LIKE ? LIMIT 100";
+        const [rows] = await db.execute(query, [`%${searchTerm}%`]);
+        return rows;
     }
 
     static async createSupplier(data) {
@@ -38,7 +68,7 @@ class Supplier {
             FROM supplier s
             LEFT JOIN company c ON s.company_id = c.id
             LEFT JOIN bank b ON s.bank_id = b.id
-            ORDER BY s.id DESC
+            ORDER BY s.created_at DESC
         `;
         const [rows] = await db.execute(query);
         return rows;
@@ -49,7 +79,6 @@ class Supplier {
         const [result] = await db.execute(query, [newContact, supplierId]);
         return result;
     }
-
 }
 
 module.exports = Supplier;

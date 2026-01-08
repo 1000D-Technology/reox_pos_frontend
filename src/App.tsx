@@ -27,7 +27,7 @@ import RemovedProducts from "./pages/dashboard/Products/RemovedProducts.tsx";
 import CreateSupplier from "./pages/dashboard/Supplier/CreateSupplier.tsx";
 import SupplierGRN from "./pages/dashboard/Supplier/SupplierGRN.tsx";
 
-import CustomerSales from "./pages/dashboard/Customer/CustomerSales.tsx";
+import CustomerCreaditBook from "./pages/dashboard/Customer/CustomerCreaditBook.tsx";
 import ManageEmployee from "./pages/dashboard/Employee/ManageEmployee.tsx";
 import AttendanceMark from "./pages/dashboard/Employee/AttendanceMark.tsx";
 import AttendanceReport from "./pages/dashboard/Employee/Attendance Report.tsx";
@@ -79,7 +79,7 @@ export default function App() {
                     <Route path="/supplier/supplier-payments" element={<SupplierPayment />} />
                     <Route path="/customer" element={<ManageCustomer />} />
                     <Route path="/customer/manage-customer" element={<ManageCustomer />} />
-                    <Route path="/customer/customer-sales" element={<CustomerSales />} />
+                    <Route path="/customer/customer-sales" element={<CustomerCreaditBook />} />
                     <Route path="/employee" element={<ManageEmployee />} />
                     <Route path="/employee/manage-employee" element={<ManageEmployee />} />
                     <Route path="/employee/attendance-mark" element={<AttendanceMark />} />

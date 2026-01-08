@@ -8,7 +8,7 @@ import {
 import { useEffect, useState } from 'react';
 import toast, { Toaster } from 'react-hot-toast';
 import { motion } from 'framer-motion';
-import axiosInstance from '../../../api/axiosInstance';
+import { categoryService } from '../../../services/categoryService';
 import ConfirmationModal from '../../../components/modals/ConfirmationModal';
 
 interface Category {
@@ -26,7 +26,6 @@ function ManageCategory() {
     const [categories, setCategories] = useState<Category[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
-    const [isSearching, setIsSearching] = useState(false);
     const [updateCategoryName, setUpdateCategoryName] = useState('');
     const [isUpdating, setIsUpdating] = useState(false);
     const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
@@ -59,11 +58,9 @@ function ManageCategory() {
             setIsLoading(true);
             let response;
             if (searchQuery && searchQuery.trim()) {
-                setIsSearching(true);
-                response = await axiosInstance.get(`/api/common/categories/search?q=${encodeURIComponent(searchQuery)}`);
+                response = await categoryService.searchCategories(searchQuery);
             } else {
-                setIsSearching(false);
-                response = await axiosInstance.get('/api/common/categories');
+                response = await categoryService.getCategories();
             }
 
             if (response.data.success) {
@@ -76,7 +73,6 @@ function ManageCategory() {
             toast.error('Error loading categories. Please try again.');
         } finally {
             setIsLoading(false);
-            setIsSearching(false);
         }
     };
 
@@ -133,7 +129,7 @@ function ManageCategory() {
         }
 
         setIsSaving(true);
-        const createCategoryPromise = axiosInstance.post('/api/common/categories', {
+        const createCategoryPromise = categoryService.createCategory({
             name: newCategoryName.trim()
         });
 
@@ -167,7 +163,7 @@ function ManageCategory() {
         }
 
         setIsUpdating(true);
-        const updateCategoryPromise = axiosInstance.put(`/api/common/categories/${selectedCategory.id}`, {
+        const updateCategoryPromise = categoryService.updateCategory(selectedCategory.id, {
             name: updateCategoryName.trim()
         });
 
@@ -198,7 +194,7 @@ function ManageCategory() {
         if (!categoryToDelete) return;
 
         setIsDeleting(true);
-        const deleteCategoryPromise = axiosInstance.delete(`/api/common/categories/${categoryToDelete.id}`);
+        const deleteCategoryPromise = categoryService.deleteCategory(categoryToDelete.id);
 
         try {
             await toast.promise(deleteCategoryPromise, {

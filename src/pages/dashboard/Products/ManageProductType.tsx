@@ -10,6 +10,7 @@ import { useEffect, useState } from 'react';
 import toast, { Toaster } from 'react-hot-toast';
 import { motion } from 'framer-motion';
 import axiosInstance from '../../../api/axiosInstance';
+import { productTypeService } from '../../../services/productTypeService';
 import ConfirmationModal from '../../../components/modals/ConfirmationModal';
 
 interface ProductType {
@@ -59,9 +60,9 @@ const ManageProductType = () => {
             setIsLoading(true);
             let response;
             if (searchQuery && searchQuery.trim()) {
-                response = await axiosInstance.get(`/api/common/product-types/search?q=${searchQuery}`);
+                response = await productTypeService.searchProductTypes(searchQuery);
             } else {
-                response = await axiosInstance.get('/api/common/product-types');
+                response = await productTypeService.getProductTypes();
             }
 
             if (response.data.success) {
@@ -124,7 +125,7 @@ const ManageProductType = () => {
         }
 
         setIsSaving(true);
-        const createTypePromise = axiosInstance.post('/api/common/product-types', {
+        const createTypePromise = productTypeService.createProductType({
             name: newTypeName.trim()
         });
 
@@ -157,7 +158,7 @@ const ManageProductType = () => {
         }
 
         setIsUpdating(true);
-        const updateTypePromise = axiosInstance.put(`/api/common/product-types/${selectedType.id}`, {
+        const updateTypePromise = productTypeService.updateProductType(selectedType.id, {
             name: updateTypeName.trim()
         });
 
@@ -189,7 +190,7 @@ const ManageProductType = () => {
         }
 
         setIsDeleting(true);
-        const deleteTypePromise = axiosInstance.delete(`/api/common/product-types/${typeToDelete.id}`);
+        const deleteTypePromise = productTypeService.deleteProductType(typeToDelete.id);
 
         try {
             await toast.promise(deleteTypePromise, {
