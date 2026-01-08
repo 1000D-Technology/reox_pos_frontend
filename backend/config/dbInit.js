@@ -7,7 +7,7 @@ const seedDatabase = async () => {
         
         if (statusRows[0].count === 0) {
             console.log("Seeding status data...");
-            await db.execute("INSERT INTO status (id, status_name) VALUES (1, 'Active'), (2, 'Inactive')");
+            await db.execute("INSERT INTO status (id, ststus) VALUES (1, 'Active'), (2, 'Inactive')");
             console.log("Status seeded successfully!");
         }
 

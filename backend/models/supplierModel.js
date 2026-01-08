@@ -64,7 +64,7 @@ class Supplier {
                 c.company_name AS companyName,
                 b.bank_name AS bankName,
                 s.account_number AS accountNumber,
-                st.status_name AS status,
+                st.ststus AS status,
                 s.status_id,
                 DATE_FORMAT(s.created_at, '%Y-%m-%d') AS joinedDate
             FROM supplier s

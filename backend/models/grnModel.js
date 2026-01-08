@@ -7,10 +7,13 @@ class GRN {
         try {
             await connection.beginTransaction();
 
+            // Determine GRN status based on balance
+            const grnStatusId = data.balance > 0 ? 1 : 2;
+
             const [grnResult] = await connection.execute(
                 `INSERT INTO grn (bill_number, supplier_id, total, paid_amount, balance, grn_status_id, create_at) 
              VALUES (?, ?, ?, ?, ?, ?, NOW())`,
-                [data.billNumber, data.supplierId, data.grandTotal, data.paidAmount, data.balance, 1]
+                [data.billNumber, data.supplierId, data.grandTotal, data.paidAmount, data.balance, grnStatusId]
             );
             const grnId = grnResult.insertId;
 
