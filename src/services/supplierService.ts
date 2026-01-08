@@ -1,13 +1,8 @@
 import axiosInstance from '../api/axiosInstance';
+import { companyService } from './companyService';
+import { bankService } from './bankService';
 
 export const supplierService = {
-    // Create new company
-    createCompany: (companyData: {
-        name: string;
-        email?: string;
-        contact: string;
-    }) => axiosInstance.post('/api/suppliers/companies', companyData),
-    
     // Add new supplier
     addSupplier: (supplierData: {
         supplierName: string;
@@ -18,16 +13,10 @@ export const supplierService = {
         accountNumber?: string;
     }) => axiosInstance.post('/api/suppliers/add', supplierData),
     
-    // Get all companies
-    getCompanies: () => axiosInstance.get('/api/suppliers/companies'),
-    
-    // Get all banks
-    getBanks: () => axiosInstance.get('/api/suppliers/banks'),
-    
     // Get both companies and banks in parallel
     getCompaniesAndBanks: () => Promise.all([
-        axiosInstance.get('/api/suppliers/companies'),
-        axiosInstance.get('/api/suppliers/banks')
+        companyService.getCompanies(),
+        bankService.getBanks()
     ]),
     
     // Get all suppliers
@@ -37,13 +26,7 @@ export const supplierService = {
     updateSupplierContact: (id: number, contactNumber: string) => 
         axiosInstance.patch(`/api/suppliers/update-contact/${id}`, { contactNumber }),
     
-    // Get company by id (placeholder for future use)
-    getCompanyById: (id: number) => axiosInstance.get(`/api/suppliers/companies/${id}`),
-    
-    // Update company (placeholder for future use)
-    updateCompany: (id: number, companyData: any) => 
-        axiosInstance.put(`/api/suppliers/companies/${id}`, companyData),
-    
-    // Delete company (placeholder for future use)
-    deleteCompany: (id: number) => axiosInstance.delete(`/api/suppliers/companies/${id}`),
+    // Update supplier status
+    updateSupplierStatus: (id: number, currentStatusId: number) => 
+        axiosInstance.patch(`/api/suppliers/update-status/${id}`, { currentStatusId }),
 };

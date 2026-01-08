@@ -10,5 +10,6 @@ router.get('/banks', supplierController.searchBank);
 router.post('/add', validateSupplier, supplierController.addSupplier);
 router.get('/list', supplierController.getSuppliers);
 router.patch('/update-contact/:id', supplierController.updateSupplierContact);
+router.patch('/update-status/:id', supplierController.updateSupplierStatus);
 
 module.exports = router;

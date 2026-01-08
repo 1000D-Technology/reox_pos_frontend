@@ -26,6 +26,7 @@ interface Category {
     bank: string;
     account: string;
     status: string;
+    statusId: number;
 }
 
 function ManageSupplier() {
@@ -126,7 +127,8 @@ function ManageSupplier() {
                     company: supplier.companyName || '',
                     bank: supplier.bankName || '',
                     account: supplier.accountNumber || '',
-                    status: 'Active'
+                    status: supplier.status || 'Active',
+                    statusId: supplier.status_id || 1
                 }));
                 setSuppliers(transformedData);
                 setFilteredSuppliers(transformedData);
@@ -240,20 +242,19 @@ function ManageSupplier() {
 
         return pages;
     };
-    const handleStatusToggle = async (supplierId: string, currentStatus: string) => {
-        const newStatus = currentStatus === 'Active' ? 'Inactive' : 'Active';
-
+    const handleStatusToggle = async (supplierId: string, currentStatusId: number) => {
         try {
             const updatePromise = supplierService.updateSupplierStatus(
                 parseInt(supplierId),
-                newStatus
+                currentStatusId
             );
 
             await toast.promise(updatePromise, {
                 loading: 'Updating status...',
                 success: () => {
                     fetchSuppliers();
-                    return `Supplier ${newStatus === 'Active' ? 'activated' : 'deactivated'} successfully!`;
+                    const newStatus = currentStatusId === 1 ? 'deactivated' : 'activated';
+                    return `Supplier ${newStatus} successfully!`;
                 },
                 error: (err) => err.response?.data?.message || 'Failed to update status'
             });
@@ -430,7 +431,7 @@ function ManageSupplier() {
                                             <button
                                                 onClick={(e) => {
                                                     e.stopPropagation();
-                                                    handleStatusToggle(category.id, category.status);
+                                                    handleStatusToggle(category.id, category.statusId);
                                                 }}
                                                 className={`px-4 py-1.5 text-xs font-semibold rounded-full transition-all transform hover:scale-105 ${
                                                     category.status === 'Active'

@@ -78,3 +78,24 @@ exports.updateSupplierContact = catchAsync(async (req, res, next) => {
         message: "Contact number updated successfully!"
     });
 });
+
+exports.updateSupplierStatus = catchAsync(async (req, res, next) => {
+    const { id } = req.params;
+    const { currentStatusId } = req.body;
+
+    if (!currentStatusId || (currentStatusId !== 1 && currentStatusId !== 2)) {
+        return next(new AppError("Current status ID must be either 1 (Active) or 2 (Inactive).", 400));
+    }
+
+    const result = await Supplier.updateStatus(id, currentStatusId);
+
+    if (result.affectedRows === 0) {
+        return next(new AppError("Supplier not found.", 404));
+    }
+
+    const newStatus = currentStatusId === 1 ? 'Inactive' : 'Active';
+    res.status(200).json({
+        success: true,
+        message: `Supplier status updated to ${newStatus} successfully!`
+    });
+});

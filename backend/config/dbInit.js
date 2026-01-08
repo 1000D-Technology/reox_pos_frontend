@@ -2,6 +2,15 @@ const db = require('./db');
 
 const seedDatabase = async () => {
     try {
+        // Seed status table
+        const [statusRows] = await db.execute("SELECT COUNT(*) as count FROM status");
+        
+        if (statusRows[0].count === 0) {
+            console.log("Seeding status data...");
+            await db.execute("INSERT INTO status (id, status_name) VALUES (1, 'Active'), (2, 'Inactive')");
+            console.log("Status seeded successfully!");
+        }
+
         // Seed product status
         const [rows] = await db.execute("SELECT COUNT(*) as count FROM product_status");
         
