@@ -51,11 +51,11 @@ const demoInvoices = [
 
 
 const demoCustomers = [
-    { id: 1, name: 'Rajesh Kumar', contact: '0771234567' },
-    { id: 2, name: 'Priya Sharma', contact: '0772234567' },
-    { id: 3, name: 'Amit Patel', contact: '0773234567' },
-    { id: 4, name: 'Sunita Rao', contact: '0774234567' },
-    { id: 5, name: 'Vikram Singh', contact: '0775234567' },
+    { id: 1, name: 'Rajesh Kumar', contact: '0771234567',credit:5000 },
+    { id: 2, name: 'Priya Sharma', contact: '0772234567',credit:5000 },
+    { id: 3, name: 'Amit Patel', contact: '0773234567',credit:5000 },
+    { id: 4, name: 'Sunita Rao', contact: '0774234567',credit:5000 },
+    { id: 5, name: 'Vikram Singh', contact: '0775234567',credit:5000 },
 ];
 
 interface CartItem {
@@ -737,6 +737,7 @@ const POSInterface = () => {
                                         >
                                             <p className="text-sm font-semibold text-gray-800">{customer.name}</p>
                                             <p className="text-xs text-gray-500">{customer.contact}</p>
+                                            <p className="text-xs text-gray-500">{customer.credit}</p>
                                         </button>
                                     ))
                                 ) : (
@@ -759,10 +760,17 @@ const POSInterface = () => {
                         {selectedCustomer && (
                             <div className="mt-2 p-2 bg-emerald-50 border-2 border-emerald-200 rounded-lg">
                                 <div className="flex items-center justify-between">
-                                    <div>
-                                        <p className="text-sm font-semibold text-emerald-800">{selectedCustomer.name}</p>
-                                        <p className="text-xs text-emerald-600">{selectedCustomer.contact}</p>
+                                    <div className={'flex justify-between w-full'}>
+                                       <div>
+                                           <p className="text-sm font-semibold text-emerald-800">{selectedCustomer.name}</p>
+                                           <p className="text-xs text-emerald-600">{selectedCustomer.contact}</p>
+                                       </div>
+                                        <div className={'flex items-center pe-4 flex-col'}>
+                                            <p className="text-xs ">Credit Balance</p>
+                                            <p className="text-sm text-red-600 font-semibold">RS.{selectedCustomer.credit}.00</p>
+                                        </div>
                                     </div>
+
                                     <button
                                         onClick={() => {
                                             setSelectedCustomer(null);
@@ -777,72 +785,47 @@ const POSInterface = () => {
                         )}
                     </div>
 
-                    {/* Discount */}
-                    <div className="bg-white rounded-2xl shadow-lg p-3">
-                        <h3 className="text-xs font-semibold text-gray-600 mb-1.5">Bill Discount (%)</h3>
-                        <input
-                            type="number"
-                            value={discount}
-                            onChange={(e) => setDiscount(Number(e.target.value))}
-                            className="w-full px-2.5 py-2 text-sm bg-gray-50 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-emerald-500"
-                            min="0"
-                            max="100"
-                        />
-                    </div>
 
-                    {/* Add Payment Method */}
+                    {/* Payment Methods - Always Visible */}
                     <div className="bg-white rounded-2xl shadow-lg p-3">
-                        <h3 className="text-xs font-semibold text-gray-600 mb-2">Add Payment Method</h3>
-                        <div className="grid grid-cols-3 gap-2">
-                            {paymentMethods.map((method) => (
-                                <button
-                                    key={method.id}
-                                    onClick={() => addPaymentMethod(method.id)}
-                                    disabled={paymentAmounts.some(p => p.methodId === method.id)}
-                                    className={`flex flex-col items-center gap-1 p-2 rounded-lg border-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed ${method.color} hover:shadow-md`}
-                                >
-                                    <method.icon className="w-4 h-4" />
-                                    <span className="text-xs font-medium">{method.label}</span>
-                                </button>
-                            ))}
-                        </div>
-                    </div>
+                        <h3 className="text-xs font-semibold text-gray-600 mb-2">Payment Methods</h3>
+                        <div className="space-y-2">
+                            {paymentMethods.map((method) => {
+                                const payment = paymentAmounts.find(p => p.methodId === method.id);
+                                const amount = payment?.amount || 0;
 
-                    {/* Selected Payment Methods */}
-                    {paymentAmounts.length > 0 && (
-                        <div className="bg-white rounded-2xl shadow-lg p-3">
-                            <h3 className="text-xs font-semibold text-gray-600 mb-2">Payment Split</h3>
-                            <div className="space-y-2">
-                                {paymentAmounts.map((payment) => {
-                                    const method = paymentMethods.find(m => m.id === payment.methodId);
-                                    return (
-                                        <div key={payment.methodId} className="flex items-center gap-2">
-                                            <div className="flex-1">
-                                                <div className="flex items-center gap-2 mb-1">
-                                                    {method && <method.icon className="w-3.5 h-3.5 text-emerald-600" />}
-                                                    <span className="text-xs font-medium text-gray-700">{method?.label}</span>
-                                                </div>
-                                                <input
-                                                    type="number"
-                                                    value={payment.amount}
-                                                    onChange={(e) => updatePaymentAmount(payment.methodId, Number(e.target.value))}
-                                                    placeholder="Enter amount"
-                                                    className="w-full px-2 py-1.5 text-sm bg-gray-50 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-emerald-500"
-                                                    min="0"
-                                                />
+                                return (
+                                    <div key={method.id} className="flex items-center gap-2">
+                                        <div className="flex-1">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <method.icon className="w-3.5 h-3.5 text-emerald-600" />
+                                                <span className="text-xs font-medium text-gray-700">{method.label}</span>
                                             </div>
-                                            <button
-                                                onClick={() => removePaymentMethod(payment.methodId)}
-                                                className="p-1.5 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg transition-colors"
-                                            >
-                                                <X className="w-3.5 h-3.5" />
-                                            </button>
+                                            <input
+                                                type="number"
+                                                value={amount}
+                                                onChange={(e) => {
+                                                    const newAmount = Number(e.target.value);
+                                                    if (newAmount > 0) {
+                                                        if (payment) {
+                                                            updatePaymentAmount(method.id, newAmount);
+                                                        } else {
+                                                            setPaymentAmounts([...paymentAmounts, { methodId: method.id, amount: newAmount }]);
+                                                        }
+                                                    } else if (payment) {
+                                                        setPaymentAmounts(paymentAmounts.filter(p => p.methodId !== method.id));
+                                                    }
+                                                }}
+                                                placeholder="Enter amount"
+                                                className="w-full px-2 py-1.5 text-sm bg-gray-50 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-emerald-500"
+                                                min="0"
+                                            />
                                         </div>
-                                    );
-                                })}
-                            </div>
+                                    </div>
+                                );
+                            })}
                         </div>
-                    )}
+                    </div>
 
                     {/* Total Summary */}
                     <div className="bg-gradient-to-br from-emerald-600 to-emerald-700 rounded-2xl shadow-lg p-3 text-white">
