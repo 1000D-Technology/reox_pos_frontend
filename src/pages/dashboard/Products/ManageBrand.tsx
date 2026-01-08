@@ -9,6 +9,7 @@ import { useEffect, useState } from 'react';
 import toast, { Toaster } from 'react-hot-toast';
 import { motion } from 'framer-motion';
 import axiosInstance from '../../../api/axiosInstance';
+import { brandService } from '../../../services/brandService';
 import ConfirmationModal from '../../../components/modals/ConfirmationModal';
 
 interface Brand {
@@ -60,10 +61,10 @@ function ManageBrand() {
             let response;
             if (searchQuery && searchQuery.trim()) {
                 setIsSearching(true);
-                response = await axiosInstance.get(`/api/common/brands/search?q=${encodeURIComponent(searchQuery)}`);
+                response = await brandService.searchBrands(searchQuery);
             } else {
                 setIsSearching(false);
-                response = await axiosInstance.get('/api/common/brands');
+                response = await brandService.getBrands();
             }
 
             if (response.data.success) {
@@ -133,7 +134,7 @@ function ManageBrand() {
         }
 
         setIsSaving(true);
-        const createBrandPromise = axiosInstance.post('/api/common/brands', {
+        const createBrandPromise = brandService.createBrand({
             name: newBrandName.trim()
         });
 
@@ -167,7 +168,7 @@ function ManageBrand() {
         }
 
         setIsUpdating(true);
-        const updateBrandPromise = axiosInstance.put(`/api/common/brands/${selectedBrand.id}`, {
+        const updateBrandPromise = brandService.updateBrand(selectedBrand.id, {
             name: updateBrandName.trim()
         });
 
@@ -198,7 +199,7 @@ function ManageBrand() {
         if (!brandToDelete) return;
 
         setIsDeleting(true);
-        const deleteBrandPromise = axiosInstance.delete(`/api/common/brands/${brandToDelete.id}`);
+        const deleteBrandPromise = brandService.deleteBrand(brandToDelete.id);
 
         try {
             await toast.promise(deleteBrandPromise, {
