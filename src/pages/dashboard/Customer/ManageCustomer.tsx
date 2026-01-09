@@ -16,7 +16,7 @@ import {
 
 import { useEffect, useState } from 'react';
 import toast, { Toaster } from 'react-hot-toast';
-import { motion } from 'framer-motion';
+
 
 interface Customer {
     id: number;
@@ -373,12 +373,8 @@ function ManageCustomer() {
 
                 <div className={'grid md:grid-cols-3 grid-cols-1 gap-4'}>
                     {summaryCards.map((stat, i) => (
-                        <motion.div
+                        <div
                             key={i}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: i * 0.1 }}
-                            whileHover={{ scale: 1.05, y: -2 }}
                             className={`flex items-center p-4 space-x-3 transition-all bg-white rounded-2xl shadow-lg hover:shadow-xl ${stat.bgGlow} cursor-pointer group relative overflow-hidden`}
                         >
                             <div className="absolute inset-0 bg-gradient-to-br from-transparent via-gray-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
@@ -399,14 +395,12 @@ function ManageCustomer() {
                                 </div>
                                 <p className="text-sm font-bold text-gray-700">{stat.value}</p>
                             </div>
-                        </motion.div>
+                        </div>
                     ))}
                 </div>
 
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.4 }}
+                <div
+
                     className="bg-white rounded-xl p-4 shadow-lg"
                 >
                     <div className="relative">
@@ -419,12 +413,10 @@ function ManageCustomer() {
                             className="w-full pl-10 pr-4 py-2.5 text-sm border-2 border-gray-200 rounded-lg focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all outline-none"
                         />
                     </div>
-                </motion.div>
+                </div>
 
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.5 }}
+                <div
+
                     className={'flex flex-col bg-white rounded-xl p-4 justify-between gap-8 shadow-lg'}
                 >
                     <div className="overflow-y-auto max-h-md md:h-[320px] lg:h-[550px] rounded-lg scrollbar-thin scrollbar-thumb-emerald-300 scrollbar-track-gray-100">
@@ -584,13 +576,13 @@ function ManageCustomer() {
                             </button>
                         </div>
                     </nav>
-                </motion.div>
+                </div>
             </div>
 
             {/* Edit Modal */}
             {isModalOpen && selectedCustomer && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-                    <motion.div
+                    <div
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
                         className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md relative"
@@ -647,14 +639,14 @@ function ManageCustomer() {
                                 {isUpdatingPhone ? 'Updating...' : 'Update Phone'}
                             </button>
                         </div>
-                    </motion.div>
+                    </div>
                 </div>
             )}
 
             {/* Invoices Modal */}
             {showInvoices && selectedCustomer && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-                    <motion.div
+                    <div
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
                         className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden"
@@ -718,16 +710,14 @@ function ManageCustomer() {
                                 </div>
                             )}
                         </div>
-                    </motion.div>
+                    </div>
                 </div>
             )}
 
             {/* Invoice Detail Modal */}
             {showInvoiceDetail && selectedInvoice && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
+                    <div
                         className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden"
                     >
                         <div className="bg-gradient-to-r from-emerald-500 to-emerald-600 px-6 py-4 flex justify-between items-center">
@@ -871,7 +861,7 @@ function ManageCustomer() {
                                 </div>
                             )}
                         </div>
-                    </motion.div>
+                    </div>
                 </div>
             )}
         </>
