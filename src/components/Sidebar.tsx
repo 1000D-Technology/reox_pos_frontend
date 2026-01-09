@@ -136,7 +136,7 @@ export default function Sidebar({isOpen}: SidebarProps) {
         },
         {label: "Accounts", path: "/accounts", icon: <CreditCard size={20}/>},
         {label: "Reports", path: "/reports", icon: <BarChart size={20}/>},
-        {label: "Settings", path: "/settings", icon: <Settings size={20}/>},
+        {label: "Settings", path: "/setting", icon: <Settings size={20}/>},
     ];
 
     return (
