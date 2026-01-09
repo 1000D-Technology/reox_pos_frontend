@@ -85,3 +85,54 @@ exports.getSummaryCards = catchAsync(async (req, res, next) => {
         }
     });
 });
+
+exports.getOutOfStockList = catchAsync(async (req, res, next) => {
+    const stockData = await Stock.getOutOfStock();
+
+    const transformedData = stockData.map(item => ({
+        productID: item.product_id.toString(),
+        productName: item.product_name,
+        unit: item.unit,
+        costPrice: `LKR ${parseFloat(item.cost_price).toFixed(2)}`,
+        MRP: `LKR ${parseFloat(item.mrp).toFixed(2)}`,
+        Price: `LKR ${parseFloat(item.selling_price).toFixed(2)}`,
+        supplier: item.supplier || 'N/A',
+        stockQty: item.stock_qty.toString()
+    }));
+
+    res.status(200).json({
+        success: true,
+        count: transformedData.length,
+        data: transformedData
+    });
+});
+
+exports.getSearchOutOfStock = catchAsync(async (req, res, next) => {
+    const filters = {
+        searchQuery: req.query.product,  // Product ID or Name
+        category: req.query.category,
+        supplier: req.query.supplier,
+        fromDate: req.query.fromDate,
+        toDate: req.query.toDate
+    };
+
+    const stockData = await Stock.searchOutOfStock(filters);
+
+    const transformedData = stockData.map(item => ({
+        productID: item.product_id.toString(),
+        productName: item.product_name,
+        unit: item.unit,
+        costPrice: `LKR ${parseFloat(item.cost_price).toFixed(2)}`,
+        MRP: `LKR ${parseFloat(item.mrp).toFixed(2)}`,
+        Price: `LKR ${parseFloat(item.selling_price).toFixed(2)}`,
+        supplier: item.supplier || 'N/A',
+        stockQty: item.stock_qty.toString()
+    }));
+
+    res.status(200).json({
+        success: true,
+        count: transformedData.length,
+        data: transformedData,
+        message: transformedData.length === 0 ? 'No out-of-stock items found matching the criteria' : `Found ${transformedData.length} out-of-stock items`
+    });
+});

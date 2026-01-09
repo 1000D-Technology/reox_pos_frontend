@@ -6,5 +6,7 @@ const stockController = require('../controllers/stockController');
 router.get('/', stockController.getStockList);
 router.get('/search', stockController.getSearchStock);
 router.get('/summary-cards', stockController.getSummaryCards);
+router.get('/out-of-stock', stockController.getOutOfStockList);
+router.get('/out-of-stock/search', stockController.getSearchOutOfStock);
 
 module.exports = router;

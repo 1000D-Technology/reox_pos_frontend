@@ -15,6 +15,27 @@ export const stockService = {
     getStockList: () => 
         axiosInstance.get('/api/stock'),
 
+    getOutOfStockList: () =>
+        axiosInstance.get('/api/stock/out-of-stock'),
+
+    // Search out-of-stock items with filters
+    searchOutOfStock: (filters: {
+        product?: string;
+        category?: string;
+        supplier?: string;
+        fromDate?: string;
+        toDate?: string;
+    }) => {
+        const params = new URLSearchParams();
+        if (filters.product) params.append('product', filters.product);
+        if (filters.category) params.append('category', filters.category);
+        if (filters.supplier) params.append('supplier', filters.supplier);
+        if (filters.fromDate) params.append('fromDate', filters.fromDate);
+        if (filters.toDate) params.append('toDate', filters.toDate);
+        
+        return axiosInstance.get(`/api/stock/out-of-stock/search?${params.toString()}`);
+    },
+
     // Search stock with filters
     searchStock: (filters: {
         category?: string;

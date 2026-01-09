@@ -15,6 +15,11 @@ import {
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import TypeableSelect from "../../../components/TypeableSelect.tsx";
+import { productService } from '../../../services/productService';
+import { categoryService } from '../../../services/categoryService';
+import { supplierService } from '../../../services/supplierService';
+import { stockService } from '../../../services/stockService';
+import toast, { Toaster } from 'react-hot-toast';
 
 function OutOfStock() {
     const summaryCards = [
@@ -65,90 +70,143 @@ function OutOfStock() {
         },
     ];
 
-    const stockData = [
-        {
-            productId: "P-1001",
-            productName: "White Sugar",
-            unit: "kg",
-            discountAmount: "50.00",
-            costPrice: "175.00",
-            mrp: "225.00",
-            price: "210.00",
-            supplier: "Global Foods Ltd",
-            stock: "0"
-        },
-        {
-            productId: "P-1002",
-            productName: "Brown Rice",
-            unit: "kg",
-            discountAmount: "0.00",
-            costPrice: "220.00",
-            mrp: "270.00",
-            price: "270.00",
-            supplier: "Organic Farms Inc",
-            stock: "0"
-        },
-        {
-            productId: "P-1003",
-            productName: "Wheat Flour",
-            unit: "kg",
-            discountAmount: "20.00",
-            costPrice: "130.00",
-            mrp: "160.00",
-            price: "140.00",
-            supplier: "National Mills",
-            stock: "0"
-        },
-        {
-            productId: "P-1004",
-            productName: "Vegetable Oil",
-            unit: "L",
-            discountAmount: "0.00",
-            costPrice: "350.00",
-            mrp: "420.00",
-            price: "420.00",
-            supplier: "Sunshine Products",
-            stock: "0"
-        },
-        {
-            productId: "P-1005",
-            productName: "Black Pepper",
-            unit: "g",
-            discountAmount: "15.00",
-            costPrice: "80.00",
-            mrp: "120.00",
-            price: "105.00",
-            supplier: "Spice World",
-            stock: "0"
+    // State for out-of-stock data
+    const [stockData, setStockData] = useState<any[]>([]);
+    const [isLoadingStock, setIsLoadingStock] = useState(false);
+
+    // Load out-of-stock data
+    const loadOutOfStockData = async () => {
+        setIsLoadingStock(true);
+        try {
+            const response = await stockService.getOutOfStockList();
+            if (response.data?.success) {
+                setStockData(response.data.data);
+            } else {
+                toast.error('Failed to load out-of-stock data');
+            }
+        } catch (error) {
+            console.error('Error loading out-of-stock data:', error);
+            toast.error('Failed to load out-of-stock data');
+        } finally {
+            setIsLoadingStock(false);
         }
-    ];
+    };
 
     type SelectOption = {
-        value: string;
+        value: string | number;
         label: string;
     };
 
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
     const [selectedSupplier, setSelectedSupplier] = useState<string | null>(null);
     const [selectedProduct, setSelectedProduct] = useState<string | null>(null);
+    const [fromDate, setFromDate] = useState<string>('');
+    const [toDate, setToDate] = useState<string>('');
 
-    const category = [
-        { value: 'apple', label: 'Apple' },
-        { value: 'banana', label: 'Banana' },
-        { value: 'orange', label: 'Orange' },
-    ];
+    // Dropdown options state
+    const [categories, setCategories] = useState<SelectOption[]>([]);
+    const [suppliers, setSuppliers] = useState<SelectOption[]>([]);
+    const [products, setProducts] = useState<SelectOption[]>([]);
+    const [isLoadingDropdowns, setIsLoadingDropdowns] = useState(false);
 
-    const supplier = [
-        { value: 'supplier1', label: 'Global Foods Ltd' },
-        { value: 'supplier2', label: 'Organic Farms Inc' },
-        { value: 'supplier3', label: 'National Mills' },
-    ];
+    // Load dropdown data
+    const loadDropdownData = async () => {
+        setIsLoadingDropdowns(true);
+        try {
+            const [productsResponse, categoriesResponse, suppliersResponse] = await Promise.all([
+                productService.getProductsForDropdown(),
+                categoryService.getCategories(),
+                supplierService.getSupplierDropdownList()
+            ]);
 
-    const productSearch = [
-        { value: 'product1', label: 'White Sugar' },
-        { value: 'product2', label: 'Brown Rice' },
-        { value: 'product3', label: 'Wheat Flour' },
-    ];
+            // Transform products
+            if (productsResponse.data?.success) {
+                const productOptions = productsResponse.data.data.map((product: any) => ({
+                    value: product.id.toString(),
+                    label: product.productName || product.product_name
+                }));
+                setProducts(productOptions);
+            }
+
+            // Transform categories
+            if (categoriesResponse.data?.success) {
+                const categoryOptions = categoriesResponse.data.data.map((category: any) => ({
+                    value: category.id.toString(),
+                    label: category.name || category.category_name
+                }));
+                setCategories(categoryOptions);
+            }
+
+            // Transform suppliers
+            if (suppliersResponse.data?.success) {
+                const supplierOptions = suppliersResponse.data.data.map((supplier: any) => ({
+                    value: supplier.id.toString(),
+                    label: supplier.supplierName
+                }));
+                setSuppliers(supplierOptions);
+            }
+
+        } catch (error) {
+            console.error('Error loading dropdown data:', error);
+            toast.error('Failed to load filter options');
+        } finally {
+            setIsLoadingDropdowns(false);
+        }
+    };
+
+    // Search functionality
+    const handleSearch = async () => {
+        if (!selectedProduct && !selectedCategory && !selectedSupplier && !fromDate && !toDate) {
+            toast.error('Please select at least one filter');
+            return;
+        }
+
+        setIsLoadingStock(true);
+        try {
+            const filters = {
+                product: selectedProduct || undefined,
+                category: selectedCategory || undefined,
+                supplier: selectedSupplier || undefined,
+                fromDate: fromDate || undefined,
+                toDate: toDate || undefined
+            };
+
+            const response = await stockService.searchOutOfStock(filters);
+            console.log(response);
+            
+            if (response.data?.success) {
+                setStockData(response.data.data || []);
+                setCurrentPage(1);
+                setSelectedIndex(0);
+                if (response.data.count > 0) {
+                    toast.success(`Found ${response.data.count} out-of-stock items`);
+                } else {
+                    toast.error('No out-of-stock items found matching the criteria');
+                }
+            } else {
+                toast.error('Search failed');
+                setStockData([]);
+            }
+        } catch (error) {
+            console.error('Error searching out-of-stock data:', error);
+            toast.error('Search failed. Please try again.');
+            setStockData([]);
+        } finally {
+            setIsLoadingStock(false);
+        }
+    };
+
+    // Clear filters and reload all data
+    const handleClear = () => {
+        setSelectedProduct(null);
+        setSelectedCategory(null);
+        setSelectedSupplier(null);
+        setFromDate('');
+        setToDate('');
+        setCurrentPage(1);
+        loadOutOfStockData();
+        toast.success('Filters cleared');
+    };
 
     const [selectedIndex, setSelectedIndex] = useState(0);
     const [currentPage, setCurrentPage] = useState(1);
@@ -158,6 +216,11 @@ function OutOfStock() {
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
     const currentStockData = stockData.slice(startIndex, endIndex);
+
+    useEffect(() => {
+        loadDropdownData();
+        loadOutOfStockData();
+    }, []);
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -280,16 +343,17 @@ function OutOfStock() {
                     className={'bg-white rounded-xl p-4 flex flex-col shadow-lg'}
                 >
                     <h2 className="text-xl font-semibold text-gray-700 mb-3">Filter</h2>
-                    <div className={'grid md:grid-cols-5 gap-4'}>
+                    <div className={'grid md:grid-cols-6 gap-4'}>
                         <div>
                             <label htmlFor="product" className="block text-sm font-medium text-gray-700 mb-1">
                                 Product
                             </label>
                             <TypeableSelect
-                                options={productSearch}
+                                options={products}
                                 value={selectedProduct}
                                 onChange={(opt) => setSelectedProduct(opt?.value as string || null)}
-                                placeholder="Search product..."
+                                placeholder={isLoadingDropdowns ? "Loading..." : "Search product..."}
+                                disabled={isLoadingDropdowns}
                             />
                         </div>
                         <div>
@@ -297,10 +361,11 @@ function OutOfStock() {
                                 Category
                             </label>
                             <TypeableSelect
-                                options={category}
+                                options={categories}
                                 value={selectedCategory}
                                 onChange={(opt) => setSelectedCategory(opt?.value as string || null)}
-                                placeholder="Search categories..."
+                                placeholder={isLoadingDropdowns ? "Loading..." : "Search categories..."}
+                                disabled={isLoadingDropdowns}
                             />
                         </div>
                         <div>
@@ -308,27 +373,48 @@ function OutOfStock() {
                                 Supplier
                             </label>
                             <TypeableSelect
-                                options={supplier}
+                                options={suppliers}
                                 value={selectedSupplier}
                                 onChange={(opt) => setSelectedSupplier(opt?.value as string || null)}
-                                placeholder="Search suppliers..."
+                                placeholder={isLoadingDropdowns ? "Loading..." : "Search suppliers..."}
+                                disabled={isLoadingDropdowns}
                             />
                         </div>
                         <div>
-                            <label htmlFor="date" className="block text-sm font-medium text-gray-700 mb-1">
-                                Date
+                            <label htmlFor="fromDate" className="block text-sm font-medium text-gray-700 mb-1">
+                                From Date
                             </label>
                             <input
                                 type="date"
-                                id="date"
+                                id="fromDate"
+                                value={fromDate}
+                                onChange={(e) => setFromDate(e.target.value)}
+                                className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-red-400 focus:outline-none transition-all"
+                            />
+                        </div>
+                        <div>
+                            <label htmlFor="toDate" className="block text-sm font-medium text-gray-700 mb-1">
+                                To Date
+                            </label>
+                            <input
+                                type="date"
+                                id="toDate"
+                                value={toDate}
+                                onChange={(e) => setToDate(e.target.value)}
                                 className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-red-400 focus:outline-none transition-all"
                             />
                         </div>
                         <div className={'grid grid-cols-2 md:items-end items-start gap-2 text-white font-medium'}>
-                            <button className={'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 py-2 rounded-lg flex items-center justify-center shadow-lg shadow-red-200 hover:shadow-xl transition-all'}>
+                            <button 
+                                onClick={handleSearch}
+                                disabled={isLoadingStock}
+                                className={'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 py-2 rounded-lg flex items-center justify-center shadow-lg shadow-red-200 hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed'}>
                                 <SearchCheck className="mr-2" size={14} />Search
                             </button>
-                            <button className={'bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 py-2 rounded-lg flex items-center justify-center shadow-lg shadow-gray-200 hover:shadow-xl transition-all'}>
+                            <button 
+                                onClick={handleClear}
+                                disabled={isLoadingStock}
+                                className={'bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 py-2 rounded-lg flex items-center justify-center shadow-lg shadow-gray-200 hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed'}>
                                 <RefreshCw className="mr-2" size={14} />Clear
                             </button>
                         </div>
@@ -350,7 +436,6 @@ function OutOfStock() {
                                     'Product ID',
                                     'Product Name',
                                     'Unit',
-                                    'Discount',
                                     'Cost Price',
                                     'MRP',
                                     'Price',
@@ -371,16 +456,22 @@ function OutOfStock() {
                             </thead>
 
                             <tbody className="bg-white divide-y divide-gray-200">
-                            {currentStockData.length === 0 ? (
+                            {isLoadingStock ? (
                                 <tr>
-                                    <td colSpan={9} className="px-6 py-8 text-center text-gray-500">
+                                    <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
+                                        Loading out-of-stock items...
+                                    </td>
+                                </tr>
+                            ) : currentStockData.length === 0 ? (
+                                <tr>
+                                    <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
                                         No out of stock items found
                                     </td>
                                 </tr>
                             ) : (
                                 currentStockData.map((item, index) => (
                                     <tr
-                                        key={index}
+                                        key={`${item.productID}-${currentPage}-${index}`}
                                         onClick={() => setSelectedIndex(index)}
                                         className={`cursor-pointer transition-all ${
                                             selectedIndex === index
@@ -389,7 +480,7 @@ function OutOfStock() {
                                         }`}
                                     >
                                         <td className="px-6 py-2 whitespace-nowrap text-sm font-semibold text-gray-800">
-                                            {item.productId}
+                                            {item.productID}
                                         </td>
                                         <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-gray-700">
                                             {item.productName}
@@ -397,17 +488,14 @@ function OutOfStock() {
                                         <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-600">
                                             {item.unit}
                                         </td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-purple-600">
-                                            LKR {item.discountAmount}
-                                        </td>
                                         <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-blue-600">
-                                            LKR {item.costPrice}
+                                            {item.costPrice}
                                         </td>
                                         <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-gray-600">
-                                            LKR {item.mrp}
+                                            {item.MRP}
                                         </td>
                                         <td className="px-6 py-2 whitespace-nowrap text-sm font-bold text-emerald-600">
-                                            LKR {item.price}
+                                            {item.Price}
                                         </td>
                                         <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-600">
                                             {item.supplier}
@@ -415,7 +503,7 @@ function OutOfStock() {
                                         <td className="px-6 py-2 whitespace-nowrap">
                                                 <span className="px-3 py-1 text-xs font-semibold rounded-full bg-gradient-to-r from-red-100 to-red-200 text-red-800 flex items-center gap-1 w-fit">
                                                     <AlertTriangle className="w-3 h-3" />
-                                                    {item.stock}
+                                                    {item.stockQty}
                                                 </span>
                                         </td>
                                     </tr>
