@@ -8,7 +8,7 @@ import {
     Package,
     DollarSign,
     TrendingDown,
-    Users,
+
     ShoppingCart,
     ArrowUpRight,
     ArrowDownRight,
