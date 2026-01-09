@@ -3,7 +3,7 @@ import {
     LayoutDashboard,
 
     Users,
-    User,
+
     CreditCard,
     BarChart,
     Settings,
@@ -113,25 +113,22 @@ export default function Sidebar({isOpen}: SidebarProps) {
             ],
         },
         {
-            label: "Customer",
-            path: "/customer",
+            label: "Manage Customer",
+            path: "/customer/manage-customer",
             icon: <Users size={20}/>,
-            children: [
-                {label: "Manage Customer", path: "/customer/manage-customer"},
-                {label: "Customer Sales", path: "/customer/customer-sales"},
-            ],
+
         },
-        {
-            label: "Employee",
-            path: "/employee",
-            icon: <User size={20}/>,
-            children: [
-                {label: "Manage Employee", path: "/employee/manage-employee"},
-                {label: "Attendance Mark", path: "/employee/attendance-mark"},
-                {label: "Attendance Report", path: "/employee/attendance-report"},
-                {label: "Employee Salary", path: "/employee/employee-salary"},
-            ],
-        },
+        // {
+        //     label: "Employee",
+        //     path: "/employee/manage-employee",
+        //     icon: <User size={20}/>,
+        //     children: [
+        //         {label: "Manage Employee", path: "/employee/manage-employee"},
+        //         {label: "Attendance Mark", path: "/employee/attendance-mark"},
+        //         {label: "Attendance Report", path: "/employee/attendance-report"},
+        //         {label: "Employee Salary", path: "/employee/employee-salary"},
+        //     ],
+        // },
         {
             label: "Manage User",
             path: "/manage-users",

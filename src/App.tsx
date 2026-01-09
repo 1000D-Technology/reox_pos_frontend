@@ -32,7 +32,7 @@ import ManageEmployee from "./pages/dashboard/Employee/ManageEmployee.tsx";
 import AttendanceMark from "./pages/dashboard/Employee/AttendanceMark.tsx";
 import AttendanceReport from "./pages/dashboard/Employee/Attendance Report.tsx";
 import EmployeeSalary from "./pages/dashboard/Employee/EmployeeSalary.tsx";
-import ManageUser from "./pages/dashboard/ManageUser.tsx";
+import ManageUser from "./pages/dashboard/User/ManageUser.tsx";
 import CreateGrn from "./pages/dashboard/grn/CreateGrn.tsx";
 import ManageBrand from "./pages/dashboard/Products/ManageBrand.tsx";
 import GrnList from "./pages/dashboard/grn/GrnList.tsx";
