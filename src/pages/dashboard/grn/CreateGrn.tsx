@@ -4,7 +4,8 @@ import { motion } from 'framer-motion';
 import TypeableSelect from "../../../components/TypeableSelect.tsx";
 import { productService } from "../../../services/productService.ts";
 import { supplierService } from "../../../services/supplierService.ts";
-import axiosInstance from "../../../api/axiosInstance.ts";
+import { paymentTypeService } from "../../../services/paymentTypeService.ts";
+import { grnService } from "../../../services/grnService.ts";
 import toast, { Toaster } from 'react-hot-toast';
 
 function CreateGrn() {
@@ -195,7 +196,7 @@ function CreateGrn() {
             const [productsResponse, suppliersResponse, paymentTypesResponse] = await Promise.all([
                 productService.getProductsForDropdown(),
                 supplierService.getSuppliers(),
-                axiosInstance.get('/api/grn/payment-types')
+                paymentTypeService.getPaymentType()
             ]);
 
             // Handle products response
@@ -317,7 +318,7 @@ function CreateGrn() {
                 }))
             };
 
-            const response = await axiosInstance.post('/api/grn/add', grnPayload);
+            const response = await grnService.createGRN(grnPayload);
 
             if (response.data.success) {
                 toast.success(`GRN created successfully! GRN ID: ${response.data.grnId}`);
@@ -329,10 +330,22 @@ function CreateGrn() {
                 setBillNumber(generateBillNumber());
                 clearForm();
             } else {
-                toast.error('Failed to create GRN');
+                toast.error(response.data.message || 'Failed to create GRN');
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error creating GRN:', error);
+            
+            // Handle validation errors (400 status)
+            if (error.response && error.response.status === 400) {
+                const errorMessage = error.response.data?.message || 'Validation failed. Please check your input.';
+                toast.error(errorMessage);
+            } else if (error.response && error.response.data?.message) {
+                // Handle other API errors
+                toast.error(error.response.data.message);
+            } else {
+                // Handle network errors or other issues
+                toast.error('Failed to create GRN. Please check your connection and try again.');
+            }
         }
     };
 
@@ -474,7 +487,6 @@ function CreateGrn() {
                                         : setSelectedSupplier(null)
                                 }
                                 placeholder="Type to search Supplier"
-                                allowCreate={false}
                             />
                         </div>
                     </div>
@@ -509,7 +521,6 @@ function CreateGrn() {
                                         : setSelectedProduct(null)
                                 }
                                 placeholder="Type to search Product"
-                                allowCreate={false}
                             />
                         </div>
                         <div>

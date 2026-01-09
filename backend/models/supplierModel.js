@@ -64,11 +64,27 @@ class Supplier {
                 c.company_name AS companyName,
                 b.bank_name AS bankName,
                 s.account_number AS accountNumber,
+                st.ststus AS status,
+                s.status_id,
                 DATE_FORMAT(s.created_at, '%Y-%m-%d') AS joinedDate
             FROM supplier s
             LEFT JOIN company c ON s.company_id = c.id
             LEFT JOIN bank b ON s.bank_id = b.id
+            INNER JOIN status st ON s.status_id = st.id
             ORDER BY s.created_at DESC
+        `;
+        const [rows] = await db.execute(query);
+        return rows;
+    }
+
+    static async getSupplierDropdownList() {
+        const query = `
+            SELECT 
+                s.id,
+                s.supplier_name AS supplierName
+            FROM supplier s
+            WHERE s.status_id = 1
+            ORDER BY s.supplier_name ASC
         `;
         const [rows] = await db.execute(query);
         return rows;
@@ -77,6 +93,14 @@ class Supplier {
     static async updateContact(supplierId, newContact) {
         const query = `UPDATE supplier SET contact_number = ? WHERE id = ?`;
         const [result] = await db.execute(query, [newContact, supplierId]);
+        return result;
+    }
+
+    static async updateStatus(supplierId, currentStatusId) {
+        // Toggle status: if 1 (Active) change to 2 (Inactive), if 2 (Inactive) change to 1 (Active)
+        const newStatusId = currentStatusId === 1 ? 2 : 1;
+        const query = `UPDATE supplier SET status_id = ? WHERE id = ?`;
+        const [result] = await db.execute(query, [newStatusId, supplierId]);
         return result;
     }
 }

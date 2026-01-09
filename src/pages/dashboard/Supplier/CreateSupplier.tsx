@@ -3,15 +3,21 @@ import {
     ChevronRight,
     CirclePlus,
     Pencil,
-
     X,
+    Building2,
+    Users,
+    Phone,
+    Mail,
+    CreditCard,
+    Briefcase
 } from 'lucide-react';
 
 import { useEffect, useState } from 'react';
 import toast, { Toaster } from 'react-hot-toast';
+import { motion } from 'framer-motion';
 import { supplierService } from '../../../services/supplierService';
+import { companyService } from '../../../services/companyService';
 import TypeableSelect from '../../../components/TypeableSelect';
-
 
 interface Category {
     id: string;
@@ -32,17 +38,18 @@ function CreateSupplier() {
         contact: ''
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
-    
+    const [isCompanyModalOpen, setIsCompanyModalOpen] = useState(false);
+
     // State for company selection
-    const [companies, setCompanies] = useState<{value: string, label: string}[]>([]);
-    const [selectedCompany, setSelectedCompany] = useState<{value: string, label: string} | null>(null);
+    const [companies, setCompanies] = useState<{value: string | number, label: string}[]>([]);
+    const [selectedCompany, setSelectedCompany] = useState<{value: string | number, label: string} | null>(null);
     const [isLoadingCompanies, setIsLoadingCompanies] = useState(false);
-    
+
     // State for bank selection
-    const [banks, setBanks] = useState<{value: string, label: string}[]>([]);
-    const [selectedBank, setSelectedBank] = useState<{value: string, label: string} | null>(null);
+    const [banks, setBanks] = useState<{value: string | number, label: string}[]>([]);
+    const [selectedBank, setSelectedBank] = useState<{value: string | number, label: string} | null>(null);
     const [isLoadingBanks, setIsLoadingBanks] = useState(false);
-    
+
     // State for supplier form
     const [supplierData, setSupplierData] = useState({
         supplierName: '',
@@ -59,15 +66,13 @@ function CreateSupplier() {
     const [totalItems, setTotalItems] = useState(0);
     const [isLoadingSuppliers, setIsLoadingSuppliers] = useState(false);
 
-    // State for controlling the modal visibility
+    // State for controlling the update modal visibility
     const [isModalOpen, setIsModalOpen] = useState(false);
-
-    // 2. Specify that the state can be a 'Category' object or 'null'
     const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
     const [newContactNumber, setNewContactNumber] = useState('');
     const [isUpdatingContact, setIsUpdatingContact] = useState(false);
 
-    // 🔹 Selected row state
+    // Selected row state
     const [selectedIndex, setSelectedIndex] = useState(0);
 
     // Calculate pagination values
@@ -76,19 +81,24 @@ function CreateSupplier() {
     const endIndex = startIndex + itemsPerPage;
     const currentPageData = salesData.slice(startIndex, endIndex);
 
-    // 🔹 Handle Up / Down arrow keys
+    // Handle Up / Down arrow keys
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === "ArrowDown") {
                 setSelectedIndex((prev) => (prev < currentPageData.length - 1 ? prev + 1 : prev));
             } else if (e.key === "ArrowUp") {
                 setSelectedIndex((prev) => (prev > 0 ? prev - 1 : prev));
+            } else if (e.key === "Enter" && e.shiftKey) {
+                e.preventDefault();
+                if (!isSubmittingSupplier) {
+                    handleSubmitSupplier();
+                }
             }
         };
 
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [currentPageData.length]);
+    }, [currentPageData.length, isSubmittingSupplier, supplierData, selectedCompany, selectedBank]);
 
     // Function to search companies and banks
     const searchCompaniesAndBanks = async () => {
@@ -103,7 +113,7 @@ function CreateSupplier() {
                 }));
                 setCompanies(companyOptions);
             }
-            
+
             if (banksResponse.data.success) {
                 const bankOptions = banksResponse.data.data.map((bank: any) => ({
                     value: bank.id.toString(),
@@ -132,9 +142,8 @@ function CreateSupplier() {
             try {
                 const response = await supplierService.getSuppliers();
                 const result = response.data;
-                
+
                 if (result.success) {
-                    // Transform the backend data to match our Category interface
                     const transformedData = result.data.map((supplier: any, index: number) => ({
                         id: supplier.id.toString(),
                         no: (index + 1).toString(),
@@ -165,7 +174,7 @@ function CreateSupplier() {
     const goToPage = (page: number) => {
         if (page >= 1 && page <= totalPages) {
             setCurrentPage(page);
-            setSelectedIndex(0); // Reset selection to first item
+            setSelectedIndex(0);
         }
     };
 
@@ -185,9 +194,9 @@ function CreateSupplier() {
 
     // Generate page numbers to display
     const getPageNumbers = () => {
-        const pages = [];
+        const pages: (number | string)[] = [];
         const maxPagesToShow = 5;
-        
+
         if (totalPages <= maxPagesToShow) {
             for (let i = 1; i <= totalPages; i++) {
                 pages.push(i);
@@ -211,16 +220,180 @@ function CreateSupplier() {
                 pages.push(totalPages);
             }
         }
-        
+
         return pages;
     };
 
+    const handleSubmitSupplier = async () => {
+        if (!supplierData.supplierName.trim()) {
+            toast.error('Supplier name is required');
+            return;
+        }
+
+        if (!supplierData.email.trim()) {
+            toast.error('Email is required');
+            return;
+        }
+
+        if (!supplierData.contactNumber.trim()) {
+            toast.error('Contact number is required');
+            return;
+        }
+
+        if (!selectedCompany) {
+            toast.error('Company is required');
+            return;
+        }
+
+        if (!selectedBank) {
+            toast.error('Bank is required');
+            return;
+        }
+
+        setIsSubmittingSupplier(true);
+
+        try {
+            const createSupplierPromise = supplierService.addSupplier({
+                supplierName: supplierData.supplierName,
+                email: supplierData.email,
+                contactNumber: supplierData.contactNumber,
+                companyId: typeof selectedCompany.value === 'number' ? selectedCompany.value : parseInt(selectedCompany.value),
+                bankId: typeof selectedBank.value === 'number' ? selectedBank.value : parseInt(selectedBank.value),
+                accountNumber: supplierData.accountNumber
+            });
+
+            await toast.promise(
+                createSupplierPromise,
+                {
+                    loading: 'Creating supplier...',
+                    success: (res) => {
+                        const response = supplierService.getSuppliers();
+                        response.then(result => {
+                            if (result.data.success) {
+                                const transformedData = result.data.data.map((supplier: any, index: number) => ({
+                                    id: supplier.id.toString(),
+                                    no: (index + 1).toString(),
+                                    name: supplier.supplierName || '',
+                                    email: supplier.email || '',
+                                    contact: supplier.contactNumber || '',
+                                    company: supplier.companyName || '',
+                                    bank: supplier.bankName || '',
+                                    account: supplier.accountNumber || '',
+                                }));
+                                setSalesData(transformedData);
+                                setTotalItems(transformedData.length);
+                            }
+                        });
+                        return res.data.message || 'Supplier created successfully!';
+                    },
+                    error: (err) => err.response?.data?.message || 'Failed to create supplier'
+                }
+            );
+
+            setSupplierData({
+                supplierName: '',
+                email: '',
+                contactNumber: '',
+                accountNumber: ''
+            });
+            setSelectedCompany(null);
+            setSelectedBank(null);
+
+        } catch (error) {
+            console.error('Error creating supplier:', error);
+        } finally {
+            setIsSubmittingSupplier(false);
+        }
+    };
+
+    const handleSubmitCompany = async () => {
+        if (!companyData.name.trim()) {
+            toast.error('Company name is required');
+            return;
+        }
+
+        setIsSubmitting(true);
+
+        try {
+            const createCompanyPromise = companyService.createCompany(companyData);
+
+            await toast.promise(
+                createCompanyPromise,
+                {
+                    loading: 'Creating company...',
+                    success: (res) => {
+                        searchCompaniesAndBanks();
+                        return res.data.message || 'Company created successfully!';
+                    },
+                    error: (err) => err.response?.data?.message || 'Failed to create company'
+                }
+            );
+
+            setCompanyData({ name: '', email: '', contact: '' });
+            setIsCompanyModalOpen(false);
+
+        } catch (error) {
+            console.error('Error creating company:', error);
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const handleUpdateContact = async () => {
+        if (!selectedCategory || !newContactNumber.trim()) {
+            toast.error('Contact number is required');
+            return;
+        }
+
+        setIsUpdatingContact(true);
+
+        try {
+            const updatePromise = supplierService.updateSupplierContact(
+                parseInt(selectedCategory.id),
+                newContactNumber
+            );
+
+            await toast.promise(
+                updatePromise,
+                {
+                    loading: 'Updating contact...',
+                    success: (res) => {
+                        const response = supplierService.getSuppliers();
+                        response.then(result => {
+                            if (result.data.success) {
+                                const transformedData = result.data.data.map((supplier: any, index: number) => ({
+                                    id: supplier.id.toString(),
+                                    no: (index + 1).toString(),
+                                    name: supplier.supplierName || '',
+                                    email: supplier.email || '',
+                                    contact: supplier.contactNumber || '',
+                                    company: supplier.companyName || '',
+                                    bank: supplier.bankName || '',
+                                    account: supplier.accountNumber || '',
+                                }));
+                                setSalesData(transformedData);
+                                setTotalItems(transformedData.length);
+                            }
+                        });
+                        handleCloseModal();
+                        return res.data.message || 'Contact updated successfully!';
+                    },
+                    error: (err) => err.response?.data?.message || 'Failed to update contact'
+                }
+            );
+
+        } catch (error) {
+            console.error('Error updating contact:', error);
+        } finally {
+            setIsUpdatingContact(false);
+        }
+    };
 
     const handleEditClick = (category: Category) => {
         setSelectedCategory(category);
+        setNewContactNumber(category.contact);
         setIsModalOpen(true);
     };
-
 
     const handleCloseModal = () => {
         setIsModalOpen(false);
@@ -229,6 +402,11 @@ function CreateSupplier() {
         setIsUpdatingContact(false);
     };
 
+    const handleCloseCompanyModal = () => {
+        setIsCompanyModalOpen(false);
+        setCompanyData({ name: '', email: '', contact: '' });
+        setIsSubmitting(false);
+    };
 
     return (
         <>
@@ -243,412 +421,161 @@ function CreateSupplier() {
                     success: {
                         duration: 3000,
                         style: {
-                            background: '#10B981',
+                            background: '#10b981',
                         },
                     },
                     error: {
                         duration: 4000,
                         style: {
-                            background: '#EF4444',
-                        },
-                    },
-                    loading: {
-                        style: {
-                            background: '#3B82F6',
+                            background: '#ef4444',
                         },
                     },
                 }}
             />
-            <div className={'flex flex-col gap-4 h-full'}>
-            <div>
-                <div className="text-sm text-gray-500 flex items-center">
-                    <span>Pages</span>
-                    <span className="mx-2">›</span>
-                    <span className="text-black">Create Supplier</span>
+            <div className={"flex flex-col gap-4 h-full"}>
+                <div>
+                    <div className="text-sm text-gray-400 flex items-center">
+                        <span>Suppliers</span>
+                        <span className="mx-2">›</span>
+                        <span className="text-gray-700 font-medium">Create Supplier</span>
+                    </div>
+                    <h1 className="text-3xl font-semibold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
+                        Create New Supplier
+                    </h1>
                 </div>
-                <h1 className="text-3xl font-semibold text-gray-500">Create Supplier</h1>
-            </div>
 
-            <div className={'flex flex-col bg-white rounded-md  p-4 justify-between gap-8'}>
-
-                <div className={'grid md:grid-cols-5 gap-4'}>
-                    <div>
-                        <label htmlFor="supplier-name"
-                            className="block text-sm font-medium text-gray-700 mb-1">Name <span className="text-red-500">*</span></label>
-                        <input 
-                            type="text" 
-                            id="supplier-name" 
-                            placeholder="Enter supplier name"
-                            value={supplierData.supplierName}
-                            onChange={(e) => setSupplierData({...supplierData, supplierName: e.target.value})}
-                            className="w-full text-sm rounded-md py-2 px-2 border-2 border-gray-100 focus:border-emerald-500 focus:ring-emerald-500" 
-                        />
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className={"bg-white rounded-xl p-6 flex flex-col shadow-lg"}
+                >
+                    <div className="flex items-center gap-2 mb-4">
+                        <Users className="text-emerald-600" size={24} />
+                        <h2 className="text-xl font-semibold text-gray-700">Supplier Information</h2>
                     </div>
 
-                    <div>
-                        <label htmlFor="supplier-email"
-                            className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                        <input 
-                            type="email" 
-                            id="supplier-email" 
-                            placeholder="Enter supplier email"
-                            value={supplierData.email}
-                            onChange={(e) => setSupplierData({...supplierData, email: e.target.value})}
-                            className="w-full text-sm rounded-md py-2 px-2 border-2 border-gray-100 focus:border-emerald-500 focus:ring-emerald-500" 
-                        />
-                    </div>
-
-                    <div>
-                        <label htmlFor="supplier-contact"
-                            className="block text-sm font-medium text-gray-700 mb-1">Contact Number <span className="text-red-500">*</span></label>
-                        <input 
-                            type="tel" 
-                            id="supplier-contact" 
-                            placeholder="Enter contact number (10 digits)"
-                            value={supplierData.contactNumber}
-                            onChange={(e) => setSupplierData({...supplierData, contactNumber: e.target.value})}
-                            className="w-full text-sm rounded-md py-2 px-2 border-2 border-gray-100 focus:border-emerald-500 focus:ring-emerald-500 appearance-none" 
-                            maxLength={10}
-                        />
-                    </div>
-
-                    <div>
-                        <div className='flex justify-between items-center'>
-                            <label htmlFor="search-category" className="block text-sm font-medium text-gray-700 mb-1">Company Name</label>
-
-                            <details className="relative">
-                                <summary className="list-none">
-                                    <CirclePlus className='text-green-700 hover:bg-green-200 rounded-full p-1 cursor-pointer' size={18} />
-                                </summary>
-
-                                {/* Modal built with <details> so no new hooks are required */}
-                                <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/10 backdrop-blur-sm">
-                                    <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md relative">
-                                        <button
-                                            type="button"
-                                            onClick={(e) => (e.currentTarget.closest('details') as HTMLDetailsElement).removeAttribute('open')}
-                                            className="absolute top-3 right-3 text-gray-400 hover:text-gray-600">
-                                            <X className="w-5 h-5" />
-                                        </button>
-
-                                        <h3 className="text-lg font-semibold mb-4">Add Company</h3>
-
-                                        <div className="space-y-3">
-                                            <div>
-                                                <label htmlFor="new-company-name" className="block text-sm font-medium text-gray-700 mb-1">
-                                                    Company Name <span className="text-red-500">*</span>
-                                                </label>
-                                                <input
-                                                    id="new-company-name"
-                                                    type="text"
-                                                    placeholder="Enter company name"
-                                                    value={companyData.name}
-                                                    onChange={(e) => setCompanyData({...companyData, name: e.target.value})}
-                                                    className="w-full text-sm rounded-md py-2 px-3 border border-gray-300 focus:border-emerald-500 focus:ring-emerald-500"
-                                                />
-                                            </div>
-
-                                            <div>
-                                                <label htmlFor="new-company-email" className="block text-sm font-medium text-gray-700 mb-1">
-                                                    Email
-                                                </label>
-                                                <input
-                                                    id="new-company-email"
-                                                    type="email"
-                                                    placeholder="Enter company email"
-                                                    value={companyData.email}
-                                                    onChange={(e) => setCompanyData({...companyData, email: e.target.value})}
-                                                    className="w-full text-sm rounded-md py-2 px-3 border border-gray-300 focus:border-emerald-500 focus:ring-emerald-500"
-                                                />
-                                            </div>
-
-                                            <div>
-                                                <label htmlFor="new-company-contact" className="block text-sm font-medium text-gray-700 mb-1">
-                                                    Contact Number <span className="text-red-500">*</span>
-                                                </label>
-                                                <input
-                                                    id="new-company-contact"
-                                                    type="text"
-                                                    placeholder="Enter contact number (e.g., 0771234567)"
-                                                    value={companyData.contact}
-                                                    onChange={(e) => setCompanyData({...companyData, contact: e.target.value})}
-                                                    className="w-full text-sm rounded-md py-2 px-3 border border-gray-300 focus:border-emerald-500 focus:ring-emerald-500"
-                                                />
-                                            </div>
-                                        </div>
-
-                                        <div className="mt-6 flex justify-end gap-2">
-                                            <button
-                                                type="button"
-                                                disabled={isSubmitting}
-                                                onClick={async (e) => {
-                                                    // Capture modal reference before async operations
-                                                    const detailsElement = e.currentTarget.closest('details') as HTMLDetailsElement;
-                                                    
-                                                    // Basic validation
-                                                    if (!companyData.name.trim()) {
-                                                        toast.error('Company name is required');
-                                                        return;
-                                                    }
-                                                    
-                                                    if (!companyData.contact.trim()) {
-                                                        toast.error('Contact number is required');
-                                                        return;
-                                                    }
-
-                                                    setIsSubmitting(true);
-
-                                                    try {
-                                                        const createCompanyPromise = supplierService.createCompany({
-                                                            name: companyData.name.trim(),
-                                                            email: companyData.email.trim() || undefined,
-                                                            contact: companyData.contact.trim()
-                                                        });
-
-                                                        toast.loading('Creating company...');
-
-                                                        const response = await createCompanyPromise;
-                                                        toast.dismiss();
-                                                        
-                                                        if (response.data.success) {
-                                                            toast.success(response.data.message || 'Company created successfully!');
-                                                            
-                                                            // Reset form
-                                                            setCompanyData({ name: '', email: '', contact: '' });
-                                                            
-                                                            // Refresh companies list
-                                                            searchCompaniesAndBanks();
-                                                            
-                                                            // Close modal using captured reference
-                                                            if (detailsElement) {
-                                                                detailsElement.removeAttribute('open');
-                                                            }
-                                                        } else {
-                                                            toast.error(response.data.message || 'Failed to create company');
-                                                        }
-
-                                                    } catch (error: any) {
-                                                        console.error('Error creating company:', error);
-                                                        toast.dismiss();
-                                                        
-                                                        if (error.response?.data?.message) {
-                                                            toast.error(error.response.data.message);
-                                                        } else {
-                                                            toast.error('Failed to create company. Please try again.');
-                                                        }
-                                                    } finally {
-                                                        setIsSubmitting(false);
-                                                    }
-                                                }}
-                                                className={`py-2 px-4 rounded-md font-semibold text-white ${
-                                                    isSubmitting 
-                                                        ? 'bg-gray-400 cursor-not-allowed' 
-                                                        : 'bg-emerald-600 hover:bg-emerald-700'
-                                                }`}>
-                                                {isSubmitting ? 'Creating...' : 'Save Company'}
-                                            </button>
-
-                                            <button
-                                                type="button"
-                                                disabled={isSubmitting}
-                                                onClick={(e) => {
-                                                    setCompanyData({ name: '', email: '', contact: '' });
-                                                    (e.currentTarget.closest('details') as HTMLDetailsElement).removeAttribute('open');
-                                                }}
-                                                className="py-2 px-4 rounded-md border hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
-                                                Cancel
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </details>
+                    <div className={"grid md:grid-cols-5 gap-4"}>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Supplier Name
+                            </label>
+                            <input
+                                type="text"
+                                value={supplierData.supplierName}
+                                onChange={(e) => setSupplierData({...supplierData, supplierName: e.target.value})}
+                                placeholder="Enter Supplier Name"
+                                className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all outline-none"
+                            />
                         </div>
-                        
-                        <TypeableSelect
-                            options={companies}
-                            value={selectedCompany?.value || null}
-                            onChange={(opt) => {
-                                if (opt) {
-                                    setSelectedCompany({
-                                        value: String(opt.value),
-                                        label: opt.label,
-                                    });
-                                } else {
-                                    setSelectedCompany(null);
-                                }
-                            }}
-                            placeholder="Type to search company"
-                        />
-                      
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Email
+                            </label>
+                            <input
+                                type="email"
+                                value={supplierData.email}
+                                onChange={(e) => setSupplierData({...supplierData, email: e.target.value})}
+                                placeholder="Enter Email"
+                                className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all outline-none"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Contact Number
+                            </label>
+                            <input
+                                type="text"
+                                value={supplierData.contactNumber}
+                                onChange={(e) => setSupplierData({...supplierData, contactNumber: e.target.value})}
+                                placeholder="Enter Contact Number"
+                                className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all outline-none"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Company
+                            </label>
+                            <TypeableSelect
+                                options={companies}
+                                value={selectedCompany?.value || null}
+                                onChange={(option) => setSelectedCompany(option)}
+                                placeholder="Select company..."
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Bank
+                            </label>
+                            <TypeableSelect
+                                options={banks}
+                                value={selectedBank?.value || null}
+                                onChange={(option) => setSelectedBank(option)}
+                                placeholder="Select bank..."
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Account Number
+                            </label>
+                            <input
+                                type="text"
+                                value={supplierData.accountNumber}
+                                onChange={(e) => setSupplierData({...supplierData, accountNumber: e.target.value})}
+                                placeholder="Enter Account Number"
+                                className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all outline-none"
+                            />
+                        </div>
                     </div>
 
-                    <div>
-                        <label htmlFor="new-category"
-                            className="block text-sm font-medium text-gray-700 mb-1">Bank</label>
-                        <TypeableSelect
-                            options={banks}
-                            value={selectedBank?.value || null}
-                            onChange={(opt) => {
-                                if (opt) {
-                                    setSelectedBank({
-                                        value: String(opt.value),
-                                        label: opt.label,
-                                    });
-                                } else {
-                                    setSelectedBank(null);
-                                }
-                            }}
-                            placeholder="Type to search bank"
-                        />
+                    <div className="flex justify-between items-center mt-6">
+                        <button
+                            onClick={() => setIsCompanyModalOpen(true)}
+                            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-medium rounded-lg shadow-lg shadow-blue-200 transition-all"
+                        >
+                            <CirclePlus size={16} />
+                            Add Company
+                        </button>
+                        <button
+                            onClick={handleSubmitSupplier}
+                            disabled={isSubmittingSupplier}
+                            className={`flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-medium rounded-lg shadow-lg shadow-emerald-200 transition-all ${
+                                isSubmittingSupplier ? 'opacity-50 cursor-not-allowed' : ''
+                            }`}
+                        >
+                            {isSubmittingSupplier ? 'Creating...' : 'Create Supplier'}
+                            <span className="text-xs text-emerald-100">(Shift + Enter)</span>
+                        </button>
                     </div>
+                </motion.div>
 
-                    <div>
-                        <label htmlFor="account-number"
-                            className="block text-sm font-medium text-gray-700 mb-1">Account Number</label>
-                        <input 
-                            type="text" 
-                            id="account-number" 
-                            placeholder="Enter account number"
-                            value={supplierData.accountNumber}
-                            onChange={(e) => setSupplierData({...supplierData, accountNumber: e.target.value})}
-                            className="w-full text-sm rounded-md py-2 px-2 border-2 border-gray-100 focus:border-emerald-500 focus:ring-emerald-500" 
-                        />
-                    </div>
-
-                </div>
-
-                <div className={'flex justify-end border-b-1 mt-[-13px]'}>
-                    <button 
-                        onClick={async () => {
-                            // Validation
-                            if (!supplierData.supplierName.trim()) {
-                                toast.error('Supplier name is required');
-                                return;
-                            }
-                            
-                            if (!supplierData.contactNumber.trim()) {
-                                toast.error('Contact number is required');
-                                return;
-                            }
-                            
-                            if (supplierData.contactNumber.length !== 10) {
-                                toast.error('Contact number must be exactly 10 digits');
-                                return;
-                            }
-                            
-                            if (!selectedCompany) {
-                                toast.error('Please select a company');
-                                return;
-                            }
-
-                            setIsSubmittingSupplier(true);
-
-                            try {
-                                toast.loading('Creating supplier...');
-
-                                const response = await supplierService.addSupplier({
-                                    supplierName: supplierData.supplierName.trim(),
-                                    email: supplierData.email.trim() || undefined,
-                                    contactNumber: supplierData.contactNumber.trim(),
-                                    companyId: parseInt(selectedCompany.value),
-                                    bankId: selectedBank ? parseInt(selectedBank.value) : undefined,
-                                    accountNumber: supplierData.accountNumber.trim() || undefined
-                                });
-
-                                toast.dismiss();
-                                
-                                if (response.data.success) {
-                                    toast.success(response.data.message || 'Supplier created successfully!');
-                                    
-                                    // Reset form
-                                    setSupplierData({ 
-                                        supplierName: '', 
-                                        email: '', 
-                                        contactNumber: '', 
-                                        accountNumber: '' 
-                                    });
-                                    setSelectedCompany(null);
-                                    setSelectedBank(null);
-                                    
-                                    // Refresh suppliers list
-                                    const fetchSuppliers = async () => {
-                                        try {
-                                            const response = await supplierService.getSuppliers();
-                                            const result = response.data;
-                                            
-                                            if (result.success) {
-                                                const transformedData = result.data.map((supplier: any, index: number) => ({
-                                                    id: supplier.id.toString(),
-                                                    no: (index + 1).toString(),
-                                                    name: supplier.supplierName || '',
-                                                    email: supplier.email || '',
-                                                    contact: supplier.contactNumber || '',
-                                                    company: supplier.companyName || '',
-                                                    bank: supplier.bankName || '',
-                                                    account: supplier.accountNumber || '',
-                                                }));
-                                                setSalesData(transformedData);
-                                                setTotalItems(transformedData.length);
-                                            }
-                                        } catch (error) {
-                                            console.error('Error refreshing suppliers:', error);
-                                        }
-                                    };
-                                    fetchSuppliers();
-                                } else {
-                                    toast.error(response.data.message || 'Failed to create supplier');
-                                }
-
-                            } catch (error: any) {
-                                console.error('Error creating supplier:', error);
-                                toast.dismiss();
-                                
-                                if (error.response?.data?.message) {
-                                    toast.error(error.response.data.message);
-                                } else {
-                                    toast.error('Failed to create supplier. Please try again.');
-                                }
-                            } finally {
-                                setIsSubmittingSupplier(false);
-                            }
-                        }}
-                        disabled={isSubmittingSupplier}
-                        className={`py-2 px-10 rounded-md font-semibold text-white mb-4 ${
-                            isSubmittingSupplier 
-                                ? 'bg-gray-400 cursor-not-allowed' 
-                                : 'bg-emerald-600 hover:bg-emerald-700'
-                        }`}>
-                        {isSubmittingSupplier ? 'Creating...' : 'Save Supplier'}
-                    </button>
-                </div>
-
-                <div
-                    className="overflow-y-auto max-h-md md:h-[320px] lg:h-[500px] rounded-md scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-                    <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-emerald-600 sticky top-0 z-10">
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2 }}
+                    className={"flex flex-col bg-white rounded-xl h-full p-6 justify-between shadow-lg"}
+                >
+                    <span className="text-lg font-semibold text-gray-800 block mb-4">Supplier List</span>
+                    <div className="overflow-y-auto max-h-md md:h-[320px] lg:h-[420px] rounded-lg scrollbar-thin scrollbar-thumb-emerald-300 scrollbar-track-gray-100">
+                        <table className="min-w-full divide-y divide-gray-200">
+                            <thead className="bg-gradient-to-r from-emerald-600 to-emerald-700 sticky top-0 z-10">
                             <tr>
-                                {['#', 'Name', 'Email', 'Contact Number','Company Name','Bank','Account Number','Actions'].map((header, i, arr) => (
+                                {['No', 'Name', 'Email', 'Contact', 'Company', 'Bank', 'Account', 'Actions'].map((header, i, arr) => (
                                     <th
-                                        key={header}
-                                        scope="col"
-                                        className={`px-6 py-3 text-left text-sm font-medium text-white tracking-wider
-                                            ${i === 0 ? "rounded-tl-lg" : ""}
-                                            ${i === arr.length - 1 ? "rounded-tr-lg" : ""}`}
+                                        key={i}
+                                        className={`px-6 py-3 text-left text-sm font-medium text-white tracking-wider ${
+                                            i === 0 ? 'rounded-tl-lg' : i === arr.length - 1 ? 'rounded-tr-lg' : ''
+                                        }`}
                                     >
                                         {header}
                                     </th>
                                 ))}
                             </tr>
-                        </thead>
-
-                        <tbody className="bg-white divide-y divide-gray-200">
+                            </thead>
+                            <tbody className="bg-white divide-y divide-gray-200">
                             {isLoadingSuppliers ? (
                                 <tr>
-                                    <td colSpan={8} className="px-6 py-8 text-center">
-                                        <div className="flex items-center justify-center space-x-2">
-                                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-emerald-600"></div>
-                                            <span className="text-gray-500">Loading suppliers...</span>
-                                        </div>
+                                    <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
+                                        Loading suppliers...
                                     </td>
                                 </tr>
                             ) : currentPageData.length === 0 ? (
@@ -658,255 +585,239 @@ function CreateSupplier() {
                                     </td>
                                 </tr>
                             ) : (
-                                currentPageData.map((sale, index) => (
+                                currentPageData.map((supplier, index) => (
                                     <tr
-                                        key={index}
+                                        key={supplier.id}
                                         onClick={() => setSelectedIndex(index)}
-                                        className={`cursor-pointer ${index === selectedIndex
-                                            ? "bg-green-100 border-l-4 border-green-600"
-                                            : "hover:bg-green-50"
-                                            }`}
+                                        className={`cursor-pointer transition-colors ${
+                                            selectedIndex === index
+                                                ? "bg-emerald-50 border-l-4 border-emerald-600"
+                                                : "hover:bg-emerald-50/50"
+                                        }`}
                                     >
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">{startIndex + index + 1}</td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">{sale.name}</td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">{sale.email}</td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">{sale.contact}</td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">{sale.company}</td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">{sale.bank}</td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">{sale.account}</td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
-                                            <div className="flex items-center space-x-2">
-                                                <div className="relative group">
-                                                    <button
-                                                        onClick={() => handleEditClick(sale)}
-                                                        className="p-2 bg-green-100 rounded-full text-green-700 hover:bg-green-200 transition-colors">
-                                                        <Pencil size={15} />
-                                                    </button>
-                                                    <span
-                                                        className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max px-2 py-1 text-xs text-white bg-gray-900 rounded-md invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-opacity">
-                                                        Edit Supplier
-                                                    </span>
-                                                </div>
-                                                
-                                            </div>
+                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">{supplier.no}</td>
+                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">{supplier.name}</td>
+                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">{supplier.email}</td>
+                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">{supplier.contact}</td>
+                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">{supplier.company}</td>
+                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">{supplier.bank}</td>
+                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">{supplier.account}</td>
+                                        <td className="px-6 py-2 whitespace-nowrap text-sm">
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleEditClick(supplier);
+                                                }}
+                                                className="text-emerald-600 hover:text-emerald-800 p-1 rounded transition-colors"
+                                            >
+                                                <Pencil size={16} />
+                                            </button>
                                         </td>
                                     </tr>
                                 ))
                             )}
-                        </tbody>
-                    </table>
-                </div>
+                            </tbody>
+                        </table>
+                    </div>
 
-                <nav className="bg-white flex items-center justify-between px-4 py-3 sm:px-6">
-                    <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
-                        <div>
-                            <p className="text-sm text-gray-700">
-                                Showing {startIndex + 1} to {Math.min(endIndex, totalItems)} of {totalItems} results
-                            </p>
+                    <nav className="bg-white flex items-center justify-between sm:px-6 pt-4 border-t-2 border-gray-100">
+                        <div className="text-sm text-gray-600">
+                            Showing <span className="font-medium text-emerald-600">{currentPageData.length === 0 ? 0 : startIndex + 1}</span> to <span className="font-medium text-emerald-600">{Math.min(endIndex, totalItems)}</span> of <span className="font-medium text-emerald-600">{totalItems}</span> suppliers
                         </div>
-                        
                         <div className="flex items-center space-x-2">
-                            <button 
+                            <button
                                 onClick={goToPreviousPage}
                                 disabled={currentPage === 1}
-                                className={`flex items-center px-3 py-2 text-sm font-medium rounded-md ${
-                                    currentPage === 1 
-                                        ? 'text-gray-400 cursor-not-allowed' 
-                                        : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                                className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${
+                                    currentPage === 1
+                                        ? 'text-gray-300 cursor-not-allowed'
+                                        : 'text-gray-600 hover:bg-emerald-50 hover:text-emerald-600'
                                 }`}
                             >
-                                <ChevronLeft className="mr-2 h-4 w-4" />
-                                Previous
+                                <ChevronLeft className="mr-1 h-4 w-4"/> Previous
                             </button>
 
-                            {getPageNumbers().map((pageNum, index) => (
-                                pageNum === '...' ? (
-                                    <span key={`ellipsis-${index}`} className="px-3 py-2 text-gray-500">
-                                        ...
-                                    </span>
-                                ) : (
+                            {getPageNumbers().map((page, idx) => (
+                                typeof page === 'number' ? (
                                     <button
-                                        key={pageNum}
-                                        onClick={() => goToPage(Number(pageNum))}
-                                        className={`px-3 py-2 text-sm font-medium rounded-md ${
-                                            currentPage === pageNum
-                                                ? 'bg-emerald-600 text-white'
-                                                : 'text-gray-500 hover:bg-gray-100'
+                                        key={idx}
+                                        onClick={() => goToPage(page)}
+                                        className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
+                                            currentPage === page
+                                                ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-200'
+                                                : 'text-gray-600 hover:bg-emerald-50'
                                         }`}
                                     >
-                                        {pageNum}
+                                        {page}
                                     </button>
+                                ) : (
+                                    <span key={idx} className="text-gray-400 px-2">...</span>
                                 )
                             ))}
 
-                            <button 
+                            <button
                                 onClick={goToNextPage}
                                 disabled={currentPage === totalPages}
-                                className={`flex items-center px-3 py-2 text-sm font-medium rounded-md ${
-                                    currentPage === totalPages 
-                                        ? 'text-gray-400 cursor-not-allowed' 
-                                        : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                                className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${
+                                    currentPage === totalPages
+                                        ? 'text-gray-300 cursor-not-allowed'
+                                        : 'text-gray-600 hover:bg-emerald-50 hover:text-emerald-600'
                                 }`}
                             >
-                                Next
-                                <ChevronRight className="ml-2 h-4 w-4" />
+                                Next <ChevronRight className="ml-1 h-4 w-4"/>
                             </button>
                         </div>
-                    </div>
-                    
-                    {/* Mobile pagination */}
-                    <div className="flex flex-1 justify-between sm:hidden">
-                        <button
-                            onClick={goToPreviousPage}
-                            disabled={currentPage === 1}
-                            className={`relative inline-flex items-center px-4 py-2 text-sm font-medium rounded-md ${
-                                currentPage === 1 
-                                    ? 'text-gray-400 cursor-not-allowed' 
-                                    : 'text-gray-500 hover:text-gray-700'
-                            }`}
-                        >
-                            Previous
-                        </button>
-                        <button
-                            onClick={goToNextPage}
-                            disabled={currentPage === totalPages}
-                            className={`relative inline-flex items-center px-4 py-2 ml-3 text-sm font-medium rounded-md ${
-                                currentPage === totalPages 
-                                    ? 'text-gray-400 cursor-not-allowed' 
-                                    : 'text-gray-500 hover:text-gray-700'
-                            }`}
-                        >
-                            Next
-                        </button>
-                    </div>
-                </nav>
+                    </nav>
+                </motion.div>
             </div>
 
-            {/* Update Category Modal */}
-            {isModalOpen && selectedCategory && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/10 backdrop-blur-sm">
-                    <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md relative ">
+            {/* Add Company Modal */}
+            {isCompanyModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md relative"
+                    >
                         <button
-                            onClick={handleCloseModal}
-                            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
-                            <X className="w-6 h-6" />
+                            onClick={handleCloseCompanyModal}
+                            className="absolute top-4 right-4 p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                        >
+                            <X size={20} className="text-gray-500" />
                         </button>
 
-                        <h2 className="text-3xl font-bold text-[#525252] mb-10">Update Supplier</h2>
-
-                        <div className="space-y-2">
-                            <p className='text-teal-600'>{selectedCategory.name}</p>
-                            <p className="text-sm text-gray-600">
-                                Current Supplier Contact Number :
-                                <span className="font-semibold text-teal-600 ml-2">{selectedCategory.contact}</span>
-                            </p>
+                        <div className="flex items-center gap-3 mb-6">
+                            <div className="p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl">
+                                <Building2 className="text-white" size={24} />
+                            </div>
                             <div>
-                                <label htmlFor="update-category-name" className="block text-sm font-bold text-gray-700 mb-1">
-                                    New Supplier Contact Number
+                                <h3 className="text-xl font-semibold text-gray-800">Add New Company</h3>
+                                <p className="text-sm text-gray-500">Create a new company record</p>
+                            </div>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Company Name
                                 </label>
                                 <input
                                     type="text"
-                                    id="update-category-name"
-                                    placeholder="Enter Supplier Contact Number"
-                                    value={newContactNumber}
-                                    onChange={(e) => {
-                                        const value = e.target.value.replace(/[^0-9]/g, ''); // Only allow numbers
-                                        if (value.length <= 10) {
-                                            setNewContactNumber(value);
-                                        }
-                                    }}
-                                    maxLength={10}
-                                    className="w-full text-sm rounded-md py-2 px-3 border border-gray-300 focus:border-emerald-500 focus:ring-emerald-500"
+                                    value={companyData.name}
+                                    onChange={(e) => setCompanyData({...companyData, name: e.target.value})}
+                                    placeholder="Enter Company Name"
+                                    className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Email
+                                </label>
+                                <input
+                                    type="email"
+                                    value={companyData.email}
+                                    onChange={(e) => setCompanyData({...companyData, email: e.target.value})}
+                                    placeholder="Enter Email"
+                                    className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Contact
+                                </label>
+                                <input
+                                    type="text"
+                                    value={companyData.contact}
+                                    onChange={(e) => setCompanyData({...companyData, contact: e.target.value})}
+                                    placeholder="Enter Contact"
+                                    className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none"
                                 />
                             </div>
                         </div>
 
-                        <div className="mt-10 flex justify-end">
-                            <button 
-                                onClick={async () => {
-                                    // Validation
-                                    if (!newContactNumber.trim()) {
-                                        toast.error('Contact number is required');
-                                        return;
-                                    }
-                                    
-                                    if (newContactNumber.length !== 10) {
-                                        toast.error('Contact number must be exactly 10 digits');
-                                        return;
-                                    }
-                                    
-                                    if (newContactNumber === selectedCategory?.contact) {
-                                        toast.error('New contact number is the same as current contact number');
-                                        return;
-                                    }
-                                    
-                                    setIsUpdatingContact(true);
-                                    
-                                    try {
-                                        toast.loading('Updating contact number...');
-                                        
-                                        const response = await supplierService.updateSupplierContact(
-                                            parseInt(selectedCategory!.id), 
-                                            newContactNumber.trim()
-                                        );
-                                        
-                                        toast.dismiss();
-                                        
-                                        if (response.data.success) {
-                                            toast.success(response.data.message || 'Contact number updated successfully!');
-                                            
-                                            // Refresh suppliers list
-                                            const suppliersResponse = await supplierService.getSuppliers();
-                                            if (suppliersResponse.data.success) {
-                                                const formattedData: Category[] = suppliersResponse.data.data.map((supplier: any, index: number) => ({
-                                                    id: supplier.id.toString(),
-                                                    no: supplier.id.toString(),
-                                                    name: supplier.supplierName || 'N/A',
-                                                    email: supplier.email || 'N/A',
-                                                    contact: supplier.contactNumber || 'N/A',
-                                                    company: supplier.companyName || 'N/A',
-                                                    bank: supplier.bankName || 'N/A',
-                                                    account: supplier.accountNumber || 'N/A',
-                                                }));
-                                                setSalesData(formattedData);
-                                                setTotalItems(formattedData.length);
-                                            }
-                                            
-                                            // Close modal
-                                            handleCloseModal();
-                                        } else {
-                                            toast.error(response.data.message || 'Failed to update contact number');
-                                        }
-                                        
-                                    } catch (error: any) {
-                                        console.error('Error updating contact number:', error);
-                                        toast.dismiss();
-                                        
-                                        if (error.response?.data?.message) {
-                                            toast.error(error.response.data.message);
-                                        } else {
-                                            toast.error('Failed to update contact number. Please try again.');
-                                        }
-                                    } finally {
-                                        setIsUpdatingContact(false);
-                                    }
-                                }}
-                                disabled={isUpdatingContact}
-                                className={`w-1/2 font-semibold py-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 ${
-                                    isUpdatingContact 
-                                        ? 'bg-gray-400 text-gray-600 cursor-not-allowed' 
-                                        : 'bg-emerald-600 text-white hover:bg-emerald-700'
-                                }`}>
-                                {isUpdatingContact ? 'Updating...' : 'Update Contact'}
+                        <div className="mt-8 flex justify-end gap-3">
+                            <button
+                                onClick={handleCloseCompanyModal}
+                                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleSubmitCompany}
+                                disabled={isSubmitting}
+                                className={`px-6 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-medium rounded-lg shadow-lg shadow-blue-200 transition-all ${
+                                    isSubmitting ? 'opacity-50 cursor-not-allowed' : ''
+                                }`}
+                            >
+                                {isSubmitting ? 'Creating...' : 'Create Company'}
                             </button>
                         </div>
-                    </div>
+                    </motion.div>
                 </div>
             )}
 
+            {/* Update Supplier Modal */}
+            {isModalOpen && selectedCategory && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md relative"
+                    >
+                        <button
+                            onClick={handleCloseModal}
+                            className="absolute top-4 right-4 p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                        >
+                            <X size={20} className="text-gray-500" />
+                        </button>
 
-            </div>
+                        <div className="flex items-center gap-3 mb-6">
+                            <div className="p-3 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl">
+                                <Pencil className="text-white" size={24} />
+                            </div>
+                            <div>
+                                <h3 className="text-xl font-semibold text-gray-800">Update Supplier</h3>
+                                <p className="text-sm text-gray-500">Update contact for {selectedCategory.name}</p>
+                            </div>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Contact Number
+                                </label>
+                                <input
+                                    type="text"
+                                    value={newContactNumber}
+                                    onChange={(e) => setNewContactNumber(e.target.value)}
+                                    placeholder="Enter new contact number"
+                                    className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all outline-none"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="mt-8 flex justify-end gap-3">
+                            <button
+                                onClick={handleCloseModal}
+                                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleUpdateContact}
+                                disabled={isUpdatingContact}
+                                className={`px-6 py-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-medium rounded-lg shadow-lg shadow-emerald-200 transition-all ${
+                                    isUpdatingContact ? 'opacity-50 cursor-not-allowed' : ''
+                                }`}
+                            >
+                                {isUpdatingContact ? 'Updating...' : 'Update Contact'}
+                            </button>
+                        </div>
+                    </motion.div>
+                </div>
+            )}
         </>
     );
 }
-export default CreateSupplier
+
+export default CreateSupplier;

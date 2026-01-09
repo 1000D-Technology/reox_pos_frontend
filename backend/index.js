@@ -8,12 +8,15 @@ const brandRoutes = require('./routes/brandRoutes');
 const categoryRoutes = require('./routes/categoryRoutes');
 const unitRoutes = require('./routes/unitRoutes');
 const productTypeRoutes = require('./routes/productTypeRoutes');
+const paymentTypeRoutes = require('./routes/paymentTypeRoutes');
+const stockRoutes = require('./routes/stockRoutes');
 
 
 require('dotenv').config();
 const swaggerJsDoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
 const seedDatabase = require('./config/dbInit');
+const { a } = require('framer-motion/client');
 
 // Middleware
 const app = express();
@@ -28,6 +31,8 @@ app.use('/api/brands', brandRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/units', unitRoutes);
 app.use('/api/product-types', productTypeRoutes);
+app.use('/api/payment-types', paymentTypeRoutes);
+app.use('/api/stock', stockRoutes);
 
 // Handle undefined routes
 app.use((req, res, next) => {
