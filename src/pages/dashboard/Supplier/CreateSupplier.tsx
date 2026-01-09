@@ -16,6 +16,7 @@ import { useEffect, useState } from 'react';
 import toast, { Toaster } from 'react-hot-toast';
 import { motion } from 'framer-motion';
 import { supplierService } from '../../../services/supplierService';
+import { companyService } from '../../../services/companyService';
 import TypeableSelect from '../../../components/TypeableSelect';
 
 interface Category {
@@ -40,13 +41,13 @@ function CreateSupplier() {
     const [isCompanyModalOpen, setIsCompanyModalOpen] = useState(false);
 
     // State for company selection
-    const [companies, setCompanies] = useState<{value: string, label: string}[]>([]);
-    const [selectedCompany, setSelectedCompany] = useState<{value: string, label: string} | null>(null);
+    const [companies, setCompanies] = useState<{value: string | number, label: string}[]>([]);
+    const [selectedCompany, setSelectedCompany] = useState<{value: string | number, label: string} | null>(null);
     const [isLoadingCompanies, setIsLoadingCompanies] = useState(false);
 
     // State for bank selection
-    const [banks, setBanks] = useState<{value: string, label: string}[]>([]);
-    const [selectedBank, setSelectedBank] = useState<{value: string, label: string} | null>(null);
+    const [banks, setBanks] = useState<{value: string | number, label: string}[]>([]);
+    const [selectedBank, setSelectedBank] = useState<{value: string | number, label: string} | null>(null);
     const [isLoadingBanks, setIsLoadingBanks] = useState(false);
 
     // State for supplier form
@@ -252,12 +253,12 @@ function CreateSupplier() {
         setIsSubmittingSupplier(true);
 
         try {
-            const createSupplierPromise = supplierService.createSupplier({
+            const createSupplierPromise = supplierService.addSupplier({
                 supplierName: supplierData.supplierName,
                 email: supplierData.email,
                 contactNumber: supplierData.contactNumber,
-                companyId: parseInt(selectedCompany.value),
-                bankId: parseInt(selectedBank.value),
+                companyId: typeof selectedCompany.value === 'number' ? selectedCompany.value : parseInt(selectedCompany.value),
+                bankId: typeof selectedBank.value === 'number' ? selectedBank.value : parseInt(selectedBank.value),
                 accountNumber: supplierData.accountNumber
             });
 
@@ -314,7 +315,7 @@ function CreateSupplier() {
         setIsSubmitting(true);
 
         try {
-            const createCompanyPromise = supplierService.createCompany(companyData);
+            const createCompanyPromise = companyService.createCompany(companyData);
 
             await toast.promise(
                 createCompanyPromise,
@@ -348,7 +349,7 @@ function CreateSupplier() {
 
         try {
             const updatePromise = supplierService.updateSupplierContact(
-                selectedCategory.id,
+                parseInt(selectedCategory.id),
                 newContactNumber
             );
 
