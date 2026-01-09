@@ -173,7 +173,7 @@ function OutOfStock() {
 
             const response = await stockService.searchOutOfStock(filters);
             console.log(response);
-            
+
             if (response.data?.success) {
                 setStockData(response.data.data || []);
                 setCurrentPage(1);
@@ -405,13 +405,13 @@ function OutOfStock() {
                             />
                         </div>
                         <div className={'grid grid-cols-2 md:items-end items-start gap-2 text-white font-medium'}>
-                            <button 
+                            <button
                                 onClick={handleSearch}
                                 disabled={isLoadingStock}
                                 className={'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 py-2 rounded-lg flex items-center justify-center shadow-lg shadow-red-200 hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed'}>
                                 <SearchCheck className="mr-2" size={14} />Search
                             </button>
-                            <button 
+                            <button
                                 onClick={handleClear}
                                 disabled={isLoadingStock}
                                 className={'bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 py-2 rounded-lg flex items-center justify-center shadow-lg shadow-gray-200 hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed'}>
@@ -431,84 +431,82 @@ function OutOfStock() {
                     <div className="overflow-y-auto max-h-md md:h-[320px] lg:h-[500px] rounded-lg scrollbar-thin scrollbar-thumb-red-300 scrollbar-track-gray-100">
                         <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-gradient-to-r from-red-500 to-red-600 sticky top-0 z-10">
-                            <tr>
-                                {[
-                                    'Product ID',
-                                    'Product Name',
-                                    'Unit',
-                                    'Cost Price',
-                                    'MRP',
-                                    'Price',
-                                    'Supplier',
-                                    'Stock'
-                                ].map((header, i, arr) => (
-                                    <th
-                                        key={i}
-                                        scope="col"
-                                        className={`px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider ${
-                                            i === 0 ? 'rounded-tl-lg' : i === arr.length - 1 ? 'rounded-tr-lg' : ''
-                                        }`}
-                                    >
-                                        {header}
-                                    </th>
-                                ))}
-                            </tr>
+                                <tr>
+                                    {[
+                                        'Product ID',
+                                        'Product Name',
+                                        'Unit',
+                                        'Cost Price',
+                                        'MRP',
+                                        'Price',
+                                        'Supplier',
+                                        'Stock'
+                                    ].map((header, i, arr) => (
+                                        <th
+                                            key={i}
+                                            scope="col"
+                                            className={`px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider ${i === 0 ? 'rounded-tl-lg' : i === arr.length - 1 ? 'rounded-tr-lg' : ''
+                                                }`}
+                                        >
+                                            {header}
+                                        </th>
+                                    ))}
+                                </tr>
                             </thead>
 
                             <tbody className="bg-white divide-y divide-gray-200">
-                            {isLoadingStock ? (
-                                <tr>
-                                    <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
-                                        Loading out-of-stock items...
-                                    </td>
-                                </tr>
-                            ) : currentStockData.length === 0 ? (
-                                <tr>
-                                    <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
-                                        No out of stock items found
-                                    </td>
-                                </tr>
-                            ) : (
-                                currentStockData.map((item, index) => (
-                                    <tr
-                                        key={`${item.productID}-${currentPage}-${index}`}
-                                        onClick={() => setSelectedIndex(index)}
-                                        className={`cursor-pointer transition-all ${
-                                            selectedIndex === index
-                                                ? 'bg-red-50 border-l-4 border-l-red-500'
-                                                : 'hover:bg-gray-50'
-                                        }`}
-                                    >
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-semibold text-gray-800">
-                                            {item.productID}
+                                {isLoadingStock ? (
+                                    <tr>
+                                        <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
+                                            Loading out-of-stock items...
                                         </td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-gray-700">
-                                            {item.productName}
+                                    </tr>
+                                ) : currentStockData.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
+                                            No out of stock items found
                                         </td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-600">
-                                            {item.unit}
-                                        </td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-blue-600">
-                                            {item.costPrice}
-                                        </td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-gray-600">
-                                            {item.MRP}
-                                        </td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-bold text-emerald-600">
-                                            {item.Price}
-                                        </td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-600">
-                                            {item.supplier}
-                                        </td>
-                                        <td className="px-6 py-2 whitespace-nowrap">
+                                    </tr>
+                                ) : (
+                                    currentStockData.map((item, index) => (
+                                        <tr
+                                            key={`${item.productID}-${currentPage}-${index}`}
+                                            onClick={() => setSelectedIndex(index)}
+                                            className={`cursor-pointer transition-all ${selectedIndex === index
+                                                    ? 'bg-red-50 border-l-4 border-l-red-500'
+                                                    : 'hover:bg-gray-50'
+                                                }`}
+                                        >
+                                            <td className="px-6 py-2 whitespace-nowrap text-sm font-semibold text-gray-800">
+                                                {item.productID}
+                                            </td>
+                                            <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-gray-700">
+                                                {item.productName}
+                                            </td>
+                                            <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-600">
+                                                {item.unit}
+                                            </td>
+                                            <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-blue-600">
+                                                {item.costPrice}
+                                            </td>
+                                            <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-gray-600">
+                                                {item.MRP}
+                                            </td>
+                                            <td className="px-6 py-2 whitespace-nowrap text-sm font-bold text-emerald-600">
+                                                {item.Price}
+                                            </td>
+                                            <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-600">
+                                                {item.supplier}
+                                            </td>
+                                            <td className="px-6 py-2 whitespace-nowrap">
                                                 <span className="px-3 py-1 text-xs font-semibold rounded-full bg-gradient-to-r from-red-100 to-red-200 text-red-800 flex items-center gap-1 w-fit">
                                                     <AlertTriangle className="w-3 h-3" />
                                                     {item.stockQty}
                                                 </span>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
                             </tbody>
                         </table>
                     </div>
@@ -523,11 +521,10 @@ function OutOfStock() {
                             <button
                                 onClick={goToPreviousPage}
                                 disabled={currentPage === 1}
-                                className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${
-                                    currentPage === 1
+                                className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${currentPage === 1
                                         ? 'text-gray-400 cursor-not-allowed'
                                         : 'text-gray-600 hover:text-red-600 hover:bg-red-50'
-                                }`}
+                                    }`}
                             >
                                 <ChevronLeft className="mr-2 h-5 w-5" /> Previous
                             </button>
@@ -537,11 +534,10 @@ function OutOfStock() {
                                     <button
                                         key={index}
                                         onClick={() => goToPage(page)}
-                                        className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${
-                                            currentPage === page
+                                        className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${currentPage === page
                                                 ? 'bg-gradient-to-r from-red-500 to-red-600 text-white shadow-md'
                                                 : 'text-gray-600 hover:bg-red-50 hover:text-red-600'
-                                        }`}
+                                            }`}
                                     >
                                         {page}
                                     </button>
@@ -555,11 +551,10 @@ function OutOfStock() {
                             <button
                                 onClick={goToNextPage}
                                 disabled={currentPage === totalPages}
-                                className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${
-                                    currentPage === totalPages
+                                className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${currentPage === totalPages
                                         ? 'text-gray-400 cursor-not-allowed'
                                         : 'text-gray-600 hover:text-red-600 hover:bg-red-50'
-                                }`}
+                                    }`}
                             >
                                 Next <ChevronRight className="ml-2 h-5 w-5" />
                             </button>
@@ -585,6 +580,28 @@ function OutOfStock() {
                     </button>
                 </motion.div>
             </div>
+            <Toaster
+                position="top-right"
+                toastOptions={{
+                    duration: 4000,
+                    style: {
+                        background: '#363636',
+                        color: '#fff',
+                    },
+                    success: {
+                        duration: 3000,
+                        style: {
+                            background: '#10b981',
+                        },
+                    },
+                    error: {
+                        duration: 4000,
+                        style: {
+                            background: '#ef4444',
+                        },
+                    },
+                }}
+            />
         </>
     );
 }
