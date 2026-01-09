@@ -17,21 +17,16 @@ class GRN {
             for (const item of data.items) {
                 let finalBatchId;
 
-                if (Number.isInteger(Number(item.batchIdentifier))) {
-                    const [batchExists] = await connection.execute(
-                        `SELECT id FROM batch WHERE id = ?`, [item.batchIdentifier]
-                    );
+                // First check if batch name already exists in the batch table
+                const [existingBatch] = await connection.execute(
+                    `SELECT id FROM batch WHERE batch_name = ?`, [item.batchIdentifier]
+                );
 
-                    if (batchExists.length > 0) {
-                        finalBatchId = item.batchIdentifier;
-                    } else {
-                        const [newBatch] = await connection.execute(
-                            `INSERT INTO batch (batch_name, date_time) VALUES (?, NOW())`,
-                            [item.batchIdentifier]
-                        );
-                        finalBatchId = newBatch.insertId;
-                    }
+                if (existingBatch.length > 0) {
+                    // Batch name exists, use the existing batch ID
+                    finalBatchId = existingBatch[0].id;
                 } else {
+                    // Batch name doesn't exist, create new batch
                     const [newBatch] = await connection.execute(
                         `INSERT INTO batch (batch_name, date_time) VALUES (?, NOW())`,
                         [item.batchIdentifier]

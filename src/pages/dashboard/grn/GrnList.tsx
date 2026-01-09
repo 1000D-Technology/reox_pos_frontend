@@ -15,12 +15,12 @@ import {
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import TypeableSelect from "../../../components/TypeableSelect.tsx";
-import axiosInstance from "../../../api/axiosInstance.ts";
 import { supplierService } from "../../../services/supplierService.ts";
+import { grnService } from "../../../services/grnService.ts";
 import toast, { Toaster } from 'react-hot-toast';
 
 interface SelectOption {
-    value: string;
+    value: string | number;
     label: string;
 }
 
@@ -116,7 +116,7 @@ function GrnList() {
 
     const fetchGrnSummary = async () => {
         try {
-            const response = await axiosInstance.get('/api/grn/summary');
+            const response = await grnService.getStats();
             if (response.data.success) {
                 setSummaryData(response.data.data);
             } else {
@@ -132,7 +132,7 @@ function GrnList() {
     const fetchGrnList = async () => {
         setIsLoadingGrnList(true);
         try {
-            const response = await axiosInstance.get('/api/grn/list');
+            const response = await grnService.getGRNList();
             if (response.data.success) {
                 setGrnListData(response.data.data);
             } else {
@@ -186,7 +186,7 @@ function GrnList() {
             if (toDate) params.append('toDate', toDate);
             if (billNumber.trim()) params.append('billNumber', billNumber.trim());
 
-            const response = await axiosInstance.get(`/api/grn/search?${params.toString()}`);
+            const response = await grnService.searchGRNList(params.toString());
 
             if (response.data.success) {
                 setGrnListData(response.data.data);
@@ -364,11 +364,7 @@ function GrnList() {
                             <TypeableSelect
                                 options={suppliers}
                                 value={selected?.value || null}
-                                onChange={(opt) =>
-                                    setSelected(
-                                        opt ? { value: opt.value, label: opt.label } : null
-                                    )
-                                }
+                                onChange={(opt) => setSelected(opt)}
                                 placeholder={isLoadingSuppliers ? "Loading suppliers..." : "Type to search Supplier"}
                                 disabled={isLoadingSuppliers}
                             />

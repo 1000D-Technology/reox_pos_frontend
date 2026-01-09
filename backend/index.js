@@ -8,6 +8,7 @@ const brandRoutes = require('./routes/brandRoutes');
 const categoryRoutes = require('./routes/categoryRoutes');
 const unitRoutes = require('./routes/unitRoutes');
 const productTypeRoutes = require('./routes/productTypeRoutes');
+const paymentTypeRoutes = require('./routes/paymentTypeRoutes');
 
 
 require('dotenv').config();
@@ -28,6 +29,8 @@ app.use('/api/brands', brandRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/units', unitRoutes);
 app.use('/api/product-types', productTypeRoutes);
+app.use('/api/payment-types', paymentTypeRoutes);
+
 
 // Handle undefined routes
 app.use((req, res, next) => {
