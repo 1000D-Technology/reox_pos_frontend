@@ -38,6 +38,7 @@ import ManageBrand from "./pages/dashboard/Products/ManageBrand.tsx";
 import GrnList from "./pages/dashboard/grn/GrnList.tsx";
 import POS from "./pages/dashboard/POS.tsx";
 import ManageProductType from "./pages/dashboard/Products/ManageProductType.tsx";
+import BackUp from "./pages/dashboard/BackUp.tsx";
 
 export default function App() {
     return (
@@ -90,6 +91,7 @@ export default function App() {
                     <Route path="/accounts" element={<Accounts />} />
                     <Route path="/reports" element={<Reports />} />
                     <Route path="/setting" element={<Setting />} />
+                    <Route path="/back-up" element={<BackUp />} />
                     <Route path="/pos" element={<POS />} />
                 </Route>
             </Routes>
