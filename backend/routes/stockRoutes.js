@@ -8,5 +8,7 @@ router.get('/search', stockController.getSearchStock);
 router.get('/summary-cards', stockController.getSummaryCards);
 router.get('/out-of-stock', stockController.getOutOfStockList);
 router.get('/out-of-stock/search', stockController.getSearchOutOfStock);
+router.get('/get-stock-by-variant/:variationId', stockController.getStockForProduct);
 
 module.exports = router;
+

@@ -29,6 +29,38 @@ const seedDatabase = async () => {
             console.log("Payment types seeded successfully!");
         }
 
+        // Seed reason table
+        const [reasonRows] = await db.execute("SELECT COUNT(*) as count FROM reason");
+        
+        if (reasonRows[0].count === 0) {
+            console.log("Seeding reason data...");
+            await db.execute(`INSERT INTO reason (id, reason) VALUES 
+                (1, 'Transit damage'),
+                (2, 'Handling damage'),
+                (3, 'Packaging defect'),
+                (4, 'Manufacturing defect'),
+                (5, 'Expired product'),
+                (6, 'Customer return'),
+                (7, 'Improper storage'),
+                (8, 'Supplier damage'),
+                (9, 'Water damage'),
+                (10, 'Theft damage')`);
+            console.log("Reason data seeded successfully!");
+        }
+        // Seed return status table
+        const [returnStatusRows] = await db.execute("SELECT COUNT(*) as count FROM return_status");
+        
+        if (returnStatusRows[0].count === 0) {
+            console.log("Seeding return status data...");
+            await db.execute(`INSERT INTO return_status (id, return_status) VALUES 
+                (1, 'Pending Review'),
+                (2, 'Confirmed'),
+                (3, 'Disposed'),
+                (4, 'Returned to Supplier')`);
+            console.log("Return status data seeded successfully!");
+        }
+        
+
         console.log("Database seeding completed!");
     } catch (error) {
         console.error("Database seeding failed:", error.message);

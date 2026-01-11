@@ -56,6 +56,29 @@ export const stockService = {
     getSummaryCards: () => 
         axiosInstance.get('/api/stock/summary-cards'),
 
+    // Get stock items for a specific product variant
+    getStockByVariant: (variationId: string) => 
+        axiosInstance.get(`/api/stock/get-stock-by-variant/${variationId}`),
+
+    // Get reasons for damaged stock
+    getReasons: () => 
+        axiosInstance.get('/api/reasons/all'),
+
+    // Get return status options
+    getReturnStatus: () => 
+        axiosInstance.get('/api/return-status/all'),
+
+    // Create damaged stock record
+    createDamagedRecord: (data: {
+        productId: string;
+        stockId: string;
+        damagedQty: number;
+        reasonId: string;
+        statusId: string;
+        description?: string;
+    }) => 
+        axiosInstance.post('/api/damaged/add', data),
+
     // Individual methods for specific dropdown needs
     getCategories: () => categoryService.getCategories(),
     getUnits: () => unitService.getUnits(),

@@ -132,3 +132,25 @@ exports.getSearchOutOfStock = catchAsync(async (req, res, next) => {
             : `Found ${transformedData.length} items`
     });
 });
+
+exports.getStockForProduct = catchAsync(async (req, res, next) => {
+    const { variationId } = req.params;
+
+    if (!variationId) {
+        return res.status(400).json({ success: false, message: "Product Variation ID is required" });
+    }
+
+    const stockItems = await Stock.getStockByProductVariation(variationId);
+
+    const transformedData = stockItems.map(item => ({
+        stockID: item.stock_id,
+        displayName: item.full_stock_display,
+        quantity: item.available_qty,
+        price: item.selling_price
+    }));
+
+    res.status(200).json({
+        success: true,
+        data: transformedData
+    });
+});

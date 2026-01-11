@@ -10,6 +10,9 @@ const unitRoutes = require('./routes/unitRoutes');
 const productTypeRoutes = require('./routes/productTypeRoutes');
 const paymentTypeRoutes = require('./routes/paymentTypeRoutes');
 const stockRoutes = require('./routes/stockRoutes');
+const resonRoutes = require('./routes/reasonRoutes');
+const returnStatusRoutes = require('./routes/returnStatusRoutes');
+const damagedRoutes = require('./routes/damagedRoutes');
 
 
 require('dotenv').config();
@@ -33,6 +36,9 @@ app.use('/api/units', unitRoutes);
 app.use('/api/product-types', productTypeRoutes);
 app.use('/api/payment-types', paymentTypeRoutes);
 app.use('/api/stock', stockRoutes);
+app.use('/api/reasons', resonRoutes);
+app.use('/api/return-status', returnStatusRoutes);
+app.use('/api/damaged', damagedRoutes);
 
 // Handle undefined routes
 app.use((req, res, next) => {

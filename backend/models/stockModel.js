@@ -218,6 +218,27 @@ class Stock {
     const [rows] = await db.execute(query, queryParams);
     return rows;
 }
+
+static async getStockByProductVariation(productId) {
+    const query = `SELECT 
+            s.id AS stock_id,
+            CONCAT(p.product_name, 
+                   IF(pv.color IS NOT NULL AND pv.color != '', CONCAT(' - ', pv.color), ''), 
+                   IF(pv.size IS NOT NULL AND pv.size != '', CONCAT(' - ', pv.size), ''),
+                   ' (', b.batch_name, ')'
+            ) AS full_stock_display,
+            s.qty AS available_qty,
+            s.rsp AS selling_price
+        FROM stock s
+        INNER JOIN product_variations pv ON s.product_variations_id = pv.id
+        INNER JOIN product p ON pv.product_id = p.id
+        INNER JOIN batch b ON s.batch_id = b.id
+        WHERE p.id = ? AND s.qty > 0 
+        ORDER BY pv.id ASC, b.date_time DESC
+    `;
+    const [rows] = await db.execute(query, [productId]);
+    return rows;
+}
 }
 
 module.exports = Stock;

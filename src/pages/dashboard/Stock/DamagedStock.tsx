@@ -16,6 +16,8 @@ import {
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import TypeableSelect from '../../../components/TypeableSelect.tsx';
+import { stockService } from '../../../services/stockService';
+import { productService } from '../../../services/productService';
 
 function DamagedStock() {
     const summaryCards = [
@@ -66,46 +68,22 @@ function DamagedStock() {
         },
     ];
 
-    const category = [
-        { value: 'grocery', label: 'Grocery' },
-        { value: 'beverages', label: 'Beverages' },
-        { value: 'snacks', label: 'Snacks' },
-    ];
-
-    const unit = [
-        { value: 'kg', label: 'Kilogram' },
-        { value: 'ltr', label: 'Litre' },
-        { value: 'pcs', label: 'Pieces' },
-    ];
-
-    const supplier = [
-        { value: 'supplier1', label: 'Global Foods Ltd' },
-        { value: 'supplier2', label: 'Organic Farms Inc' },
-        { value: 'supplier3', label: 'National Mills' },
-    ];
-
-    const productSearch = [
-        { value: 'product1', label: 'White Sugar' },
-        { value: 'product2', label: 'Brown Rice' },
-        { value: 'product3', label: 'Wheat Flour' },
-    ];
-
-    const productAdd = [
-        { value: 'product1', label: 'White Sugar - P-1001' },
-        { value: 'product2', label: 'Brown Rice - P-1002' },
-        { value: 'product3', label: 'Wheat Flour - P-1003' },
-    ];
-
-    const stock = [
-        { value: 'batch1', label: 'Batch #001 (50 units)' },
-        { value: 'batch2', label: 'Batch #002 (120 units)' },
-        { value: 'batch3', label: 'Batch #003 (35 units)' },
-    ];
-
     type SelectOption = {
         value: string;
         label: string;
     };
+
+    // Dropdown data states
+    const [category, setCategory] = useState<SelectOption[]>([]);
+    const [unit, setUnit] = useState<SelectOption[]>([]);
+    const [supplier, setSupplier] = useState<SelectOption[]>([]);
+    const [productSearch, setProductSearch] = useState<SelectOption[]>([]);
+    const [productAdd, setProductAdd] = useState<SelectOption[]>([]);
+    const [stock, setStock] = useState<SelectOption[]>([]);
+    const [reason, setReason] = useState<SelectOption[]>([]);
+    const [status, setStatus] = useState<SelectOption[]>([]);
+    const [loading, setLoading] = useState<boolean>(true);
+    const [loadingStock, setLoadingStock] = useState<boolean>(false);
 
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
     const [selectedUnit, setSelectedUnit] = useState<string | null>(null);
@@ -113,7 +91,12 @@ function DamagedStock() {
     const [selectedProduct, setSelectedProduct] = useState<string | null>(null);
     const [selectedProductAdd, setSelectedProductAdd] = useState<string | null>(null);
     const [selectedStock, setSelectedStock] = useState<string | null>(null);
+    const [selectedReason, setSelectedReason] = useState<string | null>(null);
+    const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
     const [damagedQty, setDamagedQty] = useState<string>('');
+    const [description, setDescription] = useState<string>('');
+    const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+    const [submitMessage, setSubmitMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
     const salesData = [
         {
@@ -148,6 +131,126 @@ function DamagedStock() {
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
     const currentSalesData = salesData.slice(startIndex, endIndex);
+
+    // Load dropdown data on component mount
+    useEffect(() => {
+        const loadDropdownData = async () => {
+            try {
+                setLoading(true);
+                
+                const [categoriesResponse, unitsResponse, suppliersResponse] = await stockService.getStockFilterData();
+                
+                // Transform categories
+                if (categoriesResponse.data?.success) {
+                    const categoryOptions = categoriesResponse.data.data.map((category: any) => ({
+                        value: category.id.toString(),
+                        label: category.name
+                    }));
+                    setCategory(categoryOptions);
+                }
+                
+                // Transform units
+                if (unitsResponse.data?.success) {
+                    const unitOptions = unitsResponse.data.data.map((unit: any) => ({
+                        value: unit.id.toString(),
+                        label: unit.name
+                    }));
+                    setUnit(unitOptions);
+                }
+                
+                // Transform suppliers
+                if (suppliersResponse.data?.success) {
+                    const supplierOptions = suppliersResponse.data.data.map((supplier: any) => ({
+                        value: supplier.id.toString(),
+                        label: supplier.supplierName
+                    }));
+                    setSupplier(supplierOptions);
+                }
+                
+                // Initialize reason and return status from API
+                const reasonResponse = await stockService.getReasons();
+                console.log('Reason API Response Debug:', reasonResponse);
+                const returnStatusResponse = await stockService.getReturnStatus();
+                
+                if (reasonResponse.data?.success) {
+                    const reasonOptions = reasonResponse.data.data.map((reason: any) => ({
+                        value: reason.id.toString(),
+                        label: reason.reason
+                    }));
+                    setReason(reasonOptions);
+                }
+                
+                if (returnStatusResponse.data?.success) {
+                    const statusOptions = returnStatusResponse.data.data.map((status: any) => ({
+                        value: status.id.toString(),
+                        label: status.name
+                    }));
+                    setStatus(statusOptions);
+                }
+                
+                setLoading(false);
+            } catch (error) {
+                console.error('Error loading dropdown data:', error);
+                setLoading(false);
+            }
+        };
+        
+        const loadProductData = async () => {
+            try {
+                const productsData = await productService.getProductsForDropdown();
+            
+                // Transform products
+                if (productsData.data?.success) {
+                    const productOptions = productsData.data.data.map((product: any) => ({
+                        value: product.id.toString(),
+                        label: product.product_name || product.name
+                    }));
+                    setProductSearch(productOptions);
+                    setProductAdd(productOptions);
+                }
+            } catch (error) {
+                console.error('Error loading product data:', error);
+            }
+        };
+        
+        loadDropdownData();
+        loadProductData();
+    }, []);
+
+    // Load stock items when product is selected
+    useEffect(() => {
+        const loadStockForProduct = async () => {
+            if (!selectedProductAdd) {
+                setStock([]);
+                return;
+            }
+
+            try {
+                setLoadingStock(true);
+                console.log('Selected Product for Stock Load Debug:', selectedProductAdd);
+                const response = await stockService.getStockByVariant(selectedProductAdd);
+                
+                console.log('Stock API Response Debug:', response);
+                
+                if (response.data?.success) {
+                    const stockOptions = response.data.data.map((stockItem: any) => ({
+                        value: stockItem.stockID.toString(),
+                        label: `${stockItem.displayName} (Qty: ${stockItem.quantity}, Price: LKR ${stockItem.price})`
+                    }));
+                    setStock(stockOptions);
+                } else {
+                    setStock([]);
+                }
+            } catch (error) {
+                console.error('Error loading stock for product:', error);
+                setStock([]);
+            } finally {
+                setLoadingStock(false);
+            }
+        };
+
+        loadStockForProduct();
+    }, [selectedProductAdd]);
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -225,7 +328,78 @@ function DamagedStock() {
         setSelectedProductAdd(null);
         setSelectedStock(null);
         setDamagedQty('');
+        setSelectedReason(null);
+        setSelectedStatus(null);
+        setDescription('');
+        setSubmitMessage(null);
     };
+
+    const validateForm = () => {
+        if (!selectedProductAdd) {
+            setSubmitMessage({ type: 'error', text: 'Please select a product' });
+            return false;
+        }
+        if (!selectedStock) {
+            setSubmitMessage({ type: 'error', text: 'Please select a stock batch' });
+            return false;
+        }
+        if (!damagedQty || parseFloat(damagedQty) <= 0) {
+            setSubmitMessage({ type: 'error', text: 'Please enter a valid damaged quantity' });
+            return false;
+        }
+        if (!selectedReason) {
+            setSubmitMessage({ type: 'error', text: 'Please select a reason' });
+            return false;
+        }
+        if (!selectedStatus) {
+            setSubmitMessage({ type: 'error', text: 'Please select a status' });
+            return false;
+        }
+        return true;
+    };
+
+    const handleAddDamaged = async () => {
+        if (!validateForm()) return;
+
+        try {
+            setIsSubmitting(true);
+            setSubmitMessage(null);
+
+            const response = await stockService.createDamagedRecord({
+                productId: selectedProductAdd!,
+                stockId: selectedStock!,
+                damagedQty: parseFloat(damagedQty),
+                reasonId: selectedReason!,
+                statusId: selectedStatus!,
+                description: description.trim() || undefined
+            });
+
+            if (response.data?.success) {
+                setSubmitMessage({ type: 'success', text: 'Damaged stock record created successfully!' });
+                handleClearAdd();
+            } else {
+                setSubmitMessage({ type: 'error', text: response.data?.message || 'Failed to create damaged stock record' });
+            }
+        } catch (error: any) {
+            console.error('Error creating damaged record:', error);
+            setSubmitMessage({ 
+                type: 'error', 
+                text: error.response?.data?.message || 'An error occurred while creating the record' 
+            });
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    // Clear message after 5 seconds
+    useEffect(() => {
+        if (submitMessage) {
+            const timer = setTimeout(() => {
+                setSubmitMessage(null);
+            }, 5000);
+            return () => clearTimeout(timer);
+        }
+    }, [submitMessage]);
 
     return (
         <div className={'flex flex-col gap-4 h-full'}>
@@ -291,7 +465,8 @@ function DamagedStock() {
                             options={category}
                             value={selectedCategory}
                             onChange={(opt) => setSelectedCategory(opt?.value as string || null)}
-                            placeholder="Search categories..."
+                            placeholder={loading ? "Loading categories..." : "Search categories..."}
+                            disabled={loading}
                         />
                     </div>
                     <div>
@@ -302,7 +477,8 @@ function DamagedStock() {
                             options={unit}
                             value={selectedUnit}
                             onChange={(opt) => setSelectedUnit(opt?.value as string || null)}
-                            placeholder="Search units..."
+                            placeholder={loading ? "Loading units..." : "Search units..."}
+                            disabled={loading}
                         />
                     </div>
                     <div>
@@ -313,7 +489,8 @@ function DamagedStock() {
                             options={supplier}
                             value={selectedSupplier}
                             onChange={(opt) => setSelectedSupplier(opt?.value as string || null)}
-                            placeholder="Search suppliers..."
+                            placeholder={loading ? "Loading suppliers..." : "Search suppliers..."}
+                            disabled={loading}
                         />
                     </div>
                     <div>
@@ -324,7 +501,8 @@ function DamagedStock() {
                             options={productSearch}
                             value={selectedProduct}
                             onChange={(opt) => setSelectedProduct(opt?.value as string || null)}
-                            placeholder="Search products..."
+                            placeholder={loading ? "Loading products..." : "Search products..."}
+                            disabled={loading}
                         />
                     </div>
                     <div className={'grid grid-cols-2 md:items-end items-start gap-2 text-white font-medium'}>
@@ -355,20 +533,30 @@ function DamagedStock() {
                             options={productAdd}
                             value={selectedProductAdd}
                             onChange={(opt) => setSelectedProductAdd(opt?.value as string || null)}
-                            placeholder="Search products..."
+                            placeholder={loading ? "Loading products..." : "Search products..."}
+                            disabled={loading}
                         />
                     </div>
                     <div>
                         <label htmlFor="stock" className="block text-sm font-medium text-gray-700 mb-1">
                             Select Stock
                         </label>
-                        <TypeableSelect
-                            options={stock}
-                            value={selectedStock}
-                            onChange={(opt) => setSelectedStock(opt?.value as string || null)}
-                            placeholder="Select batch..."
-                            disabled={!selectedProductAdd}
-                        />
+                        <select
+                            id="stock"
+                            value={selectedStock || ''}
+                            onChange={(e) => setSelectedStock(e.target.value || null)}
+                            disabled={!selectedProductAdd || loadingStock}
+                            className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-red-400 focus:outline-none transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
+                        >
+                            <option value="">
+                                {loadingStock ? 'Loading stock...' : !selectedProductAdd ? 'Select product first' : 'Select batch...'}
+                            </option>
+                            {stock.map((stockItem) => (
+                                <option key={stockItem.value} value={stockItem.value}>
+                                    {stockItem.label}
+                                </option>
+                            ))}
+                        </select>
                     </div>
                     <div>
                         <label htmlFor="damaged-qty" className="block text-sm font-medium text-gray-700 mb-1">
@@ -383,14 +571,85 @@ function DamagedStock() {
                             className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-red-400 focus:outline-none transition-all"
                         />
                     </div>
+                    <div>
+                        <label htmlFor="reason" className="block text-sm font-medium text-gray-700 mb-1">
+                            Reason
+                        </label>
+                        <select
+                            id="reason"
+                            value={selectedReason || ''}
+                            onChange={(e) => setSelectedReason(e.target.value || null)}
+                            disabled={loading}
+                            className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-red-400 focus:outline-none transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
+                        >
+                            <option value="">
+                                {loading ? 'Loading reasons...' : 'Select reason...'}
+                            </option>
+                            {reason.map((reasonItem) => (
+                                <option key={reasonItem.value} value={reasonItem.value}>
+                                    {reasonItem.label}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                    <div className="col-span-2">
+                        <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
+                            Description
+                        </label>
+                        <textarea
+                            id="description"
+                            value={description}
+                            onChange={(e) => setDescription(e.target.value)}
+                            placeholder="Enter additional description..."
+                            rows={3}
+                            className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-red-400 focus:outline-none transition-all resize-none"
+                        />
+                    </div>
+                    <div>
+                        <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1">
+                            Status
+                        </label>
+                        <select
+                            id="status"
+                            value={selectedStatus || ''}
+                            onChange={(e) => setSelectedStatus(e.target.value || null)}
+                            disabled={loading}
+                            className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-red-400 focus:outline-none transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
+                        >
+                            <option value="">
+                                {loading ? 'Loading status...' : 'Select status...'}
+                            </option>
+                            {status.map((statusItem) => (
+                                <option key={statusItem.value} value={statusItem.value}>
+                                    {statusItem.label}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
                     <div className={'grid grid-cols-2 md:items-end items-start gap-2 text-white font-medium'}>
-                        <button className={'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 py-2 rounded-lg flex items-center justify-center shadow-lg shadow-red-200 hover:shadow-xl transition-all'}>
-                            <Plus className="mr-2" size={14} />Add
+                        <button 
+                            onClick={handleAddDamaged}
+                            disabled={isSubmitting}
+                            className={'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 py-2 rounded-lg flex items-center justify-center shadow-lg shadow-red-200 hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed'}
+                        >
+                            <Plus className="mr-2" size={14} />
+                            {isSubmitting ? 'Adding...' : 'Add'}
                         </button>
                         <button onClick={handleClearAdd} className={'bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 py-2 rounded-lg flex items-center justify-center shadow-lg shadow-gray-200 hover:shadow-xl transition-all'}>
                             <RefreshCw className="mr-2" size={14} />Clear
                         </button>
                     </div>
+
+                    {/* Success/Error Message */}
+                    {submitMessage && (
+                        <div className={`col-span-5 p-3 rounded-lg text-sm font-medium ${
+                            submitMessage.type === 'success' 
+                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
+                                : 'bg-red-50 text-red-700 border border-red-200'
+                        }`}>
+                            {submitMessage.text}
+                        </div>
+                    )}
                 </div>
             </motion.div>
 
