@@ -19,12 +19,22 @@ import { stockService } from "../../../services/stockService.ts";
 import toast, { Toaster } from 'react-hot-toast';
 
 function StockList() {
+    // Summary data state
+    const [summaryData, setSummaryData] = useState({
+        totalProducts: { value: '0', trend: '+0%' },
+        totalValue: { value: 'LKR 0.00', trend: '+0%' },
+        lowStock: { value: '0', trend: '0%' },
+        totalSuppliers: { value: '0', trend: '+0%' },
+        totalCategories: { value: '0', trend: '+0%' }
+    });
+    const [isLoadingSummary, setIsLoadingSummary] = useState(false);
+
     const summaryCards = [
         {
             icon: Package,
             label: 'Total Products',
-            value: '1,245',
-            trend: '+12%',
+            value: summaryData.totalProducts.value,
+            trend: '',
             color: 'bg-gradient-to-br from-emerald-400 to-emerald-500',
             iconColor: 'text-white',
             bgGlow: 'shadow-emerald-200'
@@ -32,8 +42,8 @@ function StockList() {
         {
             icon: DollarSign,
             label: 'Total Value',
-            value: 'LKR 2,540,250.00',
-            trend: '+8%',
+            value: summaryData.totalValue.value,
+            trend: '',
             color: 'bg-gradient-to-br from-purple-400 to-purple-500',
             iconColor: 'text-white',
             bgGlow: 'shadow-purple-200'
@@ -41,8 +51,8 @@ function StockList() {
         {
             icon: TrendingUp,
             label: 'Low Stock Items',
-            value: '23',
-            trend: '-5%',
+            value: summaryData.lowStock.value,
+            trend: '',
             color: 'bg-gradient-to-br from-red-400 to-red-500',
             iconColor: 'text-white',
             bgGlow: 'shadow-red-200'
@@ -50,8 +60,8 @@ function StockList() {
         {
             icon: Users,
             label: 'Total Suppliers',
-            value: '45',
-            trend: '+3%',
+            value: summaryData.totalSuppliers.value,
+            trend: '',
             color: 'bg-gradient-to-br from-blue-400 to-blue-500',
             iconColor: 'text-white',
             bgGlow: 'shadow-blue-200'
@@ -59,8 +69,8 @@ function StockList() {
         {
             icon: ShoppingCart,
             label: 'Categories',
-            value: '12',
-            trend: '+2%',
+            value: summaryData.totalCategories.value,
+            trend: '',
             color: 'bg-gradient-to-br from-yellow-400 to-yellow-500',
             iconColor: 'text-white',
             bgGlow: 'shadow-yellow-200'
@@ -79,6 +89,7 @@ function StockList() {
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
     const [selectedUnit, setSelectedUnit] = useState<string | null>(null);
     const [selectedSupplier, setSelectedSupplier] = useState<string | null>(null);
+    const [searchQuery, setSearchQuery] = useState<string>('');
     
     // Dropdown options state
     const [suppliers, setSuppliers] = useState<SelectOption[]>([]);
@@ -104,6 +115,24 @@ function StockList() {
         }
     };
 
+    // Load summary cards data
+    const loadSummaryData = async () => {
+        setIsLoadingSummary(true);
+        try {
+            const response = await stockService.getSummaryCards();
+            if (response.data?.success) {
+                setSummaryData(response.data.data);
+            } else {
+                toast.error('Failed to load summary data');
+            }
+        } catch (error) {
+            console.error('Error loading summary data:', error);
+            toast.error('Failed to load summary data');
+        } finally {
+            setIsLoadingSummary(false);
+        }
+    };
+
     // Load all dropdown data
     const loadDropdownData = async () => {
         setIsLoadingDropdowns(true);
@@ -114,7 +143,7 @@ function StockList() {
             if (categoriesResponse.data?.success) {
                 const categoryOptions = categoriesResponse.data.data.map((category: any) => ({
                     value: category.id.toString(),
-                    label: category.name || category.category_name
+                    label: category.name
                 }));
                 setCategories(categoryOptions);
             }
@@ -123,7 +152,7 @@ function StockList() {
             if (unitsResponse.data?.success) {
                 const unitOptions = unitsResponse.data.data.map((unit: any) => ({
                     value: unit.id.toString(),
-                    label: unit.name || unit.unit_name
+                    label: unit.name
                 }));
                 setUnits(unitOptions);
             }
@@ -147,10 +176,53 @@ function StockList() {
         }
     };
 
-    // Refresh all data
-    const handleRefresh = async () => {
-        await Promise.all([loadDropdownData(), loadStockData()]);
-        toast.success('Data refreshed successfully');
+    // Search stock data with filters
+    const handleSearch = async () => {
+        setIsLoadingStock(true);
+        try {
+            const filters = {
+                category: selectedCategory || undefined,
+                unit: selectedUnit || undefined,
+                supplier: selectedSupplier || undefined,
+                q: searchQuery.trim() || undefined
+            };
+
+            // Remove undefined values
+            Object.keys(filters).forEach(key => 
+                filters[key as keyof typeof filters] === undefined && delete filters[key as keyof typeof filters]
+            );
+
+            let response;
+            if (Object.keys(filters).length > 0) {
+                response = await stockService.searchStock(filters);
+                toast.success('Search completed successfully');
+            } else {
+                response = await stockService.getStockList();
+                toast.success('Showing all stock data');
+            }
+
+            if (response.data?.success) {
+                setStockData(response.data.data);
+                setCurrentPage(1); // Reset to first page
+            } else {
+                toast.error('Failed to search stock data');
+            }
+        } catch (error) {
+            console.error('Error searching stock data:', error);
+            toast.error('Failed to search stock data');
+        } finally {
+            setIsLoadingStock(false);
+        }
+    };
+
+    // Clear all filters and reload data
+    const handleClearFilters = async () => {
+        setSelectedCategory(null);
+        setSelectedUnit(null);
+        setSelectedSupplier(null);
+        setSearchQuery('');
+        await Promise.all([loadStockData(), loadSummaryData()]);
+        toast.success('Filters cleared');
     };
 
     const [selectedIndex, setSelectedIndex] = useState(0);
@@ -165,6 +237,7 @@ function StockList() {
     useEffect(() => {
         loadDropdownData();
         loadStockData();
+        loadSummaryData();
     }, []);
 
     useEffect(() => {
@@ -332,17 +405,24 @@ function StockList() {
                             <input
                                 type="text"
                                 id="product"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
                                 placeholder="Enter Product ID or Name..."
                                 className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-400 focus:outline-none transition-all"
+                                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                             />
                         </div>
-                        <div className={'grid grid-cols-2 md:items-end items-start gap-2 text-white font-medium'}>
-                            <button className={'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 py-2 rounded-lg flex items-center justify-center shadow-lg shadow-emerald-200 hover:shadow-xl transition-all'}>
-                                <SearchCheck className="mr-2" size={14} />Search
+                        <div className={'grid grid-cols-3 md:items-end items-start gap-2 text-white font-medium'}>
+                            <button 
+                                onClick={handleSearch}
+                                disabled={isLoadingStock}
+                                className={'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 py-2 rounded-lg flex items-center justify-center shadow-lg shadow-emerald-200 hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed'}>
+                                <SearchCheck className={`mr-2 ${isLoadingStock ? 'animate-pulse' : ''}`} size={14} />
+                                {isLoadingStock ? 'Searching...' : 'Search'}
                             </button>
                             <button 
-                                onClick={handleRefresh}
-                                disabled={isLoadingDropdowns || isLoadingStock}
+                                onClick={handleClearFilters}
+                                disabled={isLoadingStock}
                                 className={'bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 py-2 rounded-lg flex items-center justify-center shadow-lg shadow-gray-200 hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed'}>
                                 <RefreshCw className={`mr-2 ${(isLoadingDropdowns || isLoadingStock) ? 'animate-spin' : ''}`} size={14} />
                                 {(isLoadingDropdowns || isLoadingStock) ? 'Refreshing...' : 'Refresh'}
@@ -366,7 +446,6 @@ function StockList() {
                                     'Product ID',
                                     'Product Name',
                                     'Unit',
-                                    'Discount',
                                     'Cost Price',
                                     'MRP',
                                     'Selling Price',
@@ -413,9 +492,7 @@ function StockList() {
                                         <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-600">
                                             {sale.unit}
                                         </td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-purple-600">
-                                            LKR {sale.discountAmount}
-                                        </td>
+                                    
                                         <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-blue-600">
                                             LKR {sale.costPrice}
                                         </td>

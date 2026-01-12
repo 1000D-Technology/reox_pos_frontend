@@ -32,12 +32,14 @@ import ManageEmployee from "./pages/dashboard/Employee/ManageEmployee.tsx";
 import AttendanceMark from "./pages/dashboard/Employee/AttendanceMark.tsx";
 import AttendanceReport from "./pages/dashboard/Employee/Attendance Report.tsx";
 import EmployeeSalary from "./pages/dashboard/Employee/EmployeeSalary.tsx";
-import ManageUser from "./pages/dashboard/ManageUser.tsx";
+import ManageUser from "./pages/dashboard/User/ManageUser.tsx";
 import CreateGrn from "./pages/dashboard/grn/CreateGrn.tsx";
 import ManageBrand from "./pages/dashboard/Products/ManageBrand.tsx";
 import GrnList from "./pages/dashboard/grn/GrnList.tsx";
 import POS from "./pages/dashboard/POS.tsx";
 import ManageProductType from "./pages/dashboard/Products/ManageProductType.tsx";
+import BackUp from "./pages/dashboard/BackUp.tsx";
+import DatabaseSetup from "./pages/setup/DatabaseSetup.tsx";
 
 export default function App() {
     return (
@@ -45,7 +47,7 @@ export default function App() {
             <Routes>
                 {/* Auth */}
                 <Route path="/signin" element={<SignIn />} />
-
+                <Route path="/setup" element={<DatabaseSetup />} />
                 {/* Dashboard layout */}
                 <Route element={<Layout />}>
                     <Route path="/" element={<Dashboard />} />
@@ -90,6 +92,7 @@ export default function App() {
                     <Route path="/accounts" element={<Accounts />} />
                     <Route path="/reports" element={<Reports />} />
                     <Route path="/setting" element={<Setting />} />
+                    <Route path="/back-up" element={<BackUp />} />
                     <Route path="/pos" element={<POS />} />
                 </Route>
             </Routes>

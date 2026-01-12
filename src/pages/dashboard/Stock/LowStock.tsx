@@ -16,14 +16,26 @@ import {
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import TypeableSelect from "../../../components/TypeableSelect.tsx";
+import { stockService } from '../../../services/stockService';
+import { productService } from '../../../services/productService';
+import toast, { Toaster } from 'react-hot-toast';
 
 function LowStock() {
+    // State for summary data
+    const [summaryData, setSummaryData] = useState({
+        lowStockItems: 0,
+        totalProducts: 0,
+        potentialLoss: 'LKR 0.00',
+        belowThreshold: 0,
+        reorderRequired: 0
+    });
+    
     const summaryCards = [
         {
             icon: AlertCircle,
             label: 'Low Stock Items',
-            value: '23',
-            trend: '+5',
+            value: summaryData.lowStockItems.toString(),
+            trend: '',
             color: 'bg-gradient-to-br from-orange-400 to-orange-500',
             iconColor: 'text-white',
             bgGlow: 'shadow-orange-200'
@@ -31,8 +43,8 @@ function LowStock() {
         {
             icon: Package,
             label: 'Total Products',
-            value: '1,245',
-            trend: '+12%',
+            value: summaryData.totalProducts.toString(),
+            trend: '',
             color: 'bg-gradient-to-br from-purple-400 to-purple-500',
             iconColor: 'text-white',
             bgGlow: 'shadow-purple-200'
@@ -40,8 +52,8 @@ function LowStock() {
         {
             icon: DollarSign,
             label: 'Potential Loss',
-            value: 'LKR 340,250.00',
-            trend: '+18%',
+            value: summaryData.potentialLoss,
+            trend: '',
             color: 'bg-gradient-to-br from-red-400 to-red-500',
             iconColor: 'text-white',
             bgGlow: 'shadow-red-200'
@@ -49,8 +61,8 @@ function LowStock() {
         {
             icon: TrendingDown,
             label: 'Below Threshold',
-            value: '15',
-            trend: '+3',
+            value: summaryData.belowThreshold.toString(),
+            trend: '',
             color: 'bg-gradient-to-br from-yellow-400 to-yellow-500',
             iconColor: 'text-white',
             bgGlow: 'shadow-yellow-200'
@@ -58,47 +70,11 @@ function LowStock() {
         {
             icon: ShoppingCart,
             label: 'Reorder Required',
-            value: '8',
-            trend: '+2',
+            value: summaryData.reorderRequired.toString(),
+            trend: '',
             color: 'bg-gradient-to-br from-blue-400 to-blue-500',
             iconColor: 'text-white',
             bgGlow: 'shadow-blue-200'
-        },
-    ];
-
-    const salesData = [
-        {
-            productID: '250929003',
-            productName: 'Patha ala',
-            unit: 'kg',
-            discountAmount: '0.00',
-            costPrice: '1050.00',
-            MRP: '1050.00',
-            Price: '1050.00',
-            supplier: 'Bimalsha kostha',
-            stockQty: '15',
-        },
-        {
-            productID: '250929004',
-            productName: 'White Sugar',
-            unit: 'kg',
-            discountAmount: '50.00',
-            costPrice: '175.00',
-            MRP: '225.00',
-            Price: '210.00',
-            supplier: 'Global Foods Ltd',
-            stockQty: '8',
-        },
-        {
-            productID: '250929005',
-            productName: 'Brown Rice',
-            unit: 'kg',
-            discountAmount: '0.00',
-            costPrice: '220.00',
-            MRP: '270.00',
-            Price: '270.00',
-            supplier: 'Organic Farms Inc',
-            stockQty: '12',
         },
     ];
 
@@ -107,36 +83,22 @@ function LowStock() {
         label: string;
     };
 
+    // Table data state
+    const [salesData, setSalesData] = useState<any[]>([]);
+    const [loading, setLoading] = useState<boolean>(true);
+
+    // Dropdown data states
+    const [categories, setCategories] = useState<SelectOption[]>([]);
+    const [units, setUnits] = useState<SelectOption[]>([]);
+    const [suppliers, setSuppliers] = useState<SelectOption[]>([]);
+    const [productSearch, setProductSearch] = useState<SelectOption[]>([]);
+    const [loadingDropdowns, setLoadingDropdowns] = useState<boolean>(true);
+    const [isSearching, setIsSearching] = useState<boolean>(false);
+
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
     const [selectedUnit, setSelectedUnit] = useState<string | null>(null);
     const [selectedSupplier, setSelectedSupplier] = useState<string | null>(null);
     const [selectedProduct, setSelectedProduct] = useState<string | null>(null);
-
-    const suppliers = [
-        { value: 'frank', label: 'Frank Traders' },
-        { value: 'elsa', label: 'Elsa Exports' },
-        { value: 'saman', label: 'Saman Silva' },
-        { value: 'kumara', label: 'Kumara Stores' },
-        { value: 'bimalsha', label: 'Bimalsha kostha' },
-    ];
-
-    const units = [
-        { value: 'kg', label: 'Kilogram' },
-        { value: 'ltr', label: 'Litre' },
-        { value: 'pcs', label: 'Pieces' },
-    ];
-
-    const categories = [
-        { value: 'grocery', label: 'Grocery' },
-        { value: 'beverages', label: 'Beverages' },
-        { value: 'snacks', label: 'Snacks' },
-    ];
-
-    const productSearch = [
-        { value: 'product1', label: 'Patha ala' },
-        { value: 'product2', label: 'White Sugar' },
-        { value: 'product3', label: 'Brown Rice' },
-    ];
 
     const [selectedIndex, setSelectedIndex] = useState(0);
     const [currentPage, setCurrentPage] = useState(1);
@@ -146,6 +108,155 @@ function LowStock() {
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
     const currentSalesData = salesData.slice(startIndex, endIndex);
+
+    // Load low stock data from API
+    const loadLowStockData = async () => {
+        try {
+            setLoading(true);
+            const response = await stockService.getLowStockList();
+            
+            if (response.data?.success) {
+                setSalesData(response.data.data);
+            } else {
+                setSalesData([]);
+            }
+        } catch (error) {
+            console.error('Error loading low stock data:', error);
+            setSalesData([]);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleSearch = async () => {
+        try {
+            setIsSearching(true);
+            setLoading(true);
+
+            const filters: any = {};
+            if (selectedCategory) filters.category_id = selectedCategory;
+            if (selectedUnit) filters.unit_id = selectedUnit;
+            if (selectedSupplier) filters.supplier_id = selectedSupplier;
+            if (selectedProduct) filters.product_id = selectedProduct;
+
+            const response = await stockService.searchLowStock(filters);
+            
+            if (response.data?.success) {
+                setSalesData(response.data.data);
+                setCurrentPage(1); // Reset to first page
+                setSelectedIndex(0);
+                
+                if (response.data.data.length > 0) {
+                    toast.success(`Found ${response.data.count || response.data.data.length} records`);
+                } else {
+                    toast.error('No records found matching your search criteria');
+                }
+            } else {
+                setSalesData([]);
+                toast.error('No records found matching your search criteria');
+            }
+        } catch (error) {
+            console.error('Error searching low stock records:', error);
+            toast.error('Failed to search low stock records');
+            setSalesData([]);
+        } finally {
+            setIsSearching(false);
+            setLoading(false);
+        }
+    };
+
+    const handleClearFilters = () => {
+        setSelectedCategory(null);
+        setSelectedUnit(null);
+        setSelectedSupplier(null);
+        setSelectedProduct(null);
+        // Reload original data
+        loadLowStockData();
+    };
+
+    // Load summary data
+    const loadSummaryData = async () => {
+        try {
+            const response = await stockService.getLowStockSummary();
+            if (response.data?.success) {
+                setSummaryData({
+                    lowStockItems: response.data.data.lowStockItems,
+                    totalProducts: response.data.data.totalProducts,
+                    potentialLoss: response.data.data.potentialLoss,
+                    belowThreshold: response.data.data.belowThreshold,
+                    reorderRequired: response.data.data.reorderRequired
+                });
+            }
+        } catch (error) {
+            console.error('Error loading summary data:', error);
+            // Keep default values on error
+        }
+    };
+
+    useEffect(() => {
+        const loadDropdownData = async () => {
+            try {
+                setLoadingDropdowns(true);
+
+                const [categoriesResponse, unitsResponse, suppliersResponse] = await stockService.getStockFilterData();
+
+                // Transform categories
+                if (categoriesResponse.data?.success) {
+                    const categoryOptions = categoriesResponse.data.data.map((category: any) => ({
+                        value: category.id.toString(),
+                        label: category.name
+                    }));
+                    setCategories(categoryOptions);
+                }
+
+                // Transform units
+                if (unitsResponse.data?.success) {
+                    const unitOptions = unitsResponse.data.data.map((unit: any) => ({
+                        value: unit.id.toString(),
+                        label: unit.name
+                    }));
+                    setUnits(unitOptions);
+                }
+
+                // Transform suppliers
+                if (suppliersResponse.data?.success) {
+                    const supplierOptions = suppliersResponse.data.data.map((supplier: any) => ({
+                        value: supplier.id.toString(),
+                        label: supplier.supplierName
+                    }));
+                    setSuppliers(supplierOptions);
+                }
+
+                setLoadingDropdowns(false);
+            } catch (error) {
+                console.error('Error loading dropdown data:', error);
+                setLoadingDropdowns(false);
+            }
+        };
+
+        const loadProductData = async () => {
+            try {
+                const productsData = await productService.getProductsForDropdown();
+
+                // Transform products
+                if (productsData.data?.success) {
+                    const productOptions = productsData.data.data.map((product: any) => ({
+                        value: product.id.toString(),
+                        label: product.product_name || product.name
+                    }));
+                    setProductSearch(productOptions);
+                }
+            } catch (error) {
+                console.error('Error loading product data:', error);
+            }
+        };
+
+        loadLowStockData();
+        loadDropdownData();
+        loadProductData();
+        loadSummaryData();
+        loadSummaryData();
+    }, []);
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -210,13 +321,6 @@ function LowStock() {
         }
 
         return pages;
-    };
-
-    const handleClearFilters = () => {
-        setSelectedCategory(null);
-        setSelectedUnit(null);
-        setSelectedSupplier(null);
-        setSelectedProduct(null);
     };
 
     const getStockStatus = (qty: string) => {
@@ -294,7 +398,8 @@ function LowStock() {
                             options={categories}
                             value={selectedCategory}
                             onChange={(opt) => setSelectedCategory(opt?.value as string || null)}
-                            placeholder="Search categories..."
+                            placeholder={loadingDropdowns ? "Loading categories..." : "Search categories..."}
+                            disabled={loadingDropdowns}
                         />
                     </div>
                     <div>
@@ -305,7 +410,8 @@ function LowStock() {
                             options={units}
                             value={selectedUnit}
                             onChange={(opt) => setSelectedUnit(opt?.value as string || null)}
-                            placeholder="Search units..."
+                            placeholder={loadingDropdowns ? "Loading units..." : "Search units..."}
+                            disabled={loadingDropdowns}
                         />
                     </div>
                     <div>
@@ -316,7 +422,8 @@ function LowStock() {
                             options={suppliers}
                             value={selectedSupplier}
                             onChange={(opt) => setSelectedSupplier(opt?.value as string || null)}
-                            placeholder="Search suppliers..."
+                            placeholder={loadingDropdowns ? "Loading suppliers..." : "Search suppliers..."}
+                            disabled={loadingDropdowns}
                         />
                     </div>
                     <div>
@@ -327,14 +434,24 @@ function LowStock() {
                             options={productSearch}
                             value={selectedProduct}
                             onChange={(opt) => setSelectedProduct(opt?.value as string || null)}
-                            placeholder="Search products..."
+                            placeholder={loadingDropdowns ? "Loading products..." : "Search products..."}
+                            disabled={loadingDropdowns}
                         />
                     </div>
                     <div className={'grid grid-cols-2 md:items-end items-start gap-2 text-white font-medium'}>
-                        <button className={'bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 py-2 rounded-lg flex items-center justify-center shadow-lg shadow-orange-200 hover:shadow-xl transition-all'}>
-                            <SearchCheck className="mr-2" size={14} />Search
+                        <button 
+                            onClick={handleSearch}
+                            disabled={isSearching || loadingDropdowns}
+                            className={'bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 py-2 rounded-lg flex items-center justify-center shadow-lg shadow-orange-200 hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed'}
+                        >
+                            <SearchCheck className="mr-2" size={14} />
+                            {isSearching ? 'Searching...' : 'Search'}
                         </button>
-                        <button onClick={handleClearFilters} className={'bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 py-2 rounded-lg flex items-center justify-center shadow-lg shadow-gray-200 hover:shadow-xl transition-all'}>
+                        <button 
+                            onClick={handleClearFilters} 
+                            disabled={loading || loadingDropdowns}
+                            className={'bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 py-2 rounded-lg flex items-center justify-center shadow-lg shadow-gray-200 hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed'}
+                        >
                             <RefreshCw className="mr-2" size={14} />Clear
                         </button>
                     </div>
@@ -352,7 +469,7 @@ function LowStock() {
                     <table className="min-w-full divide-y divide-gray-200">
                         <thead className="bg-gradient-to-r from-orange-500 to-orange-600 sticky top-0 z-10">
                         <tr>
-                            {['Product ID', 'Product Name', 'Unit', 'Discount', 'Cost Price', 'MRP', 'Price', 'Supplier', 'Stock Status'].map((header, i, arr) => (
+                            {['Product ID', 'Product Name', 'Unit', 'Cost Price', 'MRP', 'Price', 'Supplier', 'Stock Status'].map((header, i, arr) => (
                                 <th
                                     key={i}
                                     scope="col"
@@ -367,60 +484,64 @@ function LowStock() {
                         </thead>
 
                         <tbody className="bg-white divide-y divide-gray-200">
-                        {currentSalesData.length === 0 ? (
+                        {loading ? (
                             <tr>
-                                <td colSpan={9} className="px-6 py-8 text-center text-gray-500">
+                                <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
+                                    Loading low stock items...
+                                </td>
+                            </tr>
+                        ) : currentSalesData.length === 0 ? (
+                            <tr>
+                                <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
                                     No low stock items found
                                 </td>
                             </tr>
                         ) : (
-                            currentSalesData.map((sale, index) => {
-                                const stockStatus = getStockStatus(sale.stockQty);
-                                return (
-                                    <tr
-                                        key={index}
-                                        onClick={() => setSelectedIndex(index)}
-                                        className={`cursor-pointer transition-all ${
-                                            selectedIndex === index
-                                                ? 'bg-gradient-to-r from-orange-50 to-orange-100 border-l-4 border-orange-500'
-                                                : 'hover:bg-gray-50'
-                                        }`}
-                                    >
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-semibold text-gray-800">
-                                            {sale.productID}
-                                        </td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-gray-700">
-                                            {sale.productName}
-                                        </td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-600">
-                                            {sale.unit}
-                                        </td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-purple-600">
-                                            LKR {sale.discountAmount}
-                                        </td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-blue-600">
-                                            LKR {sale.costPrice}
-                                        </td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-gray-600">
-                                            LKR {sale.MRP}
-                                        </td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-bold text-emerald-600">
-                                            LKR {sale.Price}
-                                        </td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-600">
-                                            {sale.supplier}
-                                        </td>
-                                        <td className="px-6 py-2 whitespace-nowrap">
-                                            <div className="flex items-center gap-2">
-                                                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border ${stockStatus.color}`}>
-                                                        <AlertCircle className="w-3 h-3 mr-1" />
-                                                        {sale.stockQty} units - {stockStatus.label}
-                                                    </span>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                );
-                            })
+                            currentSalesData.map((sale, index) => (
+                                <tr
+                                    key={index}
+                                    onClick={() => setSelectedIndex(index)}
+                                    className={`cursor-pointer transition-all ${
+                                        selectedIndex === index
+                                            ? 'bg-gradient-to-r from-orange-50 to-orange-100 border-l-4 border-orange-500'
+                                            : 'hover:bg-gray-50'
+                                    }`}
+                                >
+                                    <td className="px-6 py-2 whitespace-nowrap text-sm font-semibold text-gray-800">
+                                        {sale.productID}
+                                    </td>
+                                    <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-gray-700">
+                                        {sale.productName}
+                                    </td>
+                                    <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-600">
+                                        {sale.unit}
+                                    </td>
+                                    <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-blue-600">
+                                        LKR {sale.costPrice}
+                                    </td>
+                                    <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-gray-600">
+                                        LKR {sale.mrp}
+                                    </td>
+                                    <td className="px-6 py-2 whitespace-nowrap text-sm font-bold text-emerald-600">
+                                        LKR {sale.price}
+                                    </td>
+                                    <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-600">
+                                        {sale.supplier}
+                                    </td>
+                                    <td className="px-6 py-2 whitespace-nowrap">
+                                        <div className="flex items-center gap-2">
+                                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border ${
+                                                sale.stockStatus?.includes('Critical') ? 'bg-red-100 text-red-700 border-red-200' :
+                                                sale.stockStatus?.includes('Low') ? 'bg-orange-100 text-orange-700 border-orange-200' :
+                                                'bg-yellow-100 text-yellow-700 border-yellow-200'
+                                            }`}>
+                                                <AlertCircle className="w-3 h-3 mr-1" />
+                                                {sale.stockStatus}
+                                            </span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))
                         )}
                         </tbody>
                     </table>
@@ -497,6 +618,28 @@ function LowStock() {
                     <FileText size={15} />PDF
                 </button>
             </motion.div>
+            <Toaster
+                position="top-right"
+                toastOptions={{
+                    duration: 4000,
+                    style: {
+                        background: '#363636',
+                        color: '#fff',
+                    },
+                    success: {
+                        duration: 3000,
+                        style: {
+                            background: '#10b981',
+                        },
+                    },
+                    error: {
+                        duration: 4000,
+                        style: {
+                            background: '#ef4444',
+                        },
+                    },
+                }}
+            />
         </div>
     );
 }
