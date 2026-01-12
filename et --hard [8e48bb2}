@@ -1,0 +1,62 @@
+[33m656bb19[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mbackend[m[33m, [m[1;31mupstream/backend[m[33m)[m HEAD@{0}: commit (merge): Merge branch 'backend' of https://github.com/1000D-Technology/reox_pos_frontend into backend
+[33m8e48bb2[m HEAD@{1}: reset: moving to HEAD
+[33m8e48bb2[m HEAD@{2}: commit: Add dashboard summary endpoints and UI for stock modules
+[33m223d9f5[m HEAD@{3}: commit: Add out-of-stock summary API and dashboard integration
+[33m8784bd0[m HEAD@{4}: commit: Add low stock listing and filtering features
+[33m0654a4c[m HEAD@{5}: commit: Add damaged stock search and table features
+[33m71dd642[m HEAD@{6}: commit: Add damaged stock management with reasons and status
+[33m30a2a60[m HEAD@{7}: commit: Update dependencies to latest versions
+[33m65a4599[m HEAD@{8}: pull --ff --recurse-submodules --progress upstream: Merge made by the 'ort' strategy.
+[33m018d37e[m HEAD@{9}: commit: Refactor stock queries to use variation details
+[33m92ffdf8[m HEAD@{10}: commit: Add out-of-stock listing and search functionality
+[33mf046fcd[m HEAD@{11}: pull --ff --recurse-submodules --progress upstream: Merge made by the 'ort' strategy.
+[33m870451c[m HEAD@{12}: commit: Add stock search and dashboard summary features
+[33m1f9a680[m HEAD@{13}: commit: Add stock management API and frontend integration
+[33m2906dfa[m HEAD@{14}: commit: Fix status field naming and GRN status logic
+[33m5bab02d[m HEAD@{15}: commit: Add supplier status toggle and refactor services
+[33m370e6bb[m HEAD@{16}: commit: Add payment type API and improve GRN validation
+[33m4967fe1[m HEAD@{17}: pull --ff --recurse-submodules --progress upstream: Fast-forward
+[33maa08af0[m HEAD@{18}: commit: Refactor supplier validation and enhance supplier management
+[33md8e47b6[m HEAD@{19}: commit: Refactor product type CRUD logic and API usage
+[33m228b7ab[m HEAD@{20}: commit: Refactor brand management logic and API integration
+[33m377d719[m HEAD@{21}: commit: Refactor category management and improve UI feedback
+[33m016e301[m HEAD@{22}: commit: Refactor product/unit services and controllers, improve validation
+[33m5da9c43[m HEAD@{23}: commit: Refactor controllers and add modular CRUD endpoints
+[33mdbeca16[m HEAD@{24}: pull --ff --recurse-submodules --progress upstream: Fast-forward
+[33m2da11f0[m HEAD@{25}: commit: Add GRN list and search functionality with pagination
+[33m921df6b[m HEAD@{26}: pull --ff --recurse-submodules --progress upstream: Merge made by the 'ort' strategy.
+[33mb32a06a[m HEAD@{27}: commit: Add GRN summary API and integrate with frontend
+[33m2bfcc39[m HEAD@{28}: commit: Refactor data fetching in CreateGrn to use Promise.all
+[33mbb62a76[m HEAD@{29}: pull --ff --recurse-submodules --progress upstream: Fast-forward
+[33mad3c269[m HEAD@{30}: commit: Add batch handling and GRN creation logic
+[33m0ca7a59[m HEAD@{31}: commit: Add GRN management and product dropdown features
+[33m8c03c3d[m HEAD@{32}: commit: Add supplier contact number update functionality
+[33mc0db06b[m HEAD@{33}: pull --ff --recurse-submodules --progress upstream: Fast-forward
+[33m9023931[m HEAD@{34}: commit: Add supplier list API and frontend pagination
+[33mfc0704c[m HEAD@{35}: commit: Add supplier creation functionality
+[33mf6c1970[m HEAD@{36}: commit: Add supplier company and bank management
+[33mafd6719[m HEAD@{37}: commit: Add support for managing removed products
+[33m93694b0[m HEAD@{38}: commit: Add Swagger API documentation to routes
+[33mfe4d0ef[m HEAD@{39}: commit: Integrate react-hot-toast for notifications in product pages
+[33mc754d70[m HEAD@{40}: commit: Implement backend search endpoints for brands, categories, and units
+[33mf585453[m HEAD@{41}: commit: Update search endpoints for categories, brands, units, and product types
+[33mfe329ee[m HEAD@{42}: commit: Add brand management CRUD operations
+[33m49bb0e8[m HEAD@{43}: commit: Add CRUD for units and categories with confirmation modals
+[33m56c6f69[m HEAD@{44}: commit: Add API and UI for creating new product units
+[33m7e0965e[m HEAD@{45}: commit: Add database seeding for product status
+[33mfcacfce[m HEAD@{46}: commit: Add product deactivation feature
+[33mdcce879[m HEAD@{47}: commit: Add product search functionality to products list
+[33m40e4864[m HEAD@{48}: commit: Refactor product validation and add product update feature
+[33mf56dc66[m HEAD@{49}: commit: Add product listing API and frontend pagination
+[33m1197199[m HEAD@{50}: pull --ff --recurse-submodules --progress upstream: Fast-forward
+[33ma39818c[m HEAD@{51}: commit: Marge , Add backend validation and dynamic dropdowns for product creation
+[33mb1cb6b7[m HEAD@{52}: pull --ff --recurse-submodules --progress upstream: Fast-forward
+[33m9cda73b[m HEAD@{53}: checkout: moving from feature/backend-setup to backend
+[33m6dc8811[m[33m ([m[1;32mfeature/backend-setup[m[33m)[m HEAD@{54}: checkout: moving from backend to feature/backend-setup
+[33m9cda73b[m HEAD@{55}: checkout: moving from feature/backend-setup to backend
+[33m6dc8811[m[33m ([m[1;32mfeature/backend-setup[m[33m)[m HEAD@{56}: commit: Add product validation middleware and improve error handling
+[33mf20bfd6[m HEAD@{57}: commit: Add product creation API with MySQL integration
+[33ma0d3364[m HEAD@{58}: commit: Add backend setup with controllers, models, and routes
+[33mdb20749[m[33m ([m[1;32mmain[m[33m)[m HEAD@{59}: checkout: moving from main to feature/backend-setup
+[33mdb20749[m[33m ([m[1;32mmain[m[33m)[m HEAD@{60}: pull --ff --recurse-submodules --progress origin: Fast-forward
+[33m7050846[m HEAD@{61}: clone: from https://github.com/1000D-Technology/reox_pos_frontend.git
