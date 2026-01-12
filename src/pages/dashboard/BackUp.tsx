@@ -229,7 +229,7 @@ const BackUp = () => {
             />
 
             <div className="min-h-screen bg-white/25 rounded-md p-6">
-                <div className="max-w-7xl mx-auto space-y-6">
+                <div className="w-full mx-auto space-y-6">
                     {/* Header */}
                     <motion.div
                         initial={{ opacity: 0, y: -20 }}
