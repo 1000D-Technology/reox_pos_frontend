@@ -156,6 +156,37 @@ class Damaged {
         const [rows] = await db.execute(query, queryParams);
         return rows;
     }
+
+    //  Get summary statistics for the Damaged Stock dashboard
+    static async getDamagedSummary() {
+        const query = `
+            SELECT 
+                -- 1. Total count of damaged records (entries)
+                COUNT(d.id) AS damaged_items_count,
+
+                -- 2. Count of unique products affected by damage
+                COUNT(DISTINCT p.id) AS total_products_affected,
+
+                -- 3. Total financial loss (Sum of damaged qty * cost price)
+                SUM(d.qty * s.cost_price) AS total_loss_value,
+
+                -- 4. Count of damage reports within the current month
+                COUNT(CASE WHEN MONTH(d.date) = MONTH(CURDATE()) AND YEAR(d.date) = YEAR(CURDATE()) THEN d.id END) AS this_month_count,
+
+                -- 5. Count of unique suppliers affected by damaged stock
+                COUNT(DISTINCT g.supplier_id) AS affected_suppliers_count
+            FROM damaged d
+            INNER JOIN stock s ON d.stock_id = s.id
+            INNER JOIN product_variations pv ON s.product_variations_id = pv.id
+            INNER JOIN product p ON pv.product_id = p.id
+            INNER JOIN grn_items gi ON s.id = gi.stock_id
+            INNER JOIN grn g ON gi.grn_id = g.id
+            WHERE 1=1
+        `;
+        
+        const [rows] = await db.execute(query);
+        return rows[0];
+    }
 }
 
 module.exports = Damaged;

@@ -21,12 +21,21 @@ import { stockService } from '../../../services/stockService';
 import { productService } from '../../../services/productService';
 
 function DamagedStock() {
+    // State for summary data
+    const [summaryData, setSummaryData] = useState({
+        damagedItems: 0,
+        totalProducts: 0,
+        lossValue: 'LKR 0.00',
+        thisMonth: 0,
+        affectedSuppliers: 0
+    });
+    
     const summaryCards = [
         {
             icon: AlertTriangle,
             label: 'Damaged Items',
-            value: '8',
-            trend: '-15%',
+            value: summaryData.damagedItems.toString(),
+            trend: '',
             color: 'bg-gradient-to-br from-red-400 to-red-500',
             iconColor: 'text-white',
             bgGlow: 'shadow-red-200'
@@ -34,8 +43,8 @@ function DamagedStock() {
         {
             icon: Package,
             label: 'Total Products',
-            value: '1,245',
-            trend: '+12%',
+            value: summaryData.totalProducts.toString(),
+            trend: '',
             color: 'bg-gradient-to-br from-purple-400 to-purple-500',
             iconColor: 'text-white',
             bgGlow: 'shadow-purple-200'
@@ -43,8 +52,8 @@ function DamagedStock() {
         {
             icon: DollarSign,
             label: 'Loss Value',
-            value: 'LKR 125,400.00',
-            trend: '+8%',
+            value: summaryData.lossValue,
+            trend: '',
             color: 'bg-gradient-to-br from-yellow-400 to-yellow-500',
             iconColor: 'text-white',
             bgGlow: 'shadow-yellow-200'
@@ -52,8 +61,8 @@ function DamagedStock() {
         {
             icon: TrendingUp,
             label: 'This Month',
-            value: '3',
-            trend: '-25%',
+            value: summaryData.thisMonth.toString(),
+            trend: '',
             color: 'bg-gradient-to-br from-blue-400 to-blue-500',
             iconColor: 'text-white',
             bgGlow: 'shadow-blue-200'
@@ -61,8 +70,8 @@ function DamagedStock() {
         {
             icon: Users,
             label: 'Affected Suppliers',
-            value: '5',
-            trend: '+2',
+            value: summaryData.affectedSuppliers.toString(),
+            trend: '',
             color: 'bg-gradient-to-br from-emerald-400 to-emerald-500',
             iconColor: 'text-white',
             bgGlow: 'shadow-emerald-200'
@@ -199,7 +208,27 @@ function DamagedStock() {
 
         loadDropdownData();
         loadProductData();
+        loadSummaryData();
     }, []);
+
+    // Load summary data
+    const loadSummaryData = async () => {
+        try {
+            const response = await stockService.getDamagedSummary();
+            if (response.data?.success) {
+                setSummaryData({
+                    damagedItems: response.data.data.damagedItems,
+                    totalProducts: response.data.data.totalProducts,
+                    lossValue: response.data.data.lossValue,
+                    thisMonth: response.data.data.thisMonth,
+                    affectedSuppliers: response.data.data.affectedSuppliers
+                });
+            }
+        } catch (error) {
+            console.error('Error loading summary data:', error);
+            // Keep default values on error
+        }
+    };
 
     // Load stock items when product is selected
     useEffect(() => {

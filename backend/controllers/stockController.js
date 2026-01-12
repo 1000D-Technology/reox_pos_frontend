@@ -225,3 +225,27 @@ exports.getOutOfStockDashboardSummary = catchAsync(async (req, res, next) => {
         }
     });
 });
+
+exports.getLowStockDashboardSummary = catchAsync(async (req, res, next) => {
+    const summary = await Stock.getLowStockSummary();
+
+    res.status(200).json({
+        success: true,
+        data: {
+            // English Comments: Matches "Low Stock Items" card
+            lowStockItems: summary.low_stock_items_count || 0,
+            
+            // English Comments: Matches "Total Products" card
+            totalProducts: summary.total_products_count || 0,
+            
+            // English Comments: Formatting currency for "Potential Loss"
+            potentialLoss: `LKR ${(summary.potential_loss_value || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`,
+            
+            // English Comments: Matches "Below Threshold" card
+            belowThreshold: summary.below_threshold_count || 0,
+            
+            // English Comments: Matches "Reorder Required" card
+            reorderRequired: summary.reorder_required_count || 0
+        }
+    });
+});

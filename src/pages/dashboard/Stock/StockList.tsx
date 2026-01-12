@@ -34,7 +34,7 @@ function StockList() {
             icon: Package,
             label: 'Total Products',
             value: summaryData.totalProducts.value,
-            trend: summaryData.totalProducts.trend,
+            trend: '',
             color: 'bg-gradient-to-br from-emerald-400 to-emerald-500',
             iconColor: 'text-white',
             bgGlow: 'shadow-emerald-200'
@@ -43,7 +43,7 @@ function StockList() {
             icon: DollarSign,
             label: 'Total Value',
             value: summaryData.totalValue.value,
-            trend: summaryData.totalValue.trend,
+            trend: '',
             color: 'bg-gradient-to-br from-purple-400 to-purple-500',
             iconColor: 'text-white',
             bgGlow: 'shadow-purple-200'
@@ -52,7 +52,7 @@ function StockList() {
             icon: TrendingUp,
             label: 'Low Stock Items',
             value: summaryData.lowStock.value,
-            trend: summaryData.lowStock.trend,
+            trend: '',
             color: 'bg-gradient-to-br from-red-400 to-red-500',
             iconColor: 'text-white',
             bgGlow: 'shadow-red-200'
@@ -61,7 +61,7 @@ function StockList() {
             icon: Users,
             label: 'Total Suppliers',
             value: summaryData.totalSuppliers.value,
-            trend: summaryData.totalSuppliers.trend,
+            trend: '',
             color: 'bg-gradient-to-br from-blue-400 to-blue-500',
             iconColor: 'text-white',
             bgGlow: 'shadow-blue-200'
@@ -70,7 +70,7 @@ function StockList() {
             icon: ShoppingCart,
             label: 'Categories',
             value: summaryData.totalCategories.value,
-            trend: summaryData.totalCategories.trend,
+            trend: '',
             color: 'bg-gradient-to-br from-yellow-400 to-yellow-500',
             iconColor: 'text-white',
             bgGlow: 'shadow-yellow-200'

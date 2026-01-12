@@ -68,6 +68,10 @@ export const stockService = {
     getLowStockList: () => 
         axiosInstance.get('/api/stock/low-stock'),
 
+    // Get low stock summary data
+    getLowStockSummary: () =>
+        axiosInstance.get('/api/stock/low-stock/summary'),
+
     // Search low stock with filters
     searchLowStock: (filters: {
         category_id?: string;
@@ -112,6 +116,10 @@ export const stockService = {
     // Get damaged stock table data
     getDamagedTableData: () => 
         axiosInstance.get('/api/damaged/table-data'),
+
+    // Get damaged stock summary data
+    getDamagedSummary: () =>
+        axiosInstance.get('/api/damaged/summary-cards'),
 
     // Search damaged stock records with filters
     searchDamagedRecords: (filters: {

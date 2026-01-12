@@ -344,6 +344,32 @@ static async getStockByProductVariation(productId) {
         const [rows] = await db.execute(query);
         return rows[0];
     }
+
+    static async getLowStockSummary() {
+        const query = `
+            SELECT 
+                -- 1. Total number of batches/records that are low in stock
+                COUNT(s.id) AS low_stock_items_count,
+
+                -- 2. Unique products affected by low stock
+                COUNT(DISTINCT pv.product_id) AS total_products_count,
+
+                -- 3. Potential Value/Loss (Sum of remaining qty * cost price)
+                SUM(s.qty * s.cost_price) AS potential_loss_value,
+
+                -- 4. Count of items specifically below a critical threshold (e.g., 5 units)
+                COUNT(CASE WHEN s.qty <= 5 THEN s.id END) AS below_threshold_count,
+
+                -- 5. Number of unique products that need reordering
+                COUNT(DISTINCT CASE WHEN s.qty < 10 THEN pv.product_id END) AS reorder_required_count
+            FROM stock s
+            INNER JOIN product_variations pv ON s.product_variations_id = pv.id
+            WHERE s.qty < 15 AND s.qty > 0
+        `;
+        
+        const [rows] = await db.execute(query);
+        return rows[0];
+    }
 }
 
 module.exports = Stock;
