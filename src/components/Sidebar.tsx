@@ -9,7 +9,7 @@ import {
     Settings,
     LogOut,
     Truck,
-    ChevronDown, AudioWaveform, BadgePlus, FolderTree, Boxes, UserCog, FolderSymlink
+    ChevronDown, AudioWaveform, BadgePlus, FolderTree, Boxes, UserCog, FolderSymlink, DatabaseBackup
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { useState } from "react";
@@ -137,6 +137,7 @@ export default function Sidebar({isOpen}: SidebarProps) {
         {label: "Accounts", path: "/accounts", icon: <CreditCard size={20}/>},
         {label: "Reports", path: "/reports", icon: <BarChart size={20}/>},
         {label: "Settings", path: "/setting", icon: <Settings size={20}/>},
+        {label: "Back-Up", path: "/back-up  ", icon: <DatabaseBackup size={20}/>},
     ];
 
     return (
