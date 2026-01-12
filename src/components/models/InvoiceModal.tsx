@@ -1,6 +1,5 @@
 import {CircleX, Printer} from "lucide-react";
 
-
 const InvoiceModal = ({ onClose }: { onClose: () => void }) => {
     const invoiceData = {
         invoiceNo: "250929003",

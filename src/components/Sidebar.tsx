@@ -3,13 +3,13 @@ import {
     LayoutDashboard,
 
     Users,
-    User,
+
     CreditCard,
     BarChart,
     Settings,
     LogOut,
     Truck,
-    ChevronDown, AudioWaveform, BadgePlus, FolderTree, Boxes, UserCog, FolderSymlink
+    ChevronDown, AudioWaveform, BadgePlus, FolderTree, Boxes, UserCog, FolderSymlink, DatabaseBackup
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { useState } from "react";
@@ -93,8 +93,10 @@ export default function Sidebar({isOpen}: SidebarProps) {
             children: [
                 {label: "Create Product", path: "/products/create-product"},
                 {label: "Product List", path: "/products/product-list"},
+                {label: "Manage Product Type", path: "/products/manage-product-type"},
                 {label: "Manage Unit", path: "/products/manage-unit"},
                 {label: "Manage Category", path: "/products/manage-category"},
+                {label: "Manage Brand", path: "/products/manage-brand"},
                 {label: "Removed Products", path: "/products/removed-products"},
             ],
         },
@@ -107,29 +109,26 @@ export default function Sidebar({isOpen}: SidebarProps) {
                 {label: "Manage Supplier", path: "/supplier/manage-supplier"},
                 {label: "Supplier GRN History", path: "/supplier/supplier-grn"},
                 {label: "Supplier Payments", path: "/supplier/supplier-payments"},
-                {label: "Bank Management", path: "/supplier/bank-management"},
+
             ],
         },
         {
-            label: "Customer",
-            path: "/customer",
+            label: "Manage Customer",
+            path: "/customer/manage-customer",
             icon: <Users size={20}/>,
-            children: [
-                {label: "Manage Customer", path: "/customer/manage-customer"},
-                {label: "Customer Sales", path: "/customer/customer-sales"},
-            ],
+
         },
-        {
-            label: "Employee",
-            path: "/employee",
-            icon: <User size={20}/>,
-            children: [
-                {label: "Manage Employee", path: "/employee/manage-employee"},
-                {label: "Attendance Mark", path: "/employee/attendance-mark"},
-                {label: "Attendance Report", path: "/employee/attendance-report"},
-                {label: "Employee Salary", path: "/employee/employee-salary"},
-            ],
-        },
+        // {
+        //     label: "Employee",
+        //     path: "/employee/manage-employee",
+        //     icon: <User size={20}/>,
+        //     children: [
+        //         {label: "Manage Employee", path: "/employee/manage-employee"},
+        //         {label: "Attendance Mark", path: "/employee/attendance-mark"},
+        //         {label: "Attendance Report", path: "/employee/attendance-report"},
+        //         {label: "Employee Salary", path: "/employee/employee-salary"},
+        //     ],
+        // },
         {
             label: "Manage User",
             path: "/manage-users",
@@ -137,13 +136,14 @@ export default function Sidebar({isOpen}: SidebarProps) {
         },
         {label: "Accounts", path: "/accounts", icon: <CreditCard size={20}/>},
         {label: "Reports", path: "/reports", icon: <BarChart size={20}/>},
-        {label: "Settings", path: "/settings", icon: <Settings size={20}/>},
+        {label: "Settings", path: "/setting", icon: <Settings size={20}/>},
+        {label: "Back-Up", path: "/back-up  ", icon: <DatabaseBackup size={20}/>},
     ];
 
     return (
         <aside
-            className={`p-3 transition-all duration-500 ease-in-out
-        ${isOpen ? "w-72" : "w-20"}`}
+            className={`py-3 ps-2 transition-all duration-500 ease-in-out
+        ${isOpen ? "w-76" : "w-20"}`}
         >
             <div className="h-full flex flex-col transition-all duration-500 rounded-xl bg-white">
                 {/* Logo */}
@@ -156,7 +156,7 @@ export default function Sidebar({isOpen}: SidebarProps) {
                 </div>
 
                 {/* Navigation */}
-                <nav className="flex-1 items-center overflow-y-auto ps-2 py-4">
+                <nav className="flex-1 items-center overflow-y-auto ps-2 py-4 hide-scrollbar">
                     <ul className="space-y-2">
                         {navItems.map((item, index) => (
                             <li key={index}>

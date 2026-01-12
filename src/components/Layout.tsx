@@ -1,33 +1,82 @@
+// src/components/Layout.tsx
 import { useState, useEffect } from "react";
 import Sidebar from "./Sidebar";
 import { Bell, Calculator, ClipboardPlus, PanelLeft, Power, RotateCcw } from "lucide-react";
-import { Link, Outlet } from "react-router-dom";
-import InvoiceModal from "./InvoiceModal";
+import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
+import InvoiceModal from "./models/InvoiceModal.tsx";
 import { AnimatePresence, motion } from "framer-motion";
+import QuotationModal from "./models/QuotationsModel.tsx";
+import PosCashBalance from "./models/PosCashBalance.tsx";
+import CalculatorModal from "./models/CalculatorModal.tsx";
 
-// Event name constant (moved to prevent ESLint fast refresh issues)
 const OPEN_INVOICE_MODAL_EVENT = "openInvoiceModal";
+const OPEN_QUOTATION_MODAL_EVENT = "openQuotationModal";
 
 export default function Layout() {
+    const location = useLocation();
+    const navigate = useNavigate();
     const [isOpen, setIsOpen] = useState(true);
-    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
+    const [isQuotationModalOpen, setIsQuotationModalOpen] = useState(false);
+    const [isScrolled, setIsScrolled] = useState(false);
+    const [isPosCashBalanceOpen, setIsPosCashBalanceOpen] = useState(false);
+    const [isCalculatorOpen, setIsCalculatorOpen] = useState(false);
 
-    // Fixed: Using useEffect instead of useState for event listener
+    const handleRefresh = () => {
+        // Navigate to current path to trigger a refresh
+        navigate(location.pathname, { replace: true });
+        // Force a full page reload if needed
+        window.location.reload();
+    };
+
     useEffect(() => {
-        const handleOpenModal = () => setIsModalOpen(true);
-        window.addEventListener(OPEN_INVOICE_MODAL_EVENT, handleOpenModal);
-        return () => window.removeEventListener(OPEN_INVOICE_MODAL_EVENT, handleOpenModal);
+        if (location.pathname === '/pos') {
+            setIsOpen(false);
+        }
+    }, [location.pathname]);
+
+    useEffect(() => {
+        if (isCalculatorOpen) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = 'unset';
+        }
+
+        return () => {
+            document.body.style.overflow = 'unset';
+        };
+    }, [isCalculatorOpen]);
+
+    useEffect(() => {
+        const handleScroll = (e: Event) => {
+            const target = e.target as HTMLElement;
+            setIsScrolled(target.scrollTop > 0);
+        };
+
+        const mainContent = document.querySelector('main');
+        mainContent?.addEventListener('scroll', handleScroll);
+
+        const handleOpenInvoiceModal = () => setIsInvoiceModalOpen(true);
+        const handleOpenQuotationModal = () => setIsQuotationModalOpen(true);
+
+        window.addEventListener(OPEN_INVOICE_MODAL_EVENT, handleOpenInvoiceModal);
+        window.addEventListener(OPEN_QUOTATION_MODAL_EVENT, handleOpenQuotationModal);
+
+        return () => {
+            mainContent?.removeEventListener('scroll', handleScroll);
+            window.removeEventListener(OPEN_INVOICE_MODAL_EVENT, handleOpenInvoiceModal);
+            window.removeEventListener(OPEN_QUOTATION_MODAL_EVENT, handleOpenQuotationModal);
+        };
     }, []);
 
     return (
-        <div className="flex h-screen w-full bg-gradient-to-r from-emerald-50 to-yellow-50" style={{ fontSize: "10px", fontFamily: "Riope, sans-serif" }}>
-            {/* Sidebar */}
+        <div className="flex h-screen w-full bg-gradient-to-r from-emerald-50 to-yellow-50">
             <Sidebar isOpen={isOpen} toggle={() => setIsOpen(!isOpen)} />
 
-            {/* Main content */}
             <div className="flex-1 flex flex-col pt-3 pe-1">
-                {/* Header */}
-                <header className="h-16 flex items-center px-4 justify-between bg-white/10 backdrop-blur-md rounded-xl">
+                <header className={`h-16 flex items-center px-4 justify-between backdrop-blur-sm rounded-xl transition-colors duration-300 ${
+                    isScrolled ? 'bg-white/30' : 'bg-white/10'
+                }`}>
                     <button
                         onClick={() => setIsOpen(!isOpen)}
                         className="text-gray-400 hover:text-emerald-600 transition hover:cursor-pointer"
@@ -36,19 +85,26 @@ export default function Layout() {
                     </button>
 
                     <div className="flex items-center justify-between gap-3 bg-white px-3 py-2 rounded-full">
-                        <Link to={"#"} className="px-7 py-2 bg-gray-800 text-white rounded-full flex items-center gap-4">
+                        <button
+                            onClick={() => setIsPosCashBalanceOpen(true)}
+                            className="px-7 py-2 bg-gray-800 text-white rounded-full flex items-center gap-4 hover:bg-gray-900 transition cursor-pointer"
+                        >
                             <ClipboardPlus size={18} />POS
-                        </Link>
+                        </button>
+
                         <div className={'flex items-center gap-3 text-gray-400'}>
-                            <Link to={'#'}>
+                            <button onClick={() => setIsCalculatorOpen(true)} className={'cursor-pointer'}>
                                 <Calculator size={15} />
-                            </Link>
+                            </button>
                             <Link to={'#'} className={"p-2 rounded-full bg-red-50"}>
                                 <Power size={15} />
                             </Link>
-                            <Link to={'#'} className={"p-2 rounded-full bg-emerald-50"}>
+                            <button
+                                onClick={handleRefresh}
+                                className={"p-2 rounded-full bg-emerald-50 hover:bg-emerald-100 transition cursor-pointer"}
+                            >
                                 <RotateCcw size={15} />
-                            </Link>
+                            </button>
                             <Link to={'#'} className={'me-3'}>
                                 <Bell size={15} />
                             </Link>
@@ -59,29 +115,27 @@ export default function Layout() {
                             </div>
                             <div className="w-12 h-12 rounded-full flex justify-center items-center">
                                 <img
-                                    src="https://i.pravatar.cc/40?img=1"
-                                    alt="user"
-                                    className="w-12 h-12 rounded-full"
+                                    src={'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&dpr=1&w=500'}
+                                    alt={'User'}
+                                    className="w-10 h-10 rounded-full object-cover"
                                 />
                             </div>
                         </div>
                     </div>
                 </header>
 
-                {/* Page Content */}
-                <main className="flex-1 overflow-y-auto ps-4 pe-1  my-3 me-3 h-full">
+                <main className="flex-1 overflow-y-auto ps-3 pe-1 my-3 me-3 h-full hide-scrollbar">
                     <Outlet/>
                 </main>
 
-                {/* Invoice Modal with Animation */}
                 <AnimatePresence>
-                    {isModalOpen && (
+                    {isInvoiceModalOpen && (
                         <motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             className="fixed inset-0 z-50 flex items-center justify-center w-full h-full"
-                            onClick={() => setIsModalOpen(false)}
+                            onClick={() => setIsInvoiceModalOpen(false)}
                         >
                             <motion.div
                                 initial={{ scale: 0.7, y: 50 }}
@@ -91,7 +145,68 @@ export default function Layout() {
                                 onClick={e => e.stopPropagation()}
                                 className={'w-full h-full'}
                             >
-                                <InvoiceModal onClose={() => setIsModalOpen(false)} />
+                                <InvoiceModal onClose={() => setIsInvoiceModalOpen(false)} />
+                            </motion.div>
+                        </motion.div>
+                    )}
+                    {isQuotationModalOpen && (
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 z-50 flex items-center justify-center w-full h-full"
+                            onClick={() => setIsQuotationModalOpen(false)}
+                        >
+                            <motion.div
+                                initial={{ scale: 0.7, y: 50 }}
+                                animate={{ scale: 1, y: 0 }}
+                                exit={{ scale: 0.7, y: 50 }}
+                                transition={{ type: "spring", damping: 20 }}
+                                onClick={e => e.stopPropagation()}
+                                className={'w-full h-full'}
+                            >
+                                <QuotationModal onClose={() => setIsQuotationModalOpen(false)} />
+                            </motion.div>
+                        </motion.div>
+                    )}
+                    {isPosCashBalanceOpen && (
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+                            onClick={() => setIsPosCashBalanceOpen(false)}
+                        >
+                            <motion.div
+                                initial={{ scale: 0.7, y: 50 }}
+                                animate={{ scale: 1, y: 0 }}
+                                exit={{ scale: 0.7, y: 50 }}
+                                transition={{ type: "spring", damping: 20 }}
+                                onClick={e => e.stopPropagation()}
+                            >
+                                <PosCashBalance
+                                    onClose={() => setIsPosCashBalanceOpen(false)}
+                                    onNavigateToPOS={() => setIsOpen(false)}
+                                />
+                            </motion.div>
+                        </motion.div>
+                    )}
+                    {isCalculatorOpen && (
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm"
+                            onClick={() => setIsCalculatorOpen(false)}
+                        >
+                            <motion.div
+                                initial={{ scale: 0.7, y: 50 }}
+                                animate={{ scale: 1, y: 0 }}
+                                exit={{ scale: 0.7, y: 50 }}
+                                transition={{ type: "spring", damping: 20 }}
+                                onClick={e => e.stopPropagation()}
+                            >
+                                <CalculatorModal onClose={() => setIsCalculatorOpen(false)} />
                             </motion.div>
                         </motion.div>
                     )}
