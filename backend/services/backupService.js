@@ -1,26 +1,25 @@
-// backend/services/backupService.ts
-import * as mysql from 'mysql2/promise';
-import * as fs from 'fs';
-import * as path from 'path';
+const mysql = require('mysql2/promise');
+const fs = require('fs');
+const path = require('path');
 
-export class BackupService {
-    private backupDir = path.join(process.cwd(), 'backups');
-    private connection: mysql.Connection | null = null;
-
+class BackupService {
     constructor() {
+        this.backupDir = path.join(process.cwd(), 'backups');
+        this.connection = null;
+
         if (!fs.existsSync(this.backupDir)) {
             fs.mkdirSync(this.backupDir, { recursive: true });
         }
     }
 
-    private async getConnection() {
+    async getConnection() {
         if (!this.connection) {
             this.connection = await mysql.createConnection({
                 host: process.env.DB_HOST,
                 user: process.env.DB_USER,
                 password: process.env.DB_PASSWORD,
                 database: process.env.DB_NAME,
-                port: parseInt(process.env.PORT || '3306'),
+                port: parseInt(process.env.DB_PORT || '3306'),
             });
         }
         return this.connection;
@@ -36,30 +35,20 @@ export class BackupService {
             let sqlDump = '-- MySQL Database Backup\n';
             sqlDump += `-- Created: ${new Date().toISOString()}\n`;
             sqlDump += `-- Database: ${process.env.DB_NAME}\n\n`;
-
             sqlDump += 'SET FOREIGN_KEY_CHECKS=0;\n\n';
 
-            // Get all tables
-            const [tables] = await connection.query<mysql.RowDataPacket[]>(
-                'SHOW TABLES'
-            );
+            const [tables] = await connection.query('SHOW TABLES');
 
             for (const tableRow of tables) {
-                const tableName = Object.values(tableRow)[0] as string;
+                const tableName = Object.values(tableRow)[0];
 
                 sqlDump += `\n-- Table: ${tableName}\n`;
                 sqlDump += `DROP TABLE IF EXISTS \`${tableName}\`;\n`;
 
-                // Get CREATE TABLE statement
-                const [createResult] = await connection.query<mysql.RowDataPacket[]>(
-                    `SHOW CREATE TABLE \`${tableName}\``
-                );
+                const [createResult] = await connection.query(`SHOW CREATE TABLE \`${tableName}\``);
                 sqlDump += createResult[0]['Create Table'] + ';\n\n';
 
-                // Get table data
-                const [rows] = await connection.query<mysql.RowDataPacket[]>(
-                    `SELECT * FROM \`${tableName}\``
-                );
+                const [rows] = await connection.query(`SELECT * FROM \`${tableName}\``);
 
                 if (rows.length > 0) {
                     sqlDump += `-- Data for table ${tableName}\n`;
@@ -83,8 +72,6 @@ export class BackupService {
             }
 
             sqlDump += 'SET FOREIGN_KEY_CHECKS=1;\n';
-
-            // Write to file
             fs.writeFileSync(filepath, sqlDump, 'utf8');
 
             const stats = fs.statSync(filepath);
@@ -97,17 +84,42 @@ export class BackupService {
                 date: new Date().toISOString(),
                 timestamp
             };
-        } catch (err: any) {
+        } catch (err) {
             throw new Error(`Backup failed: ${err.message}`);
         }
+    }
+
+    listBackups() {
+        try {
+            const files = fs.readdirSync(this.backupDir);
+            const backups = files
+                .filter(file => file.endsWith('.sql'))
+                .map(file => {
+                    const filepath = path.join(this.backupDir, file);
+                    const stats = fs.statSync(filepath);
+                    return {
+                        filename: file,
+                        size: `${(stats.size / (1024 * 1024)).toFixed(2)} MB`,
+                        date: stats.mtime.toISOString(),
+                        timestamp: stats.mtimeMs
+                    };
+                })
+                .sort((a, b) => b.timestamp - a.timestamp);
+
+            return backups;
+        } catch (error) {
+            throw new Error(`Failed to list backups: ${error.message}`);
+        }
+    }
+
+    getBackupPath(filename) {
+        return path.join(this.backupDir, filename);
     }
 
     getLatestBackup() {
         try {
             const files = fs.readdirSync(this.backupDir);
-            if (files.length === 0) {
-                return null;
-            }
+            if (files.length === 0) return null;
 
             const backups = files
                 .filter(file => file.endsWith('.sql'))
@@ -144,7 +156,7 @@ export class BackupService {
             }
 
             let totalSize = 0;
-            let latestDate: Date | null = null;
+            let latestDate = null;
 
             backups.forEach(file => {
                 const filepath = path.join(this.backupDir, file);
@@ -155,7 +167,7 @@ export class BackupService {
                 }
             });
 
-            const timeAgo = this.getTimeAgo(latestDate!);
+            const timeAgo = this.getTimeAgo(latestDate);
 
             return {
                 lastBackup: timeAgo,
@@ -173,7 +185,7 @@ export class BackupService {
         }
     }
 
-    private getTimeAgo(date: Date): string {
+    getTimeAgo(date) {
         const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
 
         if (seconds < 60) return 'Just now';
@@ -181,10 +193,6 @@ export class BackupService {
         if (seconds < 86400) return `${Math.floor(seconds / 3600)} hours ago`;
         if (seconds < 604800) return `${Math.floor(seconds / 86400)} days ago`;
         return date.toLocaleDateString();
-    }
-
-    getBackupPath(filename: string): string {
-        return path.join(this.backupDir, filename);
     }
 
     async cleanOldBackups(keepCount = 7) {
@@ -208,7 +216,7 @@ export class BackupService {
             });
 
             return { deleted: toDelete.length };
-        } catch (err: any) {
+        } catch (err) {
             throw new Error(`Cleanup failed: ${err.message}`);
         }
     }
@@ -220,3 +228,5 @@ export class BackupService {
         }
     }
 }
+
+module.exports = { BackupService };
