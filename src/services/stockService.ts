@@ -18,6 +18,10 @@ export const stockService = {
     getOutOfStockList: () =>
         axiosInstance.get('/api/stock/out-of-stock'),
 
+    // Get out-of-stock summary data
+    getOutOfStockSummary: () =>
+        axiosInstance.get('/api/stock/out-of-stock/summary'),
+
     // Search out-of-stock items with filters
     searchOutOfStock: (filters: {
         product?: string;
@@ -64,6 +68,10 @@ export const stockService = {
     getLowStockList: () => 
         axiosInstance.get('/api/stock/low-stock'),
 
+    // Get low stock summary data
+    getLowStockSummary: () =>
+        axiosInstance.get('/api/stock/low-stock/summary'),
+
     // Search low stock with filters
     searchLowStock: (filters: {
         category_id?: string;
@@ -108,6 +116,10 @@ export const stockService = {
     // Get damaged stock table data
     getDamagedTableData: () => 
         axiosInstance.get('/api/damaged/table-data'),
+
+    // Get damaged stock summary data
+    getDamagedSummary: () =>
+        axiosInstance.get('/api/damaged/summary-cards'),
 
     // Search damaged stock records with filters
     searchDamagedRecords: (filters: {

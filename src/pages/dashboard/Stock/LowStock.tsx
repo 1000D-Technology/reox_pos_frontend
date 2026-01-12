@@ -21,12 +21,21 @@ import { productService } from '../../../services/productService';
 import toast, { Toaster } from 'react-hot-toast';
 
 function LowStock() {
+    // State for summary data
+    const [summaryData, setSummaryData] = useState({
+        lowStockItems: 0,
+        totalProducts: 0,
+        potentialLoss: 'LKR 0.00',
+        belowThreshold: 0,
+        reorderRequired: 0
+    });
+    
     const summaryCards = [
         {
             icon: AlertCircle,
             label: 'Low Stock Items',
-            value: '23',
-            trend: '+5',
+            value: summaryData.lowStockItems.toString(),
+            trend: '',
             color: 'bg-gradient-to-br from-orange-400 to-orange-500',
             iconColor: 'text-white',
             bgGlow: 'shadow-orange-200'
@@ -34,8 +43,8 @@ function LowStock() {
         {
             icon: Package,
             label: 'Total Products',
-            value: '1,245',
-            trend: '+12%',
+            value: summaryData.totalProducts.toString(),
+            trend: '',
             color: 'bg-gradient-to-br from-purple-400 to-purple-500',
             iconColor: 'text-white',
             bgGlow: 'shadow-purple-200'
@@ -43,8 +52,8 @@ function LowStock() {
         {
             icon: DollarSign,
             label: 'Potential Loss',
-            value: 'LKR 340,250.00',
-            trend: '+18%',
+            value: summaryData.potentialLoss,
+            trend: '',
             color: 'bg-gradient-to-br from-red-400 to-red-500',
             iconColor: 'text-white',
             bgGlow: 'shadow-red-200'
@@ -52,8 +61,8 @@ function LowStock() {
         {
             icon: TrendingDown,
             label: 'Below Threshold',
-            value: '15',
-            trend: '+3',
+            value: summaryData.belowThreshold.toString(),
+            trend: '',
             color: 'bg-gradient-to-br from-yellow-400 to-yellow-500',
             iconColor: 'text-white',
             bgGlow: 'shadow-yellow-200'
@@ -61,8 +70,8 @@ function LowStock() {
         {
             icon: ShoppingCart,
             label: 'Reorder Required',
-            value: '8',
-            trend: '+2',
+            value: summaryData.reorderRequired.toString(),
+            trend: '',
             color: 'bg-gradient-to-br from-blue-400 to-blue-500',
             iconColor: 'text-white',
             bgGlow: 'shadow-blue-200'
@@ -165,6 +174,25 @@ function LowStock() {
         loadLowStockData();
     };
 
+    // Load summary data
+    const loadSummaryData = async () => {
+        try {
+            const response = await stockService.getLowStockSummary();
+            if (response.data?.success) {
+                setSummaryData({
+                    lowStockItems: response.data.data.lowStockItems,
+                    totalProducts: response.data.data.totalProducts,
+                    potentialLoss: response.data.data.potentialLoss,
+                    belowThreshold: response.data.data.belowThreshold,
+                    reorderRequired: response.data.data.reorderRequired
+                });
+            }
+        } catch (error) {
+            console.error('Error loading summary data:', error);
+            // Keep default values on error
+        }
+    };
+
     useEffect(() => {
         const loadDropdownData = async () => {
             try {
@@ -226,6 +254,8 @@ function LowStock() {
         loadLowStockData();
         loadDropdownData();
         loadProductData();
+        loadSummaryData();
+        loadSummaryData();
     }, []);
 
     useEffect(() => {

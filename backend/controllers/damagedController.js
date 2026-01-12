@@ -79,3 +79,20 @@ exports.searchDamaged = catchAsync(async (req, res, next) => {
         data: results
     });
 });
+
+
+exports.getDamagedDashboardSummary = catchAsync(async (req, res, next) => {
+    const summary = await Damaged.getDamagedSummary();
+
+    res.status(200).json({
+        success: true,
+        data: {
+            damagedItems: summary.damaged_items_count || 0,
+            totalProducts: summary.total_products_affected || 0,
+            // English Comments: Formatting the loss value as currency string
+            lossValue: `LKR ${(summary.total_loss_value || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`,
+            thisMonth: summary.this_month_count || 0,
+            affectedSuppliers: summary.affected_suppliers_count || 0
+        }
+    });
+});

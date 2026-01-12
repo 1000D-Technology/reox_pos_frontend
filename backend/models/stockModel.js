@@ -315,6 +315,56 @@ static async getStockByProductVariation(productId) {
         const [rows] = await db.execute(query, queryParams);
         return rows;
     }
+
+    // Get summary data for Out of Stock dashboard
+    static async getOutOfStockSummary() {
+        const query = `
+            SELECT 
+                -- 1. Total unique products that are currently out of stock
+                COUNT(DISTINCT s.product_variations_id) AS total_out_of_stock_products,
+
+                -- 2. Count of unique suppliers affected by zero stock items
+                COUNT(DISTINCT g.supplier_id) AS affected_suppliers,
+
+                -- 3. Average days since stock reached zero (assuming we track when qty became 0)
+                -- Note: If you don't have a 'stock_out_date', we use a default or simplified logic.
+                -- Here we calculate based on the last updated time of zero stock.
+                ROUND(AVG(DATEDIFF(CURDATE(), s.mfd)), 1) AS avg_days_out 
+            FROM stock s
+            INNER JOIN grn_items gi ON s.id = gi.stock_id
+            INNER JOIN grn g ON gi.grn_id = g.id
+            WHERE s.qty <= 0
+        `;
+        
+        const [rows] = await db.execute(query);
+        return rows[0];
+    }
+
+    static async getLowStockSummary() {
+        const query = `
+            SELECT 
+                -- 1. Total number of batches/records that are low in stock
+                COUNT(s.id) AS low_stock_items_count,
+
+                -- 2. Unique products affected by low stock
+                COUNT(DISTINCT pv.product_id) AS total_products_count,
+
+                -- 3. Potential Value/Loss (Sum of remaining qty * cost price)
+                SUM(s.qty * s.cost_price) AS potential_loss_value,
+
+                -- 4. Count of items specifically below a critical threshold (e.g., 5 units)
+                COUNT(CASE WHEN s.qty <= 5 THEN s.id END) AS below_threshold_count,
+
+                -- 5. Number of unique products that need reordering
+                COUNT(DISTINCT CASE WHEN s.qty < 10 THEN pv.product_id END) AS reorder_required_count
+            FROM stock s
+            INNER JOIN product_variations pv ON s.product_variations_id = pv.id
+            WHERE s.qty < 15 AND s.qty > 0
+        `;
+        
+        const [rows] = await db.execute(query);
+        return rows[0];
+    }
 }
 
 module.exports = Stock;
