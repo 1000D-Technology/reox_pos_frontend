@@ -22,12 +22,20 @@ import { stockService } from '../../../services/stockService';
 import toast, { Toaster } from 'react-hot-toast';
 
 function OutOfStock() {
+ 
+    const [outOfStockCount, setOutOfStockCount] = useState<number>(0);
+    const [summaryData, setSummaryData] = useState({
+        totalProducts: 0,
+        avgDaysOut: '0.0',
+        affectedSuppliers: 0
+    });
+
     const summaryCards = [
         {
             icon: AlertTriangle,
             label: 'Out of Stock Items',
-            value: '5',
-            trend: '+2',
+            value: outOfStockCount.toString(),
+            trend: '',
             color: 'bg-gradient-to-br from-red-400 to-red-500',
             iconColor: 'text-white',
             bgGlow: 'shadow-red-200'
@@ -35,26 +43,17 @@ function OutOfStock() {
         {
             icon: Package,
             label: 'Total Products',
-            value: '1,245',
-            trend: '+12%',
+            value: summaryData.totalProducts.toString(),
+            trend: '',
             color: 'bg-gradient-to-br from-purple-400 to-purple-500',
             iconColor: 'text-white',
             bgGlow: 'shadow-purple-200'
         },
         {
-            icon: DollarSign,
-            label: 'Lost Revenue',
-            value: 'LKR 85,400.00',
-            trend: '+15%',
-            color: 'bg-gradient-to-br from-yellow-400 to-yellow-500',
-            iconColor: 'text-white',
-            bgGlow: 'shadow-yellow-200'
-        },
-        {
             icon: TrendingDown,
             label: 'Avg. Days Out',
-            value: '3.5',
-            trend: '-8%',
+            value: summaryData.avgDaysOut,
+            trend: '',
             color: 'bg-gradient-to-br from-blue-400 to-blue-500',
             iconColor: 'text-white',
             bgGlow: 'shadow-blue-200'
@@ -62,15 +61,15 @@ function OutOfStock() {
         {
             icon: Users,
             label: 'Affected Suppliers',
-            value: '12',
-            trend: '+5%',
+            value: summaryData.affectedSuppliers.toString(),
+            trend: '',
             color: 'bg-gradient-to-br from-emerald-400 to-emerald-500',
             iconColor: 'text-white',
             bgGlow: 'shadow-emerald-200'
         },
     ];
 
-    // State for out-of-stock data
+       // State for out-of-stock data
     const [stockData, setStockData] = useState<any[]>([]);
     const [isLoadingStock, setIsLoadingStock] = useState(false);
 
@@ -81,6 +80,7 @@ function OutOfStock() {
             const response = await stockService.getOutOfStockList();
             if (response.data?.success) {
                 setStockData(response.data.data);
+                setOutOfStockCount(response.data.count || response.data.data.length);
             } else {
                 toast.error('Failed to load out-of-stock data');
             }
@@ -89,6 +89,23 @@ function OutOfStock() {
             toast.error('Failed to load out-of-stock data');
         } finally {
             setIsLoadingStock(false);
+        }
+    };
+
+    // Load summary data
+    const loadSummaryData = async () => {
+        try {
+            const response = await stockService.getOutOfStockSummary();
+            if (response.data?.success) {
+                setSummaryData({
+                    totalProducts: response.data.data.totalProducts,
+                    avgDaysOut: response.data.data.avgDaysOut,
+                    affectedSuppliers: response.data.data.affectedSuppliers
+                });
+            }
+        } catch (error) {
+            console.error('Error loading summary data:', error);
+            // Keep default values on error
         }
     };
 
@@ -220,6 +237,7 @@ function OutOfStock() {
     useEffect(() => {
         loadDropdownData();
         loadOutOfStockData();
+        loadSummaryData();
     }, []);
 
     useEffect(() => {
@@ -303,7 +321,7 @@ function OutOfStock() {
                 </div>
 
                 {/* Stats Cards */}
-                <div className={'grid md:grid-cols-5 grid-cols-1 gap-4'}>
+                <div className={'grid md:grid-cols-4 grid-cols-1 gap-4'}>
                     {summaryCards.map((stat, i) => (
                         <motion.div
                             key={i}

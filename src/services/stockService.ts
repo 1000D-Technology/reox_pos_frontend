@@ -18,6 +18,10 @@ export const stockService = {
     getOutOfStockList: () =>
         axiosInstance.get('/api/stock/out-of-stock'),
 
+    // Get out-of-stock summary data
+    getOutOfStockSummary: () =>
+        axiosInstance.get('/api/stock/out-of-stock/summary'),
+
     // Search out-of-stock items with filters
     searchOutOfStock: (filters: {
         product?: string;

@@ -11,6 +11,7 @@ router.get('/out-of-stock/search', stockController.getSearchOutOfStock);
 router.get('/get-stock-by-variant/:variationId', stockController.getStockForProduct);
 router.get('/low-stock', stockController.getLowStockList);
 router.get('/low-stock/search', stockController.getFilteredLowStock);
+router.get('/out-of-stock/summary', stockController.getOutOfStockDashboardSummary);
 
 module.exports = router;
 

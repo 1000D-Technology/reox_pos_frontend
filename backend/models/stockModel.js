@@ -320,6 +320,30 @@ static async getStockByProductVariation(productId) {
         const [rows] = await db.execute(query, queryParams);
         return rows;
     }
+
+    // Get summary data for Out of Stock dashboard
+    static async getOutOfStockSummary() {
+        const query = `
+            SELECT 
+                -- 1. Total unique products that are currently out of stock
+                COUNT(DISTINCT s.product_variations_id) AS total_out_of_stock_products,
+
+                -- 2. Count of unique suppliers affected by zero stock items
+                COUNT(DISTINCT g.supplier_id) AS affected_suppliers,
+
+                -- 3. Average days since stock reached zero (assuming we track when qty became 0)
+                -- Note: If you don't have a 'stock_out_date', we use a default or simplified logic.
+                -- Here we calculate based on the last updated time of zero stock.
+                ROUND(AVG(DATEDIFF(CURDATE(), s.mfd)), 1) AS avg_days_out 
+            FROM stock s
+            INNER JOIN grn_items gi ON s.id = gi.stock_id
+            INNER JOIN grn g ON gi.grn_id = g.id
+            WHERE s.qty <= 0
+        `;
+        
+        const [rows] = await db.execute(query);
+        return rows[0];
+    }
 }
 
 module.exports = Stock;

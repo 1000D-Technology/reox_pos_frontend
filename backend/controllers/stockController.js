@@ -212,3 +212,16 @@ exports.getFilteredLowStock = catchAsync(async (req, res, next) => {
         data: tableData
     });
 });
+
+exports.getOutOfStockDashboardSummary = catchAsync(async (req, res, next) => {
+    const summary = await Stock.getOutOfStockSummary();
+
+    res.status(200).json({
+        success: true,
+        data: {
+            totalProducts: summary.total_out_of_stock_products || 0,
+            avgDaysOut: summary.avg_days_out || 0,
+            affectedSuppliers: summary.affected_suppliers || 0
+        }
+    });
+});
