@@ -13,7 +13,7 @@ const stockRoutes = require('./routes/stockRoutes');
 const resonRoutes = require('./routes/reasonRoutes');
 const returnStatusRoutes = require('./routes/returnStatusRoutes');
 const damagedRoutes = require('./routes/damagedRoutes');
-
+const setupRoutes = require('./routes/setup');
 
 require('dotenv').config();
 const swaggerJsDoc = require('swagger-jsdoc');
@@ -39,7 +39,7 @@ app.use('/api/stock', stockRoutes);
 app.use('/api/reasons', resonRoutes);
 app.use('/api/return-status', returnStatusRoutes);
 app.use('/api/damaged', damagedRoutes);
-
+app.use('/api/setup', setupRoutes);
 // Handle undefined routes
 app.use((req, res, next) => {
     next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404));

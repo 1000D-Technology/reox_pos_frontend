@@ -39,6 +39,7 @@ import GrnList from "./pages/dashboard/grn/GrnList.tsx";
 import POS from "./pages/dashboard/POS.tsx";
 import ManageProductType from "./pages/dashboard/Products/ManageProductType.tsx";
 import BackUp from "./pages/dashboard/BackUp.tsx";
+import DatabaseSetup from "./pages/setup/DatabaseSetup.tsx";
 
 export default function App() {
     return (
@@ -46,7 +47,7 @@ export default function App() {
             <Routes>
                 {/* Auth */}
                 <Route path="/signin" element={<SignIn />} />
-
+                <Route path="/setup" element={<DatabaseSetup />} />
                 {/* Dashboard layout */}
                 <Route element={<Layout />}>
                     <Route path="/" element={<Dashboard />} />

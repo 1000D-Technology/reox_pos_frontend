@@ -8,8 +8,6 @@ import {
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import toast, { Toaster } from 'react-hot-toast';
-import { motion } from 'framer-motion';
-import axiosInstance from '../../../api/axiosInstance';
 import { productTypeService } from '../../../services/productTypeService';
 import ConfirmationModal from '../../../components/modals/ConfirmationModal';
 
@@ -288,9 +286,8 @@ const ManageProductType = () => {
                     </h1>
                 </div>
 
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
+                <div
+
                     className={'flex flex-col bg-white rounded-xl p-6 justify-between gap-6 shadow-lg'}
                 >
                     <div className={'grid md:grid-cols-5 gap-4'}>
@@ -361,13 +358,9 @@ const ManageProductType = () => {
                                 </tr>
                             ) : (
                                 salesData.map((type, index) => (
-                                    <motion.tr
+                                    <tr
                                         key={type.id}
-                                        initial={{ opacity: 0, x: -20 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        transition={{ delay: 0.05 * index }}
                                         onClick={() => setSelectedIndex(index)}
-                                        whileHover={{ backgroundColor: "rgba(16,185,129,0.05)" }}
                                         className={`cursor-pointer transition-all ${
                                             selectedIndex === index
                                                 ? 'bg-emerald-50 border-l-4 border-emerald-500'
@@ -399,7 +392,7 @@ const ManageProductType = () => {
                                                 </button>
                                             </div>
                                         </td>
-                                    </motion.tr>
+                                    </tr>
                                 ))
                             )}
                             </tbody>
@@ -453,15 +446,14 @@ const ManageProductType = () => {
                             </button>
                         </div>
                     </nav>
-                </motion.div>
+                </div>
             </div>
 
             {/* Update Modal */}
             {isModalOpen && selectedType && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
+                    <div
+
                         className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md relative"
                     >
                         <button
@@ -501,7 +493,7 @@ const ManageProductType = () => {
                                 {isUpdating ? 'Updating...' : 'Update Type'}
                             </button>
                         </div>
-                    </motion.div>
+                    </div>
                 </div>
             )}
 
