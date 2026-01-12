@@ -10,7 +10,6 @@ import {
     X,
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
 import toast, { Toaster } from "react-hot-toast";
 import TypeableSelect from "../../../components/TypeableSelect.tsx";
 import axiosInstance from "../../../api/axiosInstance";
@@ -349,9 +348,8 @@ function ProductList() {
 
         return (
             <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">
-                <motion.div
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
+                <div
+
                     className="bg-white rounded-2xl p-8 w-full max-w-7xl max-h-[90vh] overflow-y-auto shadow-2xl"
                 >
                     <div className="flex justify-between items-center mb-6">
@@ -537,7 +535,7 @@ function ProductList() {
                             </button>
                         </div>
                     </div>
-                </motion.div>
+                </div>
             </div>
         );
     };
@@ -612,9 +610,7 @@ function ProductList() {
                     </h1>
                 </div>
 
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
+                <div
                     className="bg-white rounded-xl p-6 shadow-lg"
                 >
                     <div className="grid md:grid-cols-5 gap-4">
@@ -662,11 +658,9 @@ function ProductList() {
                             </button>
                         </div>
                     </div>
-                </motion.div>
+                </div>
 
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
+                <div
                     className="flex flex-col bg-white rounded-xl p-6 justify-between gap-6 shadow-lg"
                 >
                     <div className="overflow-y-auto max-h-md md:h-[320px] lg:h-[520px] rounded-lg scrollbar-thin scrollbar-thumb-emerald-300 scrollbar-track-gray-100">
@@ -847,11 +841,9 @@ function ProductList() {
                             </button>
                         </div>
                     </nav>
-                </motion.div>
+                </div>
 
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
+                <div
                     className="bg-white flex justify-center p-4 gap-4 rounded-xl shadow-lg"
                 >
                     <button className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-medium rounded-lg shadow-lg shadow-emerald-200 hover:shadow-xl transition-all">
@@ -867,7 +859,7 @@ function ProductList() {
                         Export to PDF
                     </button>
 
-                </motion.div>
+                </div>
             </div>
         </>
     );
