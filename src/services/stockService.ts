@@ -77,7 +77,37 @@ export const stockService = {
         statusId: string;
         description?: string;
     }) => 
-        axiosInstance.post('/api/damaged/add', data),
+        axiosInstance.post('/api/damaged/add', {
+            stock_id: data.stockId,
+            qty: data.damagedQty,
+            reason_id: data.reasonId,
+            status_id: data.statusId,
+            description: data.description || "N/A"
+        }),
+
+    // Get damaged stock table data
+    getDamagedTableData: () => 
+        axiosInstance.get('/api/damaged/table-data'),
+
+    // Search damaged stock records with filters
+    searchDamagedRecords: (filters: {
+        product_id?: string;
+        category_id?: string;
+        supplier_id?: string;
+        unit_id?: string;
+        fromDate?: string;
+        toDate?: string;
+    }) => {
+        const params = new URLSearchParams();
+        if (filters.product_id) params.append('product_id', filters.product_id);
+        if (filters.category_id) params.append('category_id', filters.category_id);
+        if (filters.supplier_id) params.append('supplier_id', filters.supplier_id);
+        if (filters.unit_id) params.append('unit_id', filters.unit_id);
+        if (filters.fromDate) params.append('fromDate', filters.fromDate);
+        if (filters.toDate) params.append('toDate', filters.toDate);
+        
+        return axiosInstance.get(`/api/damaged/search?${params.toString()}`);
+    },
 
     // Individual methods for specific dropdown needs
     getCategories: () => categoryService.getCategories(),
