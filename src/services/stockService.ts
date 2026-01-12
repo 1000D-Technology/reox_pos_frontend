@@ -60,6 +60,26 @@ export const stockService = {
     getStockByVariant: (variationId: string) => 
         axiosInstance.get(`/api/stock/get-stock-by-variant/${variationId}`),
 
+    // Get low stock list
+    getLowStockList: () => 
+        axiosInstance.get('/api/stock/low-stock'),
+
+    // Search low stock with filters
+    searchLowStock: (filters: {
+        category_id?: string;
+        unit_id?: string;
+        supplier_id?: string;
+        product_id?: string;
+    }) => {
+        const params = new URLSearchParams();
+        if (filters.category_id) params.append('category_id', filters.category_id);
+        if (filters.unit_id) params.append('unit_id', filters.unit_id);
+        if (filters.supplier_id) params.append('supplier_id', filters.supplier_id);
+        if (filters.product_id) params.append('product_id', filters.product_id);
+        
+        return axiosInstance.get(`/api/stock/low-stock/search?${params.toString()}`);
+    },
+
     // Get reasons for damaged stock
     getReasons: () => 
         axiosInstance.get('/api/reasons/all'),

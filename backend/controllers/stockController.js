@@ -154,3 +154,61 @@ exports.getStockForProduct = catchAsync(async (req, res, next) => {
         data: transformedData
     });
 });
+
+exports.getLowStockList = catchAsync(async (req, res, next) => {
+    const lowStockItems = await Stock.getLowStockRecords();
+
+    const formattedData = lowStockItems.map(item => {
+        // Determine status label based on quantity
+        let statusLabel = item.available_qty <= 5 ? 'Critical' : 'Low';
+
+        return {
+            productID: item.product_id_code,
+            productName: item.product_name,
+            unit: item.unit,
+            costPrice: item.cost_price,
+            mrp: item.mrp,
+            price: item.selling_price,
+            supplier: item.supplier,
+            stockStatus: `${item.available_qty} units - ${statusLabel}`
+        };
+    });
+
+    res.status(200).json({
+        success: true,
+        count: formattedData.length,
+        data: formattedData
+    });
+});
+
+exports.getFilteredLowStock = catchAsync(async (req, res, next) => {
+    // Extracting IDs from the request query object
+    const { category_id, unit_id, supplier_id, product_id } = req.query;
+
+    const items = await Stock.searchLowStock({
+        category_id,
+        unit_id,
+        supplier_id,
+        product_id
+    });
+
+    //Formats data to match the UI table requirements
+    const tableData = items.map(item => ({
+        productID: item.product_id_code,
+        productName: item.product_name,
+        unit: item.unit,
+        discount: "LKR 0.00", 
+        costPrice: item.cost_price,
+        mrp: item.mrp,
+        price: item.selling_price,
+        supplier: item.supplier,
+        // Status logic based on quantity
+        stockStatus: `${item.available_qty} units - ${item.available_qty <= 5 ? 'Critical' : 'Low'}`
+    }));
+
+    res.status(200).json({
+        success: true,
+        count: tableData.length,
+        data: tableData
+    });
+});

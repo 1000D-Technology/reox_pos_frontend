@@ -239,6 +239,87 @@ static async getStockByProductVariation(productId) {
     const [rows] = await db.execute(query, [productId]);
     return rows;
 }
+
+// Get all stock items where quantity is less than 15
+    static async getLowStockRecords() {
+        const query = `
+            SELECT 
+                p.product_code AS product_id_code,
+                p.product_name,
+                u.name AS unit,
+                s.qty AS available_qty,
+                s.cost_price,
+                s.mrp,
+                s.rsp AS selling_price,
+                sup.supplier_name AS supplier
+            FROM stock s
+            INNER JOIN product_variations pv ON s.product_variations_id = pv.id
+            INNER JOIN product p ON pv.product_id = p.id
+            INNER JOIN unit_id u ON p.unit_id = u.idunit_id
+            -- English Comment: Joining through grn to get the supplier name
+            INNER JOIN grn_items gi ON s.id = gi.stock_id
+            INNER JOIN grn g ON gi.grn_id = g.id
+            INNER JOIN supplier sup ON g.supplier_id = sup.id
+            WHERE s.qty < 15 AND s.qty >= 0
+            ORDER BY s.qty ASC
+        `;
+        const [rows] = await db.execute(query);
+        return rows;
+    }
+
+    //  Search low stock records based on provided filter IDs
+    static async searchLowStock(filters) {
+        let query = `
+            SELECT 
+                p.product_code AS product_id_code,
+                p.product_name,
+                u.name AS unit,
+                s.qty AS available_qty,
+                s.cost_price,
+                s.mrp,
+                s.rsp AS selling_price,
+                sup.supplier_name AS supplier
+            FROM stock s
+            INNER JOIN product_variations pv ON s.product_variations_id = pv.id
+            INNER JOIN product p ON pv.product_id = p.id
+            INNER JOIN unit_id u ON p.unit_id = u.idunit_id
+            INNER JOIN grn_items gi ON s.id = gi.stock_id
+            INNER JOIN grn g ON gi.grn_id = g.id
+            INNER JOIN supplier sup ON g.supplier_id = sup.id
+            WHERE s.qty < 15 AND s.qty >= 0 -- Base condition for low stock
+        `;
+
+        const queryParams = [];
+
+        // Filter by Supplier ID if provided
+        if (filters.supplier_id) {
+            query += ` AND g.supplier_id = ?`;
+            queryParams.push(filters.supplier_id);
+        }
+
+        //  Filter by Category ID if provided
+        if (filters.category_id) {
+            query += ` AND p.category_id = ?`;
+            queryParams.push(filters.category_id);
+        }
+
+        // : Filter by Unit ID if provided
+        if (filters.unit_id) {
+            query += ` AND p.unit_id = ?`;
+            queryParams.push(filters.unit_id);
+        }
+
+        //  Filter by specific Product ID if provided
+        if (filters.product_id) {
+            query += ` AND p.id = ?`;
+            queryParams.push(filters.product_id);
+        }
+
+        query += ` ORDER BY s.qty ASC`;
+
+        const [rows] = await db.execute(query, queryParams);
+        return rows;
+    }
 }
 
 module.exports = Stock;
