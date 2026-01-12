@@ -114,7 +114,7 @@ function StockList() {
             if (categoriesResponse.data?.success) {
                 const categoryOptions = categoriesResponse.data.data.map((category: any) => ({
                     value: category.id.toString(),
-                    label: category.name || category.category_name
+                    label: category.name
                 }));
                 setCategories(categoryOptions);
             }
@@ -123,7 +123,7 @@ function StockList() {
             if (unitsResponse.data?.success) {
                 const unitOptions = unitsResponse.data.data.map((unit: any) => ({
                     value: unit.id.toString(),
-                    label: unit.name || unit.unit_name
+                    label: unit.name
                 }));
                 setUnits(unitOptions);
             }
