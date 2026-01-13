@@ -89,6 +89,7 @@ class GRN {
         SELECT 
             g.id AS id,
             s.supplier_name AS supplierName,
+            s.id AS supplierId,
             g.bill_number AS billNumber,
             g.total AS totalAmount,
             g.paid_amount AS paidAmount,
@@ -109,6 +110,7 @@ class GRN {
         SELECT 
             g.id AS id,
             s.supplier_name AS supplierName,
+            s.id AS supplierId,
             g.bill_number AS billNumber,
             g.total AS totalAmount,
             g.paid_amount AS paidAmount,
