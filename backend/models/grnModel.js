@@ -89,6 +89,7 @@ class GRN {
         SELECT 
             g.id AS id,
             s.supplier_name AS supplierName,
+            s.id AS supplierId,
             g.bill_number AS billNumber,
             g.total AS totalAmount,
             g.paid_amount AS paidAmount,
@@ -109,6 +110,7 @@ class GRN {
         SELECT 
             g.id AS id,
             s.supplier_name AS supplierName,
+            s.id AS supplierId,
             g.bill_number AS billNumber,
             g.total AS totalAmount,
             g.paid_amount AS paidAmount,
@@ -142,6 +144,78 @@ class GRN {
 
         const [rows] = await db.execute(query, queryParams);
         return rows;
+    }
+
+    //  Fetch Bill Numbers for a specific supplier with active status
+    static async getActiveBillNumbersBySupplier(supplierId) {
+        const query = `
+            SELECT 
+                id, 
+                bill_number,
+                total,
+                balance
+            FROM grn 
+            WHERE supplier_id = ? 
+            AND grn_status_id = 1
+            ORDER BY create_at DESC
+        `;
+        
+        const [rows] = await db.execute(query, [supplierId]);
+        return rows;
+    }
+
+    static async updatePayment(data) {
+        const connection = await db.getConnection();
+        try {
+            await connection.beginTransaction();
+
+            // 1. Fetch current balance and paid amount for validation
+            const [grnRows] = await connection.execute(
+                'SELECT balance, paid_amount FROM grn WHERE id = ? FOR UPDATE',
+                [data.grn_id]
+            );
+
+            if (grnRows.length === 0) throw new Error("GRN record not found.");
+
+            const { balance, paid_amount } = grnRows[0];
+
+            // 2. Validation: Ensure new payment is not greater than current balance
+            if (parseFloat(data.payment_amount) > parseFloat(balance)) {
+                throw new Error(`Invalid Amount. Maximum payable balance is LKR ${balance}`);
+            }
+
+            // 3. Calculate new values
+            const newBalance = parseFloat(balance) - parseFloat(data.payment_amount);
+            const newPaidAmount = parseFloat(paid_amount) + parseFloat(data.payment_amount);
+            
+            // If balance becomes 0, status_id becomes 2 (Paid), else stays 1 (Pending)
+            const newStatusId = newBalance === 0 ? 2 : 1;
+
+            // 4. Update grn table
+            await connection.execute(
+                `UPDATE grn SET 
+                    balance = ?, 
+                    paid_amount = ?, 
+                    grn_status_id = ? 
+                 WHERE id = ?`,
+                [newBalance, newPaidAmount, newStatusId, data.grn_id]
+            );
+
+            // 5. Insert record into grn_payment table
+            await connection.execute(
+                `INSERT INTO grn_payments (grn_id, paid_amount, payment_types_id, created_at) 
+                 VALUES (?, ?, ?, NOW())`,
+                [data.grn_id, data.payment_amount, data.payment_type_id]
+            );
+
+            await connection.commit();
+            return { success: true, remainingBalance: newBalance };
+        } catch (error) {
+            await connection.rollback();
+            throw error;
+        } finally {
+            connection.release();
+        }
     }
 }
 
