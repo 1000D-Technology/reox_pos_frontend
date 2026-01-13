@@ -235,26 +235,6 @@ function SupplierGrn() {
         }
     };
 
-    const handleStatusToggle = async (id: number, currentStatus: string) => {
-        const newStatus = currentStatus === 'Active' ? 'Inactive' : 'Active';
-
-        try {
-            // Simulate API call
-            await new Promise(resolve => setTimeout(resolve, 500));
-
-            setGrnData(prev =>
-                prev.map(item =>
-                    item.id === id ? { ...item, statusName: newStatus } : item
-                )
-            );
-
-            toast.success(`Status updated to ${newStatus} successfully!`);
-        } catch (error) {
-            console.error('Error updating status:', error);
-            toast.error('Failed to update status');
-        }
-    };
-
     // Add state for pagination
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage] = useState(10);
@@ -537,20 +517,12 @@ function SupplierGrn() {
                                         <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-600">
                                             {grn.grnDate}
                                         </td>
-                                        <td className="px-6 py-2 whitespace-nowrap">
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleStatusToggle(grn.id, grn.statusName);
-                                                }}
-                                                className={`px-4 py-1.5 text-xs font-semibold rounded-full transition-all transform hover:scale-105 ${
-                                                    grn.statusName === 'Active'
-                                                        ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-200 hover:from-emerald-600 hover:to-emerald-700'
-                                                        : 'bg-gradient-to-r from-yellow-500 to-yellow-600 text-white shadow-lg shadow-yellow-200 hover:from-yellow-600 hover:to-yellow-700'
-                                                }`}
-                                            >
-                                                {grn.statusName}
-                                            </button>
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                                                grn.statusName === 'Active' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'
+                                            }`}>
+                                                {grn.statusName === 'Active' ? 'Pending' : 'Complete'}
+                                            </span>
                                         </td>
                                         <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
                                             <div className="flex gap-2">

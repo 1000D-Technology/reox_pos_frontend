@@ -52,3 +52,54 @@ exports.searchGRNList = catchAsync(async (req, res, next) => {
         count: grns.length
     });
 });
+
+exports.getSupplierBills = catchAsync(async (req, res, next) => {
+    const { supplier_id } = req.params;
+
+    if (!supplier_id) {
+        return res.status(400).json({
+            success: false,
+            message: "Supplier ID is required"
+        });
+    }
+
+    const bills = await Grn.getActiveBillNumbersBySupplier(supplier_id);
+
+    res.status(200).json({
+        success: true,
+        count: bills.length,
+        data: bills
+    });
+});
+
+exports.processPayment = catchAsync(async (req, res, next) => {
+    const { grn_id, payment_amount, payment_type_id } = req.body;
+
+    // English Comments: Basic check for input values
+    if (!grn_id || !payment_amount || !payment_type_id) {
+        return res.status(400).json({
+            success: false,
+            message: "Please provide GRN ID, payment amount and payment type."
+        });
+    }
+
+    try {
+        const result = await Grn.updatePayment({
+            grn_id,
+            payment_amount,
+            payment_type_id
+        });
+
+        res.status(200).json({
+            success: true,
+            message: "Payment processed successfully.",
+            balance: result.remainingBalance
+        });
+    } catch (error) {
+        // English Comments: Sends the specific validation error (e.g., amount exceeded) back to UI
+        res.status(400).json({
+            success: false,
+            message: error.message
+        });
+    }
+});
