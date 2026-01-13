@@ -56,54 +56,6 @@ function SupplierPayment() {
     });
     const [isLoadingStats, setIsLoadingStats] = useState(true);
 
-    const summaryCards = [
-        {
-            title: 'Total Bills',
-            value: isLoadingStats ? '...' : stats.totalGrn.toString(),
-            icon: <FileSpreadsheet size={20} />,
-            trend: '',
-            color: 'bg-gradient-to-br from-emerald-400 to-emerald-500',
-            iconColor: 'text-white',
-            bgGlow: 'shadow-emerald-200'
-        },
-        {
-            title: 'Total Amount',
-            value: isLoadingStats ? '...' : `LKR ${stats.totalAmount.toLocaleString()}`,
-            icon: <DollarSign size={20} />,
-            trend: '',
-            color: 'bg-gradient-to-br from-purple-400 to-purple-500',
-            iconColor: 'text-white',
-            bgGlow: 'shadow-purple-200'
-        },
-        {
-            title: 'Total Paid',
-            value: isLoadingStats ? '...' : `LKR ${stats.totalPaid.toLocaleString()}`,
-            icon: <Download size={20} />,
-            trend: '',
-            color: 'bg-gradient-to-br from-blue-400 to-blue-500',
-            iconColor: 'text-white',
-            bgGlow: 'shadow-blue-200'
-        },
-        {
-            title: 'Total Balance',
-            value: isLoadingStats ? '...' : `LKR ${stats.totalBalance.toLocaleString()}`,
-            icon: <DollarSign size={20} />,
-            trend: '',
-            color: 'bg-gradient-to-br from-red-400 to-red-500',
-            iconColor: 'text-white',
-            bgGlow: 'shadow-red-200'
-        },
-        {
-            title: 'Open Bills',
-            value: isLoadingStats ? '...' : '20',
-            icon: <BookmarkCheck size={20} />,
-            trend: '',
-            color: 'bg-gradient-to-br from-yellow-400 to-yellow-500',
-            iconColor: 'text-white',
-            bgGlow: 'shadow-yellow-200'
-        },
-    ];
-
     const [selectedIndex, setSelectedIndex] = useState(0);
     const [suppliers, setSuppliers] = useState<SupplierOption[]>([]);
     const [isLoadingSuppliers, setIsLoadingSuppliers] = useState(true);
@@ -417,38 +369,6 @@ function SupplierPayment() {
                     <h1 className="text-3xl font-semibold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
                         Supplier Payments
                     </h1>
-                </div>
-
-                <div className={'grid md:grid-cols-5 grid-cols-1 gap-4'}>
-                    {summaryCards.map((card, index) => (
-                        <motion.div
-                            key={index}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: index * 0.1 }}
-                            whileHover={{ scale: 1.05, y: -2 }}
-                            className={`flex items-center p-4 space-x-3 transition-all bg-white rounded-2xl shadow-lg hover:shadow-xl ${card.bgGlow} cursor-pointer group relative overflow-hidden`}
-                        >
-                            <div className="absolute inset-0 bg-gradient-to-br from-transparent via-gray-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-
-                            <div className={`p-3 rounded-full ${card.color} shadow-md relative z-10`}>
-                                <span className={card.iconColor}>{card.icon}</span>
-                            </div>
-
-                            <div className="w-px h-10 bg-gray-200"></div>
-
-                            <div className="relative z-10 flex-1">
-                                <div className="flex items-center justify-between">
-                                    <p className="text-sm text-gray-500">{card.title}</p>
-                                    <div className={`flex items-center gap-0.5 text-[10px] font-semibold ${card.trend.startsWith('+') ? 'text-emerald-600' : 'text-red-600'}`}>
-                                        {card.trend.startsWith('+') ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
-                                        {card.trend}
-                                    </div>
-                                </div>
-                                <p className="text-sm font-bold text-gray-700">{card.value}</p>
-                            </div>
-                        </motion.div>
-                    ))}
                 </div>
 
                 <motion.div
