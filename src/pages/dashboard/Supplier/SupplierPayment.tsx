@@ -5,8 +5,10 @@ import {
     Copy,
     DollarSign,
     Download,
+    Eye,
     FileSpreadsheet,
     HandCoins,
+    Printer,
     RefreshCw,
     Save,
     ArrowUpRight,
@@ -14,106 +16,72 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
+import toast, { Toaster } from 'react-hot-toast';
+import { supplierService } from '../../../services/supplierService';
+import { grnService } from '../../../services/grnService';
+import { paymentTypeService } from '../../../services/paymentTypeService';
 import TypeableSelect from "../../../components/TypeableSelect.tsx";
 
+interface GRNData {
+    id: number;
+    supplierName: string;
+    supplierId: number;
+    billNumber: string;
+    totalAmount: number;
+    paidAmount: number;
+    balanceAmount: number;
+    grnDate: string;
+    statusName: string;
+}
+
+interface Supplier {
+    id: number;
+    supplierName: string;
+    companyName?: string;
+}
+
+interface SupplierOption {
+    value: string | number;
+    label: string;
+}
+
 function SupplierPayment() {
-
-    const summaryCards = [
-        {
-            title: 'Total Bills',
-            value: '50',
-            icon: <FileSpreadsheet size={20} />,
-            trend: '+12%',
-            color: 'bg-gradient-to-br from-emerald-400 to-emerald-500',
-            iconColor: 'text-white',
-            bgGlow: 'shadow-emerald-200'
-        },
-        {
-            title: 'Total Amount',
-            value: 'LKR 154,250.00',
-            icon: <DollarSign size={20} />,
-            trend: '+8%',
-            color: 'bg-gradient-to-br from-purple-400 to-purple-500',
-            iconColor: 'text-white',
-            bgGlow: 'shadow-purple-200'
-        },
-        {
-            title: 'Total Paid',
-            value: 'LKR 1,540,250.00',
-            icon: <Download size={20} />,
-            trend: '+15%',
-            color: 'bg-gradient-to-br from-blue-400 to-blue-500',
-            iconColor: 'text-white',
-            bgGlow: 'shadow-blue-200'
-        },
-        {
-            title: 'Total Balance',
-            value: 'LKR 1,540,250.00',
-            icon: <DollarSign size={20} />,
-            trend: '-5%',
-            color: 'bg-gradient-to-br from-red-400 to-red-500',
-            iconColor: 'text-white',
-            bgGlow: 'shadow-red-200'
-        },
-        {
-            title: 'Open Bills',
-            value: '20',
-            icon: <BookmarkCheck size={20} />,
-            trend: '+3%',
-            color: 'bg-gradient-to-br from-yellow-400 to-yellow-500',
-            iconColor: 'text-white',
-            bgGlow: 'shadow-yellow-200'
-        },
-    ];
-
-    const InvoiceData = [
-        {
-            supplierid: '250929003',
-            name: 'ABC Suppliers',
-            billnumber: 'BILL-001',
-            amount: '5200.00',
-            paid: '5200.00',
-            balance: '0.00',
-            date: '2025-01-15',
-            status: 'Paid',
-        },
-    ];
-
-    const [selectedSupplier, setSelectedSupplier] = useState<string | number | null>(null);
-    const [selectedBillNumber, setSelectedBillNumber] = useState<string | number | null>(null);
-
-// Create options for suppliers (unique suppliers from InvoiceData)
-    const supplierOptions = Array.from(
-        new Set(InvoiceData.map(invoice => invoice.supplierid))
-    ).map(id => {
-        const invoice = InvoiceData.find(inv => inv.supplierid === id);
-        return {
-            value: id,
-            label: `${id} - ${invoice?.name}`
-        };
+    const [grnData, setGrnData] = useState<GRNData[]>([]);
+    const [isLoadingGRN, setIsLoadingGRN] = useState(true);
+    const [stats, setStats] = useState({
+        totalGrn: 0,
+        totalAmount: 0,
+        totalPaid: 0,
+        totalBalance: 0
     });
+    const [isLoadingStats, setIsLoadingStats] = useState(true);
 
-// Create options for bill numbers (filtered by selected supplier if any)
-    const billNumberOptions = InvoiceData
-        .filter(invoice => !selectedSupplier || invoice.supplierid === selectedSupplier)
-        .map(invoice => ({
-            value: invoice.billnumber,
-            label: `${invoice.billnumber} (LKR ${invoice.amount})`
-        }));
+    const [selectedIndex, setSelectedIndex] = useState(0);
+    const [suppliers, setSuppliers] = useState<SupplierOption[]>([]);
+    const [isLoadingSuppliers, setIsLoadingSuppliers] = useState(true);
+    const [selectedSupplier, setSelectedSupplier] = useState<SupplierOption | null>(null);
+    
+    // Payment processing state
+    const [selectedBillNumber, setSelectedBillNumber] = useState<string | null>(null);
+    const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
+    const [billNumberOptions, setBillNumberOptions] = useState<{id: number, bill_number: string, total: number, balance: number}[]>([]);
+    const [isLoadingBills, setIsLoadingBills] = useState(false);
+    const [paymentTypes, setPaymentTypes] = useState<any[]>([]);
+    const [selectedPaymentType, setSelectedPaymentType] = useState<string | null>(null);
+    const [isLoadingPaymentTypes, setIsLoadingPaymentTypes] = useState(true);
+    const [paymentAmount, setPaymentAmount] = useState<string>('');
+    const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+    const [selectedBill, setSelectedBill] = useState<any>(null);
 
-// Get selected invoice details
-    const selectedInvoice = InvoiceData.find(
-        inv => inv.billnumber === selectedBillNumber
-    );
-
+    // Add state for pagination
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage] = useState(10);
 
-// Calculate pagination values
-    const totalPages = Math.ceil(InvoiceData.length / itemsPerPage);
+    // Calculate pagination values
+    const totalPages = Math.ceil(grnData.length / itemsPerPage);
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
-    const currentInvoiceData = InvoiceData.slice(startIndex, endIndex);
+    const currentGRNData = grnData.slice(startIndex, endIndex);
 
 // Pagination functions
     const goToPage = (page: number) => {
@@ -167,13 +135,11 @@ function SupplierPayment() {
     };
 
 
-    const [selectedIndex, setSelectedIndex] = useState(0);
-
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === "ArrowDown") {
                 e.preventDefault();
-                setSelectedIndex((prev) => (prev < InvoiceData.length - 1 ? prev + 1 : prev));
+                setSelectedIndex((prev) => (prev < grnData.length - 1 ? prev + 1 : prev));
             } else if (e.key === "ArrowUp") {
                 e.preventDefault();
                 setSelectedIndex((prev) => (prev > 0 ? prev - 1 : prev));
@@ -182,10 +148,217 @@ function SupplierPayment() {
 
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [InvoiceData.length]);
+    }, [grnData.length]);
+
+    // Fetch suppliers on component mount
+    useEffect(() => {
+        const fetchSuppliers = async () => {
+            try {
+                setIsLoadingSuppliers(true);
+                const response = await supplierService.getSupplierDropdownList();
+                const supplierOptions = response.data.data.map((supplier: Supplier) => ({
+                    value: supplier.id.toString(),
+                    label: supplier.companyName
+                        ? `${supplier.supplierName} - ${supplier.companyName}`
+                        : supplier.supplierName,
+                }));
+                setSuppliers(supplierOptions);
+            } catch (error) {
+                console.error('Error fetching suppliers:', error);
+                toast.error('Failed to load suppliers');
+            } finally {
+                setIsLoadingSuppliers(false);
+            }
+        };
+
+        fetchSuppliers();
+    }, []);
+
+    // Fetch stats data on component mount
+    useEffect(() => {
+        const fetchStats = async () => {
+            try {
+                setIsLoadingStats(true);
+                const response = await grnService.getStats();
+                setStats(response.data.data);
+            } catch (error) {
+                console.error('Error fetching stats:', error);
+                toast.error('Failed to load statistics');
+            } finally {
+                setIsLoadingStats(false);
+            }
+        };
+
+        fetchStats();
+    }, []);
+
+    // Fetch GRN data on component mount
+    useEffect(() => {
+        const fetchGRNData = async () => {
+            try {
+                setIsLoadingGRN(true);
+                const response = await grnService.getGRNList();
+                setGrnData(response.data.data || []);
+            } catch (error) {
+                console.error('Error fetching GRN data:', error);
+                toast.error('Failed to load GRN data');
+            } finally {
+                setIsLoadingGRN(false);
+            }
+        };
+
+        fetchGRNData();
+    }, []);
+
+    // Fetch bills when supplier changes
+    useEffect(() => {
+        const fetchBills = async () => {
+            if (!selectedSupplier?.value) {
+                setBillNumberOptions([]);
+                setSelectedBillNumber(null);
+                return;
+            }
+
+            try {
+                setIsLoadingBills(true);
+                const response = await grnService.getBillsBySupplier(selectedSupplier.value);
+                setBillNumberOptions(response.data.data || []);
+            } catch (error) {
+                console.error('Error fetching bills:', error);
+                toast.error('Failed to load bill numbers');
+                setBillNumberOptions([]);
+            } finally {
+                setIsLoadingBills(false);
+            }
+        };
+
+        fetchBills();
+    }, [selectedSupplier]);
+
+    // Fetch payment types on component mount
+    useEffect(() => {
+        const fetchPaymentTypes = async () => {
+            try {
+                setIsLoadingPaymentTypes(true);
+                const response = await paymentTypeService.getPaymentType();
+                setPaymentTypes(response.data.data || []);
+            } catch (error) {
+                console.error('Error fetching payment types:', error);
+                toast.error('Failed to load payment types');
+            } finally {
+                setIsLoadingPaymentTypes(false);
+            }
+        };
+
+        fetchPaymentTypes();
+    }, []);
+
+    // Handle payment processing
+    const handlePayment = async () => {
+        // Validation
+        if (!selectedBill) {
+            toast.error('Please select a bill first');
+            return;
+        }
+        
+        if (!paymentAmount || parseFloat(paymentAmount) <= 0) {
+            toast.error('Please enter a valid payment amount');
+            return;
+        }
+        
+        if (!selectedPaymentType) {
+            toast.error('Please select a payment type');
+            return;
+        }
+        
+        const amount = parseFloat(paymentAmount);
+        const balance = parseFloat(selectedInvoice?.balance || '0');
+        
+        if (amount > balance) {
+            toast.error('Payment amount cannot exceed the outstanding balance');
+            return;
+        }
+        
+        try {
+            setIsProcessingPayment(true);
+            
+            const paymentData = {
+                grn_id: selectedBill.id,
+                payment_amount: amount,
+                payment_type_id: parseInt(selectedPaymentType)
+            };
+            
+            const response = await grnService.processPayment(paymentData);
+            
+            if (response.data.success) {
+                toast.success('Payment processed successfully!');
+                
+                // Clear form
+                setPaymentAmount('');
+                setSelectedPaymentType(null);
+                setSelectedBillNumber(null);
+                setSelectedBill(null);
+                setSelectedInvoice(null);
+                
+                // Refresh data
+                const grnResponse = await grnService.getGRNList();
+                setGrnData(grnResponse.data.data || []);
+                
+                const statsResponse = await grnService.getStats();
+                setStats(statsResponse.data.data);
+                
+                // Refresh bills for the same supplier
+                if (selectedSupplier?.value) {
+                    const billsResponse = await grnService.getBillsBySupplier(selectedSupplier.value);
+                    setBillNumberOptions(billsResponse.data.data || []);
+                }
+            }
+        } catch (error: any) {
+            console.error('Payment processing error:', error);
+            const errorMessage = error.response?.data?.message || 'Failed to process payment';
+            toast.error(errorMessage);
+        } finally {
+            setIsProcessingPayment(false);
+        }
+    };
+    
+    // Handle form clear
+    const handleClear = () => {
+        setSelectedSupplier(null);
+        setSelectedBillNumber(null);
+        setSelectedBill(null);
+        setSelectedInvoice(null);
+        setPaymentAmount('');
+        setSelectedPaymentType(null);
+        setBillNumberOptions([]);
+    };
+
+
 
     return (
         <>
+            <Toaster
+                position="top-right"
+                toastOptions={{
+                    duration: 4000,
+                    style: {
+                        background: '#363636',
+                        color: '#fff',
+                    },
+                    success: {
+                        duration: 3000,
+                        style: {
+                            background: '#10b981',
+                        },
+                    },
+                    error: {
+                        duration: 4000,
+                        style: {
+                            background: '#ef4444',
+                        },
+                    },
+                }}
+            />
             <div className={'flex flex-col gap-4 h-full'}>
                 <div>
                     <div className="text-sm text-gray-400 flex items-center">
@@ -198,38 +371,6 @@ function SupplierPayment() {
                     </h1>
                 </div>
 
-                <div className={'grid md:grid-cols-5 grid-cols-1 gap-4'}>
-                    {summaryCards.map((card, index) => (
-                        <motion.div
-                            key={index}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: index * 0.1 }}
-                            whileHover={{ scale: 1.05, y: -2 }}
-                            className={`flex items-center p-4 space-x-3 transition-all bg-white rounded-2xl shadow-lg hover:shadow-xl ${card.bgGlow} cursor-pointer group relative overflow-hidden`}
-                        >
-                            <div className="absolute inset-0 bg-gradient-to-br from-transparent via-gray-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-
-                            <div className={`p-3 rounded-full ${card.color} shadow-md relative z-10`}>
-                                <span className={card.iconColor}>{card.icon}</span>
-                            </div>
-
-                            <div className="w-px h-10 bg-gray-200"></div>
-
-                            <div className="relative z-10 flex-1">
-                                <div className="flex items-center justify-between">
-                                    <p className="text-sm text-gray-500">{card.title}</p>
-                                    <div className={`flex items-center gap-0.5 text-[10px] font-semibold ${card.trend.startsWith('+') ? 'text-emerald-600' : 'text-red-600'}`}>
-                                        {card.trend.startsWith('+') ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
-                                        {card.trend}
-                                    </div>
-                                </div>
-                                <p className="text-sm font-bold text-gray-700">{card.value}</p>
-                            </div>
-                        </motion.div>
-                    ))}
-                </div>
-
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -237,33 +378,60 @@ function SupplierPayment() {
                     className={'bg-white rounded-xl p-4 flex flex-col shadow-lg'}
                 >
                     <h2 className="text-xl font-semibold text-gray-700 mb-3">Payment Processing</h2>
-                    <div className={'grid md:grid-cols-5 gap-4'}>
-
+                    <div className={'grid md:grid-cols-6 gap-4'}>
                         <div>
                             <label htmlFor="supplier" className="block text-sm font-medium text-gray-700 mb-1">
                                 Supplier
                             </label>
                             <TypeableSelect
-                                options={supplierOptions}
-                                value={selectedSupplier}
-                                onChange={(option) => {
-                                    setSelectedSupplier(option?.value || null);
+                                options={suppliers}
+                                value={selectedSupplier?.value || null}
+                                onChange={(opt) => {
+                                    setSelectedSupplier(opt);
                                     setSelectedBillNumber(null); // Reset bill number when supplier changes
                                 }}
-                                placeholder="Type to search supplier"
+                                placeholder={isLoadingSuppliers ? "Loading suppliers..." : "Type to search supplier"}
+                                disabled={isLoadingSuppliers}
                             />
                         </div>
                         <div>
                             <label htmlFor="bill-number" className="block text-sm font-medium text-gray-700 mb-1">
                                 Bill Number
                             </label>
-                            <TypeableSelect
-                                options={billNumberOptions}
-                                value={selectedBillNumber}
-                                onChange={(option) => setSelectedBillNumber(option?.value || null)}
-                                placeholder="Type to select Bill Number..."
-                                disabled={!selectedSupplier}
-                            />
+                            <select
+                                id="bill-number"
+                                value={selectedBillNumber || ''}
+                                onChange={(e) => {
+                                    const billNumber = e.target.value || null;
+                                    setSelectedBillNumber(billNumber);
+                                    
+                                    // Find the selected bill object and set invoice details
+                                    if (billNumber) {
+                                        const selectedBillData = billNumberOptions.find(bill => bill.bill_number === billNumber);
+                                        if (selectedBillData) {
+                                            setSelectedBill(selectedBillData);
+                                            setSelectedInvoice({
+                                                amount: selectedBillData.total.toFixed(2),
+                                                balance: selectedBillData.balance.toFixed(2)
+                                            });
+                                        }
+                                    } else {
+                                        setSelectedBill(null);
+                                        setSelectedInvoice(null);
+                                    }
+                                }}
+                                disabled={!selectedSupplier || isLoadingBills}
+                                className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-400 focus:outline-none transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
+                            >
+                                <option value="">
+                                    {isLoadingBills ? 'Loading bills...' : !selectedSupplier ? 'Select supplier first' : 'Select Bill Number...'}
+                                </option>
+                                {billNumberOptions.map((bill) => (
+                                    <option key={bill.id} value={bill.bill_number}>
+                                        {bill.bill_number}
+                                    </option>
+                                ))}
+                            </select>
                         </div>
                         <div className="flex flex-col justify-end">
                             <label className="block text-xs font-medium text-gray-500 mb-1">
@@ -283,17 +451,58 @@ function SupplierPayment() {
                                 New Payment
                             </label>
                             <input
-                                type="text"
+                                type="number"
                                 id="new-payment"
+                                value={paymentAmount}
+                                onChange={(e) => setPaymentAmount(e.target.value)}
                                 placeholder="Enter Amount..."
+                                min="0"
+                                step="0.01"
+                                max={selectedInvoice?.balance}
                                 className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-400 focus:outline-none transition-all"
                             />
                         </div>
+                        
+                        <div>
+                            <label htmlFor="payment-type" className="block text-sm font-medium text-gray-700 mb-1">
+                                Payment Type
+                            </label>
+                            <select
+                                id="payment-type"
+                                value={selectedPaymentType || ''}
+                                onChange={(e) => setSelectedPaymentType(e.target.value || null)}
+                                disabled={isLoadingPaymentTypes}
+                                className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-400 focus:outline-none transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
+                            >
+                                <option value="">
+                                    {isLoadingPaymentTypes ? 'Loading payment types...' : 'Select Payment Type...'}
+                                </option>
+                                {paymentTypes.map((paymentType) => (
+                                    <option key={paymentType.id} value={paymentType.id}>
+                                        {paymentType.payment_types}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
                         <div className={'grid grid-cols-2 md:items-end items-start gap-2 text-white font-medium'}>
-                            <button className={'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 py-2 rounded-lg flex items-center justify-center shadow-lg shadow-emerald-200 hover:shadow-xl transition-all'}>
-                                <HandCoins className="mr-2" size={14} />Pay Now
+                            <button 
+                                onClick={handlePayment}
+                                disabled={isProcessingPayment || !selectedBill || !paymentAmount || !selectedPaymentType}
+                                className={'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 py-2 rounded-lg flex items-center justify-center shadow-lg shadow-emerald-200 hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed'}
+                            >
+                                {isProcessingPayment ? (
+                                    <RefreshCw className="animate-spin mr-2" size={14} />
+                                ) : (
+                                    <HandCoins className="mr-2" size={14} />
+                                )}
+                                {isProcessingPayment ? 'Processing...' : 'Pay Now'}
                             </button>
-                            <button className={'bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 py-2 rounded-lg flex items-center justify-center shadow-lg shadow-gray-200 hover:shadow-xl transition-all'}>
+                            <button 
+                                onClick={handleClear}
+                                disabled={isProcessingPayment}
+                                className={'bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 py-2 rounded-lg flex items-center justify-center shadow-lg shadow-gray-200 hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed'}
+                            >
                                 <RefreshCw className="mr-2" size={14} />Clear
                             </button>
                         </div>
@@ -312,17 +521,17 @@ function SupplierPayment() {
                             <tr>
                                 {[
                                     'Supplier ID',
-                                    'Name',
+                                    'Supplier Name',
                                     'Bill Number',
                                     'Amount',
                                     'Paid',
                                     'Balance',
                                     'Date',
                                     'Status',
-                                    'Actions',
+                                    'Action'
                                 ].map((header, i, arr) => (
                                     <th
-                                        key={header}
+                                        key={i}
                                         scope="col"
                                         className={`px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider ${
                                             i === 0 ? 'rounded-tl-lg' : i === arr.length - 1 ? 'rounded-tr-lg' : ''
@@ -335,60 +544,76 @@ function SupplierPayment() {
                             </thead>
 
                             <tbody className="bg-white divide-y divide-gray-200">
-
-                            {InvoiceData.map((invoice, index) => (
-                                <tr
-                                    key={index}
-                                    onClick={() => setSelectedIndex(index)}
-                                    className={`cursor-pointer transition-all ${
-                                        index === selectedIndex
-                                            ? 'bg-emerald-50 border-l-4 border-l-emerald-500'
-                                            : 'hover:bg-gray-50'
-                                    }`}
-                                >
-                                    <td className="px-6 py-2 whitespace-nowrap text-sm font-semibold text-gray-800">
-                                        {invoice.supplierid}
-                                    </td>
-                                    <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-gray-700">
-                                        {invoice.name}
-                                    </td>
-                                    <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-gray-600">
-                                        {invoice.billnumber}
-                                    </td>
-                                    <td className="px-6 py-2 whitespace-nowrap text-sm font-bold text-emerald-600">
-                                        LKR {invoice.amount}
-                                    </td>
-                                    <td className="px-6 py-2 whitespace-nowrap text-sm font-bold text-blue-600">
-                                        LKR {invoice.paid}
-                                    </td>
-                                    <td className="px-6 py-2 whitespace-nowrap text-sm font-bold text-red-600">
-                                        LKR {invoice.balance}
-                                    </td>
-                                    <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-gray-600">
-                                        {invoice.date}
-                                    </td>
-                                    <td className="px-6 py-2 whitespace-nowrap">
-                                            <span className={`px-3 py-1 text-xs font-semibold rounded-full ${
-                                                invoice.status === 'Paid'
-                                                    ? 'bg-gradient-to-r from-emerald-100 to-emerald-200 text-emerald-800'
-                                                    : 'bg-gradient-to-r from-yellow-100 to-yellow-200 text-yellow-800'
-                                            }`}>
-                                                {invoice.status}
-                                            </span>
-                                    </td>
-                                    <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
-                                        <div className="flex gap-2">
-                                            <button className="p-2 bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-white rounded-lg shadow-md hover:shadow-lg transition-all">
-                                                <Save size={16} />
-                                            </button>
-                                            <button className="p-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all">
-                                                <Copy size={16} />
-                                            </button>
+                            {isLoadingGRN ? (
+                                <tr>
+                                    <td colSpan={9} className="px-6 py-8 text-center text-gray-500">
+                                        <div className="flex items-center justify-center">
+                                            <RefreshCw className="animate-spin mr-2" size={16} />
+                                            Loading GRN data...
                                         </div>
                                     </td>
                                 </tr>
-                            ))}
-
+                            ) : grnData.length === 0 ? (
+                                <tr>
+                                    <td colSpan={9} className="px-6 py-8 text-center text-gray-500">
+                                        No GRN records found
+                                    </td>
+                                </tr>
+                            ) : (
+                                grnData.map((grn, index) => (
+                                    <tr
+                                        key={grn.id}
+                                        onClick={() => setSelectedIndex(index)}
+                                        className={`cursor-pointer transition-all ${
+                                            selectedIndex === index
+                                                ? 'bg-emerald-50 border-l-4 border-l-emerald-500'
+                                                : 'hover:bg-gray-50'
+                                        }`}
+                                    >
+                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-semibold text-gray-800">
+                                            {grn.supplierId}
+                                        </td>
+                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-gray-700">
+                                            {grn.supplierName}
+                                        </td>
+                                        <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-600">
+                                            {grn.billNumber}
+                                        </td>
+                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-bold text-emerald-600">
+                                            LKR {grn.totalAmount.toLocaleString()}
+                                        </td>
+                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-blue-600">
+                                            LKR {grn.paidAmount.toLocaleString()}
+                                        </td>
+                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-red-600">
+                                            LKR {grn.balanceAmount.toLocaleString()}
+                                        </td>
+                                        <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-600">
+                                            {grn.grnDate}
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                                                grn.statusName === 'Active' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'
+                                            }`}>
+                                                {grn.statusName === 'Active' ? 'Pending' : 'Complete'}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
+                                            <div className="flex gap-2">
+                                                <button className="p-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all">
+                                                    <Eye size={16}/>
+                                                </button>
+                                                <button className="p-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all">
+                                                    <Printer size={16}/>
+                                                </button>
+                                                <button className="p-2 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all">
+                                                    <Copy size={16}/>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
                             </tbody>
                         </table>
                     </div>
@@ -396,8 +621,8 @@ function SupplierPayment() {
                     <nav className="bg-white flex items-center justify-between sm:px-6 pt-4 border-t-2 border-gray-100">
                         <div className="text-sm text-gray-600">
                             Showing <span className="font-semibold text-gray-800">{startIndex + 1}</span> to{' '}
-                            <span className="font-semibold text-gray-800">{Math.min(endIndex, InvoiceData.length)}</span> of{' '}
-                            <span className="font-semibold text-gray-800">{InvoiceData.length}</span> results
+                            <span className="font-semibold text-gray-800">{Math.min(endIndex, grnData.length)}</span> of{' '}
+                            <span className="font-semibold text-gray-800">{grnData.length}</span> results
                         </div>
                         <div className="flex items-center space-x-2">
                             <button

@@ -1,4 +1,4 @@
-import { useState,useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Search, Barcode, ShoppingCart, Trash2, Plus, Minus,
@@ -7,18 +7,7 @@ import {
     ArrowUpDown, BanknoteIcon, ArrowRightLeft, AlertCircle
 } from 'lucide-react';
 import TypeableSelect from "../../components/TypeableSelect.tsx";
-
-// Update demo products with isBulk property
-const demoProducts = [
-    { id: 1, name: 'Coca Cola 330ml', barcode: '8901234567890', price: 150, wholesalePrice: 130, stock: 150, category: 'Beverages', isBulk: false },
-    { id: 2, name: 'Lays Chips 50g', barcode: '8901234567891', price: 80, wholesalePrice: 70, stock: 200, category: 'Snacks', isBulk: false },
-    { id: 3, name: 'Rice 50kg Bag', barcode: '8901234567892', price: 5000, wholesalePrice: 4500, stock: 50, category: 'Grains', isBulk: true },
-    { id: 4, name: 'Rice 1kg', barcode: '8901234567893', price: 120, wholesalePrice: 100, stock: 500, category: 'Grains', isBulk: false },
-    { id: 5, name: 'Sugar 50kg Bag', barcode: '8901234567894', price: 6000, wholesalePrice: 5500, stock: 30, category: 'Sweeteners', isBulk: true },
-    { id: 6, name: 'Sugar 1kg', barcode: '8901234567895', price: 140, wholesalePrice: 120, stock: 400, category: 'Sweeteners', isBulk: false },
-    { id: 7, name: 'Flour 50kg Bag', barcode: '8901234567896', price: 4500, wholesalePrice: 4000, stock: 40, category: 'Baking', isBulk: true },
-    { id: 8, name: 'Flour 1kg', barcode: '8901234567897', price: 100, wholesalePrice: 85, stock: 600, category: 'Baking', isBulk: false },
-];
+import { posService } from '../../services/posService';
 
 const demoInvoices = [
     {
@@ -51,11 +40,11 @@ const demoInvoices = [
 
 
 const demoCustomers = [
-    { id: 1, name: 'Rajesh Kumar', contact: '0771234567',credit:5000 },
-    { id: 2, name: 'Priya Sharma', contact: '0772234567',credit:5000 },
-    { id: 3, name: 'Amit Patel', contact: '0773234567',credit:5000 },
-    { id: 4, name: 'Sunita Rao', contact: '0774234567',credit:5000 },
-    { id: 5, name: 'Vikram Singh', contact: '0775234567',credit:5000 },
+    { id: 1, name: 'Rajesh Kumar', contact: '0771234567', credit: 5000 },
+    { id: 2, name: 'Priya Sharma', contact: '0772234567', credit: 5000 },
+    { id: 3, name: 'Amit Patel', contact: '0773234567', credit: 5000 },
+    { id: 4, name: 'Sunita Rao', contact: '0774234567', credit: 5000 },
+    { id: 5, name: 'Vikram Singh', contact: '0775234567', credit: 5000 },
 ];
 
 interface CartItem {
@@ -68,6 +57,7 @@ interface CartItem {
     discount: number;
     stock: number;
     category: string;
+    productCode: string;
 }
 
 interface PaymentAmount {
@@ -79,24 +69,52 @@ interface Customer {
     id: number;
     name: string;
     contact: string;
+    credit: number;
 }
 interface ReturnItem extends CartItem {
     returnQuantity: number;
 }
 interface Product {
-    id: number;
-    name: string;
+    id: number;           // මෙය stockID ලෙස ලැබුණත් id ලෙස map කරගමු
+    name: string;         // මෙය displayName ලෙස ලැබුණත් name ලෙස map කරගමු
     barcode: string;
     price: number;
     wholesalePrice: number;
     stock: number;
-    category: string;
+    category: string;     // unit/category දෙකම මෙයට ගමු
+    productCode: string;
     isBulk: boolean;
+    batch?: string;       // Optional fields
+    expiry?: string | null;
 }
+
+interface CartItem extends Product {
+    quantity: number;
+    discount: number;
+}
+
+const mapAPIProductToProduct = (apiData: any): Product => {
+    return {
+        id: apiData.id || apiData.stockID, // දෙකෙන් කුමක් ආවත් id ලෙස ගනී
+        name: apiData.name || apiData.displayName, // දෙකෙන් කුමක් ආවත් name ලෙස ගනී
+        barcode: apiData.barcode,
+        price: Number(apiData.price),
+        wholesalePrice: Number(apiData.wholesalePrice || 0),
+        stock: Number(apiData.stock),
+        category: apiData.category || apiData.unit || 'Pcs',
+        isBulk: apiData.isBulk === true || String(apiData.unit).toLowerCase().includes('kg'),
+        productCode: apiData.productCode,
+        batch: apiData.batch || '',
+        expiry: apiData.expiry || null
+    };
+};
 
 const POSInterface = () => {
     const [billingMode, setBillingMode] = useState<'retail' | 'wholesale'>('retail');
     const [cartItems, setCartItems] = useState<CartItem[]>([]);
+    const [products, setProducts] = useState<Product[]>([]);
+    const [productsLoading, setProductsLoading] = useState(true);
+    const [barcodeSearchLoading, setBarcodeSearchLoading] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [paymentAmounts, setPaymentAmounts] = useState<PaymentAmount[]>([]);
     const [discount, setDiscount] = useState(0);
@@ -118,7 +136,7 @@ const POSInterface = () => {
     const [transferComplete, setTransferComplete] = useState(false);
 
 
-// Cash Management States
+    // Cash Management States
     const [showCashModal, setShowCashModal] = useState(false);
     const [cashTransactionType, setCashTransactionType] = useState<'give' | 'get'>('give');
     const [cashAmount, setCashAmount] = useState(0);
@@ -135,6 +153,57 @@ const POSInterface = () => {
     const [newCustomerName, setNewCustomerName] = useState('');
     const [newCustomerContact, setNewCustomerContact] = useState('');
     const [customers, setCustomers] = useState<Customer[]>(demoCustomers);
+
+    // Load products from API
+    useEffect(() => {
+        const loadProducts = async () => {
+            try {
+                setProductsLoading(true);
+                const response = await posService.getPOSProductsList();
+                if (response.data?.success && Array.isArray(response.data.data)) {
+                    const transformed = response.data.data.map(mapAPIProductToProduct);
+                    setProducts(transformed);
+                }
+            } catch (error) {
+                console.error('Failed to load products:', error);
+            } finally {
+                setProductsLoading(false);
+            }
+        };
+        loadProducts();
+    }, []);
+
+    // Barcode search effect
+    useEffect(() => {
+        const isNumericSearch = /^\d+$/.test(searchTerm.trim());
+
+        if (isNumericSearch && searchTerm.length > 3) {
+            const searchBarcode = async () => {
+                try {
+                    setBarcodeSearchLoading(true);
+                    const response = await posService.searchByBarcode(searchTerm);
+
+                    // ඔබගේ Barcode search එකෙන් ලැබෙන්නේ Array එකක් නම් [0] ගමු
+                    const apiData = Array.isArray(response.data?.data)
+                        ? response.data.data[0]
+                        : response.data?.data;
+
+                    if (response.data?.success && apiData) {
+                        const productToCart = mapAPIProductToProduct(apiData);
+                        addToCart(productToCart);
+                        setSearchTerm(''); // එකතු කළ පසු සෙවුම හිස් කරන්න
+                    }
+                } catch (error) {
+                    console.error('Barcode search failed:', error);
+                } finally {
+                    setBarcodeSearchLoading(false);
+                }
+            };
+
+            const debounceTimer = setTimeout(searchBarcode, 500);
+            return () => clearTimeout(debounceTimer);
+        }
+    }, [searchTerm]);
 
     // F-Key Event Handlers
     useEffect(() => {
@@ -199,8 +268,8 @@ const POSInterface = () => {
     const [selectedLooseProduct, setSelectedLooseProduct] = useState<Product | null>(null);
 
     // Prepare options for TypeableSelect
-    const bulkProducts = demoProducts.filter(p => p.isBulk);
-    const looseProducts = demoProducts.filter(p => !p.isBulk);
+    const bulkProducts = products.filter(p => p.isBulk);
+    const looseProducts = products.filter(p => !p.isBulk);
 
     const bulkProductOptions = bulkProducts.map(p => ({
         value: p.id,
@@ -304,22 +373,36 @@ const POSInterface = () => {
         item.barcode.includes(returnSearchTerm)
     );
 
-    const addToCart = (product: typeof demoProducts[0]) => {
-        const price = billingMode === 'retail' ? product.price : product.wholesalePrice;
-        const existingItem = cartItems.find(item => item.id === product.id);
-
-        if (existingItem) {
-            setCartItems(cartItems.map(item =>
-                item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
-            ));
-        } else {
-            setCartItems([...cartItems, {
-                ...product,
-                quantity: 1,
-                price,
-                discount: 0
-            }]);
+    const addToCart = (product: Product) => {
+        // තොග පරීක්ෂාව
+        if (product.stock <= 0) {
+            alert("This product is out of stock!");
+            return;
         }
+
+        setCartItems(prevCart => {
+            const existingItem = prevCart.find(item => item.id === product.id);
+
+            if (existingItem) {
+                // තොගයට වඩා වැඩිපුර ඇතුළත් කිරීම වැළැක්වීම
+                if (existingItem.quantity >= product.stock) {
+                    alert("Cannot add more than available stock");
+                    return prevCart;
+                }
+                return prevCart.map(item =>
+                    item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
+                );
+            }
+
+            // අලුත් item එකක් ලෙස එකතු කිරීම
+            const priceToUse = billingMode === 'wholesale' ? product.wholesalePrice : product.price;
+            return [...prevCart, {
+                ...product,
+                price: priceToUse,
+                quantity: 1,
+                discount: 0
+            }];
+        });
     };
 
     const updateQuantity = (id: number, delta: number) => {
@@ -352,10 +435,14 @@ const POSInterface = () => {
         setAmountGiven(0);
     };
 
-    const filteredProducts = demoProducts.filter(p =>
-        p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.barcode.includes(searchTerm)
-    );
+    const isNumericSearch = /^\d+$/.test(searchTerm.trim());
+
+    const filteredProducts = isNumericSearch && searchTerm.length > 0
+        ? [] // Will be handled by barcode search
+        : products.filter(p =>
+            p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            p.productCode.toLowerCase().includes(searchTerm.toLowerCase())
+        );
 
     const paymentMethods = [
         { id: 'cash', label: 'Cash', icon: Banknote, color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
@@ -449,21 +536,19 @@ const POSInterface = () => {
                 <div className="flex items-center gap-2 bg-gray-100 p-1.5 rounded-xl">
                     <button
                         onClick={() => setBillingMode('retail')}
-                        className={`px-5 py-2 rounded-lg font-semibold transition-all text-sm ${
-                            billingMode === 'retail'
-                                ? 'bg-emerald-500 text-white shadow-md'
-                                : 'text-gray-600 hover:bg-gray-200'
-                        }`}
+                        className={`px-5 py-2 rounded-lg font-semibold transition-all text-sm ${billingMode === 'retail'
+                            ? 'bg-emerald-500 text-white shadow-md'
+                            : 'text-gray-600 hover:bg-gray-200'
+                            }`}
                     >
                         Retail
                     </button>
                     <button
                         onClick={() => setBillingMode('wholesale')}
-                        className={`px-5 py-2 rounded-lg font-semibold transition-all text-sm ${
-                            billingMode === 'wholesale'
-                                ? 'bg-emerald-500 text-white shadow-md'
-                                : 'text-gray-600 hover:bg-gray-200'
-                        }`}
+                        className={`px-5 py-2 rounded-lg font-semibold transition-all text-sm ${billingMode === 'wholesale'
+                            ? 'bg-emerald-500 text-white shadow-md'
+                            : 'text-gray-600 hover:bg-gray-200'
+                            }`}
                     >
                         Wholesale
                     </button>
@@ -539,34 +624,56 @@ const POSInterface = () => {
                     </div>
 
                     <div className="space-y-2 overflow-y-auto flex-1">
-                        {filteredProducts.map((product) => (
-                            <motion.div
-                                key={product.id}
-                                whileHover={{ scale: 1.02 }}
-                                whileTap={{ scale: 0.98 }}
-                                onClick={() => addToCart(product)}
-                                className="p-2.5 bg-gray-50 hover:bg-emerald-50 rounded-xl cursor-pointer transition-all border-2 border-transparent hover:border-emerald-200"
-                            >
-                                <div className="flex justify-between items-start mb-1">
-                                    <div className="flex-1">
-                                        <h3 className="font-semibold text-sm text-gray-800">{product.name}</h3>
-                                        <p className="text-xs text-gray-500">{product.category}</p>
+                        {productsLoading ? (
+                            <div className="flex items-center justify-center h-32">
+                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500"></div>
+                                <span className="ml-2 text-sm text-gray-500">Loading products...</span>
+                            </div>
+                        ) : barcodeSearchLoading ? (
+                            <div className="flex items-center justify-center h-32">
+                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                                <span className="ml-2 text-sm text-gray-500">Searching barcode...</span>
+                            </div>
+                        ) : isNumericSearch && searchTerm.length > 0 ? (
+                            <div className="flex flex-col items-center justify-center h-32 text-gray-400">
+                                <Barcode className="w-12 h-12 mb-2" />
+                                <p className="text-sm">Scanning barcode: {searchTerm}</p>
+                                <p className="text-xs text-gray-400">Continue typing or scan...</p>
+                            </div>
+                        ) : filteredProducts.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center h-32 text-gray-400">
+                                <Package className="w-12 h-12 mb-2" />
+                                <p className="text-sm">No products found</p>
+                            </div>
+                        ) : (
+                            filteredProducts.map((product) => (
+                                <motion.div
+                                    key={product.id}
+                                    whileHover={{ scale: 1.02 }}
+                                    whileTap={{ scale: 0.98 }}
+                                    onClick={() => addToCart(product)}
+                                    className="p-2.5 bg-gray-50 hover:bg-emerald-50 rounded-xl cursor-pointer transition-all border-2 border-transparent hover:border-emerald-200"
+                                >
+                                    <div className="flex justify-between items-start mb-1">
+                                        <div className="flex-1">
+                                            <h3 className="font-semibold text-sm text-gray-800">{product.name}</h3>
+                                            <p className="text-xs text-gray-500">{product.category} • {product.productCode}</p>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="font-bold text-sm text-emerald-600">Rs {product.price}</p>
+                                            <p className="text-xs text-gray-500 line-through">Rs {product.wholesalePrice}</p>
+                                        </div>
                                     </div>
-                                    <div className="text-right">
-                                        <p className="font-bold text-sm text-emerald-600">Rs {product.price}</p>
-                                        <p className="text-xs text-gray-500 line-through">Rs {product.wholesalePrice}</p>
+                                    <div className="flex justify-between items-center text-xs">
+                                        <span className="text-gray-500">{product.barcode}</span>
+                                        <span className={`px-2 py-0.5 rounded-full ${product.stock > 100 ? 'bg-emerald-100 text-emerald-700' : 'bg-orange-100 text-orange-700'
+                                            }`}>
+                                            Stock: {product.stock}
+                                        </span>
                                     </div>
-                                </div>
-                                <div className="flex justify-between items-center text-xs">
-                                    <span className="text-gray-500">{product.barcode}</span>
-                                    <span className={`px-2 py-0.5 rounded-full ${
-                                        product.stock > 100 ? 'bg-emerald-100 text-emerald-700' : 'bg-orange-100 text-orange-700'
-                                    }`}>
-                                        Stock: {product.stock}
-                                    </span>
-                                </div>
-                            </motion.div>
-                        ))}
+                                </motion.div>
+                            ))
+                        )}
                     </div>
                 </div>
 
@@ -591,11 +698,10 @@ const POSInterface = () => {
                                     initial={{ opacity: 0, x: -20 }}
                                     animate={{ opacity: 1, x: 0 }}
                                     exit={{ opacity: 0, x: 20 }}
-                                    className={`p-2.5 rounded-xl border-2 transition-all ${
-                                        editingItem === item.id
-                                            ? 'bg-emerald-50 border-emerald-300'
-                                            : 'bg-gray-50 border-transparent'
-                                    }`}
+                                    className={`p-2.5 rounded-xl border-2 transition-all ${editingItem === item.id
+                                        ? 'bg-emerald-50 border-emerald-300'
+                                        : 'bg-gray-50 border-transparent'
+                                        }`}
                                 >
                                     <div className="flex justify-between items-start mb-2">
                                         <div className="flex-1">
@@ -611,11 +717,10 @@ const POSInterface = () => {
                                         <div className="flex gap-1">
                                             <button
                                                 onClick={() => setEditingItem(editingItem === item.id ? null : item.id)}
-                                                className={`p-1.5 rounded-lg transition-colors ${
-                                                    editingItem === item.id
-                                                        ? 'bg-emerald-500 text-white'
-                                                        : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'
-                                                }`}
+                                                className={`p-1.5 rounded-lg transition-colors ${editingItem === item.id
+                                                    ? 'bg-emerald-500 text-white'
+                                                    : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'
+                                                    }`}
                                             >
                                                 <Edit3 className="w-3.5 h-3.5" />
                                             </button>
@@ -761,10 +866,10 @@ const POSInterface = () => {
                             <div className="mt-2 p-2 bg-emerald-50 border-2 border-emerald-200 rounded-lg">
                                 <div className="flex items-center justify-between">
                                     <div className={'flex justify-between w-full'}>
-                                       <div>
-                                           <p className="text-sm font-semibold text-emerald-800">{selectedCustomer.name}</p>
-                                           <p className="text-xs text-emerald-600">{selectedCustomer.contact}</p>
-                                       </div>
+                                        <div>
+                                            <p className="text-sm font-semibold text-emerald-800">{selectedCustomer.name}</p>
+                                            <p className="text-xs text-emerald-600">{selectedCustomer.contact}</p>
+                                        </div>
                                         <div className={'flex items-center pe-4 flex-col'}>
                                             <p className="text-xs ">Credit Balance</p>
                                             <p className="text-sm text-red-600 font-semibold">RS.{selectedCustomer.credit}.00</p>
@@ -1580,21 +1685,19 @@ const POSInterface = () => {
                             <div className="flex gap-2 mb-4 bg-gray-100 p-2 rounded-xl">
                                 <button
                                     onClick={() => setCashTransactionType('give')}
-                                    className={`flex-1 py-3 rounded-lg font-semibold transition-all ${
-                                        cashTransactionType === 'give'
-                                            ? 'bg-red-500 text-white shadow-md'
-                                            : 'text-gray-600 hover:bg-gray-200'
-                                    }`}
+                                    className={`flex-1 py-3 rounded-lg font-semibold transition-all ${cashTransactionType === 'give'
+                                        ? 'bg-red-500 text-white shadow-md'
+                                        : 'text-gray-600 hover:bg-gray-200'
+                                        }`}
                                 >
                                     Cash Give (Out)
                                 </button>
                                 <button
                                     onClick={() => setCashTransactionType('get')}
-                                    className={`flex-1 py-3 rounded-lg font-semibold transition-all ${
-                                        cashTransactionType === 'get'
-                                            ? 'bg-green-500 text-white shadow-md'
-                                            : 'text-gray-600 hover:bg-gray-200'
-                                    }`}
+                                    className={`flex-1 py-3 rounded-lg font-semibold transition-all ${cashTransactionType === 'get'
+                                        ? 'bg-green-500 text-white shadow-md'
+                                        : 'text-gray-600 hover:bg-gray-200'
+                                        }`}
                                 >
                                     Cash Get (In)
                                 </button>
@@ -1644,11 +1747,10 @@ const POSInterface = () => {
                             <button
                                 onClick={handleCashTransaction}
                                 disabled={cashAmount <= 0 || !cashReason.trim()}
-                                className={`w-full py-4 rounded-xl font-bold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
-                                    cashTransactionType === 'give'
-                                        ? 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700'
-                                        : 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700'
-                                }`}
+                                className={`w-full py-4 rounded-xl font-bold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed ${cashTransactionType === 'give'
+                                    ? 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700'
+                                    : 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700'
+                                    }`}
                             >
                                 Confirm {cashTransactionType === 'give' ? 'Cash Out' : 'Cash In'}
                             </button>

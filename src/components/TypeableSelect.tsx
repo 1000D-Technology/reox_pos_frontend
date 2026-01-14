@@ -74,8 +74,8 @@ export default function TypeableSelect({
         onChange(option);
     }
 
-    function handleClear(e: React.MouseEvent) {
-        e.stopPropagation();
+    function handleClear(e?: React.SyntheticEvent | React.MouseEvent | React.KeyboardEvent) {
+       if (e) e.preventDefault();
         setSelected(null);
         setQuery('');
         onChange(null);
@@ -114,21 +114,19 @@ export default function TypeableSelect({
                 setQuery(selected.label);
             }
         } else if (e.key === 'Backspace' && query === '' && selected) {
-            handleClear(e as React.MouseEvent<Element, MouseEvent>);
+            handleClear();
         }
     }
 
     function onInputChange(e: React.ChangeEvent<HTMLInputElement>) {
         const newQuery = e.target.value;
         setQuery(newQuery);
-        setOpen(newQuery.trim() !== '');
+        setOpen(true);
         setHighlight(0);
     }
 
     function onInputFocus() {
-        if (query.trim() !== '') {
             setOpen(true);
-        }
     }
 
     // Auto-scroll highlighted item into view
