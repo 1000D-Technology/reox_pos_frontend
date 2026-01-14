@@ -324,7 +324,6 @@ const POSInterface = () => {
                     onEditItem={setEditingItem}
                     calculateItemTotal={calculateItemTotal}
                 />
-
                 <PaymentPanel
                     selectedCustomer={selectedCustomer}
                     customerSearchTerm={customerSearchTerm}
