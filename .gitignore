@@ -25,4 +25,4 @@ dist-ssr
 *.env
 backend/.env
 backend/.env
-backend/backups/*
+backend/backups/
