@@ -15,6 +15,7 @@ const returnStatusRoutes = require('./routes/returnStatusRoutes');
 const damagedRoutes = require('./routes/damagedRoutes');
 const setupRoutes = require('./routes/setup');
 const backupRoutes = require('./routes/backup.routes');
+const posRoutes = require('./routes/posRoutes');
 const { scheduleBackup } = require('./schedulers/backupScheduler');
 
 require('dotenv').config();
@@ -42,6 +43,7 @@ app.use('/api/return-status', returnStatusRoutes);
 app.use('/api/damaged', damagedRoutes);
 app.use('/api/setup', setupRoutes);
 app.use('/api/backup', backupRoutes);
+app.use('/api/pos', posRoutes);
 
 // Handle undefined routes
 app.use((req, res, next) => {
