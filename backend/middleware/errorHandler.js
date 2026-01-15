@@ -2,8 +2,8 @@ class AppError extends Error {
     constructor(message, statusCode) {
         super(message);
         this.statusCode = statusCode;
+        this.status = `${statusCode}`.startsWith('4') ? 'fail' : 'error';
         this.isOperational = true;
-
         Error.captureStackTrace(this, this.constructor);
     }
 }
@@ -55,29 +55,30 @@ const globalErrorHandler = (err, req, res, next) => {
     err.statusCode = err.statusCode || 500;
     err.status = err.status || 'error';
 
-    if (err.code === 'ER_ROW_IS_REFERENCED_2') {
-        err = new AppError('Cannot delete this record because it is being used elsewhere.', 400);
-    }
-    if (err.code === 'ER_DUP_ENTRY') {
-        err = new AppError('This record already exists in our system.', 400);
-    }
-    if (err.code === 'ER_NO_REFERENCED_ROW_2') {
-        err = new AppError('The selected reference (Company/Bank) is invalid.', 400);
-    }
+    console.error('ERROR:', err);
 
     if (process.env.NODE_ENV === 'development') {
-        sendErrorDev(err, res);
-    } else {
-        let error = Object.create(Object.getPrototypeOf(err));
-        Object.getOwnPropertyNames(err).forEach(name => {
-            error[name] = err[name];
+        res.status(err.statusCode).json({
+            success: false,
+            status: err.status,
+            error: err,
+            message: err.message,
+            stack: err.stack
         });
-
-        if (error.name === 'CastError') error = handleCastErrorDB(error);
-        if (error.code === 11000) error = handleDuplicateFieldsDB(error);
-        if (error.name === 'ValidationError') error = handleValidationErrorDB(error);
-
-        sendErrorProd(error, res);
+    } else {
+        if (err.isOperational) {
+            res.status(err.statusCode).json({
+                success: false,
+                status: err.status,
+                message: err.message
+            });
+        } else {
+            res.status(500).json({
+                success: false,
+                status: 'error',
+                message: 'Something went wrong!'
+            });
+        }
     }
 };
 
