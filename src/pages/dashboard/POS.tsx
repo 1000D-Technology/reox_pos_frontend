@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { posService } from '../../services/posService';
+import { customerService } from '../../services/customerService';
 import { POSHeader } from '../../components/pos/POSHeader';
 import { POSSummaryCards } from '../../components/pos/POSSummaryCards';
 import { ProductPanel } from '../../components/pos/ProductPanel';
@@ -10,52 +11,33 @@ import { BillModal } from '../../components/pos/BillModal';
 import { CustomerRegistrationModal } from '../../components/pos/CustomerRegistrationModal';
 import { BulkLooseModal } from '../../components/pos/BulkLooseModal';
 import { CashManagementModal } from '../../components/pos/CashManagementModal';
-import {CartPanel} from "../../components/pos/CartPanel.tsx";
-
-interface Product {
-    id: number;
-    name: string;
-    barcode: string;
-    price: number;
-    wholesalePrice: number;
-    stock: number;
-    category: string;
-    productCode: string;
-    isBulk: boolean;
-    batch?: string;
-    expiry?: string | null;
-}
-
-interface CartItem extends Product {
-    quantity: number;
-    discount: number;
-}
-
-interface PaymentAmount {
-    methodId: string;
-    amount: number;
-}
+import { CartPanel } from "../../components/pos/CartPanel.tsx";
+import type { Product, CartItem, PaymentAmount } from '../../types';
+import toast, { Toaster } from 'react-hot-toast';
 
 interface Customer {
     id: number;
     name: string;
     contact: string;
+    email?: string;
     credit: number;
 }
 
-const mapAPIProductToProduct = (apiData: Record<string, unknown>): Product => {
+const mapAPIProductToProduct = (apiData: any): Product => {
+    const item = Array.isArray(apiData) ? apiData[0] : apiData;
+
     return {
-        id: (apiData.id as number) || (apiData.stockID as number),
-        name: (apiData.name as string) || (apiData.displayName as string),
-        barcode: apiData.barcode as string,
-        price: Number(apiData.price),
-        wholesalePrice: Number(apiData.wholesalePrice || 0),
-        stock: Number(apiData.stock),
-        category: (apiData.category as string) || (apiData.unit as string) || 'Pcs',
-        isBulk: apiData.isBulk === true || String(apiData.unit).toLowerCase().includes('kg'),
-        productCode: apiData.productCode as string,
-        batch: (apiData.batch as string) || '',
-        expiry: (apiData.expiry as string) || null
+        id: item.id || item.stockID,
+        name: item.name || item.displayName,
+        barcode: item.barcode,
+        price: Number(item.price || 0),
+        wholesalePrice: Number(item.wholesalePrice || 0),
+        stock: Number(item.stock || 0),
+        category: item.category || item.unit || 'Pcs',
+        productCode: item.productCode || '',
+        isBulk: Boolean(item.isBulk) || String(item.unit || '').toLowerCase().includes('kg'),
+        batch: item.batch || '',
+        expiry: item.expiry || null
     };
 };
 
@@ -105,6 +87,14 @@ const POSInterface = () => {
         loadProducts();
     }, []);
 
+    const updateItemDiscountType = (id: number, type: 'percentage' | 'fixed' | 'price') => {
+        setCartItems(prevItems =>
+            prevItems.map(item =>
+                item.id === id ? { ...item, discountType: type } : item
+            )
+        );
+    };
+
     // Barcode search effect
     useEffect(() => {
         const isNumericSearch = /^\d+$/.test(searchTerm.trim());
@@ -113,11 +103,18 @@ const POSInterface = () => {
             const searchBarcode = async () => {
                 try {
                     setBarcodeSearchLoading(true);
-                    const response = await posService.searchProductByBarcode(searchTerm);
-                    if (response.data?.success && response.data.data) {
-                        const product = mapAPIProductToProduct(response.data.data);
-                        addToCart(product);
-                        setSearchTerm('');
+                    const response = await posService.searchByBarcode(searchTerm);
+
+                    const apiResponse = response.data;
+
+                    if (apiResponse?.success && apiResponse.data) {
+                        const product = mapAPIProductToProduct(apiResponse.data);
+                        if (product.id) {
+                            addToCart(product);
+                            setSearchTerm('');
+                        } else {
+                            console.error('Product ID not found in mapped data', product);
+                        }
                     }
                 } catch (error) {
                     console.error('Barcode search failed:', error);
@@ -194,12 +191,16 @@ const POSInterface = () => {
             }
 
             const priceToUse = billingMode === 'wholesale' ? product.wholesalePrice : product.price;
-            return [...prevCart, {
+
+            const newItem: CartItem = {
                 ...product,
                 price: priceToUse,
                 quantity: 1,
-                discount: 0
-            }];
+                discount: 0,
+                discountType: 'percentage'
+            };
+
+            return [...prevCart, newItem];
         });
     };
 
@@ -250,17 +251,45 @@ const POSInterface = () => {
         }
     };
 
-    const registerCustomer = (name: string, contact: string) => {
-        const newCustomer: Customer = {
-            id: customers.length + 1,
-            name: name.trim(),
-            contact: contact.trim(),
-            credit: 0
-        };
-        setCustomers([...customers, newCustomer]);
-        setSelectedCustomer(newCustomer);
-        setCustomerSearchTerm(name);
-        setShowRegistrationModal(false);
+    const registerCustomer = async (name: string, contact: string, email?: string, creditBalance?: number) => {
+        try {
+            const customerData = {
+                name: name.trim(),
+                contact: contact.trim(),
+                email: email?.trim() || undefined,
+                credit_balance: creditBalance || 0
+            };
+
+            const response = await customerService.addCustomer(customerData);
+            console.log('Customer registration response:', response);
+
+            if (response.data.success) {
+                const customerFromAPI = response.data.data;
+                const newCustomer: Customer = {
+                    id: customerFromAPI.id,
+                    name: customerFromAPI.name,
+                    contact: customerFromAPI.contact,
+                    email: customerFromAPI.email,
+                    credit: customerFromAPI.credit_balance
+                };
+
+                setCustomers([...customers, newCustomer]);
+                setSelectedCustomer(newCustomer);
+                setCustomerSearchTerm(name);
+                setShowRegistrationModal(false);
+
+                toast.success('Customer registered successfully!');
+            } else {
+                const errorMessage = response.data.message || 'Failed to register customer';
+                toast.error(errorMessage);
+                // Modal stays open to allow retry
+            }
+        } catch (error: any) {
+            console.error('Error registering customer:', error);
+            const errorMessage = error.response?.data?.message || 'Failed to register customer. Please try again.';
+            toast.error(errorMessage);
+            // Modal stays open to allow user to fix errors and retry
+        }
     };
 
     const completePayment = () => {
@@ -316,11 +345,13 @@ const POSInterface = () => {
                     cartItems={cartItems}
                     itemsCount={itemsCount}
                     editingItem={editingItem}
+                    billingMode={billingMode}
                     onClearCart={clearCart}
                     onRemoveItem={removeFromCart}
                     onUpdateQuantity={updateQuantity}
                     onUpdatePrice={updateItemPrice}
                     onUpdateDiscount={updateItemDiscount}
+                    onUpdateDiscountType={updateItemDiscountType}
                     onEditItem={setEditingItem}
                     calculateItemTotal={calculateItemTotal}
                 />
@@ -371,6 +402,30 @@ const POSInterface = () => {
                 isOpen={showCashModal}
                 onClose={() => setShowCashModal(false)}
             />
+
+            <Toaster
+                position="top-right"
+                toastOptions={{
+                    duration: 4000,
+                    style: {
+                        background: '#363636',
+                        color: '#fff',
+                    },
+                    success: {
+                        duration: 3000,
+                        style: {
+                            background: '#10b981',
+                        },
+                    },
+                    error: {
+                        duration: 4000,
+                        style: {
+                            background: '#ef4444',
+                        },
+                    },
+                }}
+            />
+
         </div>
     );
 };
