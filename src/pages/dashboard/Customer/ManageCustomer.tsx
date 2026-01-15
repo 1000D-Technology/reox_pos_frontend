@@ -16,13 +16,14 @@ import {
 
 import { useEffect, useState } from 'react';
 import toast, { Toaster } from 'react-hot-toast';
+import { customerService } from '../../../services/customerService';
 
 
 interface Customer {
     id: number;
     no: string;
     name: string;
-    email: string;
+    email: string | null;
     phone: string;
     totalCreditBalance: number;
     isActive: boolean;
@@ -54,14 +55,9 @@ interface InvoiceDetail {
 }
 
 function ManageCustomer() {
-    const [customers] = useState<Customer[]>([
-        { id: 1, no: '', name: 'John Doe', email: 'john@example.com', phone: '123-456-7890', totalCreditBalance: 5000, isActive: true },
-        { id: 2, no: '', name: 'Jane Smith', email: 'jane@example.com', phone: '098-765-4321', totalCreditBalance: 3500, isActive: true },
-        { id: 3, no: '', name: 'Bob Johnson', email: 'bob@example.com', phone: '555-123-4567', totalCreditBalance: 0, isActive: false }
-    ]);
-
-    const [filteredCustomers, setFilteredCustomers] = useState<Customer[]>(customers);
-    const [isLoading] = useState(false);
+    const [customers, setCustomers] = useState<Customer[]>([]);
+    const [filteredCustomers, setFilteredCustomers] = useState<Customer[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
 
     const [currentPage, setCurrentPage] = useState(1);
@@ -149,12 +145,46 @@ function ManageCustomer() {
         const lowercaseQuery = query.toLowerCase();
         const filtered = customers.filter(customer =>
             customer.name.toLowerCase().includes(lowercaseQuery) ||
-            customer.email.toLowerCase().includes(lowercaseQuery) ||
+            (customer.email && customer.email.toLowerCase().includes(lowercaseQuery)) ||
             customer.phone.toLowerCase().includes(lowercaseQuery)
         );
 
         setFilteredCustomers(filtered);
     };
+
+    // Load customers from API
+    useEffect(() => {
+        const loadCustomers = async () => {
+            try {
+                setIsLoading(true);
+                const response = await customerService.getCustomers();
+                
+                if (response.data.success) {
+                    const mappedCustomers: Customer[] = response.data.data.map((customer: any) => ({
+                        id: customer.id,
+                        no: '',
+                        name: customer.name,
+                        email: customer.email,
+                        phone: customer.contact,
+                        totalCreditBalance: customer.credit_balance,
+                        isActive: customer.status_name === 'Active'
+                    }));
+                    
+                    setCustomers(mappedCustomers);
+                    setFilteredCustomers(mappedCustomers);
+                } else {
+                    toast.error('Failed to load customers');
+                }
+            } catch (error: any) {
+                console.error('Error loading customers:', error);
+                toast.error('Failed to load customers. Please try again.');
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        loadCustomers();
+    }, []);
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -189,16 +219,59 @@ function ManageCustomer() {
         }
 
         setIsUpdatingPhone(true);
-        setTimeout(() => {
-            toast.success('Phone number updated successfully!');
-            handleCloseModal();
+        try {
+            const response = await customerService.updatePhone(selectedCustomer.id, newPhone.trim());
+            
+            if (response.data.success) {
+                // Update local state
+                const updatedCustomers = customers.map(customer =>
+                    customer.id === selectedCustomer.id
+                        ? { ...customer, phone: newPhone.trim() }
+                        : customer
+                );
+                setCustomers(updatedCustomers);
+                setFilteredCustomers(updatedCustomers);
+                
+                toast.success('Phone number updated successfully!');
+                handleCloseModal();
+            } else {
+                toast.error(response.data.message || 'Failed to update phone number');
+            }
+        } catch (error: any) {
+            console.error('Error updating phone:', error);
+            // Check if error response contains a message
+            const errorMessage = error.response?.data?.message || 'Failed to update phone number. Please try again.';
+            toast.error(errorMessage);
+        } finally {
             setIsUpdatingPhone(false);
-        }, 1000);
+        }
     };
 
-    const handleStatusToggle = (_customerId: number, currentStatus: boolean) => {
+    const handleStatusToggle = async (customerId: number, currentStatus: boolean) => {
         const newStatus = !currentStatus;
-        toast.success(`Customer ${newStatus ? 'activated' : 'deactivated'} successfully!`);
+        
+        try {
+            const response = await customerService.toggleStatus(customerId, newStatus);
+            
+            if (response.data.success) {
+                // Update local state
+                const updatedCustomers = customers.map(customer =>
+                    customer.id === customerId
+                        ? { ...customer, isActive: newStatus }
+                        : customer
+                );
+                setCustomers(updatedCustomers);
+                setFilteredCustomers(updatedCustomers);
+                
+                toast.success(`Customer ${newStatus ? 'activated' : 'deactivated'} successfully!`);
+            } else {
+                toast.error(response.data.message || 'Failed to update customer status');
+            }
+        } catch (error: any) {
+            console.error('Error updating status:', error);
+            const errorMessage = error.response?.data?.message || 'Failed to update customer status. Please try again.';
+            toast.error(errorMessage);
+        }
     };
 
     const handleViewCustomer = (customer: Customer) => {
@@ -471,7 +544,7 @@ function ManageCustomer() {
                                             {customer.name}
                                         </td>
                                         <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-600">
-                                            {customer.email}
+                                            {customer.email || 'No email'}
                                         </td>
                                         <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-gray-700">
                                             {customer.phone}
@@ -583,8 +656,6 @@ function ManageCustomer() {
             {isModalOpen && selectedCustomer && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
                     <div
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
                         className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md relative"
                     >
                         <button
@@ -647,8 +718,6 @@ function ManageCustomer() {
             {showInvoices && selectedCustomer && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
                     <div
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
                         className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden"
                     >
                         <div className="bg-gradient-to-r from-emerald-500 to-emerald-600 px-6 py-4 flex justify-between items-center">
