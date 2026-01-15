@@ -48,12 +48,12 @@ export default function App() {
         <Router>
             <Routes>
                 {/* Auth */}
-                <Route path="/" element={
+                <Route path="/signin" element={
                     <PublicRoute>
                         <SignIn/>
                     </PublicRoute>
                 }/>
-                <Route path="/setup" element={<DatabaseSetup/>}/>
+                <Route path="/" element={<DatabaseSetup/>}/>
                 {/* Dashboard layout */}
                 <Route element={<Layout/>}>
 

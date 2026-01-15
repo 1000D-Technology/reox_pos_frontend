@@ -115,28 +115,28 @@ function SignIn() {
                                 />
                             </div>
 
-                            <div className={'flex justify-between items-center mt-3'}>
-                                <div className="flex items-start">
-                                    <div className="flex items-center h-5">
-                                        <input
-                                            id="remember"
-                                            type="checkbox"
-                                            checked={rememberMe}
-                                            onChange={(e) => setRememberMe(e.target.checked)}
-                                            className="w-4 h-4 border border-gray-300 rounded-sm bg-gray-50"
-                                            disabled={loading}
-                                        />
-                                    </div>
-                                    <label htmlFor="remember" className="ms-2 text-sm font-medium">
-                                        Keep me Logged In
-                                    </label>
-                                </div>
-                                <div>
-                                    <Link to={'/forgot-password'} className={'text-sm text-emerald-500 hover:underline font-medium'}>
-                                        Forgot Password?
-                                    </Link>
-                                </div>
-                            </div>
+                            {/*<div className={'flex justify-between items-center mt-3'}>*/}
+                            {/*    <div className="flex items-start">*/}
+                            {/*        <div className="flex items-center h-5">*/}
+                            {/*            <input*/}
+                            {/*                id="remember"*/}
+                            {/*                type="checkbox"*/}
+                            {/*                checked={rememberMe}*/}
+                            {/*                onChange={(e) => setRememberMe(e.target.checked)}*/}
+                            {/*                className="w-4 h-4 border border-gray-300 rounded-sm bg-gray-50"*/}
+                            {/*                disabled={loading}*/}
+                            {/*            />*/}
+                            {/*        </div>*/}
+                            {/*        <label htmlFor="remember" className="ms-2 text-sm font-medium">*/}
+                            {/*            Keep me Logged In*/}
+                            {/*        </label>*/}
+                            {/*    </div>*/}
+                            {/*    <div>*/}
+                            {/*        <Link to={'/forgot-password'} className={'text-sm text-emerald-500 hover:underline font-medium'}>*/}
+                            {/*            Forgot Password?*/}
+                            {/*        </Link>*/}
+                            {/*    </div>*/}
+                            {/*</div>*/}
 
                             <div className={'h-full flex items-center'}>
                                 <button
@@ -153,7 +153,7 @@ function SignIn() {
                     </div>
                     <div className={'md:h-1/5 w-full flex items-center justify-center mt-4 md:mt-0'}>
                         <p className={'text-sm text-gray-400'}>
-                            &copy; 2025 <a href="#">1000D Technology PVT LTD</a>. All rights Reserved
+                            &copy; 2026 <a href="#">1000D Technology PVT LTD</a>. All rights Reserved
                         </p>
                     </div>
                 </div>

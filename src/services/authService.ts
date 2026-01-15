@@ -1,4 +1,4 @@
-import api from '../api/axiosInstance.ts';
+import api from '../api/axiosConfig';
 
 interface LoginCredentials {
     username: string;
@@ -8,12 +8,11 @@ interface LoginCredentials {
 interface User {
     id: number;
     name: string;
-    contact: string;
     email: string;
+    contact: string;
     role_id: number;
-    status_id: number;
     role: string;
-    status: string;
+    status_id: number;
 }
 
 interface LoginResponse {
@@ -27,8 +26,7 @@ export const authService = {
     login: async (credentials: LoginCredentials): Promise<LoginResponse> => {
         const response = await api.post<LoginResponse>('/api/auth/login', credentials);
 
-        if (response.data.success) {
-            // Store token and user data in sessionStorage
+        if (response.data.success && response.data.token) {
             sessionStorage.setItem('token', response.data.token);
             sessionStorage.setItem('user', JSON.stringify(response.data.user));
         }
@@ -37,16 +35,27 @@ export const authService = {
     },
 
     logout: () => {
-        sessionStorage.clear();
-        window.location.href = '/';
-    },
-
-    getCurrentUser: (): User | null => {
-        const userStr = sessionStorage.getItem('user');
-        return userStr ? JSON.parse(userStr) : null;
+        sessionStorage.removeItem('token');
+        sessionStorage.removeItem('user');
+        localStorage.removeItem('rememberMe');
     },
 
     isAuthenticated: (): boolean => {
         return !!sessionStorage.getItem('token');
     },
+
+    getCurrentUser: (): User | null => {
+        const userStr = sessionStorage.getItem('user');
+        if (!userStr) return null;
+
+        try {
+            return JSON.parse(userStr) as User;
+        } catch {
+            return null;
+        }
+    },
+
+    getToken: (): string | null => {
+        return sessionStorage.getItem('token');
+    }
 };

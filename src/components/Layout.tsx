@@ -1,4 +1,3 @@
-// src/components/Layout.tsx
 import { useState, useEffect } from "react";
 import Sidebar from "./Sidebar";
 import { Bell, Calculator, ClipboardPlus, PanelLeft, Power, RotateCcw } from "lucide-react";
@@ -8,9 +7,19 @@ import { AnimatePresence, motion } from "framer-motion";
 import QuotationModal from "./models/QuotationsModel.tsx";
 import PosCashBalance from "./models/PosCashBalance.tsx";
 import CalculatorModal from "./models/CalculatorModal.tsx";
+import ShutdownModal from "./ShutdownModal.tsx";
+import { authService } from "../services/authService";
 
 const OPEN_INVOICE_MODAL_EVENT = "openInvoiceModal";
 const OPEN_QUOTATION_MODAL_EVENT = "openQuotationModal";
+
+interface User {
+    id: number;
+    name: string;
+    email: string;
+    role: string;
+    role_id: number;
+}
 
 export default function Layout() {
     const location = useLocation();
@@ -21,11 +30,24 @@ export default function Layout() {
     const [isScrolled, setIsScrolled] = useState(false);
     const [isPosCashBalanceOpen, setIsPosCashBalanceOpen] = useState(false);
     const [isCalculatorOpen, setIsCalculatorOpen] = useState(false);
+    const [isShutdownModalOpen, setIsShutdownModalOpen] = useState(false);
+    const [user, setUser] = useState<User | null>(null);
+
+    useEffect(() => {
+        const currentUser = authService.getCurrentUser();
+        setUser(currentUser);
+    }, []);
+
+    const handleShutdown = () => {
+        authService.logout();
+        window.close();
+        setTimeout(() => {
+            navigate('/signin', { replace: true });
+        }, 100);
+    };
 
     const handleRefresh = () => {
-        // Navigate to current path to trigger a refresh
         navigate(location.pathname, { replace: true });
-        // Force a full page reload if needed
         window.location.reload();
     };
 
@@ -36,7 +58,7 @@ export default function Layout() {
     }, [location.pathname]);
 
     useEffect(() => {
-        if (isCalculatorOpen) {
+        if (isCalculatorOpen || isShutdownModalOpen) {
             document.body.style.overflow = 'hidden';
         } else {
             document.body.style.overflow = 'unset';
@@ -45,7 +67,7 @@ export default function Layout() {
         return () => {
             document.body.style.overflow = 'unset';
         };
-    }, [isCalculatorOpen]);
+    }, [isCalculatorOpen, isShutdownModalOpen]);
 
     useEffect(() => {
         const handleScroll = (e: Event) => {
@@ -96,9 +118,13 @@ export default function Layout() {
                             <button onClick={() => setIsCalculatorOpen(true)} className={'cursor-pointer'}>
                                 <Calculator size={15} />
                             </button>
-                            <Link to={'#'} className={"p-2 rounded-full bg-red-50"}>
+                            <button
+                                onClick={() => setIsShutdownModalOpen(true)}
+                                className="p-2 rounded-full bg-red-50 hover:bg-red-100 transition cursor-pointer"
+                                title="Shut Down"
+                            >
                                 <Power size={15} />
-                            </Link>
+                            </button>
                             <button
                                 onClick={handleRefresh}
                                 className={"p-2 rounded-full bg-emerald-50 hover:bg-emerald-100 transition cursor-pointer"}
@@ -108,18 +134,18 @@ export default function Layout() {
                             <Link to={'#'} className={'me-3'}>
                                 <Bell size={15} />
                             </Link>
-                            <div className={'flex flex-col leading-1 items-end border-s-2 ps-5 border-gray-200'}>
-                                <span className="text-sm font-medium text-black">John Doe</span>
-                                <br />
-                                <span className="text-xs text-gray-500">Admin</span>
-                            </div>
-                            <div className="w-12 h-12 rounded-full flex justify-center items-center">
-                                <img
-                                    src={'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&dpr=1&w=500'}
-                                    alt={'User'}
-                                    className="w-10 h-10 rounded-full object-cover"
-                                />
-                            </div>
+                            {user && (
+                                <>
+                                    <div className={'flex flex-col leading-1 items-end border-s-2 ps-5 border-gray-200'}>
+                                        <span className="text-sm font-medium text-black">{user.name}</span>
+                                        <br />
+                                        <span className="text-xs text-gray-500">{user.role}</span>
+                                    </div>
+                                    <div className="w-12 h-12 rounded-full flex justify-center items-center bg-emerald-500 text-white font-semibold text-lg">
+                                        {user.name.charAt(0).toUpperCase()}
+                                    </div>
+                                </>
+                            )}
                         </div>
                     </div>
                 </header>
@@ -129,6 +155,12 @@ export default function Layout() {
                 </main>
 
                 <AnimatePresence>
+                    {isShutdownModalOpen && (
+                        <ShutdownModal
+                            onClose={() => setIsShutdownModalOpen(false)}
+                            onShutdown={handleShutdown}
+                        />
+                    )}
                     {isInvoiceModalOpen && (
                         <motion.div
                             initial={{ opacity: 0 }}

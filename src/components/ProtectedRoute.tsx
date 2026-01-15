@@ -7,7 +7,7 @@ interface ProtectedRouteProps {
 
 export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     if (!authService.isAuthenticated()) {
-        return <Navigate to="/signin" replace />;
+        return <Navigate to="/" replace />;
     }
 
     return <>{children}</>;
