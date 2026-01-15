@@ -21,6 +21,14 @@ interface Product {
     stock: number;
     category: string;
     productCode: string;
+    isBulk: boolean;
+    batch?: string;
+    expiry?: string | null;
+}
+
+interface CartItem extends Product {
+    quantity: number;
+    discount: number;
 }
 
 interface PaymentAmount {
@@ -58,27 +66,6 @@ const demoCustomers: Customer[] = [
     { id: 4, name: 'Sunita Rao', contact: '0774234567', credit: 5000 },
     { id: 5, name: 'Vikram Singh', contact: '0775234567', credit: 5000 },
 ];
-
-interface CartItem extends Product {
-    quantity: number;
-    discount: number;
-}
-
-const mapAPIProductToProduct = (apiData: any): Product => {
-    return {
-        id: apiData.id || apiData.stockID, // දෙකෙන් කුමක් ආවත් id ලෙස ගනී
-        name: apiData.name || apiData.displayName, // දෙකෙන් කුමක් ආවත් name ලෙස ගනී
-        barcode: apiData.barcode,
-        price: Number(apiData.price),
-        wholesalePrice: Number(apiData.wholesalePrice || 0),
-        stock: Number(apiData.stock),
-        category: apiData.category || apiData.unit || 'Pcs',
-        isBulk: apiData.isBulk === true || String(apiData.unit).toLowerCase().includes('kg'),
-        productCode: apiData.productCode,
-        batch: apiData.batch || '',
-        expiry: apiData.expiry || null
-    };
-};
 
 const POSInterface = () => {
     const [billingMode, setBillingMode] = useState<'retail' | 'wholesale'>('retail');
