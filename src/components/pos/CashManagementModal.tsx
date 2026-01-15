@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, AlertCircle } from 'lucide-react';
+import {X, AlertCircle, Wallet, DollarSign, TrendingDown, TrendingUp} from 'lucide-react';
 import { useState } from 'react';
 
 interface CashManagementModalProps {
