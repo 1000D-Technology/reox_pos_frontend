@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { posService } from '../../services/posService';
+import { customerService } from '../../services/customerService';
 import { POSHeader } from '../../components/pos/POSHeader';
 import { POSSummaryCards } from '../../components/pos/POSSummaryCards';
 import { ProductPanel } from '../../components/pos/ProductPanel';
@@ -12,11 +13,13 @@ import { BulkLooseModal } from '../../components/pos/BulkLooseModal';
 import { CashManagementModal } from '../../components/pos/CashManagementModal';
 import { CartPanel } from "../../components/pos/CartPanel.tsx";
 import type { Product, CartItem, PaymentAmount } from '../../types';
+import toast, { Toaster } from 'react-hot-toast';
 
 interface Customer {
     id: number;
     name: string;
     contact: string;
+    email?: string;
     credit: number;
 }
 
@@ -248,17 +251,45 @@ const POSInterface = () => {
         }
     };
 
-    const registerCustomer = (name: string, contact: string) => {
-        const newCustomer: Customer = {
-            id: customers.length + 1,
-            name: name.trim(),
-            contact: contact.trim(),
-            credit: 0
-        };
-        setCustomers([...customers, newCustomer]);
-        setSelectedCustomer(newCustomer);
-        setCustomerSearchTerm(name);
-        setShowRegistrationModal(false);
+    const registerCustomer = async (name: string, contact: string, email?: string, creditBalance?: number) => {
+        try {
+            const customerData = {
+                name: name.trim(),
+                contact: contact.trim(),
+                email: email?.trim() || undefined,
+                credit_balance: creditBalance || 0
+            };
+
+            const response = await customerService.addCustomer(customerData);
+            console.log('Customer registration response:', response);
+
+            if (response.data.success) {
+                const customerFromAPI = response.data.data;
+                const newCustomer: Customer = {
+                    id: customerFromAPI.id,
+                    name: customerFromAPI.name,
+                    contact: customerFromAPI.contact,
+                    email: customerFromAPI.email,
+                    credit: customerFromAPI.credit_balance
+                };
+
+                setCustomers([...customers, newCustomer]);
+                setSelectedCustomer(newCustomer);
+                setCustomerSearchTerm(name);
+                setShowRegistrationModal(false);
+
+                toast.success('Customer registered successfully!');
+            } else {
+                const errorMessage = response.data.message || 'Failed to register customer';
+                toast.error(errorMessage);
+                // Modal stays open to allow retry
+            }
+        } catch (error: any) {
+            console.error('Error registering customer:', error);
+            const errorMessage = error.response?.data?.message || 'Failed to register customer. Please try again.';
+            toast.error(errorMessage);
+            // Modal stays open to allow user to fix errors and retry
+        }
     };
 
     const completePayment = () => {
@@ -314,6 +345,7 @@ const POSInterface = () => {
                     cartItems={cartItems}
                     itemsCount={itemsCount}
                     editingItem={editingItem}
+                    billingMode={billingMode}
                     onClearCart={clearCart}
                     onRemoveItem={removeFromCart}
                     onUpdateQuantity={updateQuantity}
@@ -370,6 +402,30 @@ const POSInterface = () => {
                 isOpen={showCashModal}
                 onClose={() => setShowCashModal(false)}
             />
+
+            <Toaster
+                position="top-right"
+                toastOptions={{
+                    duration: 4000,
+                    style: {
+                        background: '#363636',
+                        color: '#fff',
+                    },
+                    success: {
+                        duration: 3000,
+                        style: {
+                            background: '#10b981',
+                        },
+                    },
+                    error: {
+                        duration: 4000,
+                        style: {
+                            background: '#ef4444',
+                        },
+                    },
+                }}
+            />
+
         </div>
     );
 };

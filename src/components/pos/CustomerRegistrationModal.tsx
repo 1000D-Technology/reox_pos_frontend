@@ -1,11 +1,11 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, UserPlus, Phone } from 'lucide-react';
+import { X, UserPlus, Phone, Mail, CreditCard } from 'lucide-react';
 import { useState } from 'react';
 
 interface CustomerRegistrationModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onRegister: (name: string, contact: string) => void;
+    onRegister: (name: string, contact: string, email?: string, creditBalance?: number) => void;
 }
 
 export const CustomerRegistrationModal = ({
@@ -15,19 +15,26 @@ export const CustomerRegistrationModal = ({
                                           }: CustomerRegistrationModalProps) => {
     const [name, setName] = useState('');
     const [contact, setContact] = useState('');
+    const [email, setEmail] = useState('');
+    const [creditBalance, setCreditBalance] = useState('');
 
     const handleSubmit = () => {
         if (name.trim() && contact.trim()) {
-            onRegister(name, contact);
-            setName('');
-            setContact('');
-            onClose();
+            onRegister(
+                name, 
+                contact, 
+                email.trim() || undefined,
+                creditBalance ? parseFloat(creditBalance) : undefined
+            );
+            // Don't close modal here - let parent component handle closing on success
         }
     };
 
     const handleCancel = () => {
         setName('');
         setContact('');
+        setEmail('');
+        setCreditBalance('');
         onClose();
     };
 
@@ -84,6 +91,40 @@ export const CustomerRegistrationModal = ({
                                         value={contact}
                                         onChange={(e) => setContact(e.target.value)}
                                         className="w-full pl-10 pr-3 py-2.5 bg-gray-50 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-emerald-500 transition-colors"
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="text-sm font-semibold text-gray-700 mb-1.5 block">
+                                    Email Address
+                                </label>
+                                <div className="relative">
+                                    <Mail className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+                                    <input
+                                        type="email"
+                                        placeholder="Enter email (optional)"
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
+                                        className="w-full pl-10 pr-3 py-2.5 bg-gray-50 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-emerald-500 transition-colors"
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="text-sm font-semibold text-gray-700 mb-1.5 block">
+                                    Credit Balance
+                                </label>
+                                <div className="relative">
+                                    <CreditCard className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+                                    <input
+                                        type="number"
+                                        placeholder="Enter credit balance (optional)"
+                                        value={creditBalance}
+                                        onChange={(e) => setCreditBalance(e.target.value)}
+                                        className="w-full pl-10 pr-3 py-2.5 bg-gray-50 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-emerald-500 transition-colors"
+                                        step="0.01"
+                                        min="0"
                                     />
                                 </div>
                             </div>

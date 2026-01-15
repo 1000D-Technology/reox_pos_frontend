@@ -17,10 +17,19 @@ const customerController = {
 
             const [result] = await db.execute(sql, values);
 
+            // Fetch the complete customer data that was just created
+            const [newCustomer] = await db.execute(
+                `SELECT c.*, s.ststus as status_name 
+                 FROM customer c 
+                 INNER JOIN status s ON c.status_id = s.id 
+                 WHERE c.id = ?`, 
+                [result.insertId]
+            );
+
             res.status(201).json({
                 success: true,
                 message: "Customer added successfully",
-                customerId: result.insertId
+                data: newCustomer[0]
             });
         } catch (error) {
             console.error(error);

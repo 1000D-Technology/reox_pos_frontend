@@ -6,6 +6,7 @@ interface CartPanelProps {
     cartItems: CartItem[];
     itemsCount: number;
     editingItem: number | null;
+    billingMode: 'retail' | 'wholesale';
     onClearCart: () => void;
     onRemoveItem: (id: number) => void;
     onUpdateQuantity: (id: number, delta: number) => void;
@@ -20,6 +21,7 @@ export const CartPanel = ({
                               cartItems,
                               itemsCount,
                               editingItem,
+                              billingMode,
                               onClearCart,
                               onRemoveItem,
                               onUpdateQuantity,
@@ -62,7 +64,7 @@ export const CartPanel = ({
                                         <span className="text-xs text-gray-500">{item.category}</span>
                                         <Tag className="w-3 h-3 text-emerald-600" />
                                         <span className="text-xs font-medium text-emerald-600">
-                                            Wholesale: Rs {item.wholesalePrice}
+                                            {billingMode === 'wholesale' ? `Wholesale: Rs ${item.wholesalePrice}` : `Retail: Rs ${item.price}`}
                                         </span>
                                     </div>
                                 </div>
