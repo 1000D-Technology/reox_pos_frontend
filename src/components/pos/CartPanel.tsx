@@ -9,10 +9,12 @@ interface CartItem {
     wholesalePrice: number;
     quantity: number;
     discount: number;
+    discountType: 'percentage' | 'price';
     stock: number;
     category: string;
     productCode: string;
 }
+
 interface CartPanelProps {
     cartItems: CartItem[];
     itemsCount: number;
@@ -22,6 +24,7 @@ interface CartPanelProps {
     onUpdateQuantity: (id: number, delta: number) => void;
     onUpdatePrice: (id: number, price: number) => void;
     onUpdateDiscount: (id: number, discount: number) => void;
+    onUpdateDiscountType: (id: number, type: 'percentage' | 'price') => void;
     onEditItem: (id: number | null) => void;
     calculateItemTotal: (item: CartItem) => number;
 }
@@ -35,6 +38,7 @@ export const CartPanel = ({
                               onUpdateQuantity,
                               onUpdatePrice,
                               onUpdateDiscount,
+                              onUpdateDiscountType,
                               onEditItem,
                               calculateItemTotal
                           }: CartPanelProps) => {
@@ -71,8 +75,8 @@ export const CartPanel = ({
                                         <span className="text-xs text-gray-500">{item.category}</span>
                                         <Tag className="w-3 h-3 text-emerald-600" />
                                         <span className="text-xs font-medium text-emerald-600">
-                                                    Wholesale: Rs {item.wholesalePrice}
-                                                </span>
+                                            Wholesale: Rs {item.wholesalePrice}
+                                        </span>
                                     </div>
                                 </div>
                                 <div className="flex gap-1">
@@ -95,29 +99,88 @@ export const CartPanel = ({
                             </div>
 
                             {editingItem === item.id ? (
-                                <div className="grid grid-cols-2 gap-2 mb-2">
-                                    <div>
-                                        <label className="text-xs text-gray-600 mb-1 block">Price</label>
-                                        <input
-                                            type="number"
-                                            value={item.price}
-                                            onChange={(e) => onUpdatePrice(item.id, Number(e.target.value))}
-                                            className="w-full px-2 py-1.5 text-sm bg-white border-2 border-emerald-300 rounded-lg focus:outline-none"
-                                        />
+                                <div className="space-y-2 mb-2">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <button
+                                            onClick={() => onUpdateDiscountType(item.id, 'percentage')}
+                                            className={`flex-1 px-3 py-1.5 text-xs rounded-lg transition-colors ${
+                                                item.discountType === 'percentage'
+                                                    ? 'bg-emerald-500 text-white'
+                                                    : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                                            }`}
+                                        >
+                                            Percentage (%)
+                                        </button>
+                                        <button
+                                            onClick={() => onUpdateDiscountType(item.id, 'price')}
+                                            className={`flex-1 px-3 py-1.5 text-xs rounded-lg transition-colors ${
+                                                item.discountType === 'price'
+                                                    ? 'bg-emerald-500 text-white'
+                                                    : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                                            }`}
+                                        >
+                                            Fixed Price (Rs)
+                                        </button>
                                     </div>
-                                    <div>
-                                        <label className="text-xs text-gray-600 mb-1 block">Discount %</label>
-                                        <input
-                                            type="number"
-                                            value={item.discount}
-                                            onChange={(e) => onUpdateDiscount(item.id, Number(e.target.value))}
-                                            className="w-full px-2 py-1.5 text-sm bg-white border-2 border-emerald-300 rounded-lg focus:outline-none"
-                                            min="0"
-                                            max="100"
-                                        />
+                                    <div className="grid grid-cols-3 gap-2">
+                                        <div>
+                                            <label className="text-xs text-gray-600 mb-1 block">Price</label>
+                                            <input
+                                                type="number"
+                                                value={item.price}
+                                                onChange={(e) => onUpdatePrice(item.id, Number(e.target.value))}
+                                                className="w-full px-2 py-1.5 text-sm bg-white border-2 border-emerald-300 rounded-lg focus:outline-none"
+                                                step="0.01"
+                                                min="0"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="text-xs text-gray-600 mb-1 block">
+                                                Discount {item.discountType === 'percentage' ? '(%)' : '(Rs)'}
+                                            </label>
+                                            <input
+                                                type="number"
+                                                value={item.discount}
+                                                onChange={(e) => onUpdateDiscount(item.id, Number(e.target.value))}
+                                                className="w-full px-2 py-1.5 text-sm bg-white border-2 border-emerald-300 rounded-lg focus:outline-none"
+                                                step="0.01"
+                                                min="0"
+                                                max={item.discountType === 'percentage' ? 100 : undefined}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="text-xs text-gray-600 mb-1 block">
+                                                {item.discountType === 'percentage' ? 'Amount (Rs)' : 'Percent (%)'}
+                                            </label>
+                                            <input
+                                                type="number"
+                                                value={
+                                                    item.discountType === 'percentage'
+                                                        ? ((item.price * item.quantity * item.discount) / 100).toFixed(2)
+                                                        : ((item.discount / (item.price * item.quantity)) * 100).toFixed(2)
+                                                }
+                                                onChange={(e) => {
+                                                    const value = Number(e.target.value);
+                                                    if (item.discountType === 'percentage') {
+                                                        // Convert amount to percentage
+                                                        const percentage = (value / (item.price * item.quantity)) * 100;
+                                                        onUpdateDiscount(item.id, Math.min(percentage, 100));
+                                                    } else {
+                                                        // Convert percentage to amount
+                                                        const amount = (item.price * item.quantity * value) / 100;
+                                                        onUpdateDiscount(item.id, amount);
+                                                    }
+                                                }}
+                                                className="w-full px-2 py-1.5 text-sm bg-white border-2 border-blue-300 rounded-lg focus:outline-none"
+                                                step="0.01"
+                                                min="0"
+                                                max={item.discountType === 'price' ? 100 : undefined}
+                                            />
+                                        </div>
                                     </div>
                                 </div>
                             ) : null}
+
 
                             <div className="flex justify-between items-center">
                                 <div className="flex items-center gap-2 bg-white border-2 border-gray-200 rounded-lg p-1">
@@ -143,7 +206,10 @@ export const CartPanel = ({
                                                 Rs {(item.price * item.quantity).toFixed(2)}
                                             </p>
                                             <p className="text-xs text-emerald-600 font-medium">
-                                                -{item.discount}% off
+                                                {item.discountType === 'percentage'
+                                                    ? `-${item.discount}% off`
+                                                    : `-Rs ${item.discount.toFixed(2)} off`
+                                                }
                                             </p>
                                         </>
                                     )}
@@ -164,6 +230,5 @@ export const CartPanel = ({
                 )}
             </div>
         </div>
-
     );
 };
