@@ -1,19 +1,6 @@
 import {Trash2, Minus, Plus, Edit3, Tag, X, ShoppingCart} from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-
-interface CartItem {
-    id: number;
-    name: string;
-    barcode: string;
-    price: number;
-    wholesalePrice: number;
-    quantity: number;
-    discount: number;
-    discountType: 'percentage' | 'price';
-    stock: number;
-    category: string;
-    productCode: string;
-}
+import type { CartItem } from '../../types';
 
 interface CartPanelProps {
     cartItems: CartItem[];
