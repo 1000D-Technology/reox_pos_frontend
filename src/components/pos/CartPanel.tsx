@@ -2,6 +2,20 @@ import {Trash2, Minus, Plus, Edit3, Tag, X, ShoppingCart} from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { CartItem } from '../../types';
 
+interface CartItem {
+    id: number;
+    name: string;
+    barcode: string;
+    price: number;
+    wholesalePrice: number;
+    quantity: number;
+    discount: number;
+    discountType: 'percentage' | 'price';
+    stock: number;
+    category: string;
+    productCode: string;
+}
+
 interface CartPanelProps {
     cartItems: CartItem[];
     itemsCount: number;
@@ -65,6 +79,7 @@ export const CartPanel = ({
                                         <Tag className="w-3 h-3 text-emerald-600" />
                                         <span className="text-xs font-medium text-emerald-600">
                                             {billingMode === 'wholesale' ? `Wholesale: Rs ${item.wholesalePrice}` : `Retail: Rs ${item.price}`}
+                                            Wholesale: Rs {item.wholesalePrice}
                                         </span>
                                     </div>
                                 </div>
