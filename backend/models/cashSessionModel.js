@@ -32,11 +32,14 @@ const cashSessionModel = {
 
     async createCashSession(session) {
         try {
-            // Convert ISO datetime to MySQL datetime format
-            const mysqlDatetime = new Date(session.opening_date_time)
-                .toISOString()
-                .slice(0, 19)
-                .replace('T', ' ');
+            // Get current local datetime in MySQL format (YYYY-MM-DD HH:MM:SS)
+            const now = new Date();
+            const mysqlDatetime = now.getFullYear() + '-' +
+                String(now.getMonth() + 1).padStart(2, '0') + '-' +
+                String(now.getDate()).padStart(2, '0') + ' ' +
+                String(now.getHours()).padStart(2, '0') + ':' +
+                String(now.getMinutes()).padStart(2, '0') + ':' +
+                String(now.getSeconds()).padStart(2, '0');
 
             const [result] = await pool.query(
                 `INSERT INTO cash_sessions
@@ -60,7 +63,6 @@ const cashSessionModel = {
             throw error;
         }
     }
-
 
 };
 
