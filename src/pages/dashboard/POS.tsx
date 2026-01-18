@@ -20,7 +20,9 @@ interface Customer {
     name: string;
     contact: string;
     email?: string;
-    credit: number;
+    credit_balance?: number;
+    status_id?: number;
+    status_name?: string;
 }
 
 const mapAPIProductToProduct = (apiData: any): Product => {
@@ -41,14 +43,6 @@ const mapAPIProductToProduct = (apiData: any): Product => {
     };
 };
 
-const demoCustomers: Customer[] = [
-    { id: 1, name: 'Rajesh Kumar', contact: '0771234567', credit: 5000 },
-    { id: 2, name: 'Priya Sharma', contact: '0772234567', credit: 5000 },
-    { id: 3, name: 'Amit Patel', contact: '0773234567', credit: 5000 },
-    { id: 4, name: 'Sunita Rao', contact: '0774234567', credit: 5000 },
-    { id: 5, name: 'Vikram Singh', contact: '0775234567', credit: 5000 },
-];
-
 const POSInterface = () => {
     const [billingMode, setBillingMode] = useState<'retail' | 'wholesale'>('retail');
     const [cartItems, setCartItems] = useState<CartItem[]>([]);
@@ -66,7 +60,8 @@ const POSInterface = () => {
     const [showBulkLooseModal, setShowBulkLooseModal] = useState(false);
     const [showCashModal, setShowCashModal] = useState(false);
     const [showReturnModal, setShowReturnModal] = useState(false);
-    const [customers, setCustomers] = useState<Customer[]>(demoCustomers);
+    const [customers, setCustomers] = useState<Customer[]>([]);
+    const [customersLoading, setCustomersLoading] = useState(false);
 
     // Load products from API
     useEffect(() => {
@@ -205,9 +200,25 @@ const POSInterface = () => {
     };
 
     const updateQuantity = (id: number, delta: number) => {
-        setCartItems(cartItems.map(item =>
-            item.id === id ? { ...item, quantity: Math.max(1, item.quantity + delta) } : item
-        ).filter(item => item.quantity > 0));
+        setCartItems(prevCartItems => {
+            return prevCartItems.map(item => {
+                if (item.id === id) {
+                    const newQuantity = item.quantity + delta;
+                    
+                    // Check stock limit when increasing quantity
+                    if (delta > 0) {
+                        const product = products.find(p => p.id === id);
+                        if (product && newQuantity > product.stock) {
+                            toast.error(`Cannot add more than ${product.stock} items. Only ${product.stock} in stock.`);
+                            return item; // Return unchanged item
+                        }
+                    }
+                    
+                    return { ...item, quantity: Math.max(1, newQuantity) };
+                }
+                return item;
+            }).filter(item => item.quantity > 0);
+        });
     };
 
     const updateItemPrice = (id: number, newPrice: number) => {
@@ -244,11 +255,36 @@ const POSInterface = () => {
         }
     };
 
-    const handleCustomerSearch = (value: string) => {
+    const handleCustomerSearch = async (value: string) => {
         setCustomerSearchTerm(value);
-        if (!value) {
+        if (!value.trim()) {
             setSelectedCustomer(null);
+            setCustomers([]);
+            return;
         }
+
+        try {
+            setCustomersLoading(true);
+            const response = await customerService.searchCustomers(value);
+            
+            if (response.data?.success && Array.isArray(response.data.data)) {
+                setCustomers(response.data.data);
+            } else {
+                setCustomers([]);
+            }
+        } catch (error) {
+            console.error('Customer search failed:', error);
+            setCustomers([]);
+            toast.error('Failed to search customers');
+        } finally {
+            setCustomersLoading(false);
+        }
+    };
+
+    const handleCustomerSelect = (customer: Customer) => {
+        setSelectedCustomer(customer);
+        setCustomerSearchTerm(customer.name);
+        setCustomers([]); // Clear search results after selection
     };
 
     const registerCustomer = async (name: string, contact: string, email?: string, creditBalance?: number) => {
@@ -270,7 +306,9 @@ const POSInterface = () => {
                     name: customerFromAPI.name,
                     contact: customerFromAPI.contact,
                     email: customerFromAPI.email,
-                    credit: customerFromAPI.credit_balance
+                    credit_balance: customerFromAPI.credit_balance,
+                    status_id: customerFromAPI.status_id,
+                    status_name: customerFromAPI.status_name
                 };
 
                 setCustomers([...customers, newCustomer]);
@@ -359,6 +397,7 @@ const POSInterface = () => {
                     selectedCustomer={selectedCustomer}
                     customerSearchTerm={customerSearchTerm}
                     onCustomerSearchChange={handleCustomerSearch}
+                    onCustomerSelect={handleCustomerSelect}
                     onRegisterCustomer={() => setShowRegistrationModal(true)}
                     paymentAmounts={paymentAmounts}
                     onPaymentAmountChange={updatePaymentAmount}
@@ -367,6 +406,8 @@ const POSInterface = () => {
                     total={total}
                     cartItemsCount={itemsCount}
                     onCompletePayment={completePayment}
+                    customers={customers}
+                    customersLoading={customersLoading}
                 />
             </div>
 

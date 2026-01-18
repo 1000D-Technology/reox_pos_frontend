@@ -10,5 +10,7 @@ router.get('/all', customerController.getAllCustomers);
 router.put('/:customerId/status', customerController.toggleStatus);
 // Route for updating customer phone number
 router.put('/:customerId/phone',validateCustomer.validateCustomerNumber, customerController.updatePhone);
+// routes/customerRoutes.js
+router.get('/search', customerController.searchCustomers);
 
 module.exports = router;
