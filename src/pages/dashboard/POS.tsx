@@ -264,6 +264,7 @@ const POSInterface = () => {
                 price: priceToUse,
                 quantity: 1,
                 discount: 0,
+                discountType: 'percentage'
                 discountType: 'percentage',
                 isBulk: product.isBulk
             };
@@ -329,6 +330,7 @@ const POSInterface = () => {
             };
 
             const response = await customerService.addCustomer(customerData);
+            console.log('Customer registration response:', response);
 
             if (response.data.success) {
                 const customerFromAPI = response.data.data;
@@ -349,11 +351,13 @@ const POSInterface = () => {
             } else {
                 const errorMessage = response.data.message || 'Failed to register customer';
                 toast.error(errorMessage);
+                // Modal stays open to allow retry
             }
         } catch (error: any) {
             console.error('Error registering customer:', error);
             const errorMessage = error.response?.data?.message || 'Failed to register customer. Please try again.';
             toast.error(errorMessage);
+            // Modal stays open to allow user to fix errors and retry
         }
     };
 
@@ -467,6 +471,31 @@ const POSInterface = () => {
             <CashManagementModal
                 isOpen={showCashModal}
                 onClose={() => setShowCashModal(false)}
+            />
+
+            <Toaster
+                position="top-right"
+                toastOptions={{
+                    duration: 4000,
+                    style: {
+                        background: '#363636',
+                        color: '#fff',
+                    },
+                    success: {
+                        duration: 3000,
+                        style: {
+                            background: '#10b981',
+                        },
+                    },
+                    error: {
+                        duration: 4000,
+                        style: {
+                            background: '#ef4444',
+                        },
+                    },
+                }}
+            />
+
                 cashSessionId={currentCashSessionId}
             /><Toaster
             position="top-right"
