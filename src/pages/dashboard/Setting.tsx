@@ -1,54 +1,17 @@
-import { useState } from 'react';
-import { Printer, Upload, Settings as SettingsIcon, Save, RefreshCw, Image, FileText, Ruler, DollarSign, Users, ShoppingCart, Package, Bell, Lock, Globe, CreditCard, BarChart3 } from 'lucide-react';
-
-interface PrintSettings {
-    rollSize: string;
-    fontSize: string;
-    headerText: string;
-    footerText: string;
-    showLogo: boolean;
-    showBarcode: boolean;
-    showQR: boolean;
-    paperWidth: string;
-    copies: number;
-    autocut: boolean;
-    printDate: boolean;
-    printTime: boolean;
-}
-
-interface POSSettings {
-    storeName: string;
-    storeAddress: string;
-    storePhone: string;
-    storeEmail: string;
-    taxRate: number;
-    currency: string;
-    defaultDiscount: number;
-    lowStockAlert: number;
-    enableSound: boolean;
-    enableVibration: boolean;
-    quickSaleMode: boolean;
-    showCustomerDisplay: boolean;
-}
-
-interface SystemSettings {
-    language: string;
-    timezone: string;
-    dateFormat: string;
-    timeFormat: string;
-    theme: string;
-    notifications: boolean;
-    autoBackup: boolean;
-    backupFrequency: string;
-}
+import { useState, useEffect } from 'react';
+import { Printer, Upload, Settings as SettingsIcon, Save, RefreshCw, Image, FileText, Ruler, DollarSign, ShoppingCart, Package, Bell, Lock, Globe, CreditCard, BarChart3 } from 'lucide-react';
+import toast, { Toaster } from 'react-hot-toast';
+import type { PrintSettings, POSSettings, SystemSettings, PaymentSettings } from '../../types/settingConfig';
+import { RollSize, FontSize, Language, Timezone, DateFormat, TimeFormat, Theme, BackupFrequency, SettingsTab } from '../../enum/settings';
 
 function Setting() {
-    const [activeTab, setActiveTab] = useState<string>('print');
+    const [activeTab, setActiveTab] = useState<string>(SettingsTab.PRINT);
     const [logoPreview, setLogoPreview] = useState<string>('');
+    const [logoFile, setLogoFile] = useState<File | null>(null);
 
     const [printSettings, setPrintSettings] = useState<PrintSettings>({
-        rollSize: '80mm',
-        fontSize: 'medium',
+        rollSize: RollSize.SIZE_80MM,
+        fontSize: FontSize.MEDIUM,
         headerText: 'WELCOME TO OUR STORE',
         footerText: 'Thank you for your purchase!',
         showLogo: true,
@@ -77,19 +40,65 @@ function Setting() {
     });
 
     const [systemSettings, setSystemSettings] = useState<SystemSettings>({
-        language: 'english',
-        timezone: 'UTC',
-        dateFormat: 'DD/MM/YYYY',
-        timeFormat: '24-hour',
-        theme: 'light',
+        language: Language.ENGLISH,
+        timezone: Timezone.UTC,
+        dateFormat: DateFormat.DD_MM_YYYY,
+        timeFormat: TimeFormat.TWENTY_FOUR_HOUR,
+        theme: Theme.LIGHT,
         notifications: true,
         autoBackup: true,
-        backupFrequency: 'daily'
+        backupFrequency: BackupFrequency.DAILY
     });
+
+    const [paymentSettings, setPaymentSettings] = useState<PaymentSettings>({
+        cash: true,
+        card: true,
+        digitalWallet: false,
+        bankTransfer: false
+    });
+
+    // Load settings from localStorage on mount
+    useEffect(() => {
+        const savedPrintSettings = localStorage.getItem('printSettings');
+        const savedPOSSettings = localStorage.getItem('posSettings');
+        const savedSystemSettings = localStorage.getItem('systemSettings');
+        const savedPaymentSettings = localStorage.getItem('paymentSettings');
+        const savedLogoPath = localStorage.getItem('logoPath');
+
+        if (savedPrintSettings) {
+            setPrintSettings(JSON.parse(savedPrintSettings));
+        }
+        if (savedPOSSettings) {
+            setPOSSettings(JSON.parse(savedPOSSettings));
+        }
+        if (savedSystemSettings) {
+            setSystemSettings(JSON.parse(savedSystemSettings));
+        }
+        if (savedPaymentSettings) {
+            setPaymentSettings(JSON.parse(savedPaymentSettings));
+        }
+        if (savedLogoPath) {
+            setLogoPreview(savedLogoPath);
+        }
+    }, []);
 
     const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
+            // Validate file type
+            const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml'];
+            if (!validTypes.includes(file.type)) {
+                toast.error('Please upload a PNG, JPG, or SVG file');
+                return;
+            }
+
+            // Validate file size (5MB max)
+            if (file.size > 5 * 1024 * 1024) {
+                toast.error('File size must be less than 5MB');
+                return;
+            }
+
+            setLogoFile(file);
             const reader = new FileReader();
             reader.onloadend = () => {
                 setLogoPreview(reader.result as string);
@@ -110,26 +119,165 @@ function Setting() {
         setSystemSettings(prev => ({ ...prev, [field]: value }));
     };
 
-    const saveSettings = () => {
-        console.log('Saving settings:', { printSettings, posSettings, systemSettings });
-        alert('Settings saved successfully!');
+    const handlePaymentSettingChange = (field: keyof PaymentSettings, value: boolean) => {
+        setPaymentSettings(prev => ({ ...prev, [field]: value }));
+    };
+
+    const saveSettings = async () => {
+        try {
+            // Save settings to localStorage
+            localStorage.setItem('printSettings', JSON.stringify(printSettings));
+            localStorage.setItem('posSettings', JSON.stringify(posSettings));
+            localStorage.setItem('systemSettings', JSON.stringify(systemSettings));
+            localStorage.setItem('paymentSettings', JSON.stringify(paymentSettings));
+
+            // Save logo if uploaded
+            if (logoFile) {
+                // Store the logo as base64 in localStorage
+                // In a real application, you would upload this to a server
+                // For now, we'll save the base64 data URL
+                localStorage.setItem('logoPath', logoPreview);
+                toast.success('Logo saved successfully!');
+            }
+
+            toast.success('Settings saved successfully!');
+            console.log('Saved settings:', { printSettings, posSettings, systemSettings, paymentSettings, logoPath: logoPreview });
+        } catch (error) {
+            console.error('Error saving settings:', error);
+            toast.error('Failed to save settings');
+        }
     };
 
     const resetSettings = () => {
-        if (confirm('Are you sure you want to reset all settings to default?')) {
-            console.log('Resetting settings to default');
+        const tabNames: { [key: string]: string } = {
+            [SettingsTab.PRINT]: 'Print Settings',
+            [SettingsTab.POS]: 'POS Settings',
+            [SettingsTab.SYSTEM]: 'System Settings',
+            [SettingsTab.PAYMENT]: 'Payment Settings'
+        };
+
+        if (confirm(`Are you sure you want to reset ${tabNames[activeTab]} to default?`)) {
+            switch (activeTab) {
+                case SettingsTab.PRINT:
+                    // Reset print settings and logo
+                    localStorage.removeItem('printSettings');
+                    localStorage.removeItem('logoPath');
+
+                    setPrintSettings({
+                        rollSize: RollSize.SIZE_80MM,
+                        fontSize: FontSize.MEDIUM,
+                        headerText: 'WELCOME TO OUR STORE',
+                        footerText: 'Thank you for your purchase!',
+                        showLogo: true,
+                        showBarcode: true,
+                        showQR: false,
+                        paperWidth: '80',
+                        copies: 1,
+                        autocut: true,
+                        printDate: true,
+                        printTime: true
+                    });
+
+                    setLogoPreview('');
+                    setLogoFile(null);
+
+                    toast.success('Print settings reset to default successfully!');
+                    break;
+
+                case SettingsTab.POS:
+                    // Reset POS settings only
+                    localStorage.removeItem('posSettings');
+
+                    setPOSSettings({
+                        storeName: 'My POS Store',
+                        storeAddress: '123 Main Street, City',
+                        storePhone: '+1 234 567 8900',
+                        storeEmail: 'store@example.com',
+                        taxRate: 10,
+                        currency: 'Rs.',
+                        defaultDiscount: 0,
+                        lowStockAlert: 10,
+                        enableSound: true,
+                        enableVibration: false,
+                        quickSaleMode: false,
+                        showCustomerDisplay: true
+                    });
+
+                    toast.success('POS settings reset to default successfully!');
+                    break;
+
+                case SettingsTab.SYSTEM:
+                    // Reset system settings only
+                    localStorage.removeItem('systemSettings');
+
+                    setSystemSettings({
+                        language: Language.ENGLISH,
+                        timezone: Timezone.UTC,
+                        dateFormat: DateFormat.DD_MM_YYYY,
+                        timeFormat: TimeFormat.TWENTY_FOUR_HOUR,
+                        theme: Theme.LIGHT,
+                        notifications: true,
+                        autoBackup: true,
+                        backupFrequency: BackupFrequency.DAILY
+                    });
+
+                    toast.success('System settings reset to default successfully!');
+                    break;
+
+                case SettingsTab.PAYMENT:
+                    // Reset payment settings to default
+                    localStorage.removeItem('paymentSettings');
+
+                    setPaymentSettings({
+                        cash: true,
+                        card: true,
+                        digitalWallet: false,
+                        bankTransfer: false
+                    });
+
+                    toast.success('Payment settings reset to default successfully!');
+                    break;
+
+                default:
+                    toast.error('Unknown settings tab');
+            }
+
+            console.log(`${tabNames[activeTab]} reset to default`);
         }
     };
 
     const tabs = [
-        { id: 'print', name: 'Print Settings', icon: Printer, color: 'bg-gradient-to-br from-blue-500 to-blue-600' },
-        { id: 'pos', name: 'POS Settings', icon: ShoppingCart, color: 'bg-gradient-to-br from-green-500 to-green-600' },
-        { id: 'system', name: 'System Settings', icon: SettingsIcon, color: 'bg-gradient-to-br from-purple-500 to-purple-600' },
-        { id: 'payment', name: 'Payment Settings', icon: CreditCard, color: 'bg-gradient-to-br from-orange-500 to-orange-600' }
+        { id: SettingsTab.PRINT, name: 'Print Settings', icon: Printer, color: 'bg-gradient-to-br from-blue-500 to-blue-600' },
+        { id: SettingsTab.POS, name: 'POS Settings', icon: ShoppingCart, color: 'bg-gradient-to-br from-green-500 to-green-600' },
+        { id: SettingsTab.SYSTEM, name: 'System Settings', icon: SettingsIcon, color: 'bg-gradient-to-br from-purple-500 to-purple-600' },
+        { id: SettingsTab.PAYMENT, name: 'Payment Settings', icon: CreditCard, color: 'bg-gradient-to-br from-orange-500 to-orange-600' }
     ];
 
     return (
         <div className="p-6 bg-gray-50 min-h-screen">
+            <Toaster
+                position="top-right"
+                toastOptions={{
+                    duration: 4000,
+                    style: {
+                        background: '#363636',
+                        color: '#fff',
+                    },
+                    success: {
+                        duration: 3000,
+                        style: {
+                            background: '#10b981',
+                        },
+                    },
+                    error: {
+                        duration: 4000,
+                        style: {
+                            background: '#ef4444',
+                        },
+                    },
+                }}
+            />
+
             {/* Header */}
             <div className="mb-6">
                 <h1 className="text-3xl font-bold text-gray-800 mb-2">System Settings</h1>
@@ -160,9 +308,8 @@ function Setting() {
                     <div
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id)}
-                        className={`flex items-center p-4 space-x-3 transition-all bg-white rounded-2xl shadow-lg hover:shadow-xl cursor-pointer group relative overflow-hidden ${
-                            activeTab === tab.id ? 'ring-2 ring-green-500' : ''
-                        }`}
+                        className={`flex items-center p-4 space-x-3 transition-all bg-white rounded-2xl shadow-lg hover:shadow-xl cursor-pointer group relative overflow-hidden ${activeTab === tab.id ? 'ring-2 ring-green-500' : ''
+                            }`}
                     >
                         <div className="absolute inset-0 bg-gradient-to-br from-transparent via-gray-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
 
@@ -183,7 +330,7 @@ function Setting() {
             </div>
 
             {/* Print Settings Tab */}
-            {activeTab === 'print' && (
+            {activeTab === SettingsTab.PRINT && (
                 <div className="space-y-6">
                     {/* Logo Upload Section */}
                     <div className="bg-white rounded-lg shadow-md p-6">
@@ -242,10 +389,10 @@ function Setting() {
                                     onChange={(e) => handlePrintSettingChange('rollSize', e.target.value)}
                                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                 >
-                                    <option value="57mm">57mm (2.25 inches)</option>
-                                    <option value="80mm">80mm (3.15 inches)</option>
-                                    <option value="76mm">76mm (3 inches)</option>
-                                    <option value="58mm">58mm (2.28 inches)</option>
+                                    <option value={RollSize.SIZE_57MM}>57mm (2.25 inches)</option>
+                                    <option value={RollSize.SIZE_80MM}>80mm (3.15 inches)</option>
+                                    <option value={RollSize.SIZE_76MM}>76mm (3 inches)</option>
+                                    <option value={RollSize.SIZE_58MM}>58mm (2.28 inches)</option>
                                 </select>
                             </div>
 
@@ -266,10 +413,10 @@ function Setting() {
                                     onChange={(e) => handlePrintSettingChange('fontSize', e.target.value)}
                                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                 >
-                                    <option value="small">Small</option>
-                                    <option value="medium">Medium</option>
-                                    <option value="large">Large</option>
-                                    <option value="extra-large">Extra Large</option>
+                                    <option value={FontSize.SMALL}>Small</option>
+                                    <option value={FontSize.MEDIUM}>Medium</option>
+                                    <option value={FontSize.LARGE}>Large</option>
+                                    <option value={FontSize.EXTRA_LARGE}>Extra Large</option>
                                 </select>
                             </div>
 
@@ -418,7 +565,7 @@ function Setting() {
             )}
 
             {/* POS Settings Tab */}
-            {activeTab === 'pos' && (
+            {activeTab === SettingsTab.POS && (
                 <div className="space-y-6">
                     {/* Store Information */}
                     <div className="bg-white rounded-lg shadow-md p-6">
@@ -558,7 +705,7 @@ function Setting() {
             )}
 
             {/* System Settings Tab */}
-            {activeTab === 'system' && (
+            {activeTab === SettingsTab.SYSTEM && (
                 <div className="space-y-6">
                     {/* General Settings */}
                     <div className="bg-white rounded-lg shadow-md p-6">
@@ -574,11 +721,11 @@ function Setting() {
                                     onChange={(e) => handleSystemSettingChange('language', e.target.value)}
                                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                 >
-                                    <option value="english">English</option>
-                                    <option value="spanish">Spanish</option>
-                                    <option value="french">French</option>
-                                    <option value="german">German</option>
-                                    <option value="chinese">Chinese</option>
+                                    <option value={Language.ENGLISH}>English</option>
+                                    <option value={Language.SPANISH}>Spanish</option>
+                                    <option value={Language.FRENCH}>French</option>
+                                    <option value={Language.GERMAN}>German</option>
+                                    <option value={Language.CHINESE}>Chinese</option>
                                 </select>
                             </div>
 
@@ -589,11 +736,11 @@ function Setting() {
                                     onChange={(e) => handleSystemSettingChange('timezone', e.target.value)}
                                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                 >
-                                    <option value="UTC">UTC</option>
-                                    <option value="EST">EST (Eastern)</option>
-                                    <option value="CST">CST (Central)</option>
-                                    <option value="PST">PST (Pacific)</option>
-                                    <option value="GMT">GMT</option>
+                                    <option value={Timezone.UTC}>UTC</option>
+                                    <option value={Timezone.EST}>EST (Eastern)</option>
+                                    <option value={Timezone.CST}>CST (Central)</option>
+                                    <option value={Timezone.PST}>PST (Pacific)</option>
+                                    <option value={Timezone.GMT}>GMT</option>
                                 </select>
                             </div>
 
@@ -604,9 +751,9 @@ function Setting() {
                                     onChange={(e) => handleSystemSettingChange('dateFormat', e.target.value)}
                                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                 >
-                                    <option value="DD/MM/YYYY">DD/MM/YYYY</option>
-                                    <option value="MM/DD/YYYY">MM/DD/YYYY</option>
-                                    <option value="YYYY-MM-DD">YYYY-MM-DD</option>
+                                    <option value={DateFormat.DD_MM_YYYY}>DD/MM/YYYY</option>
+                                    <option value={DateFormat.MM_DD_YYYY}>MM/DD/YYYY</option>
+                                    <option value={DateFormat.YYYY_MM_DD}>YYYY-MM-DD</option>
                                 </select>
                             </div>
 
@@ -617,8 +764,8 @@ function Setting() {
                                     onChange={(e) => handleSystemSettingChange('timeFormat', e.target.value)}
                                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                 >
-                                    <option value="12-hour">12-hour (AM/PM)</option>
-                                    <option value="24-hour">24-hour</option>
+                                    <option value={TimeFormat.TWELVE_HOUR}>12-hour (AM/PM)</option>
+                                    <option value={TimeFormat.TWENTY_FOUR_HOUR}>24-hour</option>
                                 </select>
                             </div>
 
@@ -629,9 +776,9 @@ function Setting() {
                                     onChange={(e) => handleSystemSettingChange('theme', e.target.value)}
                                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                 >
-                                    <option value="light">Light</option>
-                                    <option value="dark">Dark</option>
-                                    <option value="auto">Auto (System)</option>
+                                    <option value={Theme.LIGHT}>Light</option>
+                                    <option value={Theme.DARK}>Dark</option>
+                                    <option value={Theme.AUTO}>Auto (System)</option>
                                 </select>
                             </div>
 
@@ -642,10 +789,10 @@ function Setting() {
                                     onChange={(e) => handleSystemSettingChange('backupFrequency', e.target.value)}
                                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                 >
-                                    <option value="hourly">Hourly</option>
-                                    <option value="daily">Daily</option>
-                                    <option value="weekly">Weekly</option>
-                                    <option value="monthly">Monthly</option>
+                                    <option value={BackupFrequency.HOURLY}>Hourly</option>
+                                    <option value={BackupFrequency.DAILY}>Daily</option>
+                                    <option value={BackupFrequency.WEEKLY}>Weekly</option>
+                                    <option value={BackupFrequency.MONTHLY}>Monthly</option>
                                 </select>
                             </div>
                         </div>
@@ -695,7 +842,7 @@ function Setting() {
             )}
 
             {/* Payment Settings Tab */}
-            {activeTab === 'payment' && (
+            {activeTab === SettingsTab.PAYMENT && (
                 <div className="space-y-6">
                     <div className="bg-white rounded-lg shadow-md p-6">
                         <h3 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
@@ -706,7 +853,12 @@ function Setting() {
                             <div className="p-4 border-2 border-gray-200 rounded-lg hover:border-orange-500 transition-colors">
                                 <label className="flex items-center justify-between cursor-pointer">
                                     <div className="flex items-center gap-3">
-                                        <input type="checkbox" defaultChecked className="w-5 h-5 text-orange-600" />
+                                        <input
+                                            type="checkbox"
+                                            checked={paymentSettings.cash}
+                                            onChange={(e) => handlePaymentSettingChange('cash', e.target.checked)}
+                                            className="w-5 h-5 text-orange-600"
+                                        />
                                         <div>
                                             <p className="font-semibold text-gray-800">Cash</p>
                                             <p className="text-sm text-gray-600">Accept cash payments</p>
@@ -719,7 +871,12 @@ function Setting() {
                             <div className="p-4 border-2 border-gray-200 rounded-lg hover:border-orange-500 transition-colors">
                                 <label className="flex items-center justify-between cursor-pointer">
                                     <div className="flex items-center gap-3">
-                                        <input type="checkbox" defaultChecked className="w-5 h-5 text-orange-600" />
+                                        <input
+                                            type="checkbox"
+                                            checked={paymentSettings.card}
+                                            onChange={(e) => handlePaymentSettingChange('card', e.target.checked)}
+                                            className="w-5 h-5 text-orange-600"
+                                        />
                                         <div>
                                             <p className="font-semibold text-gray-800">Credit/Debit Card</p>
                                             <p className="text-sm text-gray-600">Accept card payments</p>
@@ -732,7 +889,12 @@ function Setting() {
                             <div className="p-4 border-2 border-gray-200 rounded-lg hover:border-orange-500 transition-colors">
                                 <label className="flex items-center justify-between cursor-pointer">
                                     <div className="flex items-center gap-3">
-                                        <input type="checkbox" className="w-5 h-5 text-orange-600" />
+                                        <input
+                                            type="checkbox"
+                                            checked={paymentSettings.digitalWallet}
+                                            onChange={(e) => handlePaymentSettingChange('digitalWallet', e.target.checked)}
+                                            className="w-5 h-5 text-orange-600"
+                                        />
                                         <div>
                                             <p className="font-semibold text-gray-800">Digital Wallet</p>
                                             <p className="text-sm text-gray-600">PayPal, Google Pay, Apple Pay</p>
@@ -745,7 +907,12 @@ function Setting() {
                             <div className="p-4 border-2 border-gray-200 rounded-lg hover:border-orange-500 transition-colors">
                                 <label className="flex items-center justify-between cursor-pointer">
                                     <div className="flex items-center gap-3">
-                                        <input type="checkbox" className="w-5 h-5 text-orange-600" />
+                                        <input
+                                            type="checkbox"
+                                            checked={paymentSettings.bankTransfer}
+                                            onChange={(e) => handlePaymentSettingChange('bankTransfer', e.target.checked)}
+                                            className="w-5 h-5 text-orange-600"
+                                        />
                                         <div>
                                             <p className="font-semibold text-gray-800">Bank Transfer</p>
                                             <p className="text-sm text-gray-600">Direct bank transfers</p>
