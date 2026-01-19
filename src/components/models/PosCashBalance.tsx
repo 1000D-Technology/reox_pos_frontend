@@ -104,6 +104,17 @@ export default function PosCashBalance({ onClose, onNavigateToPOS }: PosCashBala
         month: 'long',
         day: 'numeric'
     });
+    useEffect(() => {
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.key === 'Enter' && !loading && !success && selectedCounter && openingBalance) {
+                event.preventDefault();
+                handleSubmit();
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [loading, success, selectedCounter, openingBalance]);
 
     return (
         <>

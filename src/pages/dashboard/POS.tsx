@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { posService } from '../../services/posService';
 import { customerService } from '../../services/customerService';
-import { cashManagementService } from '../../services/cashManagementService';
 import { authService } from '../../services/authService';
+import { cashSessionService } from '../../services/cashSessionService';
 import { POSHeader } from '../../components/pos/POSHeader';
 import { POSSummaryCards } from '../../components/pos/POSSummaryCards';
 import { ProductPanel } from '../../components/pos/ProductPanel';
@@ -15,7 +15,6 @@ import { CashManagementModal } from '../../components/pos/CashManagementModal';
 import { CartPanel } from "../../components/pos/CartPanel.tsx";
 import type { Product, CartItem, PaymentAmount } from '../../types';
 import toast, { Toaster } from 'react-hot-toast';
-import PosCashBalance from "../../components/models/PosCashBalance.tsx";
 
 interface Customer {
     id: number;
@@ -70,7 +69,6 @@ const POSInterface = () => {
     const [showReturnModal, setShowReturnModal] = useState(false);
     const [customers, setCustomers] = useState<Customer[]>(demoCustomers);
     const [currentCashSessionId, setCurrentCashSessionId] = useState<number | null>(null);
-    const [showCashBalanceModal, setShowCashBalanceModal] = useState(false);
     const [sessionChecked, setSessionChecked] = useState(false);
 
     // Load products from API
@@ -101,41 +99,32 @@ const POSInterface = () => {
                 const sessionDate = localStorage.getItem('session_date');
                 const today = new Date().toISOString().split('T')[0];
 
-                // Clear old session data if date changed
-                if (sessionDate !== today) {
+                if (sessionDate && sessionDate !== today) {
                     localStorage.removeItem('current_counter');
                     localStorage.removeItem('session_date');
-                    setShowCashBalanceModal(true);
                     setSessionChecked(true);
                     return;
                 }
 
-                // Check if we have userId and counter code
                 if (!userId || !counterCode) {
-                    setShowCashBalanceModal(true);
                     setSessionChecked(true);
                     return;
                 }
 
-                // Check backend for active session
                 const { hasActiveSession, session } = await cashSessionService.checkActiveCashSession(
                     userId,
                     counterCode
                 );
 
                 if (hasActiveSession && session) {
-                    // Session exists, set it up
                     setCurrentCashSessionId(session.id);
                     console.log('Active session found:', session);
                 } else {
-                    // No active session, show modal
                     localStorage.removeItem('current_counter');
                     localStorage.removeItem('session_date');
-                    setShowCashBalanceModal(true);
                 }
             } catch (error) {
                 console.error('Error checking session:', error);
-                setShowCashBalanceModal(true);
             } finally {
                 setSessionChecked(true);
             }
@@ -143,25 +132,6 @@ const POSInterface = () => {
 
         checkSession();
     }, []);
-
-    if (!sessionChecked) {
-        return (
-            <div className="h-screen flex items-center justify-center bg-gradient-to-br">
-                <div className="text-center">
-                    <div className="w-16 h-16 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-                    <p className="text-gray-600 text-lg">Checking session...</p>
-                </div>
-            </div>
-        );
-    }
-
-    const updateItemDiscountType = (id: number, type: 'percentage' | 'fixed' | 'price') => {
-        setCartItems(prevItems =>
-            prevItems.map(item =>
-                item.id === id ? { ...item, discountType: type } : item
-            )
-        );
-    };
 
     // Barcode search effect
     useEffect(() => {
@@ -202,7 +172,8 @@ const POSInterface = () => {
             if (e.key === 'F1') {
                 e.preventDefault();
                 setShowCashModal(true);
-            }if (e.key === 'F2') {
+            }
+            if (e.key === 'F2') {
                 e.preventDefault();
                 setShowBulkLooseModal(true);
             }
@@ -216,7 +187,25 @@ const POSInterface = () => {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, []);
 
-    // Summary Stats
+    if (!sessionChecked) {
+        return (
+            <div className="h-screen flex items-center justify-center bg-gradient-to-br">
+                <div className="text-center">
+                    <div className="w-16 h-16 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+                    <p className="text-gray-600 text-lg">Checking session...</p>
+                </div>
+            </div>
+        );
+    }
+
+    const updateItemDiscountType = (id: number, type: 'percentage' | 'price') => {
+        setCartItems(prevItems =>
+            prevItems.map(item =>
+                item.id === id ? { ...item, discountType: type } : item
+            )
+        );
+    };
+
     const subtotal = cartItems.reduce((sum, item) => {
         const itemTotal = item.price * item.quantity;
         const itemDiscount = (itemTotal * item.discount) / 100;
@@ -264,8 +253,7 @@ const POSInterface = () => {
                 price: priceToUse,
                 quantity: 1,
                 discount: 0,
-                discountType: 'percentage'
-                discountType: 'percentage',
+                discountType: 'percentage' as const,
                 isBulk: product.isBulk
             };
 
@@ -298,8 +286,7 @@ const POSInterface = () => {
 
     const clearCart = () => {
         setCartItems([]);
-        setEditingItem(null);
-        setPaymentAmounts([]);
+        setEditingItem(null);setPaymentAmounts([]);
     };
 
     const updatePaymentAmount = (methodId: string, amount: number) => {
@@ -351,13 +338,13 @@ const POSInterface = () => {
             } else {
                 const errorMessage = response.data.message || 'Failed to register customer';
                 toast.error(errorMessage);
-                // Modal stays open to allow retry
             }
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('Error registering customer:', error);
-            const errorMessage = error.response?.data?.message || 'Failed to register customer. Please try again.';
+            const errorMessage = error instanceof Error
+                ? error.message
+                : 'Failed to register customer. Please try again.';
             toast.error(errorMessage);
-            // Modal stays open to allow user to fix errors and retry
         }
     };
 
@@ -383,8 +370,6 @@ const POSInterface = () => {
 
     return (
         <div className="h-screen bg-gradient-to-br p-4 flex flex-col overflow-hidden">
-
-
             <POSHeader
                 billingMode={billingMode}
                 onBillingModeChange={setBillingMode}
@@ -397,7 +382,8 @@ const POSInterface = () => {
                 itemsCount={itemsCount}
                 subtotal={subtotal}
                 discount={discount}
-                total={total}/>
+                total={total}
+            />
 
             <div className="grid grid-cols-12 gap-3 flex-1 overflow-hidden">
                 <ProductPanel
@@ -425,6 +411,7 @@ const POSInterface = () => {
                     onEditItem={setEditingItem}
                     calculateItemTotal={calculateItemTotal}
                 />
+
                 <PaymentPanel
                     selectedCustomer={selectedCustomer}
                     customerSearchTerm={customerSearchTerm}
@@ -471,31 +458,6 @@ const POSInterface = () => {
             <CashManagementModal
                 isOpen={showCashModal}
                 onClose={() => setShowCashModal(false)}
-            />
-
-            <Toaster
-                position="top-right"
-                toastOptions={{
-                    duration: 4000,
-                    style: {
-                        background: '#363636',
-                        color: '#fff',
-                    },
-                    success: {
-                        duration: 3000,
-                        style: {
-                            background: '#10b981',
-                        },
-                    },
-                    error: {
-                        duration: 4000,
-                        style: {
-                            background: '#ef4444',
-                        },
-                    },
-                }}
-            />
-
                 cashSessionId={currentCashSessionId}
             /><Toaster
             position="top-right"
