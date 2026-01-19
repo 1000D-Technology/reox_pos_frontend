@@ -19,7 +19,14 @@ interface ProductAddModalProps {
     onClose: () => void;
     product: Product | null;
     billingMode: 'retail' | 'wholesale';
-    onAddToCart: (product: Product, quantity: number, discount: number, discountType: 'percentage' | 'price') => void;
+    onAddToCart: (
+        product: Product,
+        quantity: number,
+        discount: number,
+        discountType: 'percentage' | 'price',
+        discountAmount: number,
+        discountedPrice: number
+    ) => void;
 }
 
 export const ProductAddModal = ({
@@ -83,6 +90,7 @@ export const ProductAddModal = ({
 
     const handleAdd = () => {
         onAddToCart(product, quantity, discount, discountType);
+        console.log(product, quantity, discount, discountType);
         handleClose();
     };
 
