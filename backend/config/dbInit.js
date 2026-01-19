@@ -59,7 +59,44 @@ const seedDatabase = async () => {
                 (4, 'Returned to Supplier')`);
             console.log("Return status data seeded successfully!");
         }
+
+        // Seed bank table
+        const [bankRows] = await db.execute("SELECT COUNT(*) as count FROM bank");
         
+        if (bankRows[0].count === 0) {
+            console.log("Seeding bank data...");
+            await db.execute(`INSERT INTO bank (id, bank_name) VALUES 
+                (1, 'Bank of Ceylon (BOC)'),
+                (2, 'People\\'s Bank'),
+                (3, 'National Savings Bank (NSB)'),
+                (4, 'Commercial Bank of Ceylon'),
+                (5, 'Hatton National Bank (HNB)'),
+                (6, 'Sampath Bank'),
+                (7, 'Seylan Bank'),
+                (8, 'Nations Trust Bank (NTB)'),
+                (9, 'DFCC Bank'),
+                (10, 'NDB Bank'),
+                (11, 'Pan Asia Bank'),
+                (12, 'Amana Bank'),
+                (13, 'Union Bank'),
+                (14, 'Cargills Bank'),
+                (15, 'SDB Bank (Sanasa Development Bank)'),
+                (16, 'Regional Development Bank (RDB)'),
+                (17, 'HDFC Bank'),
+                (18, 'State Mortgage & Investment Bank (SMIB)'),
+                (19, 'HSBC'),
+                (20, 'Standard Chartered Bank')`);
+            console.log("Bank data seeded successfully!");
+        }
+
+        // Seed product status
+        const [productStatusRows] = await db.execute("SELECT COUNT(*) as count FROM product_status");
+        
+        if (productStatusRows[0].count === 0) {
+            console.log("Seeding product status data...");
+            await db.execute("INSERT INTO product_status (idproduct_status, status_name) VALUES (1, 'Active'), (2, 'Deactive')");
+            console.log("Product status seeded successfully!");
+        }
 
         console.log("Database seeding completed!");
     } catch (error) {

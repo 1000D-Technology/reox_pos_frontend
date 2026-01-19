@@ -16,26 +16,53 @@ import {
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import toast, { Toaster } from 'react-hot-toast';
+import { supplierService } from '../../../services/supplierService';
+import { grnService } from '../../../services/grnService';
+import TypeableSelect from '../../../components/TypeableSelect';
 
 interface GRNData {
-    id: string;
-    supplierid: string;
-    name: string;
-    billnumber: string;
-    amount: string;
-    paid: string;
-    balance: string;
-    date: string;
-    status: string;
+    id: number;
+    supplierName: string;
+    supplierId: number;
+    billNumber: string;
+    totalAmount: number;
+    paidAmount: number;
+    balanceAmount: number;
+    grnDate: string;
+    statusName: string;
 }
 
+interface Supplier {
+    id: number;
+    supplierName: string;
+    companyName?: string;
+}
+
+interface SupplierOption {
+    value: string | number;
+    label: string;
+}
+
+
+
 function SupplierGrn() {
+
+     const [grnData, setGrnData] = useState<GRNData[]>([]);
+    const [isLoadingGRN, setIsLoadingGRN] = useState(true);
+    const [stats, setStats] = useState({
+        totalGrn: 0,
+        totalAmount: 0,
+        totalPaid: 0,
+        totalBalance: 0
+    });
+    const [isLoadingStats, setIsLoadingStats] = useState(true);
+    
     const summaryCards = [
         {
             icon: FileSpreadsheet,
             label: 'Total Bills',
-            value: '50',
-            trend: '+12%',
+            value: isLoadingStats ? '...' : stats.totalGrn.toString(),
+            trend: '',
             color: 'bg-gradient-to-br from-emerald-400 to-emerald-500',
             iconColor: 'text-white',
             bgGlow: 'shadow-emerald-200'
@@ -43,8 +70,8 @@ function SupplierGrn() {
         {
             icon: DollarSign,
             label: 'Total Amount',
-            value: 'LKR 154,250.00',
-            trend: '+8%',
+            value: isLoadingStats ? '...' : `LKR ${stats.totalAmount.toLocaleString()}`,
+            trend: '',
             color: 'bg-gradient-to-br from-purple-400 to-purple-500',
             iconColor: 'text-white',
             bgGlow: 'shadow-purple-200'
@@ -52,8 +79,8 @@ function SupplierGrn() {
         {
             icon: Download,
             label: 'Total Paid',
-            value: 'LKR 1,540,250.00',
-            trend: '+15%',
+            value: isLoadingStats ? '...' : `LKR ${stats.totalPaid.toLocaleString()}`,
+            trend: '',
             color: 'bg-gradient-to-br from-blue-400 to-blue-500',
             iconColor: 'text-white',
             bgGlow: 'shadow-blue-200'
@@ -61,60 +88,26 @@ function SupplierGrn() {
         {
             icon: DollarSign,
             label: 'Total Balance',
-            value: 'LKR 1,540,250.00',
-            trend: '-5%',
+            value: isLoadingStats ? '...' : `LKR ${stats.totalBalance.toLocaleString()}`,
+            trend: '',
             color: 'bg-gradient-to-br from-red-400 to-red-500',
             iconColor: 'text-white',
             bgGlow: 'shadow-red-200'
         },
-        {
-            icon: BookmarkCheck,
-            label: 'Open Bills',
-            value: '20',
-            trend: '+3%',
-            color: 'bg-gradient-to-br from-yellow-400 to-yellow-500',
-            iconColor: 'text-white',
-            bgGlow: 'shadow-yellow-200'
-        },
+        
     ];
 
-    const [grnData, setGrnData] = useState<GRNData[]>([
-        {
-            id: '1',
-            supplierid: '250929003',
-            name: 'ABC Suppliers',
-            billnumber: 'BILL-001',
-            amount: '5200.00',
-            paid: '5200.00',
-            balance: '0.00',
-            date: '2025-01-15',
-            status: 'Paid',
-        },
-        {
-            id: '2',
-            supplierid: '250929004',
-            name: 'XYZ Trading',
-            billnumber: 'BILL-002',
-            amount: '8500.00',
-            paid: '5000.00',
-            balance: '3500.00',
-            date: '2025-01-16',
-            status: 'Pending',
-        },
-        {
-            id: '3',
-            supplierid: '250929005',
-            name: 'DEF Exports',
-            billnumber: 'BILL-003',
-            amount: '12000.00',
-            paid: '0.00',
-            balance: '12000.00',
-            date: '2025-01-17',
-            status: 'Pending',
-        },
-    ]);
+   
 
     const [selectedIndex, setSelectedIndex] = useState(0);
+    const [suppliers, setSuppliers] = useState<SupplierOption[]>([]);
+    const [isLoadingSuppliers, setIsLoadingSuppliers] = useState(true);
+    const [selectedSupplier, setSelectedSupplier] = useState<SupplierOption | null>(null);
+    
+    // Search form state
+    const [fromDate, setFromDate] = useState('');
+    const [toDate, setToDate] = useState('');
+    const [isSearching, setIsSearching] = useState(false);
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -131,23 +124,114 @@ function SupplierGrn() {
         return () => window.removeEventListener("keydown", handleKeyDown);
     }, [grnData.length]);
 
-    const handleStatusToggle = async (id: string, currentStatus: string) => {
-        const newStatus = currentStatus === 'Paid' ? 'Pending' : 'Paid';
+    // Fetch suppliers on component mount
+    useEffect(() => {
+        const fetchSuppliers = async () => {
+            try {
+                setIsLoadingSuppliers(true);
+                const response = await supplierService.getSupplierDropdownList();
+                const supplierOptions = response.data.data.map((supplier: Supplier) => ({
+                    value: supplier.id.toString(),
+                    label: supplier.companyName
+                        ? `${supplier.supplierName} - ${supplier.companyName}`
+                        : supplier.supplierName,
+                }));
+                setSuppliers(supplierOptions);
+            } catch (error) {
+                console.error('Error fetching suppliers:', error);
+                toast.error('Failed to load suppliers');
+            } finally {
+                setIsLoadingSuppliers(false);
+            }
+        };
 
+        fetchSuppliers();
+    }, []);
+
+    // Fetch stats data on component mount
+    useEffect(() => {
+        const fetchStats = async () => {
+            try {
+                setIsLoadingStats(true);
+                const response = await grnService.getStats();
+                setStats(response.data.data);
+            } catch (error) {
+                console.error('Error fetching stats:', error);
+                toast.error('Failed to load statistics');
+            } finally {
+                setIsLoadingStats(false);
+            }
+        };
+
+        fetchStats();
+    }, []);
+
+    // Fetch GRN data on component mount
+    useEffect(() => {
+        const fetchGRNData = async () => {
+            try {
+                setIsLoadingGRN(true);
+                const response = await grnService.getGRNList();
+                setGrnData(response.data.data || []);
+            } catch (error) {
+                console.error('Error fetching GRN data:', error);
+                toast.error('Failed to load GRN data');
+            } finally {
+                setIsLoadingGRN(false);
+            }
+        };
+
+        fetchGRNData();
+    }, []);
+
+    const handleSearch = async () => {
         try {
-            // Simulate API call
-            await new Promise(resolve => setTimeout(resolve, 500));
-
-            setGrnData(prev =>
-                prev.map(item =>
-                    item.id === id ? { ...item, status: newStatus } : item
-                )
-            );
-
-            toast.success(`Status updated to ${newStatus} successfully!`);
+            setIsSearching(true);
+            const queryParams = new URLSearchParams();
+            
+            // Add supplier name if selected
+            if (selectedSupplier && selectedSupplier.label) {
+                queryParams.append('supplierName', selectedSupplier.label.split(' - ')[0]);
+            }
+            
+            // Add date filters
+            if (fromDate) {
+                queryParams.append('fromDate', fromDate);
+            }
+            if (toDate) {
+                queryParams.append('toDate', toDate);
+            }
+            
+            const response = await grnService.searchGRNList(queryParams.toString());
+            setGrnData(response.data.data || []);
+            
+            toast.success(`Found ${response.data.data?.length || 0} GRN records`);
         } catch (error) {
-            console.error('Error updating status:', error);
-            toast.error('Failed to update status');
+            console.error('Error searching GRN data:', error);
+            toast.error('Failed to search GRN data');
+        } finally {
+            setIsSearching(false);
+        }
+    };
+
+    const handleReset = async () => {
+        try {
+            // Clear search form
+            setSelectedSupplier(null);
+            setFromDate('');
+            setToDate('');
+            
+            // Reload all GRN data
+            setIsLoadingGRN(true);
+            const response = await grnService.getGRNList();
+            setGrnData(response.data.data || []);
+            
+            toast.success('Filters cleared successfully');
+        } catch (error) {
+            console.error('Error resetting GRN data:', error);
+            toast.error('Failed to reset data');
+        } finally {
+            setIsLoadingGRN(false);
         }
     };
 
@@ -249,7 +333,7 @@ function SupplierGrn() {
                 </div>
 
                 {/* Stats Cards */}
-                <div className={'grid md:grid-cols-5 grid-cols-1 gap-4'}>
+                <div className={'grid md:grid-cols-4 grid-cols-1 gap-4'}>
                     {summaryCards.map((stat, i) => (
                         <motion.div
                             key={i}
@@ -270,10 +354,10 @@ function SupplierGrn() {
                             <div className="relative z-10 flex-1">
                                 <div className="flex items-center justify-between">
                                     <p className="text-sm text-gray-500">{stat.label}</p>
-                                    <div className={`flex items-center gap-0.5 text-[10px] font-semibold ${stat.trend.startsWith('+') ? 'text-emerald-600' : 'text-red-600'}`}>
+                                    {/* <div className={`flex items-center gap-0.5 text-[10px] font-semibold ${stat.trend.startsWith('+') ? 'text-emerald-600' : 'text-red-600'}`}>
                                         {stat.trend.startsWith('+') ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
                                         {stat.trend}
-                                    </div>
+                                    </div> */}
                                 </div>
                                 <p className="text-sm font-bold text-gray-700">{stat.value}</p>
                             </div>
@@ -291,14 +375,15 @@ function SupplierGrn() {
                     <h2 className="text-xl font-semibold text-gray-700 mb-3">Filter</h2>
                     <div className={'grid md:grid-cols-4 gap-4'}>
                         <div>
-                            <label htmlFor="supplier-id" className="block text-sm font-medium text-gray-700 mb-1">
-                                Supplier ID
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Select Supplier
                             </label>
-                            <input
-                                type="text"
-                                id="supplier-id"
-                                placeholder="Enter Supplier ID..."
-                                className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-400 focus:outline-none transition-all"
+                            <TypeableSelect
+                                options={suppliers}
+                                value={selectedSupplier?.value || null}
+                                onChange={(opt) => setSelectedSupplier(opt)}
+                                placeholder={isLoadingSuppliers ? "Loading suppliers..." : "Type to search Supplier"}
+                                disabled={isLoadingSuppliers}
                             />
                         </div>
                         <div>
@@ -308,6 +393,8 @@ function SupplierGrn() {
                             <input
                                 type="date"
                                 id="from-date"
+                                value={fromDate}
+                                onChange={(e) => setFromDate(e.target.value)}
                                 className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-400 focus:outline-none transition-all"
                             />
                         </div>
@@ -318,15 +405,30 @@ function SupplierGrn() {
                             <input
                                 type="date"
                                 id="to-date"
+                                value={toDate}
+                                onChange={(e) => setToDate(e.target.value)}
                                 className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-400 focus:outline-none transition-all"
                             />
                         </div>
                         <div className={'grid grid-cols-2 md:items-end items-start gap-2 text-white font-medium'}>
-                            <button className={'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 py-2 rounded-lg flex items-center justify-center shadow-lg shadow-emerald-200 hover:shadow-xl transition-all'}>
-                                <SearchCheck className="mr-2" size={14}/>Search
+                            <button 
+                                onClick={handleSearch}
+                                disabled={isSearching}
+                                className={'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 py-2 rounded-lg flex items-center justify-center shadow-lg shadow-emerald-200 hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed'}
+                            >
+                                {isSearching ? (
+                                    <RefreshCw className="animate-spin mr-2" size={14}/>
+                                ) : (
+                                    <SearchCheck className="mr-2" size={14}/>
+                                )}
+                                {isSearching ? 'Searching...' : 'Search'}
                             </button>
-                            <button className={'bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 py-2 rounded-lg flex items-center justify-center shadow-lg shadow-gray-200 hover:shadow-xl transition-all'}>
-                                <RefreshCw className="mr-2" size={14}/>Cancel
+                            <button 
+                                onClick={handleReset}
+                                disabled={isSearching || isLoadingGRN}
+                                className={'bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 py-2 rounded-lg flex items-center justify-center shadow-lg shadow-gray-200 hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed'}
+                            >
+                                <RefreshCw className="mr-2" size={14}/>Clear
                             </button>
                         </div>
                     </div>
@@ -368,67 +470,76 @@ function SupplierGrn() {
                             </thead>
 
                             <tbody className="bg-white divide-y divide-gray-200">
-                            {grnData.map((grn, index) => (
-                                <tr
-                                    key={grn.id}
-                                    onClick={() => setSelectedIndex(index)}
-                                    className={`cursor-pointer transition-all ${
-                                        selectedIndex === index
-                                            ? 'bg-emerald-50 border-l-4 border-l-emerald-500'
-                                            : 'hover:bg-gray-50'
-                                    }`}
-                                >
-                                    <td className="px-6 py-2 whitespace-nowrap text-sm font-semibold text-gray-800">
-                                        {grn.supplierid}
-                                    </td>
-                                    <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-gray-700">
-                                        {grn.name}
-                                    </td>
-                                    <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-600">
-                                        {grn.billnumber}
-                                    </td>
-                                    <td className="px-6 py-2 whitespace-nowrap text-sm font-bold text-emerald-600">
-                                        LKR {grn.amount}
-                                    </td>
-                                    <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-blue-600">
-                                        LKR {grn.paid}
-                                    </td>
-                                    <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-red-600">
-                                        LKR {grn.balance}
-                                    </td>
-                                    <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-600">
-                                        {grn.date}
-                                    </td>
-                                    <td className="px-6 py-2 whitespace-nowrap">
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                handleStatusToggle(grn.id, grn.status);
-                                            }}
-                                            className={`px-4 py-1.5 text-xs font-semibold rounded-full transition-all transform hover:scale-105 ${
-                                                grn.status === 'Paid'
-                                                    ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-200 hover:from-emerald-600 hover:to-emerald-700'
-                                                    : 'bg-gradient-to-r from-yellow-500 to-yellow-600 text-white shadow-lg shadow-yellow-200 hover:from-yellow-600 hover:to-yellow-700'
-                                            }`}
-                                        >
-                                            {grn.status}
-                                        </button>
-                                    </td>
-                                    <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
-                                        <div className="flex gap-2">
-                                            <button className="p-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all">
-                                                <Eye size={16}/>
-                                            </button>
-                                            <button className="p-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all">
-                                                <Printer size={16}/>
-                                            </button>
-                                            <button className="p-2 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all">
-                                                <Copy size={16}/>
-                                            </button>
+                            {isLoadingGRN ? (
+                                <tr>
+                                    <td colSpan={9} className="px-6 py-8 text-center text-gray-500">
+                                        <div className="flex items-center justify-center">
+                                            <RefreshCw className="animate-spin mr-2" size={16} />
+                                            Loading GRN data...
                                         </div>
                                     </td>
                                 </tr>
-                            ))}
+                            ) : grnData.length === 0 ? (
+                                <tr>
+                                    <td colSpan={9} className="px-6 py-8 text-center text-gray-500">
+                                        No GRN records found
+                                    </td>
+                                </tr>
+                            ) : (
+                                grnData.map((grn, index) => (
+                                    <tr
+                                        key={grn.id}
+                                        onClick={() => setSelectedIndex(index)}
+                                        className={`cursor-pointer transition-all ${
+                                            selectedIndex === index
+                                                ? 'bg-emerald-50 border-l-4 border-l-emerald-500'
+                                                : 'hover:bg-gray-50'
+                                        }`}
+                                    >
+                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-semibold text-gray-800">
+                                            {grn.supplierId}
+                                        </td>
+                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-gray-700">
+                                            {grn.supplierName}
+                                        </td>
+                                        <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-600">
+                                            {grn.billNumber}
+                                        </td>
+                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-bold text-emerald-600">
+                                            LKR {grn.totalAmount.toLocaleString()}
+                                        </td>
+                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-blue-600">
+                                            LKR {grn.paidAmount.toLocaleString()}
+                                        </td>
+                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-red-600">
+                                            LKR {grn.balanceAmount.toLocaleString()}
+                                        </td>
+                                        <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-600">
+                                            {grn.grnDate}
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                                                grn.statusName === 'Active' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'
+                                            }`}>
+                                                {grn.statusName === 'Active' ? 'Pending' : 'Complete'}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
+                                            <div className="flex gap-2">
+                                                <button className="p-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all">
+                                                    <Eye size={16}/>
+                                                </button>
+                                                <button className="p-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all">
+                                                    <Printer size={16}/>
+                                                </button>
+                                                <button className="p-2 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all">
+                                                    <Copy size={16}/>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
                             </tbody>
                         </table>
                     </div>

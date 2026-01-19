@@ -15,16 +15,24 @@ const returnStatusRoutes = require('./routes/returnStatusRoutes');
 const damagedRoutes = require('./routes/damagedRoutes');
 const setupRoutes = require('./routes/setup');
 const backupRoutes = require('./routes/backup.routes');
+const posRoutes = require('./routes/posRoutes');
+const customerRoutes = require('./routes/customerRoutes');
 const { scheduleBackup } = require('./schedulers/backupScheduler');
 
 require('dotenv').config();
 const swaggerJsDoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
 const seedDatabase = require('./config/dbInit');
+const cashSessionRoutes = require('./routes/cashSessionRoutes');
+
 
 // Middleware
 const app = express();
-app.use(cors());
+app.use(cors({
+    origin: 'http://localhost:5173',
+    credentials: true
+}));
+const authRoutes = require('./routes/auth');
 app.use(express.json());
 
 // Routes
@@ -42,6 +50,11 @@ app.use('/api/return-status', returnStatusRoutes);
 app.use('/api/damaged', damagedRoutes);
 app.use('/api/setup', setupRoutes);
 app.use('/api/backup', backupRoutes);
+app.use('/api/pos', posRoutes);
+app.use('/api/customers', customerRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api', cashSessionRoutes);
+
 
 // Handle undefined routes
 app.use((req, res, next) => {

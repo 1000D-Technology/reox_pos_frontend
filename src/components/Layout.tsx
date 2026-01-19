@@ -1,4 +1,3 @@
-// src/components/Layout.tsx
 import { useState, useEffect } from "react";
 import Sidebar from "./Sidebar";
 import { Bell, Calculator, ClipboardPlus, PanelLeft, Power, RotateCcw } from "lucide-react";
@@ -8,9 +7,20 @@ import { AnimatePresence, motion } from "framer-motion";
 import QuotationModal from "./models/QuotationsModel.tsx";
 import PosCashBalance from "./models/PosCashBalance.tsx";
 import CalculatorModal from "./models/CalculatorModal.tsx";
+import ShutdownModal from "./ShutdownModal.tsx";
+import { authService } from "../services/authService";
+import { cashSessionService } from "../services/cashSessionService";
 
 const OPEN_INVOICE_MODAL_EVENT = "openInvoiceModal";
 const OPEN_QUOTATION_MODAL_EVENT = "openQuotationModal";
+
+interface User {
+    id: number;
+    name: string;
+    email: string;
+    role: string;
+    role_id: number;
+}
 
 export default function Layout() {
     const location = useLocation();
@@ -21,13 +31,69 @@ export default function Layout() {
     const [isScrolled, setIsScrolled] = useState(false);
     const [isPosCashBalanceOpen, setIsPosCashBalanceOpen] = useState(false);
     const [isCalculatorOpen, setIsCalculatorOpen] = useState(false);
+    const [isShutdownModalOpen, setIsShutdownModalOpen] = useState(false);
+    const [user, setUser] = useState<User | null>(null);
+
+    useEffect(() => {
+        const currentUser = authService.getCurrentUser();
+        setUser(currentUser);
+    }, []);
+
+    const handleShutdown = () => {
+        authService.logout();
+        window.close();
+        setTimeout(() => {
+            navigate('/signin', { replace: true });
+        }, 100);
+    };
 
     const handleRefresh = () => {
-        // Navigate to current path to trigger a refresh
         navigate(location.pathname, { replace: true });
-        // Force a full page reload if needed
         window.location.reload();
     };
+
+    const handlePOSClick = async () => {
+        const userId = authService.getUserId();
+        if (!userId) {
+            navigate('/signin');
+            return;
+        }
+
+        try {
+            // Get counter from localStorage
+            const counterCode = localStorage.getItem('current_counter');
+            const sessionDate = localStorage.getItem('session_date');
+            const today = new Date().toISOString().split('T')[0];
+
+            // If no counter or date changed, show modal
+            if (!counterCode || sessionDate !== today) {
+                localStorage.removeItem('current_counter');
+                localStorage.removeItem('session_date');
+                setIsPosCashBalanceOpen(true);
+                return;
+            }
+
+            // Check backend for active session
+            const { hasActiveSession } = await cashSessionService.checkActiveCashSession(
+                userId,
+                counterCode
+            );
+
+            if (hasActiveSession) {
+                setIsOpen(false);
+                navigate('/pos');
+            } else {
+                localStorage.removeItem('current_counter');
+                localStorage.removeItem('session_date');
+                setIsPosCashBalanceOpen(true);
+            }
+        } catch (error) {
+            console.error('Error checking cash session:', error);
+            setIsPosCashBalanceOpen(true);
+        }
+    };
+
+
 
     useEffect(() => {
         if (location.pathname === '/pos') {
@@ -36,7 +102,7 @@ export default function Layout() {
     }, [location.pathname]);
 
     useEffect(() => {
-        if (isCalculatorOpen) {
+        if (isCalculatorOpen || isShutdownModalOpen) {
             document.body.style.overflow = 'hidden';
         } else {
             document.body.style.overflow = 'unset';
@@ -45,7 +111,7 @@ export default function Layout() {
         return () => {
             document.body.style.overflow = 'unset';
         };
-    }, [isCalculatorOpen]);
+    }, [isCalculatorOpen, isShutdownModalOpen]);
 
     useEffect(() => {
         const handleScroll = (e: Event) => {
@@ -86,7 +152,7 @@ export default function Layout() {
 
                     <div className="flex items-center justify-between gap-3 bg-white px-3 py-2 rounded-full">
                         <button
-                            onClick={() => setIsPosCashBalanceOpen(true)}
+                            onClick={handlePOSClick}
                             className="px-7 py-2 bg-gray-800 text-white rounded-full flex items-center gap-4 hover:bg-gray-900 transition cursor-pointer"
                         >
                             <ClipboardPlus size={18} />POS
@@ -96,9 +162,13 @@ export default function Layout() {
                             <button onClick={() => setIsCalculatorOpen(true)} className={'cursor-pointer'}>
                                 <Calculator size={15} />
                             </button>
-                            <Link to={'#'} className={"p-2 rounded-full bg-red-50"}>
+                            <button
+                                onClick={() => setIsShutdownModalOpen(true)}
+                                className="p-2 rounded-full bg-red-50 hover:bg-red-100 transition cursor-pointer"
+                                title="Shut Down"
+                            >
                                 <Power size={15} />
-                            </Link>
+                            </button>
                             <button
                                 onClick={handleRefresh}
                                 className={"p-2 rounded-full bg-emerald-50 hover:bg-emerald-100 transition cursor-pointer"}
@@ -108,18 +178,18 @@ export default function Layout() {
                             <Link to={'#'} className={'me-3'}>
                                 <Bell size={15} />
                             </Link>
-                            <div className={'flex flex-col leading-1 items-end border-s-2 ps-5 border-gray-200'}>
-                                <span className="text-sm font-medium text-black">John Doe</span>
-                                <br />
-                                <span className="text-xs text-gray-500">Admin</span>
-                            </div>
-                            <div className="w-12 h-12 rounded-full flex justify-center items-center">
-                                <img
-                                    src={'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&dpr=1&w=500'}
-                                    alt={'User'}
-                                    className="w-10 h-10 rounded-full object-cover"
-                                />
-                            </div>
+                            {user && (
+                                <>
+                                    <div className={'flex flex-col leading-1 items-end border-s-2 ps-5 border-gray-200'}>
+                                        <span className="text-sm font-medium text-black">{user.name}</span>
+                                        <br />
+                                        <span className="text-xs text-gray-500">{user.role}</span>
+                                    </div>
+                                    <div className="w-12 h-12 rounded-full flex justify-center items-center bg-emerald-500 text-white font-semibold text-lg">
+                                        {user.name.charAt(0).toUpperCase()}
+                                    </div>
+                                </>
+                            )}
                         </div>
                     </div>
                 </header>
@@ -129,6 +199,12 @@ export default function Layout() {
                 </main>
 
                 <AnimatePresence>
+                    {isShutdownModalOpen && (
+                        <ShutdownModal
+                            onClose={() => setIsShutdownModalOpen(false)}
+                            onShutdown={handleShutdown}
+                        />
+                    )}
                     {isInvoiceModalOpen && (
                         <motion.div
                             initial={{ opacity: 0 }}
