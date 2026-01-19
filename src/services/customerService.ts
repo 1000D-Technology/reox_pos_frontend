@@ -19,4 +19,8 @@ export const customerService = {
     // Get customer invoices
     getCustomerInvoices: (customerId: number) => 
         axiosInstance.get(`/api/customers/${customerId}/invoices`),
+
+    // Customer search by name 
+    searchCustomers: (query: string) => 
+        axiosInstance.get(`/api/customers/search`, { params: { query } }),
 };
