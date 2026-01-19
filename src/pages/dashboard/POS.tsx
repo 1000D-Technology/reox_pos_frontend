@@ -22,7 +22,9 @@ interface Customer {
     name: string;
     contact: string;
     email?: string;
-    credit: number;
+    credit_balance?: number;
+    status_id?: number;
+    status_name?: string;
 }
 
 const mapAPIProductToProduct = (apiData: any): Product => {
@@ -379,7 +381,7 @@ const POSInterface = () => {
         }
     };
 
-    const handleCustomerSearch = (value: string) => {
+    const handleCustomerSearch = async (value: string) => {
         setCustomerSearchTerm(value);
         if (!value) setSelectedCustomer(null);
     };
@@ -400,7 +402,9 @@ const POSInterface = () => {
                     name: customerFromAPI.name,
                     contact: customerFromAPI.contact,
                     email: customerFromAPI.email,
-                    credit: customerFromAPI.credit_balance
+                    credit_balance: customerFromAPI.credit_balance,
+                    status_id: customerFromAPI.status_id,
+                    status_name: customerFromAPI.status_name
                 };
 
                 setCustomers([...customers, newCustomer]);
@@ -485,6 +489,7 @@ const POSInterface = () => {
                     selectedCustomer={selectedCustomer}
                     customerSearchTerm={customerSearchTerm}
                     onCustomerSearchChange={handleCustomerSearch}
+                    onCustomerSelect={handleCustomerSelect}
                     onRegisterCustomer={() => setShowRegistrationModal(true)}
                     paymentAmounts={paymentAmounts}
                     onPaymentAmountChange={updatePaymentAmount}
@@ -493,6 +498,8 @@ const POSInterface = () => {
                     total={total}
                     cartItemsCount={itemsCount}
                     onCompletePayment={completePayment}
+                    customers={customers}
+                    customersLoading={customersLoading}
                 />
             </div>
 
