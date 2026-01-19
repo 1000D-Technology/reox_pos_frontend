@@ -6,7 +6,10 @@ interface Customer {
     id: number;
     name: string;
     contact: string;
-    credit: number;
+    credit_balance?: number;
+    email?: string;
+    status_id?: number;
+    status_name?: string;
 }
 
 interface PaymentMethod {
@@ -19,6 +22,7 @@ interface PaymentPanelProps {
     selectedCustomer: Customer | null;
     customerSearchTerm: string;
     onCustomerSearchChange: (term: string) => void;
+    onCustomerSelect: (customer: Customer) => void;
     onRegisterCustomer: () => void;
     paymentAmounts: Array<{ methodId: string; amount: number }>;
     onPaymentAmountChange: (methodId: string, amount: number) => void;
@@ -27,6 +31,8 @@ interface PaymentPanelProps {
     total: number;
     cartItemsCount: number;
     onCompletePayment: () => void;
+    customers?: Customer[];
+    customersLoading?: boolean;
 }
 
 const paymentMethods: PaymentMethod[] = [
@@ -39,6 +45,7 @@ export const PaymentPanel = ({
                                  selectedCustomer,
                                  customerSearchTerm,
                                  onCustomerSearchChange,
+                                 onCustomerSelect,
                                  onRegisterCustomer,
                                  paymentAmounts,
                                  onPaymentAmountChange,
@@ -46,26 +53,16 @@ export const PaymentPanel = ({
                                  remaining,
                                  total,
                                  cartItemsCount,
-                                 onCompletePayment
+                                 onCompletePayment,
+                                 customers = [],
+                                 customersLoading = false
                              }: PaymentPanelProps) => {
     const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
-    const [filteredCustomers, setFilteredCustomers] = useState<Customer[]>([]);
     const [localSelectedCustomer, setLocalSelectedCustomer] = useState<Customer | null>(selectedCustomer);
 
     useEffect(() => {
         setLocalSelectedCustomer(selectedCustomer);
     }, [selectedCustomer]);
-
-    useEffect(() => {
-        // Mock customer search - replace with actual API call
-        if (customerSearchTerm) {
-            // This should be replaced with actual API call
-            const mockCustomers: Customer[] = [];
-            setFilteredCustomers(mockCustomers);
-        } else {
-            setFilteredCustomers([]);
-        }
-    }, [customerSearchTerm]);
 
     const handleCustomerSearch = (value: string) => {
         onCustomerSearchChange(value);
@@ -73,9 +70,8 @@ export const PaymentPanel = ({
     };
 
     const selectCustomer = (customer: Customer) => {
-        setLocalSelectedCustomer(customer);
+        onCustomerSelect(customer);
         setShowCustomerDropdown(false);
-        onCustomerSearchChange(customer.name);
     };
 
     const clearCustomer = () => {
@@ -148,16 +144,20 @@ export const PaymentPanel = ({
                 {/* Customer Dropdown */}
                 {showCustomerDropdown && customerSearchTerm && (
                     <div className="absolute left-3 right-3 top-full mt-1 bg-white border-2 border-gray-200 rounded-xl shadow-lg z-50 max-h-48 overflow-y-auto">
-                        {filteredCustomers.length > 0 ? (
-                            filteredCustomers.map((customer) => (
+                        {customersLoading ? (
+                            <div className="p-3 text-center">
+                                <p className="text-sm text-gray-500">Searching customers...</p>
+                            </div>
+                        ) : customers.length > 0 ? (
+                            customers.map((customer) => (
                                 <button
                                     key={customer.id}
                                     onClick={() => selectCustomer(customer)}
                                     className="w-full px-3 py-2 text-left hover:bg-emerald-50 transition-colors border-b border-gray-100 last:border-0"
                                 >
                                     <p className="text-sm font-semibold text-gray-800">{customer.name}</p>
-                                    <p className="text-xs text-gray-500">{customer.contact}</p>k
-                                    <p className="text-xs text-gray-500">Credit: Rs {customer.credit}</p>
+                                    <p className="text-xs text-gray-500">{customer.contact}</p>
+                                    <p className="text-xs text-gray-500">Credit: Rs {customer.credit_balance || 0}</p>
                                 </button>
                             ))
                         ) : (
@@ -187,7 +187,7 @@ export const PaymentPanel = ({
                                 </div>
                                 <div className="flex items-center pe-4 flex-col">
                                     <p className="text-xs">Credit Balance</p>
-                                    <p className="text-sm text-red-600 font-semibold">Rs {localSelectedCustomer.credit}.00</p>
+                                    <p className="text-sm text-red-600 font-semibold">Rs {localSelectedCustomer.credit_balance || 0}.00</p>
                                 </div>
                             </div>
 
