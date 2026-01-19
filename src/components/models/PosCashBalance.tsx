@@ -32,7 +32,6 @@ export default function PosCashBalance({ onClose, onNavigateToPOS }: PosCashBala
             setError("Failed to load counters");
         }
     };
-
     const handleSubmit = async () => {
         if (!selectedCounter) {
             setError("Please select a counter");
@@ -55,6 +54,14 @@ export default function PosCashBalance({ onClose, onNavigateToPOS }: PosCashBala
                 return;
             }
 
+            // Get selected counter details
+            const selectedCounterData = counters.find(c => c.id === selectedCounter);
+            if (!selectedCounterData) {
+                setError("Invalid counter selected");
+                setLoading(false);
+                return;
+            }
+
             const sessionData = {
                 opening_date_time: new Date().toISOString(),
                 user_id: userId,
@@ -67,6 +74,10 @@ export default function PosCashBalance({ onClose, onNavigateToPOS }: PosCashBala
             };
 
             await cashSessionService.createCashSession(sessionData);
+
+            // Store counter code and date in localStorage
+            localStorage.setItem('current_counter', selectedCounterData.cashier_counter);
+            localStorage.setItem('session_date', new Date().toISOString().split('T')[0]);
 
             setSuccess(true);
             setLoading(false);
@@ -86,25 +97,13 @@ export default function PosCashBalance({ onClose, onNavigateToPOS }: PosCashBala
         }
     };
 
+
     const currentDate = new Date().toLocaleDateString('en-US', {
         weekday: 'long',
         year: 'numeric',
         month: 'long',
         day: 'numeric'
     });
-
-    useEffect(() => {
-        const handleKeyPress = (e: KeyboardEvent) => {
-            if (e.key === 'Enter' && !loading && !success) {
-                e.preventDefault();
-                handleSubmit();
-            }
-        };
-
-        window.addEventListener('keydown', handleKeyPress);
-        return () => window.removeEventListener('keydown', handleKeyPress);
-    }, [selectedCounter, openingBalance, loading, success]);
-
 
     return (
         <>
@@ -401,7 +400,7 @@ export default function PosCashBalance({ onClose, onNavigateToPOS }: PosCashBala
                             <div className="input-wrapper">
                                 <div className="relative">
                                         <span className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-400 text-2xl font-bold">
-                                            RS
+                                            Rs
                                         </span>
                                     <input
                                         type="number"
@@ -433,16 +432,10 @@ export default function PosCashBalance({ onClose, onNavigateToPOS }: PosCashBala
                             ) : (
                                 <>
                                     <span>Start POS Terminal</span>
-                                    <div className="flex items-center space-x-2">
-                                        <ChevronRight size={26} />
-                                        <div className="px-3 py-1 bg-white/20 rounded-lg border border-white/30 text-sm font-mono">
-                                            Enter ↵
-                                        </div>
-                                    </div>
+                                    <ChevronRight size={26} />
                                 </>
                             )}
                         </button>
-
                     </div>
 
                     {/* Right Section - Info Cards */}

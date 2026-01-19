@@ -24,7 +24,7 @@ const swaggerJsDoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
 const seedDatabase = require('./config/dbInit');
 const cashSessionRoutes = require('./routes/cashSessionRoutes');
-
+const cashManagementRoutes = require('./routes/cashManagementRoutes');
 
 // Middleware
 const app = express();
@@ -54,7 +54,7 @@ app.use('/api/pos', posRoutes);
 app.use('/api/customers', customerRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api', cashSessionRoutes);
-
+app.use('/api/cash-management', cashManagementRoutes);
 
 // Handle undefined routes
 app.use((req, res, next) => {

@@ -60,18 +60,35 @@ export default function Layout() {
         }
 
         try {
-            const today = new Date().toISOString().split('T')[0]; // Format: YYYY-MM-DD
-            const hasActiveSession = await cashSessionService.checkActiveCashSession(userId, today);
+            // Get counter from localStorage
+            const counterCode = localStorage.getItem('current_counter');
+            const sessionDate = localStorage.getItem('session_date');
+            const today = new Date().toISOString().split('T')[0];
+
+            // If no counter or date changed, show modal
+            if (!counterCode || sessionDate !== today) {
+                localStorage.removeItem('current_counter');
+                localStorage.removeItem('session_date');
+                setIsPosCashBalanceOpen(true);
+                return;
+            }
+
+            // Check backend for active session
+            const { hasActiveSession } = await cashSessionService.checkActiveCashSession(
+                userId,
+                counterCode
+            );
 
             if (hasActiveSession) {
                 setIsOpen(false);
                 navigate('/pos');
             } else {
+                localStorage.removeItem('current_counter');
+                localStorage.removeItem('session_date');
                 setIsPosCashBalanceOpen(true);
             }
         } catch (error) {
             console.error('Error checking cash session:', error);
-            // Show modal if check fails
             setIsPosCashBalanceOpen(true);
         }
     };

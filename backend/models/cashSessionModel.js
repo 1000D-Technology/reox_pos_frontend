@@ -1,17 +1,24 @@
 const pool = require('../config/db');
 
 const cashSessionModel = {
-    async checkActiveCashSession(userId, date) {
+    async checkActiveCashSession(userId, counterCode) {
         try {
+            console.log('Checking session for:', { userId, counterCode });
+
             const [rows] = await pool.query(
-                `SELECT id FROM cash_sessions
-                 WHERE user_id = ?
-                   AND DATE(opening_date_time) = ?
-                   AND cash_status_id = 1
+                `SELECT cs.id, cs.opening_balance, cc.cashier_counter
+                 FROM cash_sessions cs
+                          JOIN cashier_counters cc ON cs.cashier_counters_id = cc.id
+                 WHERE cs.user_id = ?
+                   AND cc.cashier_counter = ?
+                   AND DATE(cs.opening_date_time) = CURDATE()
+                   AND cs.cash_status_id = 1
                      LIMIT 1`,
-                [userId, date]
+                [userId, counterCode]
             );
-            return rows.length > 0;
+
+            console.log('Found session:', rows.length > 0 ? rows[0] : 'No session');
+            return rows.length > 0 ? rows[0] : null;
         } catch (error) {
             console.error('Error checking cash session:', error);
             throw error;
@@ -32,7 +39,6 @@ const cashSessionModel = {
 
     async createCashSession(session) {
         try {
-            // Get current local datetime in MySQL format (YYYY-MM-DD HH:MM:SS)
             const now = new Date();
             const mysqlDatetime = now.getFullYear() + '-' +
                 String(now.getMonth() + 1).padStart(2, '0') + '-' +
@@ -43,9 +49,9 @@ const cashSessionModel = {
 
             const [result] = await pool.query(
                 `INSERT INTO cash_sessions
-             (opening_date_time, user_id, opening_balance, cash_total, card_total,
-              bank_total, cashier_counters_id, cash_status_id)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+                 (opening_date_time, user_id, opening_balance, cash_total, card_total,
+                  bank_total, cashier_counters_id, cash_status_id)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
                 [
                     mysqlDatetime,
                     session.user_id,
@@ -63,7 +69,6 @@ const cashSessionModel = {
             throw error;
         }
     }
-
 };
 
 module.exports = cashSessionModel;
