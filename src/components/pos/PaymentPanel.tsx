@@ -1,5 +1,6 @@
 import { Search, UserPlus, X, Check, CreditCard, Banknote, Wallet } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { customerService } from '../../services/customerService';
 
 interface Customer {
     id: number;
@@ -81,6 +82,42 @@ export const PaymentPanel = ({
         setLocalSelectedCustomer(null);
         onCustomerSearchChange('');
     };
+    useEffect(() => {
+        const searchCustomers = async () => {
+            if (customerSearchTerm.trim().length >= 2) {
+                try {
+                    const response = await customerService.getCustomers();
+                    if (response.data?.success) {
+                        const customers = response.data.data;
+
+                        // Filter customers by name or contact
+                        const filtered = customers.filter((customer: any) => {
+                            const searchLower = customerSearchTerm.toLowerCase();
+                            const nameMatch = customer.name.toLowerCase().includes(searchLower);
+                            const contactMatch = customer.contact.includes(customerSearchTerm);
+                            return nameMatch || contactMatch;
+                        }).map((customer: any) => ({
+                            id: customer.id,
+                            name: customer.name,
+                            contact: customer.contact,
+                            email: customer.email,
+                            credit: customer.credit_balance || 0
+                        }));
+
+                        setFilteredCustomers(filtered);
+                    }
+                } catch (error) {
+                    console.error('Failed to search customers:', error);
+                    setFilteredCustomers([]);
+                }
+            } else {
+                setFilteredCustomers([]);
+            }
+        };
+
+        const debounceTimer = setTimeout(searchCustomers, 300);
+        return () => clearTimeout(debounceTimer);
+    }, [customerSearchTerm]);
 
     return (
         <div className="col-span-3 space-y-3 flex flex-col overflow-y-auto">
