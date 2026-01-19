@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { posService } from '../../services/posService';
 import { customerService } from '../../services/customerService';
+import { authService } from '../../services/authService';
+import { cashSessionService } from '../../services/cashSessionService';
 import { POSHeader } from '../../components/pos/POSHeader';
 import { POSSummaryCards } from '../../components/pos/POSSummaryCards';
 import { ProductPanel } from '../../components/pos/ProductPanel';
-
 import { PaymentPanel } from '../../components/pos/PaymentPanel';
 import { ReturnModal } from '../../components/pos/ReturnModal';
 import { BillModal } from '../../components/pos/BillModal';
@@ -82,13 +83,48 @@ const POSInterface = () => {
         loadProducts();
     }, []);
 
-    const updateItemDiscountType = (id: number, type: 'percentage' | 'fixed' | 'price') => {
-        setCartItems(prevItems =>
-            prevItems.map(item =>
-                item.id === id ? { ...item, discountType: type } : item
-            )
-        );
-    };
+    // Load active cash session
+    useEffect(() => {
+        const checkSession = async () => {
+            try {
+                const userId = authService.getUserId();
+                const counterCode = localStorage.getItem('current_counter');
+                const sessionDate = localStorage.getItem('session_date');
+                const today = new Date().toISOString().split('T')[0];
+
+                if (sessionDate && sessionDate !== today) {
+                    localStorage.removeItem('current_counter');
+                    localStorage.removeItem('session_date');
+                    setSessionChecked(true);
+                    return;
+                }
+
+                if (!userId || !counterCode) {
+                    setSessionChecked(true);
+                    return;
+                }
+
+                const { hasActiveSession, session } = await cashSessionService.checkActiveCashSession(
+                    userId,
+                    counterCode
+                );
+
+                if (hasActiveSession && session) {
+                    setCurrentCashSessionId(session.id);
+                    console.log('Active session found:', session);
+                } else {
+                    localStorage.removeItem('current_counter');
+                    localStorage.removeItem('session_date');
+                }
+            } catch (error) {
+                console.error('Error checking session:', error);
+            } finally {
+                setSessionChecked(true);
+            }
+        };
+
+        checkSession();
+    }, []);
 
     // Barcode search effect
     useEffect(() => {
@@ -144,7 +180,25 @@ const POSInterface = () => {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, []);
 
-    // Summary Stats
+    if (!sessionChecked) {
+        return (
+            <div className="h-screen flex items-center justify-center bg-gradient-to-br">
+                <div className="text-center">
+                    <div className="w-16 h-16 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+                    <p className="text-gray-600 text-lg">Checking session...</p>
+                </div>
+            </div>
+        );
+    }
+
+    const updateItemDiscountType = (id: number, type: 'percentage' | 'price') => {
+        setCartItems(prevItems =>
+            prevItems.map(item =>
+                item.id === id ? { ...item, discountType: type } : item
+            )
+        );
+    };
+
     const subtotal = cartItems.reduce((sum, item) => {
         const itemTotal = item.price * item.quantity;
         const itemDiscount = (itemTotal * item.discount) / 100;
@@ -192,7 +246,8 @@ const POSInterface = () => {
                 price: priceToUse,
                 quantity: 1,
                 discount: 0,
-                discountType: 'percentage'
+                discountType: 'percentage' as const,
+                isBulk: product.isBulk
             };
 
             return [...prevCart, newItem];
@@ -240,8 +295,7 @@ const POSInterface = () => {
 
     const clearCart = () => {
         setCartItems([]);
-        setEditingItem(null);
-        setPaymentAmounts([]);
+        setEditingItem(null);setPaymentAmounts([]);
     };
 
     const updatePaymentAmount = (methodId: string, amount: number) => {
@@ -320,13 +374,13 @@ const POSInterface = () => {
             } else {
                 const errorMessage = response.data.message || 'Failed to register customer';
                 toast.error(errorMessage);
-                // Modal stays open to allow retry
             }
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('Error registering customer:', error);
-            const errorMessage = error.response?.data?.message || 'Failed to register customer. Please try again.';
+            const errorMessage = error instanceof Error
+                ? error.message
+                : 'Failed to register customer. Please try again.';
             toast.error(errorMessage);
-            // Modal stays open to allow user to fix errors and retry
         }
     };
 
@@ -393,6 +447,7 @@ const POSInterface = () => {
                     onEditItem={setEditingItem}
                     calculateItemTotal={calculateItemTotal}
                 />
+
                 <PaymentPanel
                     selectedCustomer={selectedCustomer}
                     customerSearchTerm={customerSearchTerm}
@@ -442,31 +497,29 @@ const POSInterface = () => {
             <CashManagementModal
                 isOpen={showCashModal}
                 onClose={() => setShowCashModal(false)}
-            />
-
-            <Toaster
-                position="top-right"
-                toastOptions={{
+                cashSessionId={currentCashSessionId}
+            /><Toaster
+            position="top-right"
+            toastOptions={{
+                duration: 4000,
+                style: {
+                    background: '#363636',
+                    color: '#fff',
+                },
+                success: {
+                    duration: 3000,
+                    style: {
+                        background: '#10b981',
+                    },
+                },
+                error: {
                     duration: 4000,
                     style: {
-                        background: '#363636',
-                        color: '#fff',
+                        background: '#ef4444',
                     },
-                    success: {
-                        duration: 3000,
-                        style: {
-                            background: '#10b981',
-                        },
-                    },
-                    error: {
-                        duration: 4000,
-                        style: {
-                            background: '#ef4444',
-                        },
-                    },
-                }}
-            />
-
+                },
+            }}
+        />
         </div>
     );
 };

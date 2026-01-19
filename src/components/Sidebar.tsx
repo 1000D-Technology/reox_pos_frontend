@@ -1,18 +1,24 @@
-import {Link, useLocation} from "react-router-dom";
+import {Link, useLocation, useNavigate} from "react-router-dom";
 import {
     LayoutDashboard,
-
     Users,
-
     CreditCard,
     BarChart,
     Settings,
     LogOut,
     Truck,
-    ChevronDown, AudioWaveform, BadgePlus, FolderTree, Boxes, UserCog, FolderSymlink, DatabaseBackup
+    ChevronDown,
+    AudioWaveform,
+    BadgePlus,
+    FolderTree,
+    Boxes,
+    UserCog,
+    FolderSymlink,
+    DatabaseBackup
 } from "lucide-react";
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { authService } from "../services/authService";
 
 interface NavItemChild {
     label: string;
@@ -31,9 +37,24 @@ interface SidebarProps {
     toggle?: () => void;
 }
 
+interface User {
+    id: number;
+    name: string;
+    email: string;
+    role: string;
+    role_id: number;
+}
+
 export default function Sidebar({isOpen}: SidebarProps) {
     const location = useLocation();
+    const navigate = useNavigate();
     const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
+    const [user, setUser] = useState<User | null>(null);
+
+    useEffect(() => {
+        const currentUser = authService.getCurrentUser();
+        setUser(currentUser);
+    }, []);
 
     const toggleDropdown = (label: string, event: React.MouseEvent) => {
         if (!isOpen) return;
@@ -43,6 +64,11 @@ export default function Sidebar({isOpen}: SidebarProps) {
             ...prev,
             [label]: !prev[label]
         }));
+    };
+
+    const handleLogout = () => {
+        authService.logout();
+        navigate('/signin', { replace: true });
     };
 
     const navItems: NavItem[] = [
@@ -109,26 +135,13 @@ export default function Sidebar({isOpen}: SidebarProps) {
                 {label: "Manage Supplier", path: "/supplier/manage-supplier"},
                 {label: "Supplier GRN History", path: "/supplier/supplier-grn"},
                 {label: "Supplier Payments", path: "/supplier/supplier-payments"},
-
             ],
         },
         {
             label: "Manage Customer",
             path: "/customer/manage-customer",
             icon: <Users size={20}/>,
-
         },
-        // {
-        //     label: "Employee",
-        //     path: "/employee/manage-employee",
-        //     icon: <User size={20}/>,
-        //     children: [
-        //         {label: "Manage Employee", path: "/employee/manage-employee"},
-        //         {label: "Attendance Mark", path: "/employee/attendance-mark"},
-        //         {label: "Attendance Report", path: "/employee/attendance-report"},
-        //         {label: "Employee Salary", path: "/employee/employee-salary"},
-        //     ],
-        // },
         {
             label: "Manage User",
             path: "/manage-users",
@@ -137,7 +150,7 @@ export default function Sidebar({isOpen}: SidebarProps) {
         {label: "Accounts", path: "/accounts", icon: <CreditCard size={20}/>},
         {label: "Reports", path: "/reports", icon: <BarChart size={20}/>},
         {label: "Settings", path: "/setting", icon: <Settings size={20}/>},
-        {label: "Back-Up", path: "/back-up  ", icon: <DatabaseBackup size={20}/>},
+        {label: "Back-Up", path: "/back-up", icon: <DatabaseBackup size={20}/>},
     ];
 
     return (
@@ -166,7 +179,7 @@ export default function Sidebar({isOpen}: SidebarProps) {
                                             to={item.path || "#"}
                                             className={`flex items-center justify-between ${
                                                 isOpen ? "pr-2" : "justify-center"
-                                            } gap-3 px-3 py-2 text-sm transition 
+                                            } gap-3 px-3 py-2 text-sm transition
                                             ${(location.pathname === item.path || location.pathname.startsWith(item.path + "/"))
                                                 ? "bg-gradient-to-l from-emerald-200 font-semibold border-e-4 border-emerald-600"
                                                 : "text-gray-700 hover:bg-green-50"}`}
@@ -186,7 +199,6 @@ export default function Sidebar({isOpen}: SidebarProps) {
                                             )}
                                         </Link>
 
-                                        {/* Dropdown menu */}
                                         {isOpen && (
                                             <ul className={`ml-7 mt-1 space-y-1 overflow-hidden transition-all duration-300 ease-in-out
     ${expandedItems[item.label] ? "max-h-48 opacity-100" : "max-h-0 opacity-0"}`}>
@@ -196,7 +208,7 @@ export default function Sidebar({isOpen}: SidebarProps) {
                                                             className="absolute left-0 top-0 bottom-0 w-px bg-gray-200 ml-1"></div>
                                                         <Link
                                                             to={child.path}
-                                                            className={`flex items-center gap-2 px-3 py-1.5 text-xs  transition pl-6
+                                                            className={`flex items-center gap-2 px-3 py-1.5 text-xs transition pl-6
             ${location.pathname === child.path
                                                                 ? "bg-gradient-to-l from-emerald-200 text-black font-medium"
                                                                 : "text-gray-600 hover:bg-emerald-50"}`}
@@ -229,23 +241,25 @@ export default function Sidebar({isOpen}: SidebarProps) {
 
                 {/* User Section */}
                 <div className="p-2 flex items-center justify-between shadow-2xl m-2 rounded-full">
-                    {isOpen && (
+                    {isOpen && user && (
                         <div className="flex items-center gap-2">
-                            <img
-                                src="https://i.pravatar.cc/40?img=1"
-                                alt="user"
-                                className="w-8 h-8 rounded-full"
-                            />
+                            <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center text-white font-semibold">
+                                {user.name.charAt(0).toUpperCase()}
+                            </div>
                             <div>
-                                <p className="text-sm font-medium">John Jonson</p>
-                                <p className="text-xs text-gray-500">Admin</p>
+                                <p className="text-sm font-medium truncate max-w-[120px]" title={user.name}>
+                                    {user.name}
+                                </p>
+                                <p className="text-xs text-gray-500">{user.role}</p>
                             </div>
                         </div>
                     )}
                     <button
-                        className={`p-2 rounded-full bg-red-500 text-white hover:bg-red-600 ${
+                        onClick={handleLogout}
+                        className={`p-2 rounded-full bg-red-500 text-white hover:bg-red-600 transition ${
                             isOpen ? "ml-auto" : "mx-auto"
                         }`}
+                        title="Logout"
                     >
                         <LogOut size={16}/>
                     </button>
