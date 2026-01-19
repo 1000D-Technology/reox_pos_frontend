@@ -9,6 +9,7 @@ import PosCashBalance from "./models/PosCashBalance.tsx";
 import CalculatorModal from "./models/CalculatorModal.tsx";
 import ShutdownModal from "./ShutdownModal.tsx";
 import { authService } from "../services/authService";
+import { cashSessionService } from "../services/cashSessionService";
 
 const OPEN_INVOICE_MODAL_EVENT = "openInvoiceModal";
 const OPEN_QUOTATION_MODAL_EVENT = "openQuotationModal";
@@ -50,6 +51,49 @@ export default function Layout() {
         navigate(location.pathname, { replace: true });
         window.location.reload();
     };
+
+    const handlePOSClick = async () => {
+        const userId = authService.getUserId();
+        if (!userId) {
+            navigate('/signin');
+            return;
+        }
+
+        try {
+            // Get counter from localStorage
+            const counterCode = localStorage.getItem('current_counter');
+            const sessionDate = localStorage.getItem('session_date');
+            const today = new Date().toISOString().split('T')[0];
+
+            // If no counter or date changed, show modal
+            if (!counterCode || sessionDate !== today) {
+                localStorage.removeItem('current_counter');
+                localStorage.removeItem('session_date');
+                setIsPosCashBalanceOpen(true);
+                return;
+            }
+
+            // Check backend for active session
+            const { hasActiveSession } = await cashSessionService.checkActiveCashSession(
+                userId,
+                counterCode
+            );
+
+            if (hasActiveSession) {
+                setIsOpen(false);
+                navigate('/pos');
+            } else {
+                localStorage.removeItem('current_counter');
+                localStorage.removeItem('session_date');
+                setIsPosCashBalanceOpen(true);
+            }
+        } catch (error) {
+            console.error('Error checking cash session:', error);
+            setIsPosCashBalanceOpen(true);
+        }
+    };
+
+
 
     useEffect(() => {
         if (location.pathname === '/pos') {
@@ -108,7 +152,7 @@ export default function Layout() {
 
                     <div className="flex items-center justify-between gap-3 bg-white px-3 py-2 rounded-full">
                         <button
-                            onClick={() => setIsPosCashBalanceOpen(true)}
+                            onClick={handlePOSClick}
                             className="px-7 py-2 bg-gray-800 text-white rounded-full flex items-center gap-4 hover:bg-gray-900 transition cursor-pointer"
                         >
                             <ClipboardPlus size={18} />POS

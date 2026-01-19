@@ -57,5 +57,10 @@ export const authService = {
 
     getToken: (): string | null => {
         return sessionStorage.getItem('token');
+    },
+
+    getUserId(): number | null {
+        const user = this.getCurrentUser();
+        return user?.id || null;
     }
 };
