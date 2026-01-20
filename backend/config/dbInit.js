@@ -98,6 +98,15 @@ const seedDatabase = async () => {
             console.log("Product status seeded successfully!");
         }
 
+        // Seed role table
+        const [roleRows] = await db.execute("SELECT COUNT(*) as count FROM role");
+        
+        if (roleRows[0].count === 0) {
+            console.log("Seeding role data...");
+            await db.execute("INSERT INTO role (id, user_role) VALUES (1, 'Admin'), (2, 'Cashier'), (3, 'User')");
+            console.log("Role data seeded successfully!");
+        }
+
         console.log("Database seeding completed!");
     } catch (error) {
         console.error("Database seeding failed:", error.message);
