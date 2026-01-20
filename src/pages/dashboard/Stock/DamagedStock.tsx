@@ -750,7 +750,7 @@ function DamagedStock() {
                             className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-red-400 focus:outline-none transition-all resize-none"
                         />
                     </div>
-                    <div className={'grid grid-cols-2 md:items-end items-start gap-2 text-white font-medium'}>
+                    <div className={'col-span-2 grid grid-cols-2 items-end gap-2 text-white font-medium'}>
                         <button
                             onClick={handleAddDamaged}
                             disabled={isSubmitting}
