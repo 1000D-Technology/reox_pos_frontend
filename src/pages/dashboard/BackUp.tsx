@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import toast, { Toaster } from 'react-hot-toast';
-import axios from 'axios';
+import { backupService, type BackupResponse as BackupFile, type BackupStats } from '../../services/backupService';
 import {
     CloudUpload,
     ShieldCheck,
@@ -13,20 +13,6 @@ import {
     FileText,
     Database
 } from 'lucide-react';
-
-interface BackupStats {
-    lastBackup: string;
-    totalSize: string;
-    count: number;
-    status: string;
-}
-
-interface BackupFile {
-    filename: string;
-    size: string;
-    date: string;
-    timestamp: number;
-}
 
 const BackUp = () => {
     const [isBackingUp, setIsBackingUp] = useState(false);
@@ -47,8 +33,8 @@ const BackUp = () => {
 
     const fetchScheduleStatus = async () => {
         try {
-            const response = await axios.get('http://localhost:5000/api/backup/schedule/status');
-            setScheduleStatus(response.data);
+            const data = await backupService.getScheduleStatus();
+            setScheduleStatus(data);
         } catch (error) {
             console.error('Failed to fetch schedule status:', error);
         }
@@ -73,8 +59,8 @@ const BackUp = () => {
 
     const fetchBackupStats = async () => {
         try {
-            const response = await axios.get('http://localhost:5000/api/backup/stats');
-            setBackupStats(response.data);
+            const stats = await backupService.getBackupStats();
+            setBackupStats(stats);
         } catch (error) {
             toast.error('Failed to load backup statistics');
             console.error('Failed to fetch backup stats:', error);
@@ -83,8 +69,9 @@ const BackUp = () => {
 
     const fetchBackupList = async () => {
         try {
-            const response = await axios.get('http://localhost:5000/api/backup/list');
-            setBackupFiles(response.data);
+            // @ts-ignore - The service returns BackupResponse[] which is compatible with BackupFile[] structure for display
+            const files = await backupService.getAllBackups();
+            setBackupFiles(files as unknown as BackupFile[]);
         } catch (error) {
             toast.error('Failed to load backup list');
             console.error('Failed to fetch backup list:', error);
@@ -96,9 +83,9 @@ const BackUp = () => {
         const loadingToast = toast.loading('Creating backup...');
 
         try {
-            const response = await axios.post('http://localhost:5000/api/backup/create');
+            const response = await backupService.createBackup();
 
-            if (response.data.success) {
+            if (response.success) {
                 await fetchBackupStats();
                 await fetchBackupList();
                 toast.success('Backup created successfully!', {
@@ -122,20 +109,9 @@ const BackUp = () => {
         const downloadToast = toast.loading('Downloading backup...');
 
         try {
-            const response = await axios.get(
-                `http://localhost:5000/api/backup/download/${filename}`,
-                {
-                    responseType: 'blob',
-                    onDownloadProgress: (progressEvent) => {
-                        const percentCompleted = progressEvent.total
-                            ? Math.round((progressEvent.loaded * 100) / progressEvent.total)
-                            : 0;
-                        toast.loading(`Downloading... ${percentCompleted}%`, { id: downloadToast });
-                    }
-                }
-            );
+            const blob = await backupService.downloadBackup(filename);
 
-            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const url = window.URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.href = url;
             link.setAttribute('download', filename);
@@ -244,7 +220,7 @@ const BackUp = () => {
                                 key={i}
                                 className="flex items-center p-4 space-x-3 bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all cursor-pointer group relative overflow-hidden"
                             >
-                                <div className="absolute inset-0 bg-gradient-to-br from-emerald-50/50 via-transparent to-green-50/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                                <div className="absolute inset-0 bg-linear-to-br from-emerald-50/50 via-transparent to-green-50/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
 
                                 <div className={`p-3 rounded-full ${stat.color} shadow-md relative z-10`}>
                                     <stat.icon className={`w-6 h-6 ${stat.iconColor}`} />
@@ -268,11 +244,11 @@ const BackUp = () => {
                             <div
                                 className="bg-white rounded-3xl shadow-2xl p-8 relative overflow-hidden"
                             >
-                                <div className="absolute -top-24 -right-24 w-64 h-64 bg-gradient-to-br from-emerald-400/20 to-green-400/20 rounded-full blur-3xl"></div>
+                                <div className="absolute -top-24 -right-24 w-64 h-64 bg-linear-to-br from-emerald-400/20 to-green-400/20 rounded-full blur-3xl"></div>
 
                                 <div className="relative z-10">
                                     <div className="flex items-center justify-center mb-6">
-                                        <div className="p-4 bg-gradient-to-br from-emerald-500 to-green-500 rounded-2xl shadow-xl">
+                                        <div className="p-4 bg-linear-to-br from-emerald-500 to-green-500 rounded-2xl shadow-xl">
                                             <CloudUpload className="w-12 h-12 text-white" />
                                         </div>
                                     </div>
@@ -295,7 +271,7 @@ const BackUp = () => {
                                         <button
                                             onClick={handleBackup}
                                             disabled={isBackingUp}
-                                            className="w-full bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-600 hover:to-green-600 text-white font-semibold py-4 px-6 rounded-xl shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+                                            className="w-full bg-linear-to-r from-emerald-500 to-green-500 hover:from-emerald-600 hover:to-green-600 text-white font-semibold py-4 px-6 rounded-xl shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
                                         >
                                             {isBackingUp ? (
                                                 <RefreshCw className="w-5 h-5 animate-spin" />
@@ -327,7 +303,7 @@ const BackUp = () => {
 
                                 <div className="bg-emerald-50 rounded-xl p-5 border-2 border-emerald-200 mb-4">
                                     <div className="flex items-start space-x-3">
-                                        <CheckCircle className="w-6 h-6 text-emerald-600 mt-0.5 flex-shrink-0" />
+                                        <CheckCircle className="w-6 h-6 text-emerald-600 mt-0.5 shrink-0" />
                                         <div className="flex-1">
                                             <p className="font-bold text-emerald-900 text-lg mb-1">Auto-Backup Active</p>
                                             <p className="text-sm text-emerald-700 mb-2">
@@ -342,7 +318,7 @@ const BackUp = () => {
 
                                 <div className="p-4 bg-amber-50 rounded-xl border border-amber-200">
                                     <div className="flex items-start space-x-3">
-                                        <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                                        <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5 shrink-0" />
                                         <div>
                                             <p className="font-semibold text-amber-800">Retention Policy</p>
                                             <p className="text-sm text-amber-700">Backups are automatically stored for 7 days</p>
@@ -379,10 +355,10 @@ const BackUp = () => {
                                     backupFiles.map((file, i) => (
                                         <div
                                             key={i}
-                                            className="flex items-center justify-between p-4 bg-gradient-to-r from-emerald-50 to-green-50 rounded-xl border border-emerald-100 hover:shadow-lg transition-all group"
+                                            className="flex items-center justify-between p-4 bg-linear-to-r from-emerald-50 to-green-50 rounded-xl border border-emerald-100 hover:shadow-lg transition-all group"
                                         >
                                             <div className="flex items-center space-x-3 flex-1 min-w-0">
-                                                <div className="p-2.5 bg-gradient-to-br from-emerald-500 to-green-500 rounded-lg shadow-md flex-shrink-0">
+                                                <div className="p-2.5 bg-linear-to-br from-emerald-500 to-green-500 rounded-lg shadow-md shrink-0">
                                                     <Database className="w-5 h-5 text-white" />
                                                 </div>
                                                 <div className="flex-1 min-w-0">
@@ -397,7 +373,7 @@ const BackUp = () => {
 
                                             <button
                                                 onClick={() => handleDownload(file.filename)}
-                                                className="ml-3 p-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg transition-all hover:scale-110 shadow-md flex-shrink-0"
+                                                className="ml-3 p-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg transition-all hover:scale-110 shadow-md shrink-0"
                                                 title="Download backup"
                                             >
                                                 <Download className="w-5 h-5" />
