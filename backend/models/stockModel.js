@@ -2,7 +2,57 @@ const db = require("../config/db");
 
 class Stock {
     /**
-     * @desc Get all current stock with product and supplier details
+     * @desc Get ALL stock data with individual variation rows (not grouped)
+     */
+    static async getAllStockWithVariations() {
+        const query = `
+            SELECT 
+                s.id AS stock_id,
+                s.product_variations_id,
+                s.batch_id,
+                s.qty,
+                s.cost_price,
+                s.mrp,
+                s.rsp AS selling_price,
+                s.mfd,
+                s.exp,
+                p.id AS product_id,
+                p.product_name,
+                p.product_code,
+                pv.barcode,
+                pv.color,
+                pv.size,
+                pv.storage_capacity,
+                CONCAT(p.product_name, 
+                       IF(pv.color IS NOT NULL AND pv.color != '', CONCAT(' - ', pv.color), ''), 
+                       IF(pv.size IS NOT NULL AND pv.size != '', CONCAT(' - ', pv.size), ''),
+                       IF(pv.storage_capacity IS NOT NULL AND pv.storage_capacity != '', CONCAT(' - ', pv.storage_capacity), '')
+                ) AS full_product_name,
+                u.name AS unit,
+                c.name AS category,
+                b.name AS brand,
+                bat.batch_name,
+                sup.supplier_name AS supplier,
+                ps.status_name AS product_status
+            FROM stock s
+            INNER JOIN product_variations pv ON s.product_variations_id = pv.id
+            INNER JOIN product p ON pv.product_id = p.id
+            INNER JOIN unit_id u ON p.unit_id = u.idunit_id
+            LEFT JOIN category c ON p.category_id = c.idcategory
+            LEFT JOIN brand b ON p.brand_id = b.idbrand
+            LEFT JOIN batch bat ON s.batch_id = bat.id
+            LEFT JOIN product_status ps ON pv.product_status_id = ps.idproduct_status
+            LEFT JOIN grn_items gi ON s.id = gi.stock_id
+            LEFT JOIN grn g ON gi.grn_id = g.id
+            LEFT JOIN supplier sup ON g.supplier_id = sup.id
+            ORDER BY p.product_name ASC, pv.id ASC, s.id ASC
+        `;
+        const [rows] = await db.execute(query);
+        return rows;
+    }
+
+    /**
+     * @desc Get all current stock with product and supplier details (grouped by product)
      */
     static async getAllStock() {
         const query = `
@@ -10,10 +60,10 @@ class Stock {
                 p.id AS product_id,
                 p.product_name AS product_name,
                 u.name AS unit,
-                s.cost_price,
-                s.mrp,
-                s.rsp AS selling_price,
-                sup.supplier_name AS supplier,
+                AVG(s.cost_price) AS cost_price,
+                AVG(s.mrp) AS mrp,
+                AVG(s.rsp) AS selling_price,
+                GROUP_CONCAT(DISTINCT sup.supplier_name SEPARATOR ', ') AS supplier,
                 SUM(s.qty) AS stock_qty
             FROM stock s
             INNER JOIN product_variations pv ON s.product_variations_id = pv.id
@@ -23,7 +73,7 @@ class Stock {
             LEFT JOIN grn g ON gi.grn_id = g.id
             LEFT JOIN supplier sup ON g.supplier_id = sup.id
             WHERE s.qty > 0
-            GROUP BY p.id, p.product_name, u.name, s.cost_price, s.mrp, s.rsp, sup.supplier_name
+            GROUP BY p.id, p.product_name, u.name
             ORDER BY p.product_name ASC
         `;
         const [rows] = await db.execute(query);
@@ -33,16 +83,13 @@ class Stock {
     static async searchStock(filters) {
         let query = `
         SELECT 
-            pv.id AS variation_id,
-            CONCAT(p.product_name, 
-                   IF(pv.color IS NOT NULL AND pv.color != '', CONCAT(' - ', pv.color), ''), 
-                   IF(pv.size IS NOT NULL AND pv.size != '', CONCAT(' - ', pv.size), '')
-            ) AS full_product_name,
+            p.id AS product_id,
+            p.product_name AS product_name,
             u.name AS unit,
-            s.cost_price,
-            s.mrp,
-            s.rsp AS selling_price,
-            sup.supplier_name AS supplier,
+            AVG(s.cost_price) AS cost_price,
+            AVG(s.mrp) AS mrp,
+            AVG(s.rsp) AS selling_price,
+            GROUP_CONCAT(DISTINCT sup.supplier_name SEPARATOR ', ') AS supplier,
             SUM(s.qty) AS stock_qty
         FROM stock s
         INNER JOIN product_variations pv ON s.product_variations_id = pv.id
@@ -69,13 +116,11 @@ class Stock {
             queryParams.push(filters.supplier);
         }
         if (filters.searchQuery) {
-            query += ` AND (p.product_name LIKE ? OR pv.id = ?)`;
+            query += ` AND (p.product_name LIKE ? OR p.id = ?)`;
             queryParams.push(`%${filters.searchQuery}%`, filters.searchQuery);
         }
 
-        query += ` GROUP BY 
-                pv.id, p.product_name, pv.color, pv.size, u.name, 
-                s.cost_price, s.mrp, s.rsp, sup.supplier_name
+        query += ` GROUP BY p.id, p.product_name, u.name
                ORDER BY p.product_name ASC`;
 
         const [rows] = await db.execute(query, queryParams);
@@ -129,16 +174,13 @@ class Stock {
     static async getOutOfStock() {
     const query = `
         SELECT 
-            pv.id AS variation_id,
-            CONCAT(p.product_name, 
-                   IF(pv.color IS NOT NULL AND pv.color != '', CONCAT(' - ', pv.color), ''), 
-                   IF(pv.size IS NOT NULL AND pv.size != '', CONCAT(' - ', pv.size), '')
-            ) AS full_product_name,
+            p.id AS product_id,
+            p.product_name AS product_name,
             u.name AS unit,
-            s.cost_price,
-            s.mrp,
-            s.rsp AS selling_price,
-            sup.supplier_name AS supplier,
+            AVG(s.cost_price) AS cost_price,
+            AVG(s.mrp) AS mrp,
+            AVG(s.rsp) AS selling_price,
+            GROUP_CONCAT(DISTINCT sup.supplier_name SEPARATOR ', ') AS supplier,
             SUM(s.qty) AS stock_qty
         FROM stock s
         INNER JOIN product_variations pv ON s.product_variations_id = pv.id
@@ -148,9 +190,7 @@ class Stock {
         LEFT JOIN grn g ON gi.grn_id = g.id
         LEFT JOIN supplier sup ON g.supplier_id = sup.id
         WHERE s.qty = 0
-        GROUP BY 
-            pv.id, p.product_name, pv.color, pv.size, u.name, 
-            s.cost_price, s.mrp, s.rsp, sup.supplier_name
+        GROUP BY p.id, p.product_name, u.name
         ORDER BY p.product_name ASC
     `;
     const [rows] = await db.execute(query);
@@ -160,18 +200,15 @@ class Stock {
     static async searchOutOfStock(filters) {
     let query = `
         SELECT 
-            pv.id AS variation_id,
-            CONCAT(p.product_name, 
-                   IF(pv.color IS NOT NULL AND pv.color != '', CONCAT(' - ', pv.color), ''), 
-                   IF(pv.size IS NOT NULL AND pv.size != '', CONCAT(' - ', pv.size), '')
-            ) AS full_product_name,
+            p.id AS product_id,
+            p.product_name AS product_name,
             u.name AS unit,
-            s.cost_price,
-            s.mrp,
-            s.rsp AS selling_price,
-            sup.supplier_name AS supplier,
+            AVG(s.cost_price) AS cost_price,
+            AVG(s.mrp) AS mrp,
+            AVG(s.rsp) AS selling_price,
+            GROUP_CONCAT(DISTINCT sup.supplier_name SEPARATOR ', ') AS supplier,
             SUM(s.qty) AS stock_qty,
-            s.mfd AS manufacture_date
+            MAX(s.mfd) AS manufacture_date
         FROM stock s
         INNER JOIN product_variations pv ON s.product_variations_id = pv.id
         INNER JOIN product p ON pv.product_id = p.id
@@ -184,9 +221,9 @@ class Stock {
 
     const queryParams = [];
 
-    // Filter by Product Name or Variation ID
+    // Filter by Product Name or Product ID
     if (filters.searchQuery) {
-        query += ` AND (p.product_name LIKE ? OR pv.id = ?)`;
+        query += ` AND (p.product_name LIKE ? OR p.id = ?)`;
         queryParams.push(`%${filters.searchQuery}%`, filters.searchQuery);
     }
 
@@ -206,7 +243,7 @@ class Stock {
     }
 
     query += `
-        GROUP BY pv.id, p.product_name, pv.color, pv.size, u.name, s.cost_price, s.mrp, s.rsp, sup.supplier_name, s.mfd
+        GROUP BY p.id, p.product_name, u.name
         ORDER BY p.product_name ASC
     `;
 
