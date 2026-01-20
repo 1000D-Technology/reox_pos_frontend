@@ -16,6 +16,9 @@ import { useEffect, useState } from "react";
 import TypeableSelect from "../../../components/TypeableSelect.tsx";
 import { stockService } from "../../../services/stockService.ts";
 import toast, { Toaster } from 'react-hot-toast';
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 function StockList() {
     // Summary data state
@@ -222,6 +225,141 @@ function StockList() {
         setSearchQuery('');
         await Promise.all([loadStockData(), loadSummaryData()]);
         toast.success('Filters cleared');
+    };
+
+    // Export to Excel
+    const handleExportExcel = () => {
+        try {
+            const exportData = stockData.map((item, index) => ({
+                'No': index + 1,
+                'Product ID': item.productID,
+                'Product Name': item.productName,
+                'Unit': item.unit,
+                'Cost Price': item.costPrice,
+                'MRP': item.MRP,
+                'Selling Price': item.Price,
+                'Supplier': item.supplier,
+                'Stock QTY': item.stockQty
+            }));
+
+            const ws = XLSX.utils.json_to_sheet(exportData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Stock List');
+            
+            const timestamp = new Date().toISOString().split('T')[0];
+            XLSX.writeFile(wb, `Stock_List_${timestamp}.xlsx`);
+            toast.success('Excel file exported successfully');
+        } catch (error) {
+            console.error('Error exporting Excel:', error);
+            toast.error('Failed to export Excel file');
+        }
+    };
+
+    // Export to CSV
+    const handleExportCSV = () => {
+        try {
+            const headers = ['No', 'Product ID', 'Product Name', 'Unit', 'Cost Price', 'MRP', 'Selling Price', 'Supplier', 'Stock QTY'];
+            const csvData = stockData.map((item, index) => [
+                index + 1,
+                item.productID,
+                item.productName,
+                item.unit,
+                item.costPrice,
+                item.MRP,
+                item.Price,
+                item.supplier,
+                item.stockQty
+            ]);
+
+            const csvContent = [
+                headers.join(','),
+                ...csvData.map(row => row.map(cell => `"${cell}"`).join(','))
+            ].join('\n');
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            const timestamp = new Date().toISOString().split('T')[0];
+            
+            link.setAttribute('href', url);
+            link.setAttribute('download', `Stock_List_${timestamp}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            toast.success('CSV file exported successfully');
+        } catch (error) {
+            console.error('Error exporting CSV:', error);
+            toast.error('Failed to export CSV file');
+        }
+    };
+
+    // Export to PDF
+    const handleExportPDF = () => {
+        try {
+            const doc = new jsPDF();
+            
+            // Add title
+            doc.setFontSize(18);
+            doc.text('Stock List Report', 14, 22);
+            
+            // Add date
+            doc.setFontSize(10);
+            doc.text(`Generated on: ${new Date().toLocaleDateString('en-US', { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            })}`, 14, 30);
+
+            // Prepare table data
+            const tableData = stockData.map((item, index) => [
+                index + 1,
+                item.productID,
+                item.productName,
+                item.unit,
+                `LKR ${item.costPrice}`,
+                `LKR ${item.MRP}`,
+                `LKR ${item.Price}`,
+                item.supplier,
+                item.stockQty
+            ]);
+
+            // Add table
+            autoTable(doc, {
+                startY: 35,
+                head: [['No', 'Product ID', 'Product Name', 'Unit', 'Cost Price', 'MRP', 'Selling Price', 'Supplier', 'Stock']],
+                body: tableData,
+                theme: 'grid',
+                headStyles: {
+                    fillColor: [16, 185, 129],
+                    textColor: 255,
+                    fontStyle: 'bold'
+                },
+                styles: {
+                    fontSize: 8,
+                    cellPadding: 2
+                },
+                columnStyles: {
+                    0: { cellWidth: 10 },
+                    1: { cellWidth: 20 },
+                    2: { cellWidth: 35 },
+                    3: { cellWidth: 15 },
+                    4: { cellWidth: 20 },
+                    5: { cellWidth: 20 },
+                    6: { cellWidth: 25 },
+                    7: { cellWidth: 30 },
+                    8: { cellWidth: 15 }
+                }
+            });
+
+            const timestamp = new Date().toISOString().split('T')[0];
+            doc.save(`Stock_List_${timestamp}.pdf`);
+            toast.success('PDF file exported successfully');
+        } catch (error) {
+            console.error('Error exporting PDF:', error);
+            toast.error('Failed to export PDF file');
+        }
     };
 
     const [selectedIndex, setSelectedIndex] = useState(0);
@@ -435,7 +573,7 @@ function StockList() {
                                 onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                             />
                         </div>
-                        <div className={'grid grid-cols-3 md:items-end items-start gap-2 text-white font-medium'}>
+                        <div className={'grid grid-cols-2 md:items-end items-start gap-2 text-white font-medium'}>
                             <button 
                                 onClick={handleSearch}
                                 disabled={isLoadingStock}
@@ -599,13 +737,19 @@ function StockList() {
                 <div
                     className={'bg-white flex justify-center p-4 gap-4 rounded-xl shadow-lg'}
                 >
-                    <button className={'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 px-6 py-2 font-medium text-white rounded-lg flex gap-2 items-center shadow-lg shadow-emerald-200 hover:shadow-xl transition-all'}>
+                    <button 
+                        onClick={handleExportExcel}
+                        className={'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 px-6 py-2 font-medium text-white rounded-lg flex gap-2 items-center shadow-lg shadow-emerald-200 hover:shadow-xl transition-all'}>
                         <FileText size={15} />Excel
                     </button>
-                    <button className={'bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 px-6 py-2 font-medium text-white rounded-lg flex gap-2 items-center shadow-lg shadow-yellow-200 hover:shadow-xl transition-all'}>
+                    <button 
+                        onClick={handleExportCSV}
+                        className={'bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 px-6 py-2 font-medium text-white rounded-lg flex gap-2 items-center shadow-lg shadow-yellow-200 hover:shadow-xl transition-all'}>
                         <FileText size={15} />CSV
                     </button>
-                    <button className={'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 px-6 py-2 font-medium text-white rounded-lg flex gap-2 items-center shadow-lg shadow-red-200 hover:shadow-xl transition-all'}>
+                    <button 
+                        onClick={handleExportPDF}
+                        className={'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 px-6 py-2 font-medium text-white rounded-lg flex gap-2 items-center shadow-lg shadow-red-200 hover:shadow-xl transition-all'}>
                         <FileText size={15} />PDF
                     </button>
                 </div>
