@@ -13,7 +13,6 @@ import {
     ArrowDownRight,
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
 import TypeableSelect from "../../../components/TypeableSelect.tsx";
 import { productService } from '../../../services/productService';
 import { categoryService } from '../../../services/categoryService';
@@ -117,8 +116,6 @@ function OutOfStock() {
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
     const [selectedSupplier, setSelectedSupplier] = useState<string | null>(null);
     const [selectedProduct, setSelectedProduct] = useState<string | null>(null);
-    const [fromDate, setFromDate] = useState<string>('');
-    const [toDate, setToDate] = useState<string>('');
 
     // Dropdown options state
     const [categories, setCategories] = useState<SelectOption[]>([]);
@@ -173,36 +170,41 @@ function OutOfStock() {
 
     // Search functionality
     const handleSearch = async () => {
-        if (!selectedProduct && !selectedCategory && !selectedSupplier && !fromDate && !toDate) {
-            toast.error('Please select at least one filter');
-            return;
-        }
-
         setIsLoadingStock(true);
         try {
-            const filters = {
-                product: selectedProduct || undefined,
-                category: selectedCategory || undefined,
-                supplier: selectedSupplier || undefined,
-                fromDate: fromDate || undefined,
-                toDate: toDate || undefined
-            };
-
-            const response = await stockService.searchOutOfStock(filters);
-            console.log(response);
-
-            if (response.data?.success) {
-                setStockData(response.data.data || []);
-                setCurrentPage(1);
-                setSelectedIndex(0);
-                if (response.data.count > 0) {
-                    toast.success(`Found ${response.data.count} out-of-stock items`);
+            // If no filters selected, load all data
+            if (!selectedProduct && !selectedCategory && !selectedSupplier) {
+                const response = await stockService.getOutOfStockList();
+                if (response.data?.success) {
+                    setStockData(response.data.data);
+                    setCurrentPage(1);
+                    setSelectedIndex(0);
+                    const count = response.data.count || response.data.data.length;
+                    toast.success(`Found ${count} out-of-stock items`);
                 } else {
-                    toast.error('No out-of-stock items found matching the criteria');
+                    toast.error('Failed to load out-of-stock data');
                 }
             } else {
-                toast.error('Search failed');
-                setStockData([]);
+                // Search with filters
+                const filters = {
+                    product: selectedProduct || undefined,
+                    category: selectedCategory || undefined,
+                    supplier: selectedSupplier || undefined
+                };
+
+                const response = await stockService.searchOutOfStock(filters);
+                console.log(response);
+
+                if (response.data?.success) {
+                    setStockData(response.data.data || []);
+                    setCurrentPage(1);
+                    setSelectedIndex(0);
+                    const count = response.data.count || response.data.data.length;
+                    toast.success(`Found ${count} out-of-stock items`);
+                } else {
+                    toast.error('Search failed');
+                    setStockData([]);
+                }
             }
         } catch (error) {
             console.error('Error searching out-of-stock data:', error);
@@ -218,8 +220,6 @@ function OutOfStock() {
         setSelectedProduct(null);
         setSelectedCategory(null);
         setSelectedSupplier(null);
-        setFromDate('');
-        setToDate('');
         setCurrentPage(1);
         loadOutOfStockData();
         toast.success('Filters cleared');
@@ -242,18 +242,49 @@ function OutOfStock() {
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
+            // Prevent keyboard shortcuts when typing in input fields
+            const target = e.target as HTMLElement;
+            if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+                return;
+            }
+
             if (e.key === "ArrowDown") {
                 e.preventDefault();
                 setSelectedIndex((prev) => (prev < currentStockData.length - 1 ? prev + 1 : prev));
             } else if (e.key === "ArrowUp") {
                 e.preventDefault();
                 setSelectedIndex((prev) => (prev > 0 ? prev - 1 : prev));
+            } else if (e.key === "PageDown") {
+                e.preventDefault();
+                if (currentPage < totalPages) {
+                    goToNextPage();
+                }
+            } else if (e.key === "PageUp") {
+                e.preventDefault();
+                if (currentPage > 1) {
+                    goToPreviousPage();
+                }
+            } else if (e.key === "Home") {
+                e.preventDefault();
+                setSelectedIndex(0);
+            } else if (e.key === "End") {
+                e.preventDefault();
+                setSelectedIndex(currentStockData.length - 1);
+            } else if (e.key === "Enter" && currentStockData.length > 0) {
+                e.preventDefault();
+                const selectedItem = currentStockData[selectedIndex];
+                if (selectedItem) {
+                    toast.success(`Selected: ${selectedItem.productName} (ID: ${selectedItem.productID})`);
+                }
+            } else if (e.key === "Escape") {
+                e.preventDefault();
+                setSelectedIndex(0);
             }
         };
 
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [currentStockData.length]);
+    }, [currentStockData.length, selectedIndex, currentStockData, currentPage, totalPages]);
 
     const goToPage = (page: number) => {
         if (page >= 1 && page <= totalPages) {
@@ -323,12 +354,8 @@ function OutOfStock() {
                 {/* Stats Cards */}
                 <div className={'grid md:grid-cols-4 grid-cols-1 gap-4'}>
                     {summaryCards.map((stat, i) => (
-                        <motion.div
+                        <div
                             key={i}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: i * 0.1 }}
-                            whileHover={{ scale: 1.05, y: -2 }}
                             className={`flex items-center p-4 space-x-3 transition-all bg-white rounded-2xl shadow-lg hover:shadow-xl ${stat.bgGlow} cursor-pointer group relative overflow-hidden`}
                         >
                             <div className="absolute inset-0 bg-gradient-to-br from-transparent via-gray-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
@@ -349,19 +376,16 @@ function OutOfStock() {
                                 </div>
                                 <p className="text-sm font-bold text-gray-700">{stat.value}</p>
                             </div>
-                        </motion.div>
+                        </div>
                     ))}
                 </div>
 
                 {/* Filter Section */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.6 }}
+                <div
                     className={'bg-white rounded-xl p-4 flex flex-col shadow-lg'}
                 >
                     <h2 className="text-xl font-semibold text-gray-700 mb-3">Filter</h2>
-                    <div className={'grid md:grid-cols-6 gap-4'}>
+                    <div className={'grid md:grid-cols-4 gap-4'}>
                         <div>
                             <label htmlFor="product" className="block text-sm font-medium text-gray-700 mb-1">
                                 Product
@@ -398,30 +422,6 @@ function OutOfStock() {
                                 disabled={isLoadingDropdowns}
                             />
                         </div>
-                        <div>
-                            <label htmlFor="fromDate" className="block text-sm font-medium text-gray-700 mb-1">
-                                From Date
-                            </label>
-                            <input
-                                type="date"
-                                id="fromDate"
-                                value={fromDate}
-                                onChange={(e) => setFromDate(e.target.value)}
-                                className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-red-400 focus:outline-none transition-all"
-                            />
-                        </div>
-                        <div>
-                            <label htmlFor="toDate" className="block text-sm font-medium text-gray-700 mb-1">
-                                To Date
-                            </label>
-                            <input
-                                type="date"
-                                id="toDate"
-                                value={toDate}
-                                onChange={(e) => setToDate(e.target.value)}
-                                className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-red-400 focus:outline-none transition-all"
-                            />
-                        </div>
                         <div className={'grid grid-cols-2 md:items-end items-start gap-2 text-white font-medium'}>
                             <button
                                 onClick={handleSearch}
@@ -437,13 +437,10 @@ function OutOfStock() {
                             </button>
                         </div>
                     </div>
-                </motion.div>
+                </div>
 
                 {/* Stock Table */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.7 }}
+                <div
                     className={'flex flex-col bg-white rounded-xl h-full p-4 justify-between shadow-lg'}
                 >
                     <div className="overflow-y-auto max-h-md md:h-[320px] lg:h-[500px] rounded-lg scrollbar-thin scrollbar-thumb-red-300 scrollbar-track-gray-100">
@@ -578,13 +575,10 @@ function OutOfStock() {
                             </button>
                         </div>
                     </nav>
-                </motion.div>
+                </div>
 
                 {/* Export Buttons */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.8 }}
+                <div
                     className={'bg-white flex justify-center p-4 gap-4 rounded-xl shadow-lg'}
                 >
                     <button className={'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 px-6 py-2 font-medium text-white rounded-lg flex gap-2 items-center shadow-lg shadow-emerald-200 hover:shadow-xl transition-all'}>
@@ -596,7 +590,7 @@ function OutOfStock() {
                     <button className={'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 px-6 py-2 font-medium text-white rounded-lg flex gap-2 items-center shadow-lg shadow-red-200 hover:shadow-xl transition-all'}>
                         <FileText size={15} />PDF
                     </button>
-                </motion.div>
+                </div>
             </div>
             <Toaster
                 position="top-right"

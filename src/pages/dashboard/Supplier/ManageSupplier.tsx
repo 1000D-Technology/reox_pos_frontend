@@ -13,7 +13,6 @@ import {
 
 import { useEffect, useState } from 'react';
 import toast, { Toaster } from 'react-hot-toast';
-import { motion } from 'framer-motion';
 import { supplierService } from '../../../services/supplierService';
 
 interface Category {
@@ -302,7 +301,7 @@ function ManageSupplier() {
 
                 <div className={'grid md:grid-cols-3 grid-cols-1 gap-4'}>
                     {summaryCards.map((stat, i) => (
-                        <motion.div
+                        <div
                             key={i}
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
@@ -328,11 +327,11 @@ function ManageSupplier() {
                                 </div>
                                 <p className="text-sm font-bold text-gray-700">{stat.value}</p>
                             </div>
-                        </motion.div>
+                        </div>
                     ))}
                 </div>
 
-                <motion.div
+                <div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.4 }}
@@ -348,9 +347,9 @@ function ManageSupplier() {
                             className="w-full pl-10 pr-4 py-2.5 text-sm border-2 border-gray-200 rounded-lg focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all outline-none"
                         />
                     </div>
-                </motion.div>
+                </div>
 
-                <motion.div
+                <div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.5 }}
@@ -508,12 +507,12 @@ function ManageSupplier() {
                             </button>
                         </div>
                     </nav>
-                </motion.div>
+                </div>
             </div>
 
             {isModalOpen && selectedCategory && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-                    <motion.div
+                    <div
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
                         className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md relative"
@@ -571,7 +570,7 @@ function ManageSupplier() {
                                 {isUpdatingContact ? 'Updating...' : 'Update Contact'}
                             </button>
                         </div>
-                    </motion.div>
+                    </div>
                 </div>
             )}
         </>

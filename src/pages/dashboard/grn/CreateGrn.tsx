@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { Plus, Trash2, ShoppingCart, Package, Calendar, DollarSign } from 'lucide-react';
-import { motion } from 'framer-motion';
 import TypeableSelect from "../../../components/TypeableSelect.tsx";
 import { productService } from "../../../services/productService.ts";
 import { supplierService } from "../../../services/supplierService.ts";
@@ -449,9 +448,7 @@ function CreateGrn() {
                 </div>
 
                 {/* Basic Bill Information */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
+                <div
                     className={'bg-white rounded-xl p-6 shadow-lg'}
                 >
                     <div className="flex items-center gap-2 mb-4">
@@ -490,13 +487,10 @@ function CreateGrn() {
                             />
                         </div>
                     </div>
-                </motion.div>
+                </div>
 
                 {/* GRN Item Details */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.1 }}
+                <div
                     className={'bg-white rounded-xl p-6 shadow-lg'}
                 >
                     <div className="flex items-center gap-2 mb-4">
@@ -688,13 +682,10 @@ function CreateGrn() {
                             </button>
                         </div>
                     </div>
-                </motion.div>
+                </div>
 
                 {/* GRN Items Table */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.2 }}
+                <div
                     className={'bg-white rounded-xl p-6 shadow-lg'}
                 >
                     <span className="text-lg font-semibold text-gray-800 block mb-4">GRN Items</span>
@@ -737,13 +728,9 @@ function CreateGrn() {
                                 </tr>
                             ) : (
                                 grnData.map((sale, index) => (
-                                    <motion.tr
+                                    <tr
                                         key={index}
-                                        initial={{ opacity: 0, x: -20 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        transition={{ delay: 0.05 * index }}
                                         onClick={() => setSelectedIndex(index)}
-                                        whileHover={{ backgroundColor: "rgba(16,185,129,0.05)" }}
                                         className={`cursor-pointer transition-all ${
                                             index === selectedIndex
                                                 ? 'bg-emerald-50 border-l-4 border-emerald-500'
@@ -797,19 +784,16 @@ function CreateGrn() {
                                                 <Trash2 size={16} />
                                             </button>
                                         </td>
-                                    </motion.tr>
+                                    </tr>
                                 ))
                             )}
                             </tbody>
                         </table>
                     </div>
-                </motion.div>
+                </div>
 
                 {/* Payment & Summary */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.3 }}
+                <div
                     className={'bg-white rounded-xl p-6 shadow-lg'}
                 >
                     <div className={'flex justify-between gap-6'}>
@@ -895,7 +879,7 @@ function CreateGrn() {
                             </div>
                         </div>
                     </div>
-                </motion.div>
+                </div>
             </div>
         </>
     );

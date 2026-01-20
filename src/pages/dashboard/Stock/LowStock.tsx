@@ -14,7 +14,6 @@ import {
     ArrowDownRight,
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
 import TypeableSelect from "../../../components/TypeableSelect.tsx";
 import { stockService } from '../../../services/stockService';
 import { productService } from '../../../services/productService';
@@ -351,12 +350,8 @@ function LowStock() {
             {/* Stats Cards */}
             <div className={'grid md:grid-cols-5 grid-cols-1 gap-4'}>
                 {summaryCards.map((stat, i) => (
-                    <motion.div
+                    <div
                         key={i}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: i * 0.1 }}
-                        whileHover={{ scale: 1.05, y: -2 }}
                         className={`flex items-center p-4 space-x-3 transition-all bg-white rounded-2xl shadow-lg hover:shadow-xl ${stat.bgGlow} cursor-pointer group relative overflow-hidden`}
                     >
                         <div className="absolute inset-0 bg-gradient-to-br from-transparent via-gray-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
@@ -377,15 +372,12 @@ function LowStock() {
                             </div>
                             <p className="text-sm font-bold text-gray-700">{stat.value}</p>
                         </div>
-                    </motion.div>
+                    </div>
                 ))}
             </div>
 
             {/* Filter Section */}
-            <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.6 }}
+            <div
                 className={'bg-white rounded-xl p-4 flex flex-col shadow-lg'}
             >
                 <h2 className="text-xl font-semibold text-gray-700 mb-3">Filter</h2>
@@ -456,13 +448,10 @@ function LowStock() {
                         </button>
                     </div>
                 </div>
-            </motion.div>
+            </div>
 
             {/* Stock Table */}
-            <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.7 }}
+            <div
                 className={'flex flex-col bg-white rounded-xl h-full p-4 justify-between shadow-lg'}
             >
                 <div className="overflow-y-auto max-h-md md:h-[320px] lg:h-[500px] rounded-lg scrollbar-thin scrollbar-thumb-orange-300 scrollbar-track-gray-100">
@@ -599,13 +588,10 @@ function LowStock() {
                         </button>
                     </div>
                 </nav>
-            </motion.div>
+            </div>
 
             {/* Export Buttons */}
-            <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.8 }}
+            <div
                 className={'bg-white flex justify-center p-4 gap-4 rounded-xl shadow-lg'}
             >
                 <button className={'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 px-6 py-2 font-medium text-white rounded-lg flex gap-2 items-center shadow-lg shadow-emerald-200 hover:shadow-xl transition-all'}>
@@ -617,7 +603,7 @@ function LowStock() {
                 <button className={'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 px-6 py-2 font-medium text-white rounded-lg flex gap-2 items-center shadow-lg shadow-red-200 hover:shadow-xl transition-all'}>
                     <FileText size={15} />PDF
                 </button>
-            </motion.div>
+            </div>
             <Toaster
                 position="top-right"
                 toastOptions={{
