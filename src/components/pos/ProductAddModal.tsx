@@ -11,7 +11,7 @@ interface Product {
     stock: number;
     category: string;
     productCode: string;
-    isBulk: boolean;
+    isBulk: boolean;batch?: string;
 }
 
 interface ProductAddModalProps {
@@ -41,6 +41,14 @@ export const ProductAddModal = ({
     const [discountType, setDiscountType] = useState<'percentage' | 'price'>('percentage');
 
     useEffect(() => {
+        if (isOpen && product) {
+            setQuantity(1);
+            setDiscount(0);
+            setDiscountType('percentage');
+        }
+    }, [isOpen, product]);
+
+    useEffect(() => {
         if (!isOpen) return;
 
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -51,7 +59,7 @@ export const ProductAddModal = ({
                     break;
                 case 'Enter':
                     e.preventDefault();
-                    handleAdd();
+                    handleAddToCart();
                     break;
                 case '+':
                 case 'ArrowUp':
@@ -62,42 +70,52 @@ export const ProductAddModal = ({
                 case 'ArrowDown':
                     e.preventDefault();
                     decrementQty();
-                    break;case 'p':
+                    break;
+                case 'p':
                 case 'P':
-                    e.preventDefault();
-                    setDiscountType('percentage');
+                    if (billingMode === 'retail') {
+                        e.preventDefault();
+                        handleDiscountTypeChange('percentage');
+                    }
                     break;
                 case 'f':
                 case 'F':
-                    e.preventDefault();
-                    setDiscountType('price');
+                    if (billingMode === 'retail') {
+                        e.preventDefault();
+                        handleDiscountTypeChange('price');
+                    }
                     break;
             }
         };
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [isOpen, quantity, product]);
+    }, [isOpen, quantity, discount, discountType, billingMode, product]);
 
     if (!product) return null;
 
-    const price = billingMode === 'wholesale' ? product.wholesalePrice : product.price;
+    const price = billingMode === 'retail' ? product.price : product.wholesalePrice;
     const subtotal = price * quantity;
-    const discountAmount = discountType === 'percentage'
-        ? (subtotal * discount) / 100
-        : discount;
-    const total = subtotal - discountAmount;
+    const wholesalePrice = product.wholesalePrice;
+    const maxDiscountAmount = Math.max(0, subtotal - (wholesalePrice * quantity));
 
-    const handleAdd = () => {
-        onAddToCart(product, quantity, discount, discountType);
-        console.log(product, quantity, discount, discountType);
-        handleClose();
+    const discountAmount = billingMode === 'retail'
+        ? (discountType === 'percentage' ? (subtotal * discount) / 100 : discount)
+        : 0;
+    const discountedPrice = Math.max(wholesalePrice * quantity, subtotal - discountAmount);
+
+    const handleAddToCart = () => {
+        if (!product) return;
+
+        const finalDiscount = billingMode === 'wholesale' ? 0 : discount;
+        const finalDiscountAmount = billingMode === 'wholesale' ? 0 : discountAmount;
+        const finalDiscountedPrice = billingMode === 'wholesale' ? subtotal : discountedPrice;
+
+        onAddToCart(product, quantity, finalDiscount, discountType, finalDiscountAmount, finalDiscountedPrice);
+        onClose();
     };
 
     const handleClose = () => {
-        setQuantity(1);
-        setDiscount(0);
-        setDiscountType('percentage');
         onClose();
     };
 
@@ -113,176 +131,218 @@ export const ProductAddModal = ({
         }
     };
 
+    const handleDiscountTypeChange = (newType: 'percentage' | 'price') => {
+        if (newType === discountType) return;
+
+        if (newType === 'percentage' && discountType === 'price') {
+            const percentValue = subtotal > 0 ? (discount / subtotal) * 100 : 0;
+            setDiscount(Math.min(100, Math.max(0, percentValue)));
+        } else if (newType === 'price' && discountType === 'percentage') {
+            const priceValue = (subtotal * discount) / 100;
+            setDiscount(Math.min(maxDiscountAmount, Math.max(0, priceValue)));
+        }
+
+        setDiscountType(newType);
+    };
+
+    const handleDiscountChange = (value: number) => {
+        if (discountType === 'percentage') {
+            const maxPercent = maxDiscountAmount > 0 ? (maxDiscountAmount / subtotal) * 100 : 0;
+            setDiscount(Math.min(maxPercent, Math.max(0, value)));
+        } else {
+            setDiscount(Math.min(maxDiscountAmount, Math.max(0, value)));
+        }
+    };
+
+    const maxDiscountPercent = maxDiscountAmount > 0 ? ((maxDiscountAmount / subtotal) * 100).toFixed(2) : '0';
+
     return (
         <AnimatePresence>
             {isOpen && (
-                <>
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
                     <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        onClick={handleClose}
-                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
-                    />
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                        className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-white rounded-2xl shadow-2xl z-50 p-6"
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        className="bg-white rounded-xl shadow-2xl w-full max-w-xl"
                     >
                         {/* Header */}
-                        <div className="flex justify-between items-start mb-4">
-                            <div className="flex-1">
-                                <h2 className="text-xl font-bold text-gray-800">{product.name}</h2>
-                                <p className="text-sm text-gray-500">{product.category} • {product.productCode}</p>
-                            </div>
+                        <div className="flex justify-between items-center px-5 py-4 border-b border-gray-200 bg-gradient-to-r from-emerald-50 to-blue-50 rounded-t-xl">
+                            <h2 className="text-xl font-bold text-gray-800">Add to Cart</h2>
                             <button
                                 onClick={handleClose}
-                                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                                className="p-2 hover:bg-white/80 rounded-lg transition-colors"
                             >
-                                <X className="w-5 h-5 text-gray-500" />
+                                <X className="w-5 h-5" />
                             </button>
-                        </div>
 
-                        {/* Product Info */}
-                        <div className="bg-gradient-to-r from-emerald-50 to-blue-50 rounded-xl p-4 mb-4">
-                            <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                    <p className="text-xs text-gray-600 mb-1">Price</p>
-                                    <p className="text-lg font-bold text-emerald-600">Rs {price.toFixed(2)}</p>
+                        </div>
+                        {/* Keyboard Shortcuts */}
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-2.5 text-xs text-blue-700">
+                            <strong>Shortcuts:</strong> Enter = Add | Esc = Close | +/- = Qty | P = Percentage | F = Fixed
+                        </div>
+                        {/* Content */}
+                        <div className="p-5 space-y-5 max-h-[calc(100vh-220px)] overflow-y-auto">
+                            {/* Product Info */}
+                            <div className="bg-gradient-to-br from-blue-50 to-emerald-50 rounded-lg p-4">
+                                <div className="flex items-center gap-3 mb-3">
+                                    <div className="p-2 bg-white rounded-lg">
+                                        <Package className="w-6 h-6 text-emerald-600" />
+                                    </div>
+                                    <h3 className="font-bold text-base text-gray-800">{product.name}</h3>
                                 </div>
-                                <div>
-                                    <p className="text-xs text-gray-600 mb-1">Available Stock</p>
-                                    <p className="text-lg font-bold text-blue-600 flex items-center gap-1">
-                                        <Package className="w-4 h-4" />
-                                        {product.stock}
-                                    </p>
+                                <div className="grid grid-cols-2 gap-3 text-sm">
+                                    <div className="flex justify-between">
+                                        <span className="text-gray-600">Code:</span>
+                                        <span className="font-semibold text-gray-800">{product.productCode}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-gray-600">Category:</span>
+                                        <span className="font-semibold text-gray-800">{product.category}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-gray-600">Stock:</span>
+                                        <span className="font-semibold text-emerald-600">{product.stock} units</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-gray-600">Wholesale:</span>
+                                        <span className="font-semibold text-blue-600">Rs {wholesalePrice.toFixed(2)}</span>
+                                    </div>
+                                    {product.batch && (
+                                        <div className="flex justify-between col-span-2">
+                                            <span className="text-gray-600">Batch:</span>
+                                            <span className="font-semibold text-amber-600">{product.batch}</span>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
-                        </div>
 
-                        {/* Quantity Controls */}
-                        <div className="mb-4">
-                            <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                Quantity <span className="text-gray-400">(+ / - / ↑ / ↓)</span>
-                            </label>
-                            <div className="flex items-center gap-3">
-                                <button
-                                    onClick={decrementQty}
-                                    className="w-12 h-12 bg-gray-200 hover:bg-gray-300 rounded-xl flex items-center justify-center transition-colors"
-                                >
-                                    <Minus className="w-5 h-5 text-gray-700" />
-                                </button>
-                                <input
-                                    type="number"
-                                    value={quantity}
-                                    onChange={(e) => {
-                                        const val = Math.min(Math.max(1, Number(e.target.value)), product.stock);
-                                        setQuantity(val);
-                                    }}
-                                    className="flex-1 text-center text-2xl font-bold border-2 border-gray-200 rounded-xl py-2 focus:outline-none focus:border-emerald-500"
-                                    min={1}
-                                    max={product.stock}
-                                />
-                                <button
-                                    onClick={incrementQty}
-                                    className="w-12 h-12 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl flex items-center justify-center transition-colors"
-                                >
-                                    <Plus className="w-5 h-5" />
-                                </button>
+                            {/* Quantity Control */}
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                    Quantity (Max: {product.stock})
+                                </label>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={decrementQty}
+                                        disabled={quantity <= 1}
+                                        className="w-12 h-12 bg-red-100 hover:bg-red-500 hover:text-white disabled:bg-gray-200 disabled:text-gray-400 text-red-600 rounded-lg flex items-center justify-center transition-colors touch-manipulation"
+                                    >
+                                        <Minus className="w-5 h-5" />
+                                    </button>
+                                    <input
+                                        type="number"
+                                        value={quantity}
+                                        onChange={(e) => {
+                                            const val = Math.max(1, Math.min(product.stock, Number(e.target.value)));
+                                            setQuantity(val);
+                                        }}
+                                        className="flex-1 text-center text-2xl font-bold py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-emerald-500"
+                                        min={1}
+                                        max={product.stock}
+                                    />
+                                    <button
+                                        onClick={incrementQty}
+                                        disabled={quantity >= product.stock}
+                                        className="w-12 h-12 bg-emerald-100 hover:bg-emerald-500 hover:text-white disabled:bg-gray-200 disabled:text-gray-400 text-emerald-600 rounded-lg flex items-center justify-center transition-colors touch-manipulation"
+                                    >
+                                        <Plus className="w-5 h-5" />
+                                    </button>
+                                </div>
                             </div>
-                        </div>
 
-                        {/* Discount Type Toggle */}
-                        <div className="mb-4">
-                            <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                Discount Type <span className="text-gray-400">(P / F)</span>
-                            </label>
-                            <div className="grid grid-cols-2 gap-2">
-                                <button
-                                    onClick={() => setDiscountType('percentage')}
-                                    className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl transition-all ${
-                                        discountType === 'percentage'
-                                            ? 'bg-emerald-500 text-white shadow-lg'
-                                            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                                    }`}
-                                >
-                                    <Percent className="w-4 h-4" />
-                                    Percentage
-                                </button>
-                                <button
-                                    onClick={() => setDiscountType('price')}
-                                    className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl transition-all ${
-                                        discountType === 'price'
-                                            ? 'bg-blue-500 text-white shadow-lg'
-                                            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                                    }`}
-                                >
-                                    <DollarSign className="w-4 h-4" />
-                                    Fixed Price
-                                </button>
-                            </div>
-                        </div>
+                            {/* Discount Section - Only in Retail Mode */}
+                            {billingMode === 'retail' && (
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                        Discount (Max: Rs {maxDiscountAmount.toFixed(2)} / {maxDiscountPercent}%)
+                                    </label>
 
-                        {/* Discount Input */}
-                        <div className="mb-4">
-                            <label className="block text-sm font-semibold text-gray-700 mb-2">Discount</label>
-                            <input
-                                type="number"
-                                value={discount}
-                                onChange={(e) => {
-                                    const val = Math.max(0, Number(e.target.value));
-                                    const max = discountType === 'percentage' ? 100 : subtotal;
-                                    setDiscount(Math.min(val, max));
-                                }}
-                                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-emerald-500 text-lg"
-                                placeholder={discountType === 'percentage' ? '0 - 100' : '0'}
-                                min={0}
-                                max={discountType === 'percentage' ? 100 : undefined}
-                            />
-                        </div>
+                                    {/* Discount Type Toggle */}
+                                    <div className="flex gap-2 mb-3">
+                                        <button
+                                            onClick={() => handleDiscountTypeChange('percentage')}
+                                            className={`flex-1 py-3 rounded-lg transition-all flex items-center justify-center gap-2 ${
+                                                discountType === 'percentage'
+                                                    ? 'bg-emerald-500 text-white shadow-md'
+                                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                            }`}
+                                        >
+                                            <Percent className="w-4 h-4" />
+                                            <span className="font-semibold">Percentage</span>
+                                        </button>
+                                        <button
+                                            onClick={() => handleDiscountTypeChange('price')}
+                                            className={`flex-1 py-3 rounded-lg transition-all flex items-center justify-center gap-2 ${
+                                                discountType === 'price'
+                                                    ? 'bg-blue-500 text-white shadow-md'
+                                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                            }`}
+                                        >
+                                            <DollarSign className="w-4 h-4" />
+                                            <span className="font-semibold">Fixed Amount</span>
+                                        </button>
+                                    </div>
 
-                        {/* Summary */}
-                        <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl p-4 mb-4 space-y-2">
-                            <div className="flex justify-between text-sm">
-                                <span className="text-gray-600">Subtotal</span>
-                                <span className="font-semibold">Rs {subtotal.toFixed(2)}</span>
-                            </div>
-                            {discount > 0 && (
-                                <div className="flex justify-between text-sm text-red-600">
-                                    <span>Discount</span>
-                                    <span className="font-semibold">- Rs {discountAmount.toFixed(2)}</span>
+                                    {/* Discount Input */}
+                                    <input
+                                        type="number"
+                                        value={discount}
+                                        onChange={(e) => handleDiscountChange(Number(e.target.value))}
+                                        className="w-full px-4 py-3 text-base border-2 border-gray-200 rounded-lg focus:outline-none focus:border-emerald-500"
+                                        placeholder={discountType === 'percentage' ? `0-${maxDiscountPercent}%` : `0-${maxDiscountAmount.toFixed(2)}`}
+                                        step="0.01"
+                                        min="0"
+                                        max={discountType === 'percentage' ? parseFloat(maxDiscountPercent) : maxDiscountAmount}
+                                    />
                                 </div>
                             )}
-                            <div className="flex justify-between text-lg pt-2 border-t-2 border-gray-300">
-                                <span className="font-bold text-gray-800">Total</span>
-                                <span className="font-bold text-emerald-600">Rs {total.toFixed(2)}</span>
+
+                            {/* Price Breakdown */}
+                            <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-gray-600">Unit Price:</span>
+                                    <span className="font-semibold text-gray-800">Rs {price.toFixed(2)}</span>
+                                </div>
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-gray-600">Subtotal ({quantity} × {price.toFixed(2)}):</span>
+                                    <span className="font-semibold text-gray-800">Rs {subtotal.toFixed(2)}</span>
+                                </div>
+                                {billingMode === 'retail' && discount > 0 && (
+                                    <div className="flex justify-between text-sm text-red-600">
+                                        <span>Discount ({discountType === 'percentage' ? `${discount.toFixed(2)}%` : `Rs ${discount.toFixed(2)}`}):</span>
+                                        <span className="font-semibold">-Rs {discountAmount.toFixed(2)}</span>
+                                    </div>
+                                )}<div className="flex justify-between text-sm text-blue-600">
+                                <span>Minimum (WSP × Qty):</span>
+                                <span className="font-semibold">Rs {(wholesalePrice * quantity).toFixed(2)}</span>
                             </div>
+                                <div className="flex justify-between text-lg font-bold border-t pt-2 mt-2">
+                                    <span className="text-gray-800">Total:</span>
+                                    <span className="text-emerald-600">Rs {discountedPrice.toFixed(2)}</span>
+                                </div>
+                            </div>
+
+
                         </div>
 
-                        {/* Keyboard Shortcuts Info */}
-                        <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-3 mb-4 text-xs text-blue-700">
-                            <strong>Shortcuts:</strong> Enter = Add | Esc = Cancel | +/- = Quantity | P = Percentage | F = Fixed
-                        </div>
-
-                        {/* Action Buttons */}
-                        <div className="grid grid-cols-2 gap-3">
+                        {/* Footer Actions */}
+                        <div className="flex gap-3 px-5 py-4 border-t border-gray-200 bg-gray-50 rounded-b-xl">
                             <button
                                 onClick={handleClose}
-                                className="px-4 py-3 bg-gray-200 text-gray-700 rounded-xl hover:bg-gray-300 transition-colors font-semibold"
+                                className="flex-1 py-3 px-4 bg-white hover:bg-gray-100 text-gray-700 font-semibold rounded-lg transition-colors border border-gray-300"
                             >
-                                Cancel <span className="text-xs">(Esc)</span>
+                                Cancel
                             </button>
                             <button
-                                onClick={handleAdd}
-                                className="px-4 py-3 bg-emerald-500 text-white rounded-xl hover:bg-emerald-600 transition-colors font-semibold shadow-lg flex items-center justify-center gap-2"
+                                onClick={handleAddToCart}
+                                className="flex-1 py-3 px-4 bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-600 hover:to-green-600 text-white font-semibold rounded-lg transition-all shadow-md"
                             >
-                                <Plus className="w-5 h-5" />
-                                Add <span className="text-xs">(Enter)</span>
+                                Add to Cart
                             </button>
                         </div>
                     </motion.div>
-                </>
+                </div>
             )}
         </AnimatePresence>
     );
