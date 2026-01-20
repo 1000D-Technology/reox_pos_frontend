@@ -16,7 +16,7 @@ import {
     UserCog
 } from 'lucide-react';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import toast, { Toaster } from 'react-hot-toast';
 import { userRoleService } from '../../../services/userRoleService.ts';
 import { userService } from '../../../services/userService';
@@ -54,15 +54,10 @@ interface UserRole {
 }
 
 function ManageUser() {
-    const [users, setUsers] = useState<User[]>([
-        { id: 1, no: '', name: 'John Admin', email: 'admin@example.com', contactNumber: '0771234567', role: 'Admin', isActive: true },
-        { id: 2, no: '', name: 'Jane Manager', email: 'manager@example.com', contactNumber: '0777654321', role: 'Manager', isActive: true },
-        { id: 3, no: '', name: 'Bob Cashier', email: 'cashier@example.com', contactNumber: '0761234567', role: 'Cashier', isActive: true },
-        { id: 4, no: '', name: 'Alice Staff', email: 'staff@example.com', contactNumber: '0751234567', role: 'Staff', isActive: false }
-    ]);
+    const [users, setUsers] = useState<User[]>([]);
 
-    const [filteredUsers, setFilteredUsers] = useState<User[]>(users);
-    const [isLoading] = useState(false);
+    const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
 
     const [currentPage, setCurrentPage] = useState(1);
@@ -108,7 +103,7 @@ function ManageUser() {
     const stats = {
         totalUsers: users.length,
         activeUsers: users.filter(u => u.isActive).length,
-        adminUsers: users.filter(u => u.role === 'Admin').length
+        adminUsers: users.filter(u => u.role === 'Admin' && u.isActive).length
     };
 
     const summaryCards = [
@@ -160,6 +155,36 @@ function ManageUser() {
 
         setFilteredUsers(filtered);
     };
+
+    // Fetch users on component mount
+    const fetchUsers = useCallback(async () => {
+        setIsLoading(true);
+        try {
+            const response = await userService.getAllUsers();
+            if (response.success && response.data) {
+                const mappedUsers: User[] = response.data.map((user: any, index: number) => ({
+                    id: user.id,
+                    no: (index + 1).toString(),
+                    name: user.name,
+                    email: user.email,
+                    contactNumber: user.contact,
+                    role: user.role_name,
+                    isActive: user.status_name === 'Active'
+                }));
+                setUsers(mappedUsers);
+                setFilteredUsers(mappedUsers);
+            }
+        } catch (error) {
+            console.error('Failed to fetch users:', error);
+            toast.error('Failed to load users');
+        } finally {
+            setIsLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchUsers();
+    }, [fetchUsers]);
 
     // Fetch roles on component mount
     useEffect(() => {
@@ -308,24 +333,9 @@ function ManageUser() {
             const response = await userService.addUser(userData);
 
             if (response.success) {
-                // Find role name for local state
-                const selectedRole = userRoles.find(r => r.id.toString() === addForm.role)?.user_role || 'Staff';
-
-                // Create new user object for local state
-                const newUser: User = {
-                    id: response.data.userId || users.length + 1,
-                    no: '',
-                    name: response.data.name,
-                    email: response.data.email,
-                    contactNumber: addForm.contactNumber,
-                    role: selectedRole,
-                    isActive: true
-                };
-
-                setUsers([...users, newUser]);
-                setFilteredUsers([...users, newUser]);
                 toast.success(response.message || 'User added successfully!');
                 handleCloseAddModal();
+                fetchUsers(); // Refresh the list
             }
         } catch (error: any) {
             console.error('Error adding user:', error);
@@ -341,34 +351,52 @@ function ManageUser() {
 
         setIsProcessing(true);
 
-        setTimeout(() => {
-            const selectedRoleName = userRoles.find(r => r.id.toString() === editForm.role)?.user_role || 'Staff';
+        try {
+            // Prepare user data for API
+            const userData: any = {
+                contact: editForm.contactNumber,
+                role_id: parseInt(editForm.role)
+            };
 
-            const updatedUsers = users.map(user =>
-                user.id === selectedUser.id
-                    ? { ...user, contactNumber: editForm.contactNumber, role: selectedRoleName }
-                    : user
-            );
-
-            setUsers(updatedUsers);
-            setFilteredUsers(updatedUsers);
-            toast.success('User updated successfully!');
+            // Add password if provided
             if (editForm.password) {
-                toast.success('Password updated successfully!');
+                userData.password = editForm.password;
+                userData.confirmPassword = editForm.confirmPassword;
             }
-            handleCloseEditModal();
+
+            // Call the API
+            const response = await userService.updateUser(selectedUser.id, userData);
+
+            if (response.success) {
+                toast.success(response.message || 'User updated successfully!');
+                if (editForm.password) {
+                    toast.success('Password updated successfully!');
+                }
+                handleCloseEditModal();
+                fetchUsers(); // Refresh the list from backend
+            }
+        } catch (error: any) {
+            console.error('Error updating user:', error);
+            const errorMessage = error?.response?.data?.message || 'Failed to update user. Please try again.';
+            toast.error(errorMessage);
+        } finally {
             setIsProcessing(false);
-        }, 1500);
+        }
     };
 
-    const handleStatusToggle = (userId: number, currentStatus: boolean) => {
+    const handleStatusToggle = async (userId: number, currentStatus: boolean) => {
         const newStatus = !currentStatus;
-        const updatedUsers = users.map(user =>
-            user.id === userId ? { ...user, isActive: newStatus } : user
-        );
-        setUsers(updatedUsers);
-        setFilteredUsers(updatedUsers);
-        toast.success(`User ${newStatus ? 'activated' : 'deactivated'} successfully!`);
+        try {
+            const response = await userService.toggleUserStatus(userId, newStatus);
+            if (response.success) {
+                toast.success(response.message || `User ${newStatus ? 'activated' : 'deactivated'} successfully!`);
+                fetchUsers(); // Refresh the list from backend
+            }
+        } catch (error: any) {
+            console.error('Error toggling status:', error);
+            const errorMessage = error?.response?.data?.message || 'Failed to update user status.';
+            toast.error(errorMessage);
+        }
     };
 
     const goToPage = (page: number) => {
