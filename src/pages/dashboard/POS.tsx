@@ -72,6 +72,7 @@ const POSInterface = () => {
     const [showCashModal, setShowCashModal] = useState(false);
     const [showReturnModal, setShowReturnModal] = useState(false);
     const [customers, setCustomers] = useState<Customer[]>(demoCustomers);
+    const [customersLoading, setCustomersLoading] = useState(false);
     const [sessionChecked, setSessionChecked] = useState(false);
     const [showProductAddModal, setShowProductAddModal] = useState(false);
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -422,6 +423,11 @@ const POSInterface = () => {
         if (!value) setSelectedCustomer(null);
     };
 
+    const handleCustomerSelect = (customer: Customer) => {
+        setSelectedCustomer(customer);
+        setCustomerSearchTerm(customer.name);
+    };
+
     const registerCustomer = async (name: string, contact: string, email?: string, creditBalance?: number) => {
         try {
             const response = await customerService.addCustomer({
@@ -528,8 +534,6 @@ const POSInterface = () => {
                     total={total}
                     cartItemsCount={itemsCount}
                     onCompletePayment={completePayment}
-                    customers={customers}
-                    customersLoading={customersLoading}
                 />
             </div>
 
