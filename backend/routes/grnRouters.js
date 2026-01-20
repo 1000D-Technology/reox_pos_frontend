@@ -14,5 +14,8 @@ router.get('/search', grnController.searchGRNList);
 // Route to get bill numbers when a supplier is selected
 router.get('/bills/:supplier_id', grnController.getSupplierBills);
 
+// Get GRN Details by ID
+router.get('/get-by-id/:id', grnController.getGRNDetails);
+
 router.put('/payment/update',  grnController.processPayment);
 module.exports = router;
