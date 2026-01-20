@@ -21,7 +21,7 @@ interface ProductPanelProps {
     productsLoading: boolean;
     barcodeSearchLoading: boolean;
     onAddToCart: (product: Product) => void;
-
+    isNumericSearch: boolean;
     filteredProducts: Product[];
 }
 
@@ -31,6 +31,7 @@ export const ProductPanel = ({
                                  productsLoading,
                                  barcodeSearchLoading,
                                  onAddToCart,
+                                 isNumericSearch,
                                  filteredProducts
                              }: ProductPanelProps) => {
     const searchInputRef = useRef<HTMLInputElement>(null);
@@ -38,30 +39,20 @@ export const ProductPanel = ({
     const [barcodeBuffer, setBarcodeBuffer] = useState('');
     const [lastKeyTime, setLastKeyTime] = useState(0);
 
-    // Check if search term is alphanumeric
-    const isAlphanumericSearch = /^[a-zA-Z0-9]+$/.test(searchTerm.trim());
-
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             const currentTime = Date.now();
             const timeDiff = currentTime - lastKeyTime;
 
-            // Barcode scanner detection - alphanumeric keys pressed within 50ms
-            if (timeDiff < 50 && /^[a-zA-Z0-9]$/.test(e.key)) {
-                console.log('📟 Scanner Key Detected:', {
-                    key: e.key,
-                    timeDiff: `${timeDiff}ms`,
-                    buffer: barcodeBuffer + e.key
-                });
-
+            // Barcode scanner detection (keys pressed within 50ms)
+            if (timeDiff < 50 && /^[0-9]$/.test(e.key)) {
                 setBarcodeBuffer(prev => prev + e.key);
                 setLastKeyTime(currentTime);
                 return;
             }
 
             // Reset buffer if too much time passed
-            if (timeDiff > 100 && barcodeBuffer) {
-                console.log('🔄 Buffer Reset - Time gap:', `${timeDiff}ms`);
+            if (timeDiff > 100) {
                 setBarcodeBuffer('');
             }
 
@@ -80,7 +71,7 @@ export const ProductPanel = ({
             }
 
             // Navigate products with arrow keys (only when products are visible)
-            if (filteredProducts.length > 0 && !isAlphanumericSearch) {
+            if (filteredProducts.length > 0 && !isNumericSearch) {
                 const productElements = productListRef.current?.querySelectorAll('[data-product-id]');
                 if (!productElements) return;
 
@@ -95,6 +86,8 @@ export const ProductPanel = ({
                     const nextIndex = currentIndex + 1;
                     if (nextIndex < productElements.length) {
                         (productElements[nextIndex] as HTMLElement).focus();
+                    } else if (currentIndex === -1) {
+                        (productElements[0] as HTMLElement).focus();
                     }
                 }
 
@@ -104,6 +97,8 @@ export const ProductPanel = ({
                     const prevIndex = currentIndex - 1;
                     if (prevIndex >= 0) {
                         (productElements[prevIndex] as HTMLElement).focus();
+                    } else if (currentIndex === 0) {
+                        searchInputRef.current?.focus();
                     }
                 }
 
@@ -123,20 +118,18 @@ export const ProductPanel = ({
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [filteredProducts, isAlphanumericSearch, onSearchChange, onAddToCart, lastKeyTime, barcodeBuffer]);
+    }, [filteredProducts, isNumericSearch, onSearchChange, onAddToCart, lastKeyTime, barcodeBuffer]);
 
-    // Auto-search when barcode buffer is complete (6+ characters for alphanumeric)
+    // Auto-search when barcode buffer is complete
     useEffect(() => {
-        if (barcodeBuffer.length >= 6) {
-            console.log('✅ COMPLETE BARCODE FROM SCANNER:', barcodeBuffer);
-            console.log('Auto-triggering search...');
+        if (barcodeBuffer.length >= 8) {
             onSearchChange(barcodeBuffer);
             setBarcodeBuffer('');
         }
     }, [barcodeBuffer, onSearchChange]);
 
     return (
-        <div className="col-span-4 bg-white rounded-2xl shadow-lg p-3 flex flex-col overflow-hidden">
+        <div className="col-span-4 bg-white rounded-2xl p-3 flex flex-col overflow-hidden">
             <div className="relative mb-3">
                 <Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
                 <input
@@ -148,7 +141,7 @@ export const ProductPanel = ({
                     className="w-full pl-10 pr-10 py-2.5 text-sm bg-gray-50 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-emerald-500 transition-colors"
                     autoFocus
                 />
-                {isAlphanumericSearch && searchTerm.length > 0 ? (
+                {isNumericSearch && searchTerm.length > 0 ? (
                     <Scan className="absolute right-3 top-3 w-4 h-4 text-blue-500 animate-pulse" />
                 ) : (
                     <Barcode className="absolute right-3 top-3 w-4 h-4 text-gray-400" />
@@ -171,64 +164,73 @@ export const ProductPanel = ({
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mb-2"></div>
                         <span className="text-sm text-gray-500">Searching barcode...</span>
                     </div>
-                ) : isAlphanumericSearch && searchTerm.length > 0 ? (
-                    <div className="flex flex-col items-center justify-center h-32 text-gray-400">
-                        <Scan className="w-12 h-12 mb-2 animate-pulse text-blue-500" />
-                        <p className="text-sm font-semibold text-blue-600">Scanning: {searchTerm}</p>
-                        <p className="text-xs text-gray-400 mt-1">
-                            {searchTerm.length < 6
-                                ? `Need ${6 - searchTerm.length} more characters...`
-                                : 'Searching...'}
-                        </p>
-                        <div className="mt-3 flex items-center gap-2">
-                            <div className="h-2 w-2 bg-blue-500 rounded-full animate-bounce"></div>
-                            <div className="h-2 w-2 bg-blue-500 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
-                            <div className="h-2 w-2 bg-blue-500 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
-                        </div>
-                    </div>
+
                 ) : filteredProducts.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-32 text-gray-400">
                         <Package className="w-12 h-12 mb-2" />
-                        <p className="text-sm">No products found</p>
-                        <p className="text-xs mt-1">Try a different search term</p>
+                        <p className="text-sm font-semibold">No products found</p>
+                        {searchTerm && (
+                            <p className="text-xs text-gray-400 mt-1">Try different search term or barcode</p>
+                        )}
                     </div>
                 ) : (
                     filteredProducts.map((product) => (
-                        <motion.button
-                            key={product.id}
+                        <motion.div
+                            key={`${product.id}-${product.barcode || ''}`}
                             data-product-id={product.id}
-                            onClick={() => onAddToCart(product)}
                             tabIndex={0}
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
-                            className="w-full text-left p-3 bg-gradient-to-r from-gray-50 to-gray-100 hover:from-emerald-50 hover:to-emerald-100 border-2 border-transparent hover:border-emerald-300 rounded-xl transition-all focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-200"
+                            onClick={() => onAddToCart(product)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault();
+                                    onAddToCart(product);
+                                }
+                            }}
+                            className="p-2.5 bg-gray-50 hover:bg-emerald-50 rounded-xl cursor-pointer transition-all border-2 border-transparent hover:border-emerald-200 focus:outline-none focus:border-blue-400 focus:bg-blue-50"
                         >
                             <div className="flex justify-between items-start mb-1">
-                                <h3 className="font-semibold text-sm text-gray-800">{product.name}</h3>
-                                <span className="text-xs font-bold text-emerald-600">
-                                    Rs {product.price.toFixed(2)}
-                                </span>
-                            </div>
-                            <div className="flex items-center justify-between text-xs text-gray-500">
-                                <div className="flex items-center gap-2">
-                                    <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
-                                        {product.productCode}
-                                    </span>
-                                    <span>{product.category}</span>
-                                    {product.barcode && (
-                                        <span className="flex items-center gap-1">
-                                            <Barcode className="w-3 h-3" />
-                                            {product.barcode}
+                                <div className="flex-1">
+                                    <h3 className="font-semibold text-gray-800 text-sm leading-tight">
+                                        {product.name}
+                                    </h3>
+                                    <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                        <span className="text-xs text-gray-500 bg-gray-200 px-2 py-0.5 rounded">
+                                            {product.productCode}
                                         </span>
+                                        {product.barcode && (
+                                            <span className="flex items-center gap-1 text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded">
+                                                <Barcode className="w-3 h-3" />
+                                                {product.barcode}
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-sm font-bold text-emerald-600">
+                                        Rs {product.price.toFixed(2)}
+                                    </p>
+                                    {product.wholesalePrice > 0 && (
+                                        <p className="text-xs text-gray-500">
+                                            WS: Rs {product.wholesalePrice.toFixed(2)}
+                                        </p>
                                     )}
                                 </div>
-                                <span className={`font-medium ${product.stock > 10 ? 'text-green-600' : 'text-orange-600'}`}>
-                                    Stock: {product.stock}
-                                </span>
                             </div>
-                        </motion.button>
+                            <div className="flex justify-between items-center text-xs">
+                                <span className={`px-2 py-0.5 rounded-full ${
+                                    product.stock > 10
+                                        ? 'bg-emerald-100 text-emerald-700'
+                                        : product.stock > 0
+                                            ? 'bg-yellow-100 text-yellow-700'
+                                            : 'bg-red-100 text-red-700'
+                                }`}>
+                                    Stock: {product.stock} {product.category}
+                                </span>
+                                <span className="text-gray-500">{product.category}</span>
+                            </div>
+                        </motion.div>
                     ))
                 )}
             </div>

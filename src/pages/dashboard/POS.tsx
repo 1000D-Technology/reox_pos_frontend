@@ -261,27 +261,25 @@ const POSInterface = () => {
     const remaining = total - totalPaid;
 
     const isAlphanumericSearch = /^[a-zA-Z0-9]+$/.test(searchTerm.trim());
-
-// Show filtered products unless barcode is being searched (loading state)
-    const filteredProducts = barcodeSearchLoading
-        ? [] // Hide during barcode API search
+    const filteredProducts = isAlphanumericSearch && searchTerm.length >= 6
+        ? []
         : products.filter(p =>
             p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            p.productCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            p.barcode.toLowerCase().includes(searchTerm.toLowerCase())
+            p.productCode.toLowerCase().includes(searchTerm.toLowerCase())
         );
-
 
     const handleProductSelect = (product: Product) => {
         setSelectedProduct(product);
         setShowProductAddModal(true);
     };
-
+// Update the addToCartWithDetails function signature and implementation
     const addToCartWithDetails = (
         product: Product,
         quantity: number,
         discount: number,
-        discountType: 'percentage' | 'price'
+        discountType: 'percentage' | 'price',
+        discountAmount: number,
+        discountedPrice: number
     ) => {
         if (product.stock <= 0) {
             toast.error("Product is out of stock!");
@@ -301,10 +299,16 @@ const POSInterface = () => {
                 if (newQuantity > product.stock) {
                     toast.error("Cannot add more than available stock");
                     return prevCart;
-                }
-                return prevCart.map(item =>
+                }return prevCart.map(item =>
                     item.id === product.id
-                        ? { ...item, quantity: newQuantity, discount, discountType }
+                        ? {
+                            ...item,
+                            quantity: newQuantity,
+                            discount,
+                            discountType,
+                            discountAmount,
+                            discountedPrice: discountedPrice * (newQuantity / quantity) // Scale up for increased quantity
+                        }
                         : item
                 );
             }
@@ -316,13 +320,14 @@ const POSInterface = () => {
                 quantity,
                 discount,
                 discountType,
+                discountAmount,
+                discountedPrice,
                 isBulk: product.isBulk
             }];
         });
 
         toast.success(`${product.name} added to cart`);
     };
-
     const updateQuantity = (id: number, delta: number) => {
         setCartItems(prevItems => {
             return prevItems.map(item => {
@@ -343,6 +348,37 @@ const POSInterface = () => {
         });
     };
 
+    const updateCartItem = (
+        id: number,
+        quantity: number,
+        price: number,
+        discount: number,
+        discountType: 'percentage' | 'price'
+    ) => {
+        setCartItems(prevItems =>
+            prevItems.map(item => {
+                if (item.id === id) {
+                    const subtotal = price * quantity;
+                    const discountAmount = discountType === 'percentage'
+                        ? (subtotal * discount) / 100
+                        : discount;
+                    const discountedPrice = subtotal - discountAmount;
+
+                    return {
+                        ...item,
+                        quantity,
+                        price,
+                        discount,
+                        discountType,
+                        discountAmount,
+                        discountedPrice
+                    };
+                }
+                return item;
+            })
+        );
+        toast.success('Cart item updated successfully');
+    };
     const updateItemPrice = (id: number, newPrice: number) => {
         setCartItems(cartItems.map(item =>
             item.id === id ? { ...item, price: Math.max(0, newPrice) } : item
@@ -473,18 +509,12 @@ const POSInterface = () => {
                 <CartPanel
                     cartItems={cartItems}
                     itemsCount={itemsCount}
-                    editingItem={editingItem}
                     billingMode={billingMode}
                     onClearCart={clearCart}
                     onRemoveItem={removeFromCart}
-                    onUpdateQuantity={updateQuantity}
-                    onUpdatePrice={updateItemPrice}
-                    onUpdateDiscount={updateItemDiscount}
-                    onUpdateDiscountType={updateItemDiscountType}
-                    onEditItem={setEditingItem}
+                    onUpdateItem={updateCartItem}  // Changed from multiple update functions
                     calculateItemTotal={calculateItemTotal}
                 />
-
                 <PaymentPanel
                     selectedCustomer={selectedCustomer}
                     customerSearchTerm={customerSearchTerm}
