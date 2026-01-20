@@ -11,9 +11,11 @@ import {
     TrendingUp,
     Users,
     ShoppingCart,
+    Barcode,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import TypeableSelect from "../../../components/TypeableSelect.tsx";
+import BarcodePrintModal from "../../../components/modals/BarcodePrintModal.tsx";
 import { stockService } from "../../../services/stockService.ts";
 import toast, { Toaster } from 'react-hot-toast';
 import * as XLSX from 'xlsx';
@@ -92,12 +94,16 @@ function StockList() {
     const [selectedUnit, setSelectedUnit] = useState<string | null>(null);
     const [selectedSupplier, setSelectedSupplier] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState<string>('');
-    
+
     // Dropdown options state
     const [suppliers, setSuppliers] = useState<SelectOption[]>([]);
     const [units, setUnits] = useState<SelectOption[]>([]);
     const [categories, setCategories] = useState<SelectOption[]>([]);
     const [isLoadingDropdowns, setIsLoadingDropdowns] = useState(false);
+
+    // Barcode Modal State
+    const [isBarcodeModalOpen, setIsBarcodeModalOpen] = useState(false);
+    const [selectedProductForBarcode, setSelectedProductForBarcode] = useState<any>(null);
 
     // Load stock data
     const loadStockData = async () => {
@@ -168,7 +174,7 @@ function StockList() {
                 setSuppliers(supplierOptions);
             }
 
-        
+
 
         } catch (error) {
             console.error('Error loading dropdown data:', error);
@@ -190,7 +196,7 @@ function StockList() {
             };
 
             // Remove undefined values
-            Object.keys(filters).forEach(key => 
+            Object.keys(filters).forEach(key =>
                 filters[key as keyof typeof filters] === undefined && delete filters[key as keyof typeof filters]
             );
 
@@ -234,6 +240,7 @@ function StockList() {
                 'No': index + 1,
                 'Product ID': item.productID,
                 'Product Name': item.productName,
+                'Barcode': item.barcode,
                 'Unit': item.unit,
                 'Cost Price': item.costPrice,
                 'MRP': item.MRP,
@@ -245,7 +252,7 @@ function StockList() {
             const ws = XLSX.utils.json_to_sheet(exportData);
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, 'Stock List');
-            
+
             const timestamp = new Date().toISOString().split('T')[0];
             XLSX.writeFile(wb, `Stock_List_${timestamp}.xlsx`);
             toast.success('Excel file exported successfully');
@@ -258,11 +265,12 @@ function StockList() {
     // Export to CSV
     const handleExportCSV = () => {
         try {
-            const headers = ['No', 'Product ID', 'Product Name', 'Unit', 'Cost Price', 'MRP', 'Selling Price', 'Supplier', 'Stock QTY'];
+            const headers = ['No', 'Product ID', 'Product Name', 'Barcode', 'Unit', 'Cost Price', 'MRP', 'Selling Price', 'Supplier', 'Stock QTY'];
             const csvData = stockData.map((item, index) => [
                 index + 1,
                 item.productID,
                 item.productName,
+                item.barcode,
                 item.unit,
                 item.costPrice,
                 item.MRP,
@@ -280,14 +288,14 @@ function StockList() {
             const link = document.createElement('a');
             const url = URL.createObjectURL(blob);
             const timestamp = new Date().toISOString().split('T')[0];
-            
+
             link.setAttribute('href', url);
             link.setAttribute('download', `Stock_List_${timestamp}.csv`);
             link.style.visibility = 'hidden';
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-            
+
             toast.success('CSV file exported successfully');
         } catch (error) {
             console.error('Error exporting CSV:', error);
@@ -299,17 +307,17 @@ function StockList() {
     const handleExportPDF = () => {
         try {
             const doc = new jsPDF();
-            
+
             // Add title
             doc.setFontSize(18);
             doc.text('Stock List Report', 14, 22);
-            
+
             // Add date
             doc.setFontSize(10);
-            doc.text(`Generated on: ${new Date().toLocaleDateString('en-US', { 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric' 
+            doc.text(`Generated on: ${new Date().toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
             })}`, 14, 30);
 
             // Prepare table data
@@ -317,6 +325,7 @@ function StockList() {
                 index + 1,
                 item.productID,
                 item.productName,
+                item.barcode,
                 item.unit,
                 `LKR ${item.costPrice}`,
                 `LKR ${item.MRP}`,
@@ -328,7 +337,7 @@ function StockList() {
             // Add table
             autoTable(doc, {
                 startY: 35,
-                head: [['No', 'Product ID', 'Product Name', 'Unit', 'Cost Price', 'MRP', 'Selling Price', 'Supplier', 'Stock']],
+                head: [['No', 'Product ID', 'Product Name', 'Barcode', 'Unit', 'Cost Price', 'MRP', 'Selling Price', 'Supplier', 'Stock']],
                 body: tableData,
                 theme: 'grid',
                 headStyles: {
@@ -344,12 +353,13 @@ function StockList() {
                     0: { cellWidth: 10 },
                     1: { cellWidth: 20 },
                     2: { cellWidth: 35 },
-                    3: { cellWidth: 15 },
-                    4: { cellWidth: 20 },
+                    3: { cellWidth: 25 },
+                    4: { cellWidth: 15 },
                     5: { cellWidth: 20 },
-                    6: { cellWidth: 25 },
-                    7: { cellWidth: 30 },
-                    8: { cellWidth: 15 }
+                    6: { cellWidth: 20 },
+                    7: { cellWidth: 25 },
+                    8: { cellWidth: 30 },
+                    9: { cellWidth: 15 }
                 }
             });
 
@@ -574,14 +584,14 @@ function StockList() {
                             />
                         </div>
                         <div className={'grid grid-cols-2 md:items-end items-start gap-2 text-white font-medium'}>
-                            <button 
+                            <button
                                 onClick={handleSearch}
                                 disabled={isLoadingStock}
                                 className={'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 py-2 rounded-lg flex items-center justify-center shadow-lg shadow-emerald-200 hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed'}>
                                 <SearchCheck className={`mr-2 ${isLoadingStock ? 'animate-pulse' : ''}`} size={14} />
                                 {isLoadingStock ? 'Searching...' : 'Search'}
                             </button>
-                            <button 
+                            <button
                                 onClick={handleClearFilters}
                                 disabled={isLoadingStock}
                                 className={'bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 py-2 rounded-lg flex items-center justify-center shadow-lg shadow-gray-200 hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed'}>
@@ -599,82 +609,103 @@ function StockList() {
                     <div className="overflow-y-auto max-h-md md:h-[320px] lg:h-[500px] rounded-lg scrollbar-thin scrollbar-thumb-emerald-300 scrollbar-track-gray-100">
                         <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-gradient-to-r from-emerald-500 to-emerald-600 sticky top-0 z-10">
-                            <tr>
-                                {[
-                                    'Product ID',
-                                    'Product Name',
-                                    'Unit',
-                                    'Cost Price',
-                                    'MRP',
-                                    'Selling Price',
-                                    'Supplier',
-                                    'Stock QTY',
-                                ].map((header, i, arr) => (
-                                    <th
-                                        key={i}
-                                        scope="col"
-                                        className={`px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider ${
-                                            i === 0 ? 'rounded-tl-lg' : i === arr.length - 1 ? 'rounded-tr-lg' : ''
-                                        }`}
-                                    >
-                                        {header}
-                                    </th>
-                                ))}
-                            </tr>
+                                <tr>
+                                    {[
+                                        'Product ID',
+                                        'Product Name',
+                                        'Barcode',
+                                        'Unit',
+                                        'Cost Price',
+                                        'MRP',
+                                        'Selling Price',
+                                        'Supplier',
+                                        'Stock QTY',
+                                        'Action'
+                                    ].map((header, i, arr) => (
+                                        <th
+                                            key={i}
+                                            scope="col"
+                                            className={`px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider ${i === 0 ? 'rounded-tl-lg' : i === arr.length - 1 ? 'rounded-tr-lg' : ''
+                                                }`}
+                                        >
+                                            {header}
+                                        </th>
+                                    ))}
+                                </tr>
                             </thead>
 
                             <tbody className="bg-white divide-y divide-gray-200">
-                            {currentStockData.length === 0 ? (
-                                <tr>
-                                    <td colSpan={9} className="px-6 py-8 text-center text-gray-500">
-                                        {isLoadingStock ? 'Loading stock data...' : 'No stock records found'}
-                                    </td>
-                                </tr>
-                            ) : (
-                                currentStockData.map((sale, index) => (
-                                    <tr
-                                        key={index}
-                                        onClick={() => setSelectedIndex(index)}
-                                        className={`cursor-pointer transition-all ${
-                                            selectedIndex === index
-                                                ? 'bg-emerald-50 border-l-4 border-l-emerald-500'
-                                                : 'hover:bg-gray-50'
-                                        }`}
-                                    >
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-semibold text-gray-800">
-                                            {sale.productID}
-                                        </td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-gray-700">
-                                            {sale.productName}
-                                        </td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-600">
-                                            {sale.unit}
-                                        </td>
-                                    
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-blue-600">
-                                            LKR {sale.costPrice}
-                                        </td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-gray-600">
-                                            LKR {sale.MRP}
-                                        </td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-bold text-emerald-600">
-                                            LKR {sale.Price}
-                                        </td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-600">
-                                            {sale.supplier}
-                                        </td>
-                                        <td className="px-6 py-2 whitespace-nowrap">
-                                                <span className={`px-3 py-1 text-xs font-semibold rounded-full ${
-                                                    parseInt(sale.stockQty) < 30
-                                                        ? 'bg-gradient-to-r from-red-100 to-red-200 text-red-800'
-                                                        : 'bg-gradient-to-r from-emerald-100 to-emerald-200 text-emerald-800'
-                                                }`}>
-                                                    {sale.stockQty}
-                                                </span>
+                                {currentStockData.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={10} className="px-6 py-8 text-center text-gray-500">
+                                            {isLoadingStock ? 'Loading stock data...' : 'No stock records found'}
                                         </td>
                                     </tr>
-                                ))
-                            )}
+                                ) : (
+                                    currentStockData.map((sale, index) => (
+                                        <tr
+                                            key={index}
+                                            onClick={() => setSelectedIndex(index)}
+                                            className={`cursor-pointer transition-all ${selectedIndex === index
+                                                ? 'bg-emerald-50 border-l-4 border-l-emerald-500'
+                                                : 'hover:bg-gray-50'
+                                                }`}
+                                        >
+                                            <td className="px-6 py-2 whitespace-nowrap text-sm font-semibold text-gray-800">
+                                                {sale.productID}
+                                            </td>
+                                            <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-gray-700">
+                                                {sale.productName}
+                                            </td>
+                                            <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-500 font-mono">
+                                                {sale.barcode}
+                                            </td>
+                                            <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-600">
+                                                {sale.unit}
+                                            </td>
+
+                                            <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-blue-600">
+                                                LKR {sale.costPrice}
+                                            </td>
+                                            <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-gray-600">
+                                                LKR {sale.MRP}
+                                            </td>
+                                            <td className="px-6 py-2 whitespace-nowrap text-sm font-bold text-emerald-600">
+                                                LKR {sale.Price}
+                                            </td>
+                                            <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-600">
+                                                {sale.supplier}
+                                            </td>
+                                            <td className="px-6 py-2 whitespace-nowrap">
+                                                <span className={`px-3 py-1 text-xs font-semibold rounded-full ${parseInt(sale.stockQty) < 30
+                                                    ? 'bg-gradient-to-r from-red-100 to-red-200 text-red-800'
+                                                    : 'bg-gradient-to-r from-emerald-100 to-emerald-200 text-emerald-800'
+                                                    }`}>
+                                                    {sale.stockQty}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-2 whitespace-nowrap text-center">
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setSelectedProductForBarcode({
+                                                            productID: parseInt(sale.productID),
+                                                            productName: sale.productName,
+                                                            productCode: '', // Not available in this view, using barcode
+                                                            barcode: sale.barcode,
+                                                            price: parseFloat(sale.Price.replace(/,/g, ''))
+                                                        });
+                                                        setIsBarcodeModalOpen(true);
+                                                    }}
+                                                    className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                                                    title="Print Barcode"
+                                                >
+                                                    <Barcode size={18} />
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
                             </tbody>
                         </table>
                     </div>
@@ -689,11 +720,10 @@ function StockList() {
                             <button
                                 onClick={goToPreviousPage}
                                 disabled={currentPage === 1}
-                                className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${
-                                    currentPage === 1
-                                        ? 'text-gray-400 cursor-not-allowed'
-                                        : 'text-gray-600 hover:text-emerald-600 hover:bg-emerald-50'
-                                }`}
+                                className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${currentPage === 1
+                                    ? 'text-gray-400 cursor-not-allowed'
+                                    : 'text-gray-600 hover:text-emerald-600 hover:bg-emerald-50'
+                                    }`}
                             >
                                 <ChevronLeft className="mr-2 h-5 w-5" /> Previous
                             </button>
@@ -703,11 +733,10 @@ function StockList() {
                                     <button
                                         key={index}
                                         onClick={() => goToPage(page)}
-                                        className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${
-                                            currentPage === page
-                                                ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-md'
-                                                : 'text-gray-600 hover:bg-emerald-50 hover:text-emerald-600'
-                                        }`}
+                                        className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${currentPage === page
+                                            ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-md'
+                                            : 'text-gray-600 hover:bg-emerald-50 hover:text-emerald-600'
+                                            }`}
                                     >
                                         {page}
                                     </button>
@@ -721,11 +750,10 @@ function StockList() {
                             <button
                                 onClick={goToNextPage}
                                 disabled={currentPage === totalPages}
-                                className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${
-                                    currentPage === totalPages
-                                        ? 'text-gray-400 cursor-not-allowed'
-                                        : 'text-gray-600 hover:text-emerald-600 hover:bg-emerald-50'
-                                }`}
+                                className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${currentPage === totalPages
+                                    ? 'text-gray-400 cursor-not-allowed'
+                                    : 'text-gray-600 hover:text-emerald-600 hover:bg-emerald-50'
+                                    }`}
                             >
                                 Next <ChevronRight className="ml-2 h-5 w-5" />
                             </button>
@@ -737,24 +765,24 @@ function StockList() {
                 <div
                     className={'bg-white flex justify-center p-4 gap-4 rounded-xl shadow-lg'}
                 >
-                    <button 
+                    <button
                         onClick={handleExportExcel}
                         className={'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 px-6 py-2 font-medium text-white rounded-lg flex gap-2 items-center shadow-lg shadow-emerald-200 hover:shadow-xl transition-all'}>
                         <FileText size={15} />Excel
                     </button>
-                    <button 
+                    <button
                         onClick={handleExportCSV}
                         className={'bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 px-6 py-2 font-medium text-white rounded-lg flex gap-2 items-center shadow-lg shadow-yellow-200 hover:shadow-xl transition-all'}>
                         <FileText size={15} />CSV
                     </button>
-                    <button 
+                    <button
                         onClick={handleExportPDF}
                         className={'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 px-6 py-2 font-medium text-white rounded-lg flex gap-2 items-center shadow-lg shadow-red-200 hover:shadow-xl transition-all'}>
                         <FileText size={15} />PDF
                     </button>
                 </div>
             </div>
-            
+
             <Toaster
                 position="top-right"
                 toastOptions={{
@@ -776,6 +804,12 @@ function StockList() {
                         },
                     },
                 }}
+            />
+
+            <BarcodePrintModal
+                isOpen={isBarcodeModalOpen}
+                onClose={() => setIsBarcodeModalOpen(false)}
+                product={selectedProductForBarcode}
             />
         </>
     );

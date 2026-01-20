@@ -26,14 +26,14 @@ interface ProductPanelProps {
 }
 
 export const ProductPanel = ({
-                                 searchTerm,
-                                 onSearchChange,
-                                 productsLoading,
-                                 barcodeSearchLoading,
-                                 onAddToCart,
-                                 isNumericSearch,
-                                 filteredProducts
-                             }: ProductPanelProps) => {
+    searchTerm,
+    onSearchChange,
+    productsLoading,
+    barcodeSearchLoading,
+    onAddToCart,
+    isNumericSearch,
+    filteredProducts
+}: ProductPanelProps) => {
     const searchInputRef = useRef<HTMLInputElement>(null);
     const productListRef = useRef<HTMLDivElement>(null);
     const [barcodeBuffer, setBarcodeBuffer] = useState('');
@@ -129,7 +129,7 @@ export const ProductPanel = ({
     }, [barcodeBuffer, onSearchChange]);
 
     return (
-        <div className="col-span-4 bg-white rounded-2xl p-3 flex flex-col overflow-hidden">
+        <div className="col-span-4 bg-white rounded-2xl border border-gray-200 p-3 flex flex-col overflow-hidden">
             <div className="relative mb-3">
                 <Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
                 <input
@@ -150,7 +150,7 @@ export const ProductPanel = ({
 
             {/* Keyboard Shortcuts Info */}
             <div className="mb-2 bg-blue-50 border border-blue-200 rounded-lg p-2 text-xs text-blue-700">
-                <strong>Shortcuts:</strong> F4 = Focus | ↑↓ = Navigate | Enter/Space = Add | Esc = Clear | <Barcode className="inline w-3 h-3"/> Auto-scan
+                <strong>Shortcuts:</strong> F4 = Focus | ↑↓ = Navigate | Enter/Space = Add | Esc = Clear | <Barcode className="inline w-3 h-3" /> Auto-scan
             </div>
 
             <div ref={productListRef} className="space-y-2 overflow-y-auto flex-1">
@@ -220,13 +220,12 @@ export const ProductPanel = ({
                                 </div>
                             </div>
                             <div className="flex justify-between items-center text-xs">
-                                <span className={`px-2 py-0.5 rounded-full ${
-                                    product.stock > 10
+                                <span className={`px-2 py-0.5 rounded-full ${product.stock > 10
                                         ? 'bg-emerald-100 text-emerald-700'
                                         : product.stock > 0
                                             ? 'bg-yellow-100 text-yellow-700'
                                             : 'bg-red-100 text-red-700'
-                                }`}>
+                                    }`}>
                                     Stock: {product.stock} {product.category}
                                 </span>
                                 <span className="text-gray-500">{product.category}</span>

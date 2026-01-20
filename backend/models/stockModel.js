@@ -8,7 +8,11 @@ class Stock {
         const query = `
             SELECT 
                 p.id AS product_id,
-                p.product_name AS product_name,
+                CONCAT(p.product_name, 
+                       IF(pv.color IS NOT NULL AND pv.color != '', CONCAT(' - ', pv.color), ''), 
+                       IF(pv.size IS NOT NULL AND pv.size != '', CONCAT(' - ', pv.size), '')
+                ) AS product_name,
+                s.barcode,
                 u.name AS unit,
                 s.cost_price,
                 s.mrp,
@@ -23,7 +27,7 @@ class Stock {
             LEFT JOIN grn g ON gi.grn_id = g.id
             LEFT JOIN supplier sup ON g.supplier_id = sup.id
             WHERE s.qty > 0
-            GROUP BY p.id, p.product_name, u.name, s.cost_price, s.mrp, s.rsp, sup.supplier_name
+            GROUP BY p.id, p.product_name, pv.color, pv.size, s.barcode, u.name, s.cost_price, s.mrp, s.rsp, sup.supplier_name
             ORDER BY p.product_name ASC
         `;
         const [rows] = await db.execute(query);
@@ -38,6 +42,7 @@ class Stock {
                    IF(pv.color IS NOT NULL AND pv.color != '', CONCAT(' - ', pv.color), ''), 
                    IF(pv.size IS NOT NULL AND pv.size != '', CONCAT(' - ', pv.size), '')
             ) AS full_product_name,
+            s.barcode,
             u.name AS unit,
             s.cost_price,
             s.mrp,
@@ -69,12 +74,12 @@ class Stock {
             queryParams.push(filters.supplier);
         }
         if (filters.searchQuery) {
-            query += ` AND (p.product_name LIKE ? OR pv.id = ?)`;
-            queryParams.push(`%${filters.searchQuery}%`, filters.searchQuery);
+            query += ` AND (p.product_name LIKE ? OR pv.id = ? OR s.barcode LIKE ?)`;
+            queryParams.push(`%${filters.searchQuery}%`, filters.searchQuery, `%${filters.searchQuery}%`);
         }
 
         query += ` GROUP BY 
-                pv.id, p.product_name, pv.color, pv.size, u.name, 
+                pv.id, p.product_name, pv.color, pv.size, s.barcode, u.name, 
                 s.cost_price, s.mrp, s.rsp, sup.supplier_name
                ORDER BY p.product_name ASC`;
 
