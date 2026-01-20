@@ -17,6 +17,8 @@ const setupRoutes = require('./routes/setup');
 const backupRoutes = require('./routes/backup.routes');
 const posRoutes = require('./routes/posRoutes');
 const customerRoutes = require('./routes/customerRoutes');
+const userRoutes = require('./routes/userRoutes');
+const roleRoutes = require('./routes/roleRoutes');
 const { scheduleBackup } = require('./schedulers/backupScheduler');
 
 require('dotenv').config();
@@ -54,6 +56,8 @@ app.use('/api/pos', posRoutes);
 app.use('/api/customers', customerRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api', cashSessionRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/roles', roleRoutes);
 
 
 // Handle undefined routes
