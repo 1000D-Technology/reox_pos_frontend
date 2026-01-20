@@ -9,7 +9,6 @@ import {
     Loader2,
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
 import toast, { Toaster } from 'react-hot-toast';
 
 interface Quotation {
@@ -198,9 +197,7 @@ function QuotationList() {
                     </h1>
                 </div>
 
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
+                <div
                     className={"bg-white rounded-xl p-6 flex flex-col shadow-lg"}
                 >
                     <h2 className="text-xl font-semibold text-gray-700 mb-4">Filter</h2>
@@ -273,11 +270,9 @@ function QuotationList() {
                             </div>
                         </div>
                     </div>
-                </motion.div>
+                </div>
 
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
+                <div
                     className={"flex flex-col bg-white rounded-xl h-full p-6 justify-between shadow-lg"}
                 >
                     <div className="overflow-y-auto max-h-md md:h-[320px] lg:h-[500px] rounded-lg scrollbar-thin scrollbar-thumb-emerald-300 scrollbar-track-gray-100">
@@ -445,7 +440,7 @@ function QuotationList() {
                             </button>
                         </div>
                     </nav>
-                </motion.div>
+                </div>
             </div>
         </>
     );

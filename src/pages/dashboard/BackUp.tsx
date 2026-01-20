@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
 import toast, { Toaster } from 'react-hot-toast';
 import axios from 'axios';
 import {
@@ -231,23 +230,18 @@ const BackUp = () => {
             <div className="min-h-screen bg-white/25 rounded-md p-6">
                 <div className="w-full mx-auto space-y-6">
                     {/* Header */}
-                    <motion.div
-                        initial={{ opacity: 0, y: -20 }}
-                        animate={{ opacity: 1, y: 0 }}
+                    <div
                         className="text-center mb-8"
                     >
                         <h1 className="text-4xl font-bold text-gray-800 mb-2">Database Backup Manager</h1>
                         <p className="text-gray-600">Protect your data with automated backups at 5:00 PM daily</p>
-                    </motion.div>
+                    </div>
 
                     {/* Stats Cards */}
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
                         {statsCards.map((stat, i) => (
-                            <motion.div
+                            <div
                                 key={i}
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: i * 0.1 }}
                                 className="flex items-center p-4 space-x-3 bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all cursor-pointer group relative overflow-hidden"
                             >
                                 <div className="absolute inset-0 bg-gradient-to-br from-emerald-50/50 via-transparent to-green-50/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
@@ -262,7 +256,7 @@ const BackUp = () => {
                                     <p className="text-sm text-gray-600 font-medium">{stat.label}</p>
                                     <p className="text-lg font-bold text-gray-800">{stat.value}</p>
                                 </div>
-                            </motion.div>
+                            </div>
                         ))}
                     </div>
 
@@ -271,9 +265,7 @@ const BackUp = () => {
                         {/* Left: Create Backup + Schedule */}
                         <div className="space-y-6">
                             {/* Create Backup Card */}
-                            <motion.div
-                                initial={{ opacity: 0, x: -20 }}
-                                animate={{ opacity: 1, x: 0 }}
+                            <div
                                 className="bg-white rounded-3xl shadow-2xl p-8 relative overflow-hidden"
                             >
                                 <div className="absolute -top-24 -right-24 w-64 h-64 bg-gradient-to-br from-emerald-400/20 to-green-400/20 rounded-full blur-3xl"></div>
@@ -322,13 +314,10 @@ const BackUp = () => {
                                         </button>
                                     </div>
                                 </div>
-                            </motion.div>
+                            </div>
 
                             {/* Schedule Card */}
-                            <motion.div
-                                initial={{ opacity: 0, x: -20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: 0.1 }}
+                            <div
                                 className="bg-white rounded-3xl shadow-2xl p-8"
                             >
                                 <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
@@ -360,13 +349,11 @@ const BackUp = () => {
                                         </div>
                                     </div>
                                 </div>
-                            </motion.div>
+                            </div>
                         </div>
 
                         {/* Right: Available Backups */}
-                        <motion.div
-                            initial={{ opacity: 0, x: 20 }}
-                            animate={{ opacity: 1, x: 0 }}
+                        <div
                             className="bg-white rounded-3xl shadow-2xl p-8 h-fit"
                         >
                             <div className="flex items-center justify-between mb-6">
@@ -390,11 +377,8 @@ const BackUp = () => {
                                     </div>
                                 ) : (
                                     backupFiles.map((file, i) => (
-                                        <motion.div
+                                        <div
                                             key={i}
-                                            initial={{ opacity: 0, x: -20 }}
-                                            animate={{ opacity: 1, x: 0 }}
-                                            transition={{ delay: i * 0.05 }}
                                             className="flex items-center justify-between p-4 bg-gradient-to-r from-emerald-50 to-green-50 rounded-xl border border-emerald-100 hover:shadow-lg transition-all group"
                                         >
                                             <div className="flex items-center space-x-3 flex-1 min-w-0">
@@ -418,11 +402,11 @@ const BackUp = () => {
                                             >
                                                 <Download className="w-5 h-5" />
                                             </button>
-                                        </motion.div>
+                                        </div>
                                     ))
                                 )}
                             </div>
-                        </motion.div>
+                        </div>
                     </div>
                 </div>
             </div>

@@ -15,7 +15,6 @@ import {
     ArrowDownRight,
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
 import toast, { Toaster } from 'react-hot-toast';
 import { supplierService } from '../../../services/supplierService';
 import { grnService } from '../../../services/grnService';
@@ -371,10 +370,7 @@ function SupplierPayment() {
                     </h1>
                 </div>
 
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.6 }}
+                <div
                     className={'bg-white rounded-xl p-4 flex flex-col shadow-lg'}
                 >
                     <h2 className="text-xl font-semibold text-gray-700 mb-3">Payment Processing</h2>
@@ -507,12 +503,9 @@ function SupplierPayment() {
                             </button>
                         </div>
                     </div>
-                </motion.div>
+                </div>
 
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.7 }}
+                <div
                     className={'flex flex-col bg-white rounded-xl h-full p-4 justify-between shadow-lg'}
                 >
                     <div className="overflow-y-auto max-h-md md:h-[320px] lg:h-[500px] rounded-lg scrollbar-thin scrollbar-thumb-emerald-300 scrollbar-track-gray-100">
@@ -671,7 +664,7 @@ function SupplierPayment() {
                         </div>
                     </nav>
 
-                </motion.div>
+                </div>
             </div>
         </>
     );

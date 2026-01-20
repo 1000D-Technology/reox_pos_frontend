@@ -12,7 +12,7 @@ import {
     ArrowDownRight,
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
+
 
 function ManageInvoice() {
     const summaryCards = [
@@ -99,12 +99,8 @@ function ManageInvoice() {
 
                 <div className={'grid md:grid-cols-3 grid-cols-1 gap-4'}>
                     {summaryCards.map((stat, i) => (
-                        <motion.div
+                        <div
                             key={i}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: i * 0.1 }}
-                            whileHover={{ scale: 1.05, y: -2 }}
                             className={`flex items-center p-4 space-x-3 transition-all bg-white rounded-2xl shadow-lg hover:shadow-xl ${stat.bgGlow} cursor-pointer group relative overflow-hidden`}
                         >
                             <div className="absolute inset-0 bg-gradient-to-br from-transparent via-gray-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
@@ -125,7 +121,7 @@ function ManageInvoice() {
                                 </div>
                                 <p className="text-sm font-bold text-gray-700">{stat.value}</p>
                             </div>
-                        </motion.div>
+                        </div>
                     ))}
                 </div>
 

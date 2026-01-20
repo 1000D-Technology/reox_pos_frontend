@@ -7,7 +7,6 @@ import {
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import toast, { Toaster } from 'react-hot-toast';
-import { motion } from 'framer-motion';
 import axiosInstance from '../../../api/axiosInstance';
 import { brandService } from '../../../services/brandService';
 import ConfirmationModal from '../../../components/modals/ConfirmationModal';
@@ -25,7 +24,7 @@ function ManageBrand() {
     const [newBrandName, setNewBrandName] = useState('');
     const [isSaving, setIsSaving] = useState(false);
     const [brands, setBrands] = useState<Brand[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+    const [isLoading, setIsLoading] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [isSearching, setIsSearching] = useState(false);
     const [updateBrandName, setUpdateBrandName] = useState('');
@@ -38,6 +37,7 @@ function ManageBrand() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedBrand, setSelectedBrand] = useState<Brand | null>(null);
     const [selectedIndex, setSelectedIndex] = useState(0);
+    const [isInitialMount, setIsInitialMount] = useState(true);
 
     const totalPages = Math.ceil(brands.length / itemsPerPage);
     const startIndex = (currentPage - 1) * itemsPerPage;
@@ -86,6 +86,12 @@ function ManageBrand() {
     }, []);
 
     useEffect(() => {
+        // Skip the search effect on initial mount
+        if (isInitialMount) {
+            setIsInitialMount(false);
+            return;
+        }
+
         const timeoutId = setTimeout(() => {
             fetchBrands(searchTerm);
             setCurrentPage(1);
@@ -314,9 +320,7 @@ function ManageBrand() {
                     </h1>
                 </div>
 
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
+                <div
                     className={'flex flex-col bg-white rounded-xl p-6 justify-between gap-6 shadow-lg'}
                 >
                     <div className={'grid md:grid-cols-5 gap-4'}>
@@ -476,13 +480,11 @@ function ManageBrand() {
                             </button>
                         </div>
                     </nav>
-                </motion.div>
+                </div>
 
                 {isModalOpen && selectedBrand && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
+                        <div
                             className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md relative"
                         >
                             <button
@@ -522,7 +524,7 @@ function ManageBrand() {
                                     {isUpdating ? 'Updating...' : 'Update Brand'}
                                 </button>
                             </div>
-                        </motion.div>
+                        </div>
                     </div>
                 )}
             </div>
