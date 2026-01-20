@@ -18,12 +18,12 @@ interface CartItemEditModalProps {
 }
 
 export const CartItemEditModal = ({
-                                      isOpen,
-                                      onClose,
-                                      item,
-                                      billingMode,
-                                      onUpdate
-                                  }: CartItemEditModalProps) => {
+    isOpen,
+    onClose,
+    item,
+    billingMode,
+    onUpdate
+}: CartItemEditModalProps) => {
     const [quantity, setQuantity] = useState(1);
     const [price, setPrice] = useState(0);
     const [discount, setDiscount] = useState(0);
@@ -33,8 +33,9 @@ export const CartItemEditModal = ({
         if (item) {
             setQuantity(item.quantity);
             setPrice(item.price);
-            setDiscount(item.discount || 0);
-            setDiscountType(item.discountType || 'percentage');
+            setDiscount((item.discount || 0));
+            const type = item.discountType === 'fixed' || item.discountType === 'price' ? 'price' : 'percentage';
+            setDiscountType(type);
         }
     }, [item, isOpen]);
 
@@ -60,7 +61,7 @@ export const CartItemEditModal = ({
                 case 'ArrowDown':
                     e.preventDefault();
                     decrementQty();
-                    break;case 'p':
+                    break; case 'p':
                 case 'P':
                     if (billingMode === 'retail') {
                         e.preventDefault();
@@ -196,7 +197,7 @@ export const CartItemEditModal = ({
                                     <div className="flex items-center gap-2">
                                         <button
                                             onClick={decrementQty}
-                                            disabled={quantity <= 1}
+                                            disabled={quantity <= 0.001}
                                             className="w-10 h-10 bg-red-100 hover:bg-red-500 hover:text-white disabled:bg-gray-200 disabled:text-gray-400 text-red-600 rounded-lg flex items-center justify-center transition-colors"
                                         >
                                             <Minus className="w-4 h-4" />
@@ -205,11 +206,12 @@ export const CartItemEditModal = ({
                                             type="number"
                                             value={quantity}
                                             onChange={(e) => {
-                                                const val = Math.max(1, Math.min(item.stock, Number(e.target.value)));
+                                                const val = Math.max(0.001, Math.min(item.stock, Number(e.target.value)));
                                                 setQuantity(val);
                                             }}
+                                            step="any"
                                             className="flex-1 text-center text-xl font-bold py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-emerald-500"
-                                            min={1}
+                                            min={0.001}
                                             max={item.stock}
                                         />
                                         <button
@@ -249,22 +251,20 @@ export const CartItemEditModal = ({
                                     <div className="flex gap-2 mb-3">
                                         <button
                                             onClick={() => handleDiscountTypeChange('percentage')}
-                                            className={`flex-1 py-2.5 rounded-lg transition-all flex items-center justify-center gap-2 text-sm ${
-                                                discountType === 'percentage'
-                                                    ? 'bg-emerald-500 text-white shadow-md'
-                                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                            }`}
+                                            className={`flex-1 py-2.5 rounded-lg transition-all flex items-center justify-center gap-2 text-sm ${discountType === 'percentage'
+                                                ? 'bg-emerald-500 text-white shadow-md'
+                                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                                }`}
                                         >
                                             <Percent className="w-4 h-4" />
                                             <span className="font-semibold">Percentage</span>
                                         </button>
                                         <button
                                             onClick={() => handleDiscountTypeChange('price')}
-                                            className={`flex-1 py-2.5 rounded-lg transition-all flex items-center justify-center gap-2 text-sm ${
-                                                discountType === 'price'
-                                                    ? 'bg-blue-500 text-white shadow-md'
-                                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                            }`}
+                                            className={`flex-1 py-2.5 rounded-lg transition-all flex items-center justify-center gap-2 text-sm ${discountType === 'price'
+                                                ? 'bg-blue-500 text-white shadow-md'
+                                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                                }`}
                                         >
                                             <DollarSign className="w-4 h-4" />
                                             <span className="font-semibold">Fixed Amount</span>
