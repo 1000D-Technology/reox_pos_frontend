@@ -109,7 +109,7 @@ function StockList() {
     const loadStockData = async () => {
         setIsLoadingStock(true);
         try {
-            const response = await stockService.getStockList();
+            const response = await stockService.getAllStockWithVariations();
             if (response.data?.success) {
                 setStockData(response.data.data);
             } else {
@@ -238,15 +238,23 @@ function StockList() {
         try {
             const exportData = stockData.map((item, index) => ({
                 'No': index + 1,
-                'Product ID': item.productID,
-                'Product Name': item.productName,
-                'Barcode': item.barcode,
+                'Stock ID': item.stock_id,
+                'Product Name': item.product_name,
+                'Color': item.color || '-',
+                'Size': item.size || '-',
+                'Storage': item.storage_capacity || '-',
+                'Barcode': item.barcode || '-',
                 'Unit': item.unit,
-                'Cost Price': item.costPrice,
-                'MRP': item.MRP,
-                'Selling Price': item.Price,
-                'Supplier': item.supplier,
-                'Stock QTY': item.stockQty
+                'Batch': item.batch_name || '-',
+                'Quantity': item.qty,
+                'Cost Price': item.cost_price,
+                'MRP': item.mrp,
+                'Selling Price': item.selling_price,
+                'Supplier': item.supplier || 'N/A',
+                'Category': item.category || '-',
+                'Brand': item.brand || '-',
+                'MFD': item.mfd || '-',
+                'EXP': item.exp || '-'
             }));
 
             const ws = XLSX.utils.json_to_sheet(exportData);
@@ -254,7 +262,7 @@ function StockList() {
             XLSX.utils.book_append_sheet(wb, ws, 'Stock List');
 
             const timestamp = new Date().toISOString().split('T')[0];
-            XLSX.writeFile(wb, `Stock_List_${timestamp}.xlsx`);
+            XLSX.writeFile(wb, `Stock_List_All_Variations_${timestamp}.xlsx`);
             toast.success('Excel file exported successfully');
         } catch (error) {
             console.error('Error exporting Excel:', error);
@@ -265,18 +273,26 @@ function StockList() {
     // Export to CSV
     const handleExportCSV = () => {
         try {
-            const headers = ['No', 'Product ID', 'Product Name', 'Barcode', 'Unit', 'Cost Price', 'MRP', 'Selling Price', 'Supplier', 'Stock QTY'];
+            const headers = ['No', 'Stock ID', 'Product Name', 'Color', 'Size', 'Storage', 'Barcode', 'Unit', 'Batch', 'Quantity', 'Cost Price', 'MRP', 'Selling Price', 'Supplier', 'Category', 'Brand', 'MFD', 'EXP'];
             const csvData = stockData.map((item, index) => [
                 index + 1,
-                item.productID,
-                item.productName,
-                item.barcode,
+                item.stock_id,
+                item.product_name,
+                item.color || '-',
+                item.size || '-',
+                item.storage_capacity || '-',
+                item.barcode || '-',
                 item.unit,
-                item.costPrice,
-                item.MRP,
-                item.Price,
-                item.supplier,
-                item.stockQty
+                item.batch_name || '-',
+                item.qty,
+                item.cost_price,
+                item.mrp,
+                item.selling_price,
+                item.supplier || 'N/A',
+                item.category || '-',
+                item.brand || '-',
+                item.mfd || '-',
+                item.exp || '-'
             ]);
 
             const csvContent = [
@@ -290,7 +306,7 @@ function StockList() {
             const timestamp = new Date().toISOString().split('T')[0];
 
             link.setAttribute('href', url);
-            link.setAttribute('download', `Stock_List_${timestamp}.csv`);
+            link.setAttribute('download', `Stock_List_All_Variations_${timestamp}.csv`);
             link.style.visibility = 'hidden';
             document.body.appendChild(link);
             link.click();
@@ -306,12 +322,12 @@ function StockList() {
     // Export to PDF
     const handleExportPDF = () => {
         try {
-            const doc = new jsPDF();
-
+            const doc = new jsPDF('landscape'); // Use landscape for more columns
+            
             // Add title
             doc.setFontSize(18);
-            doc.text('Stock List Report', 14, 22);
-
+            doc.text('Stock List Report (All Variations)', 14, 22);
+            
             // Add date
             doc.setFontSize(10);
             doc.text(`Generated on: ${new Date().toLocaleDateString('en-US', {
@@ -323,21 +339,21 @@ function StockList() {
             // Prepare table data
             const tableData = stockData.map((item, index) => [
                 index + 1,
-                item.productID,
-                item.productName,
-                item.barcode,
+                item.stock_id,
+                item.product_name,
+                `${item.color || '-'} / ${item.size || '-'} / ${item.storage_capacity || '-'}`,
                 item.unit,
-                `LKR ${item.costPrice}`,
-                `LKR ${item.MRP}`,
-                `LKR ${item.Price}`,
-                item.supplier,
-                item.stockQty
+                item.batch_name || '-',
+                item.qty,
+                `LKR ${parseFloat(item.cost_price).toFixed(2)}`,
+                `LKR ${parseFloat(item.selling_price).toFixed(2)}`,
+                item.supplier || 'N/A'
             ]);
 
             // Add table
             autoTable(doc, {
                 startY: 35,
-                head: [['No', 'Product ID', 'Product Name', 'Barcode', 'Unit', 'Cost Price', 'MRP', 'Selling Price', 'Supplier', 'Stock']],
+                head: [['No', 'Stock ID', 'Product', 'Variation', 'Unit', 'Batch', 'Qty', 'Cost', 'Price', 'Supplier']],
                 body: tableData,
                 theme: 'grid',
                 headStyles: {
@@ -346,25 +362,25 @@ function StockList() {
                     fontStyle: 'bold'
                 },
                 styles: {
-                    fontSize: 8,
-                    cellPadding: 2
+                    fontSize: 7,
+                    cellPadding: 1.5
                 },
                 columnStyles: {
                     0: { cellWidth: 10 },
-                    1: { cellWidth: 20 },
-                    2: { cellWidth: 35 },
-                    3: { cellWidth: 25 },
+                    1: { cellWidth: 18 },
+                    2: { cellWidth: 45 },
+                    3: { cellWidth: 40 },
                     4: { cellWidth: 15 },
-                    5: { cellWidth: 20 },
-                    6: { cellWidth: 20 },
+                    5: { cellWidth: 25 },
+                    6: { cellWidth: 12 },
                     7: { cellWidth: 25 },
-                    8: { cellWidth: 30 },
-                    9: { cellWidth: 15 }
+                    8: { cellWidth: 25 },
+                    9: { cellWidth: 35 }
                 }
             });
 
             const timestamp = new Date().toISOString().split('T')[0];
-            doc.save(`Stock_List_${timestamp}.pdf`);
+            doc.save(`Stock_List_All_Variations_${timestamp}.pdf`);
             toast.success('PDF file exported successfully');
         } catch (error) {
             console.error('Error exporting PDF:', error);
@@ -421,7 +437,7 @@ function StockList() {
                 e.preventDefault();
                 const selectedItem = currentStockData[selectedIndex];
                 if (selectedItem) {
-                    toast.success(`Selected: ${selectedItem.productName} (ID: ${selectedItem.productID})`);
+                    toast.success(`Selected: ${selectedItem.product_name} (Stock ID: ${selectedItem.stock_id})`);
                 }
             } else if (e.key === "Escape") {
                 e.preventDefault();
@@ -609,103 +625,101 @@ function StockList() {
                     <div className="overflow-y-auto max-h-md md:h-[320px] lg:h-[500px] rounded-lg scrollbar-thin scrollbar-thumb-emerald-300 scrollbar-track-gray-100">
                         <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-gradient-to-r from-emerald-500 to-emerald-600 sticky top-0 z-10">
-                                <tr>
-                                    {[
-                                        'Product ID',
-                                        'Product Name',
-                                        'Barcode',
-                                        'Unit',
-                                        'Cost Price',
-                                        'MRP',
-                                        'Selling Price',
-                                        'Supplier',
-                                        'Stock QTY',
-                                        'Action'
-                                    ].map((header, i, arr) => (
-                                        <th
-                                            key={i}
-                                            scope="col"
-                                            className={`px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider ${i === 0 ? 'rounded-tl-lg' : i === arr.length - 1 ? 'rounded-tr-lg' : ''
-                                                }`}
-                                        >
-                                            {header}
-                                        </th>
-                                    ))}
-                                </tr>
+                            <tr>
+                                {[
+                                    'Stock ID',
+                                    'Product Name',
+                                    'Color',
+                                    'Size',
+                                    'Storage',
+                                    'Barcode',
+                                    'Unit',
+                                    'Batch',
+                                    'Qty',
+                                    'Cost Price',
+                                    'MRP',
+                                    'Selling Price',
+                                    'Supplier',
+                                ].map((header, i, arr) => (
+                                    <th
+                                        key={i}
+                                        scope="col"
+                                        className={`px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider ${
+                                            i === 0 ? 'rounded-tl-lg' : i === arr.length - 1 ? 'rounded-tr-lg' : ''
+                                        }`}
+                                    >
+                                        {header}
+                                    </th>
+                                ))}
+                            </tr>
                             </thead>
 
                             <tbody className="bg-white divide-y divide-gray-200">
-                                {currentStockData.length === 0 ? (
-                                    <tr>
-                                        <td colSpan={10} className="px-6 py-8 text-center text-gray-500">
-                                            {isLoadingStock ? 'Loading stock data...' : 'No stock records found'}
-                                        </td>
-                                    </tr>
-                                ) : (
-                                    currentStockData.map((sale, index) => (
-                                        <tr
-                                            key={index}
-                                            onClick={() => setSelectedIndex(index)}
-                                            className={`cursor-pointer transition-all ${selectedIndex === index
+                            {currentStockData.length === 0 ? (
+                                <tr>
+                                    <td colSpan={13} className="px-6 py-8 text-center text-gray-500">
+                                        {isLoadingStock ? 'Loading stock data...' : 'No stock records found'}
+                                    </td>
+                                </tr>
+                            ) : (
+                                currentStockData.map((sale, index) => (
+                                    <tr
+                                        key={index}
+                                        onClick={() => setSelectedIndex(index)}
+                                        className={`cursor-pointer transition-all ${
+                                            selectedIndex === index
                                                 ? 'bg-emerald-50 border-l-4 border-l-emerald-500'
                                                 : 'hover:bg-gray-50'
-                                                }`}
-                                        >
-                                            <td className="px-6 py-2 whitespace-nowrap text-sm font-semibold text-gray-800">
-                                                {sale.productID}
-                                            </td>
-                                            <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-gray-700">
-                                                {sale.productName}
-                                            </td>
-                                            <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-500 font-mono">
-                                                {sale.barcode}
-                                            </td>
-                                            <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-600">
-                                                {sale.unit}
-                                            </td>
-
-                                            <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-blue-600">
-                                                LKR {sale.costPrice}
-                                            </td>
-                                            <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-gray-600">
-                                                LKR {sale.MRP}
-                                            </td>
-                                            <td className="px-6 py-2 whitespace-nowrap text-sm font-bold text-emerald-600">
-                                                LKR {sale.Price}
-                                            </td>
-                                            <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-600">
-                                                {sale.supplier}
-                                            </td>
-                                            <td className="px-6 py-2 whitespace-nowrap">
-                                                <span className={`px-3 py-1 text-xs font-semibold rounded-full ${parseInt(sale.stockQty) < 30
+                                        }`}
+                                    >
+                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-semibold text-gray-800">
+                                            {sale.stock_id}
+                                        </td>
+                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-gray-700">
+                                            {sale.product_name}
+                                        </td>
+                                        <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-600">
+                                            {sale.color || '-'}
+                                        </td>
+                                        <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-600">
+                                            {sale.size || '-'}
+                                        </td>
+                                        <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-600">
+                                            {sale.storage_capacity || '-'}
+                                        </td>
+                                        <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-600">
+                                            {sale.barcode || '-'}
+                                        </td>
+                                        <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-600">
+                                            {sale.unit}
+                                        </td>
+                                        <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-600">
+                                            {sale.batch_name || '-'}
+                                        </td>
+                                        <td className="px-6 py-2 whitespace-nowrap">
+                                            <span className={`px-3 py-1 text-xs font-semibold rounded-full ${
+                                                parseInt(sale.qty) < 30
                                                     ? 'bg-gradient-to-r from-red-100 to-red-200 text-red-800'
                                                     : 'bg-gradient-to-r from-emerald-100 to-emerald-200 text-emerald-800'
-                                                    }`}>
-                                                    {sale.stockQty}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-2 whitespace-nowrap text-center">
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        setSelectedProductForBarcode({
-                                                            productID: parseInt(sale.productID),
-                                                            productName: sale.productName,
-                                                            productCode: '', // Not available in this view, using barcode
-                                                            barcode: sale.barcode,
-                                                            price: parseFloat(sale.Price.replace(/,/g, ''))
-                                                        });
-                                                        setIsBarcodeModalOpen(true);
-                                                    }}
-                                                    className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
-                                                    title="Print Barcode"
-                                                >
-                                                    <Barcode size={18} />
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))
-                                )}
+                                            }`}>
+                                                {sale.qty}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-blue-600">
+                                            LKR {parseFloat(sale.cost_price).toFixed(2)}
+                                        </td>
+                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-gray-600">
+                                            LKR {parseFloat(sale.mrp).toFixed(2)}
+                                        </td>
+                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-bold text-emerald-600">
+                                            LKR {parseFloat(sale.selling_price).toFixed(2)}
+                                        </td>
+                                        <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-600">
+                                            {sale.supplier || 'N/A'}
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
                             </tbody>
                         </table>
                     </div>

@@ -2,7 +2,21 @@ const Stock = require('../models/stockModel');
 const catchAsync = require('../utils/catchAsync');
 
 /**
- * @desc    Fetch all stock records for the table
+ * @desc    Fetch ALL stock records with individual variations (every row)
+ * @route   GET /api/stock/all-variations
+ */
+exports.getAllStockWithVariations = catchAsync(async (req, res, next) => {
+    const stockData = await Stock.getAllStockWithVariations();
+
+    res.status(200).json({
+        success: true,
+        count: stockData.length,
+        data: stockData
+    });
+});
+
+/**
+ * @desc    Fetch all stock records for the table (grouped by product)
  * @route   GET /api/stock
  */
 exports.getStockList = catchAsync(async (req, res, next) => {
@@ -40,9 +54,8 @@ exports.getSearchStock = catchAsync(async (req, res, next) => {
     const stockData = await Stock.searchStock(filters);
 
     const transformedData = stockData.map(item => ({
-        productID: item.variation_id.toString(), 
-        productName: item.full_product_name,
-        barcode: item.barcode || 'N/A',
+        productID: item.product_id.toString(), 
+        productName: item.product_name,
         unit: item.unit,
         costPrice: parseFloat(item.cost_price).toFixed(2),
         MRP: parseFloat(item.mrp).toFixed(2),
@@ -92,8 +105,8 @@ exports.getOutOfStockList = catchAsync(async (req, res, next) => {
     const stockData = await Stock.getOutOfStock();
 
     const transformedData = stockData.map(item => ({
-        productID: item.variation_id.toString(),
-        productName: item.full_product_name,
+        productID: item.product_id.toString(),
+        productName: item.product_name,
         unit: item.unit,
         costPrice: `LKR ${parseFloat(item.cost_price).toFixed(2)}`,
         MRP: `LKR ${parseFloat(item.mrp).toFixed(2)}`,
@@ -121,8 +134,8 @@ exports.getSearchOutOfStock = catchAsync(async (req, res, next) => {
     const stockData = await Stock.searchOutOfStock(filters);
 
     const transformedData = stockData.map(item => ({
-        productID: item.variation_id.toString(),
-        productName: item.full_product_name,
+        productID: item.product_id.toString(),
+        productName: item.product_name,
         unit: item.unit,
         costPrice: `LKR ${parseFloat(item.cost_price).toFixed(2)}`,
         MRP: `LKR ${parseFloat(item.mrp).toFixed(2)}`,
