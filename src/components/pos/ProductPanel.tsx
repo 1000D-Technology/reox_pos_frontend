@@ -180,6 +180,7 @@ export const ProductPanel = ({
                             data-product-id={product.id}
                             tabIndex={0}
                             whileHover={{ scale: 1.02 }}
+                            whileHover={{ scale: 1.00 }}
                             whileTap={{ scale: 0.98 }}
                             onClick={() => onAddToCart(product)}
                             onKeyDown={(e) => {
