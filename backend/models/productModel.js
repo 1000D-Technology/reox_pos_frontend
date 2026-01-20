@@ -200,13 +200,19 @@ class Product {
     const params = [statusId];
 
     //search by product type
-    if (filter.productTypeId) {
+    if (filter.productTypeId && filter.productTypeId !== 'null' && filter.productTypeId !== 'undefined') {
       query += ` AND p.product_type_id = ? `;
       params.push(filter.productTypeId);
     }
 
+    //search by unit id
+    if (filter.unitId && filter.unitId !== 'null' && filter.unitId !== 'undefined') {
+      query += ` AND p.unit_id = ? `;
+      params.push(filter.unitId);
+    }
+
     //search by product name or ID / pv.id
-    if (filter.searchTerm) {
+    if (filter.searchTerm && filter.searchTerm !== 'null' && filter.searchTerm !== 'undefined') {
       query += ` AND (p.product_name LIKE ? OR pv.id = ? OR p.product_code LIKE ? OR pv.barcode LIKE ?)`;
       const searchVal = `%${filter.searchTerm}%`;
       params.push(searchVal, filter.searchTerm, searchVal, searchVal);

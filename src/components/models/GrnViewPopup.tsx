@@ -28,9 +28,10 @@ interface GrnViewPopupProps {
     isOpen: boolean;
     onClose: () => void;
     grnData: GrnDetails | null;
+    autoPrint?: boolean;
 }
 
-const GrnViewPopup = ({ isOpen, onClose, grnData }: GrnViewPopupProps) => {
+const GrnViewPopup = ({ isOpen, onClose, grnData, autoPrint = false }: GrnViewPopupProps) => {
     useEffect(() => {
         const handleEscape = (e: KeyboardEvent) => {
             if (e.key === 'Escape') {
@@ -40,10 +41,19 @@ const GrnViewPopup = ({ isOpen, onClose, grnData }: GrnViewPopupProps) => {
 
         if (isOpen) {
             window.addEventListener('keydown', handleEscape);
+
+            // Handle auto-print
+            if (autoPrint) {
+                // Short timeout to ensure content is fully rendered and animations settle
+                const timer = setTimeout(() => {
+                    window.print();
+                }, 500);
+                return () => clearTimeout(timer);
+            }
         }
 
         return () => window.removeEventListener('keydown', handleEscape);
-    }, [isOpen, onClose]);
+    }, [isOpen, onClose, autoPrint]);
 
     if (!grnData) return null;
 
@@ -149,32 +159,32 @@ const GrnViewPopup = ({ isOpen, onClose, grnData }: GrnViewPopupProps) => {
                                     <div className="overflow-x-auto rounded-lg border border-gray-200">
                                         <table className="min-w-full divide-y divide-gray-200">
                                             <thead className="bg-gray-50">
-                                            <tr>
-                                                {['No', 'Item Name', 'Quantity', 'Unit Price', 'Total Price', 'Expiry Date'].map((header, i) => (
-                                                    <th
-                                                        key={i}
-                                                        className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider"
-                                                    >
-                                                        {header}
-                                                    </th>
-                                                ))}
-                                            </tr>
+                                                <tr>
+                                                    {['No', 'Item Name', 'Quantity', 'Unit Price', 'Total Price', 'Expiry Date'].map((header, i) => (
+                                                        <th
+                                                            key={i}
+                                                            className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider"
+                                                        >
+                                                            {header}
+                                                        </th>
+                                                    ))}
+                                                </tr>
                                             </thead>
                                             <tbody className="bg-white divide-y divide-gray-200">
-                                            {grnData.items.map((item, index) => (
-                                                <tr key={item.id} className="hover:bg-gray-50 transition-colors">
-                                                    <td className="px-4 py-3 text-sm text-gray-900">{index + 1}</td>
-                                                    <td className="px-4 py-3 text-sm text-gray-900 font-medium">{item.itemName}</td>
-                                                    <td className="px-4 py-3 text-sm text-gray-900">{item.quantity}</td>
-                                                    <td className="px-4 py-3 text-sm text-gray-900">LKR {item.unitPrice.toFixed(2)}</td>
-                                                    <td className="px-4 py-3 text-sm font-semibold text-gray-900">LKR {item.totalPrice.toFixed(2)}</td>
-                                                    <td className="px-4 py-3 text-sm text-gray-900">
-                                                        {item.expiryDate
-                                                            ? new Date(item.expiryDate).toLocaleDateString('en-US')
-                                                            : 'N/A'}
-                                                    </td>
-                                                </tr>
-                                            ))}
+                                                {grnData.items.map((item, index) => (
+                                                    <tr key={item.id} className="hover:bg-gray-50 transition-colors">
+                                                        <td className="px-4 py-3 text-sm text-gray-900">{index + 1}</td>
+                                                        <td className="px-4 py-3 text-sm text-gray-900 font-medium">{item.itemName}</td>
+                                                        <td className="px-4 py-3 text-sm text-gray-900">{item.quantity}</td>
+                                                        <td className="px-4 py-3 text-sm text-gray-900">LKR {item.unitPrice.toFixed(2)}</td>
+                                                        <td className="px-4 py-3 text-sm font-semibold text-gray-900">LKR {item.totalPrice.toFixed(2)}</td>
+                                                        <td className="px-4 py-3 text-sm text-gray-900">
+                                                            {item.expiryDate
+                                                                ? new Date(item.expiryDate).toLocaleDateString('en-US')
+                                                                : 'N/A'}
+                                                        </td>
+                                                    </tr>
+                                                ))}
                                             </tbody>
                                         </table>
                                     </div>
@@ -194,13 +204,12 @@ const GrnViewPopup = ({ isOpen, onClose, grnData }: GrnViewPopupProps) => {
                                         </div>
                                         <div className="flex justify-between items-center pt-2">
                                             <span className="text-gray-700 font-semibold">Balance Amount</span>
-                                            <span className={`text-xl font-bold ${
-                                                grnData.balanceAmount === 0
-                                                    ? 'text-green-600'
-                                                    : grnData.balanceAmount > 0
-                                                        ? 'text-red-600'
-                                                        : 'text-blue-600'
-                                            }`}>
+                                            <span className={`text-xl font-bold ${grnData.balanceAmount === 0
+                                                ? 'text-green-600'
+                                                : grnData.balanceAmount > 0
+                                                    ? 'text-red-600'
+                                                    : 'text-blue-600'
+                                                }`}>
                                                 LKR {grnData.balanceAmount.toFixed(2)}
                                             </span>
                                         </div>

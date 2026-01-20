@@ -24,7 +24,7 @@ interface LoginResponse {
 
 export const authService = {
     login: async (credentials: LoginCredentials): Promise<LoginResponse> => {
-        const response = await api.post<LoginResponse>('/api/auth/login', credentials);
+        const response = await api.post<LoginResponse>('/auth/login', credentials);
 
         if (response.data.success && response.data.token) {
             sessionStorage.setItem('token', response.data.token);

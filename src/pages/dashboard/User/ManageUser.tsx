@@ -16,8 +16,10 @@ import {
     UserCog
 } from 'lucide-react';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import toast, { Toaster } from 'react-hot-toast';
+import { userRoleService } from '../../../services/userRoleService.ts';
+import { userService } from '../../../services/userService';
 
 
 interface User {
@@ -26,7 +28,7 @@ interface User {
     name: string;
     email: string;
     contactNumber: string;
-    role: 'Admin' | 'Manager' | 'Cashier' | 'Staff';
+    role: string;
     isActive: boolean;
 }
 
@@ -34,28 +36,28 @@ interface AddUserForm {
     name: string;
     email: string;
     contactNumber: string;
-    role: 'Admin' | 'Manager' | 'Cashier' | 'Staff';
+    role: string;
     password: string;
     confirmPassword: string;
 }
 
 interface EditUserForm {
     contactNumber: string;
-    role: 'Admin' | 'Manager' | 'Cashier' | 'Staff';
+    role: string;
     password: string;
     confirmPassword: string;
 }
 
-function ManageUser() {
-    const [users, setUsers] = useState<User[]>([
-        { id: 1, no: '', name: 'John Admin', email: 'admin@example.com', contactNumber: '0771234567', role: 'Admin', isActive: true },
-        { id: 2, no: '', name: 'Jane Manager', email: 'manager@example.com', contactNumber: '0777654321', role: 'Manager', isActive: true },
-        { id: 3, no: '', name: 'Bob Cashier', email: 'cashier@example.com', contactNumber: '0761234567', role: 'Cashier', isActive: true },
-        { id: 4, no: '', name: 'Alice Staff', email: 'staff@example.com', contactNumber: '0751234567', role: 'Staff', isActive: false }
-    ]);
+interface UserRole {
+    id: number;
+    user_role: string;
+}
 
-    const [filteredUsers, setFilteredUsers] = useState<User[]>(users);
-    const [isLoading] = useState(false);
+function ManageUser() {
+    const [users, setUsers] = useState<User[]>([]);
+
+    const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
 
     const [currentPage, setCurrentPage] = useState(1);
@@ -82,25 +84,26 @@ function ManageUser() {
         name: '',
         email: '',
         contactNumber: '',
-        role: 'Staff',
+        role: '',
         password: '',
         confirmPassword: ''
     });
 
     const [editForm, setEditForm] = useState<EditUserForm>({
         contactNumber: '',
-        role: 'Staff',
+        role: '',
         password: '',
         confirmPassword: ''
     });
 
-    const userRoles = ['Admin', 'Manager', 'Cashier', 'Staff'] as const;
+    const [userRoles, setUserRoles] = useState<UserRole[]>([]);
+    const [isLoadingRoles, setIsLoadingRoles] = useState(false);
 
     // Stats calculation
     const stats = {
         totalUsers: users.length,
         activeUsers: users.filter(u => u.isActive).length,
-        adminUsers: users.filter(u => u.role === 'Admin').length
+        adminUsers: users.filter(u => u.role === 'Admin' && u.isActive).length
     };
 
     const summaryCards = [
@@ -153,6 +156,63 @@ function ManageUser() {
         setFilteredUsers(filtered);
     };
 
+    // Fetch users on component mount
+    const fetchUsers = useCallback(async () => {
+        setIsLoading(true);
+        try {
+            const response = await userService.getAllUsers();
+            if (response.success && response.data) {
+                const mappedUsers: User[] = response.data.map((user: any, index: number) => ({
+                    id: user.id,
+                    no: (index + 1).toString(),
+                    name: user.name,
+                    email: user.email,
+                    contactNumber: user.contact,
+                    role: user.role_name,
+                    isActive: user.status_name === 'Active'
+                }));
+                setUsers(mappedUsers);
+                setFilteredUsers(mappedUsers);
+            }
+        } catch (error) {
+            console.error('Failed to fetch users:', error);
+            toast.error('Failed to load users');
+        } finally {
+            setIsLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchUsers();
+    }, [fetchUsers]);
+
+    // Fetch roles on component mount
+    useEffect(() => {
+        const fetchRoles = async () => {
+            setIsLoadingRoles(true);
+            try {
+                const response = await userRoleService.getRoles();
+                if (response.success && response.data) {
+                    const roles: UserRole[] = response.data;
+                    setUserRoles(roles);
+                    // Set default role if roles are available
+                    if (roles.length > 0) {
+                        setAddForm(prev => ({ ...prev, role: roles[0].id.toString() }));
+                        setEditForm(prev => ({ ...prev, role: roles[0].id.toString() }));
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to fetch roles:', error);
+                toast.error('Failed to load user roles');
+                setUserRoles([]);
+            } finally {
+                setIsLoadingRoles(false);
+            }
+        };
+
+        fetchRoles();
+    }, []);
+
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === "ArrowDown") {
@@ -171,7 +231,7 @@ function ManageUser() {
             name: '',
             email: '',
             contactNumber: '',
-            role: 'Staff',
+            role: userRoles.length > 0 ? userRoles[0].id.toString() : '',
             password: '',
             confirmPassword: ''
         });
@@ -180,9 +240,10 @@ function ManageUser() {
 
     const handleEditClick = (user: User) => {
         setSelectedUser(user);
+        const roleId = userRoles.find(r => r.user_role === user.role)?.id.toString() || (userRoles.length > 0 ? userRoles[0].id.toString() : '');
         setEditForm({
             contactNumber: user.contactNumber,
-            role: user.role,
+            role: roleId,
             password: '',
             confirmPassword: ''
         });
@@ -195,7 +256,7 @@ function ManageUser() {
             name: '',
             email: '',
             contactNumber: '',
-            role: 'Staff',
+            role: userRoles.length > 0 ? userRoles[0].id.toString() : '',
             password: '',
             confirmPassword: ''
         });
@@ -206,7 +267,7 @@ function ManageUser() {
         setSelectedUser(null);
         setEditForm({
             contactNumber: '',
-            role: 'Staff',
+            role: userRoles.length > 0 ? userRoles[0].id.toString() : '',
             password: '',
             confirmPassword: ''
         });
@@ -257,23 +318,32 @@ function ManageUser() {
 
         setIsProcessing(true);
 
-        setTimeout(() => {
-            const newUser: User = {
-                id: users.length + 1,
-                no: '',
+        try {
+            // Prepare user data for API
+            const userData = {
                 name: addForm.name,
                 email: addForm.email,
-                contactNumber: addForm.contactNumber,
-                role: addForm.role,
-                isActive: true
+                contact: addForm.contactNumber,
+                password: addForm.password,
+                confirmPassword: addForm.confirmPassword,
+                role: parseInt(addForm.role)
             };
 
-            setUsers([...users, newUser]);
-            setFilteredUsers([...users, newUser]);
-            toast.success('User added successfully!');
-            handleCloseAddModal();
+            // Call the API
+            const response = await userService.addUser(userData);
+
+            if (response.success) {
+                toast.success(response.message || 'User added successfully!');
+                handleCloseAddModal();
+                fetchUsers(); // Refresh the list
+            }
+        } catch (error: any) {
+            console.error('Error adding user:', error);
+            const errorMessage = error?.response?.data?.message || 'Failed to add user. Please try again.';
+            toast.error(errorMessage);
+        } finally {
             setIsProcessing(false);
-        }, 1500);
+        }
     };
 
     const handleSubmitEdit = async () => {
@@ -281,32 +351,52 @@ function ManageUser() {
 
         setIsProcessing(true);
 
-        setTimeout(() => {
-            const updatedUsers = users.map(user =>
-                user.id === selectedUser.id
-                    ? { ...user, contactNumber: editForm.contactNumber, role: editForm.role }
-                    : user
-            );
+        try {
+            // Prepare user data for API
+            const userData: any = {
+                contact: editForm.contactNumber,
+                role_id: parseInt(editForm.role)
+            };
 
-            setUsers(updatedUsers);
-            setFilteredUsers(updatedUsers);
-            toast.success('User updated successfully!');
+            // Add password if provided
             if (editForm.password) {
-                toast.success('Password updated successfully!');
+                userData.password = editForm.password;
+                userData.confirmPassword = editForm.confirmPassword;
             }
-            handleCloseEditModal();
+
+            // Call the API
+            const response = await userService.updateUser(selectedUser.id, userData);
+
+            if (response.success) {
+                toast.success(response.message || 'User updated successfully!');
+                if (editForm.password) {
+                    toast.success('Password updated successfully!');
+                }
+                handleCloseEditModal();
+                fetchUsers(); // Refresh the list from backend
+            }
+        } catch (error: any) {
+            console.error('Error updating user:', error);
+            const errorMessage = error?.response?.data?.message || 'Failed to update user. Please try again.';
+            toast.error(errorMessage);
+        } finally {
             setIsProcessing(false);
-        }, 1500);
+        }
     };
 
-    const handleStatusToggle = (userId: number, currentStatus: boolean) => {
+    const handleStatusToggle = async (userId: number, currentStatus: boolean) => {
         const newStatus = !currentStatus;
-        const updatedUsers = users.map(user =>
-            user.id === userId ? { ...user, isActive: newStatus } : user
-        );
-        setUsers(updatedUsers);
-        setFilteredUsers(updatedUsers);
-        toast.success(`User ${newStatus ? 'activated' : 'deactivated'} successfully!`);
+        try {
+            const response = await userService.toggleUserStatus(userId, newStatus);
+            if (response.success) {
+                toast.success(response.message || `User ${newStatus ? 'activated' : 'deactivated'} successfully!`);
+                fetchUsers(); // Refresh the list from backend
+            }
+        } catch (error: any) {
+            console.error('Error toggling status:', error);
+            const errorMessage = error?.response?.data?.message || 'Failed to update user status.';
+            toast.error(errorMessage);
+        }
     };
 
     const goToPage = (page: number) => {
@@ -456,94 +546,92 @@ function ManageUser() {
                     <div className="overflow-y-auto max-h-md md:h-[320px] lg:h-[550px] rounded-lg scrollbar-thin scrollbar-thumb-emerald-300 scrollbar-track-gray-100">
                         <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-gradient-to-r from-emerald-500 to-emerald-600 sticky top-0 z-10">
-                            <tr>
-                                {['#', 'Name', 'Email', 'Contact Number', 'Role', 'Status', 'Actions'].map((header, i, arr) => (
-                                    <th
-                                        key={header}
-                                        scope="col"
-                                        className={`px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider
+                                <tr>
+                                    {['#', 'Name', 'Email', 'Contact Number', 'Role', 'Status', 'Actions'].map((header, i, arr) => (
+                                        <th
+                                            key={header}
+                                            scope="col"
+                                            className={`px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider
                                                 ${i === 0 ? "rounded-tl-lg" : ""}
                                                 ${i === arr.length - 1 ? "rounded-tr-lg" : ""}`}
-                                    >
-                                        {header}
-                                    </th>
-                                ))}
-                            </tr>
+                                        >
+                                            {header}
+                                        </th>
+                                    ))}
+                                </tr>
                             </thead>
 
                             <tbody className="bg-white divide-y divide-gray-200">
-                            {isLoading ? (
-                                <tr>
-                                    <td colSpan={7} className="px-6 py-8 text-center">
-                                        <div className="flex justify-center items-center">
-                                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500"></div>
-                                            <span className="ml-3 text-gray-600">Loading users...</span>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ) : userData.length === 0 ? (
-                                <tr>
-                                    <td colSpan={7} className="px-6 py-8 text-center text-gray-500">
-                                        No users found
-                                    </td>
-                                </tr>
-                            ) : (
-                                userData.map((user, index) => (
-                                    <tr
-                                        key={user.id}
-                                        onClick={() => setSelectedIndex(index)}
-                                        className={`cursor-pointer transition-all ${
-                                            selectedIndex === index
-                                                ? 'bg-emerald-50 border-l-4 border-l-emerald-500'
-                                                : 'hover:bg-gray-50'
-                                        }`}
-                                    >
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-600">
-                                            {user.no}
-                                        </td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-gray-800">
-                                            {user.name}
-                                        </td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-600">
-                                            {user.email}
-                                        </td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-gray-700">
-                                            {user.contactNumber}
-                                        </td>
-                                        <td className="px-6 py-2 whitespace-nowrap">
-                                            <span className={`px-3 py-1 text-xs font-semibold rounded-full ${getRoleBadge(user.role)} shadow-md`}>
-                                                {user.role}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-2 whitespace-nowrap">
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleStatusToggle(user.id, user.isActive);
-                                                }}
-                                                className={`px-4 py-1.5 text-xs font-semibold rounded-full transition-all transform hover:scale-105 ${
-                                                    user.isActive
-                                                        ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-200 hover:from-emerald-600 hover:to-emerald-700'
-                                                        : 'bg-gradient-to-r from-gray-400 to-gray-500 text-white shadow-lg shadow-gray-200 hover:from-gray-500 hover:to-gray-600'
-                                                }`}
-                                            >
-                                                {user.isActive ? 'Active' : 'Inactive'}
-                                            </button>
-                                        </td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleEditClick(user);
-                                                }}
-                                                className="p-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all"
-                                            >
-                                                <Pencil size={16} />
-                                            </button>
+                                {isLoading ? (
+                                    <tr>
+                                        <td colSpan={7} className="px-6 py-8 text-center">
+                                            <div className="flex justify-center items-center">
+                                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500"></div>
+                                                <span className="ml-3 text-gray-600">Loading users...</span>
+                                            </div>
                                         </td>
                                     </tr>
-                                ))
-                            )}
+                                ) : userData.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={7} className="px-6 py-8 text-center text-gray-500">
+                                            No users found
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    userData.map((user, index) => (
+                                        <tr
+                                            key={user.id}
+                                            onClick={() => setSelectedIndex(index)}
+                                            className={`cursor-pointer transition-all ${selectedIndex === index
+                                                ? 'bg-emerald-50 border-l-4 border-l-emerald-500'
+                                                : 'hover:bg-gray-50'
+                                                }`}
+                                        >
+                                            <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-600">
+                                                {user.no}
+                                            </td>
+                                            <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-gray-800">
+                                                {user.name}
+                                            </td>
+                                            <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-600">
+                                                {user.email}
+                                            </td>
+                                            <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-gray-700">
+                                                {user.contactNumber}
+                                            </td>
+                                            <td className="px-6 py-2 whitespace-nowrap">
+                                                <span className={`px-3 py-1 text-xs font-semibold rounded-full ${getRoleBadge(user.role)} shadow-md`}>
+                                                    {user.role}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-2 whitespace-nowrap">
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleStatusToggle(user.id, user.isActive);
+                                                    }}
+                                                    className={`px-4 py-1.5 text-xs font-semibold rounded-full transition-all transform hover:scale-105 ${user.isActive
+                                                        ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-200 hover:from-emerald-600 hover:to-emerald-700'
+                                                        : 'bg-gradient-to-r from-gray-400 to-gray-500 text-white shadow-lg shadow-gray-200 hover:from-gray-500 hover:to-gray-600'
+                                                        }`}
+                                                >
+                                                    {user.isActive ? 'Active' : 'Inactive'}
+                                                </button>
+                                            </td>
+                                            <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleEditClick(user);
+                                                    }}
+                                                    className="p-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all"
+                                                >
+                                                    <Pencil size={16} />
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
                             </tbody>
                         </table>
                     </div>
@@ -557,11 +645,10 @@ function ManageUser() {
                             <button
                                 onClick={() => goToPage(currentPage - 1)}
                                 disabled={currentPage === 1}
-                                className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${
-                                    currentPage === 1
-                                        ? 'text-gray-400 cursor-not-allowed'
-                                        : 'text-gray-600 hover:bg-emerald-50 hover:text-emerald-600'
-                                }`}
+                                className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${currentPage === 1
+                                    ? 'text-gray-400 cursor-not-allowed'
+                                    : 'text-gray-600 hover:bg-emerald-50 hover:text-emerald-600'
+                                    }`}
                             >
                                 <ChevronLeft className="mr-2 h-5 w-5" /> Previous
                             </button>
@@ -572,11 +659,10 @@ function ManageUser() {
                                     <button
                                         key={page}
                                         onClick={() => goToPage(page as number)}
-                                        className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
-                                            currentPage === page
-                                                ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-200'
-                                                : 'text-gray-600 hover:bg-emerald-50 hover:text-emerald-600'
-                                        }`}
+                                        className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${currentPage === page
+                                            ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-200'
+                                            : 'text-gray-600 hover:bg-emerald-50 hover:text-emerald-600'
+                                            }`}
                                     >
                                         {page}
                                     </button>
@@ -585,11 +671,10 @@ function ManageUser() {
                             <button
                                 onClick={() => goToPage(currentPage + 1)}
                                 disabled={currentPage === totalPages}
-                                className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${
-                                    currentPage === totalPages
-                                        ? 'text-gray-400 cursor-not-allowed'
-                                        : 'text-gray-600 hover:bg-emerald-50 hover:text-emerald-600'
-                                }`}
+                                className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${currentPage === totalPages
+                                    ? 'text-gray-400 cursor-not-allowed'
+                                    : 'text-gray-600 hover:bg-emerald-50 hover:text-emerald-600'
+                                    }`}
                             >
                                 Next <ChevronRight className="ml-2 h-5 w-5" />
                             </button>
@@ -680,12 +765,17 @@ function ManageUser() {
                                     </label>
                                     <select
                                         value={addForm.role}
-                                        onChange={(e) => setAddForm({ ...addForm, role: e.target.value as any })}
-                                        className="w-full px-4 py-2.5 text-sm border-2 border-gray-200 rounded-lg focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all outline-none"
+                                        onChange={(e) => setAddForm({ ...addForm, role: e.target.value })}
+                                        disabled={isLoadingRoles}
+                                        className="w-full px-4 py-2.5 text-sm border-2 border-gray-200 rounded-lg focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
                                     >
-                                        {userRoles.map(role => (
-                                            <option key={role} value={role}>{role}</option>
-                                        ))}
+                                        {isLoadingRoles ? (
+                                            <option value="">Loading roles...</option>
+                                        ) : (
+                                            userRoles.map(role => (
+                                                <option key={role.id} value={role.id}>{role.user_role}</option>
+                                            ))
+                                        )}
                                     </select>
                                 </div>
 
@@ -732,9 +822,8 @@ function ManageUser() {
                                 <button
                                     onClick={handleSubmitAdd}
                                     disabled={isProcessing}
-                                    className={`px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-semibold rounded-lg shadow-lg transition-all ${
-                                        isProcessing ? 'opacity-50 cursor-not-allowed' : ''
-                                    }`}
+                                    className={`px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-semibold rounded-lg shadow-lg transition-all ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''
+                                        }`}
                                 >
                                     {isProcessing ? 'Adding User...' : 'Add User'}
                                 </button>
@@ -796,11 +885,11 @@ function ManageUser() {
                                     </label>
                                     <select
                                         value={editForm.role}
-                                        onChange={(e) => setEditForm({ ...editForm, role: e.target.value as any })}
+                                        onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}
                                         className="w-full px-4 py-2.5 text-sm border-2 border-gray-200 rounded-lg focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all outline-none"
                                     >
                                         {userRoles.map(role => (
-                                            <option key={role} value={role}>{role}</option>
+                                            <option key={role.id} value={role.id}>{role.user_role}</option>
                                         ))}
                                     </select>
                                 </div>
@@ -848,9 +937,8 @@ function ManageUser() {
                                 <button
                                     onClick={handleSubmitEdit}
                                     disabled={isProcessing}
-                                    className={`px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-semibold rounded-lg shadow-lg transition-all ${
-                                        isProcessing ? 'opacity-50 cursor-not-allowed' : ''
-                                    }`}
+                                    className={`px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-semibold rounded-lg shadow-lg transition-all ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''
+                                        }`}
                                 >
                                     {isProcessing ? 'Updating...' : 'Update User'}
                                 </button>

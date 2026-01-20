@@ -14,11 +14,13 @@ import {
     ArrowDownRight,
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
 import TypeableSelect from "../../../components/TypeableSelect.tsx";
 import { stockService } from '../../../services/stockService';
 import { productService } from '../../../services/productService';
 import toast, { Toaster } from 'react-hot-toast';
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 function LowStock() {
     // State for summary data
@@ -172,6 +174,141 @@ function LowStock() {
         setSelectedProduct(null);
         // Reload original data
         loadLowStockData();
+    };
+
+    // Export to Excel
+    const handleExportExcel = () => {
+        try {
+            const exportData = salesData.map((item, index) => ({
+                'No': index + 1,
+                'Product ID': item.productID,
+                'Product Name': item.productName,
+                'Unit': item.unit,
+                'Cost Price': item.costPrice,
+                'MRP': item.mrp,
+                'Price': item.price,
+                'Supplier': item.supplier,
+                'Stock Status': item.stockStatus
+            }));
+
+            const ws = XLSX.utils.json_to_sheet(exportData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Low Stock');
+            
+            const timestamp = new Date().toISOString().split('T')[0];
+            XLSX.writeFile(wb, `Low_Stock_${timestamp}.xlsx`);
+            toast.success('Excel file exported successfully');
+        } catch (error) {
+            console.error('Error exporting Excel:', error);
+            toast.error('Failed to export Excel file');
+        }
+    };
+
+    // Export to CSV
+    const handleExportCSV = () => {
+        try {
+            const headers = ['No', 'Product ID', 'Product Name', 'Unit', 'Cost Price', 'MRP', 'Price', 'Supplier', 'Stock Status'];
+            const csvData = salesData.map((item, index) => [
+                index + 1,
+                item.productID,
+                item.productName,
+                item.unit,
+                item.costPrice,
+                item.mrp,
+                item.price,
+                item.supplier,
+                item.stockStatus
+            ]);
+
+            const csvContent = [
+                headers.join(','),
+                ...csvData.map(row => row.map(cell => `"${cell}"`).join(','))
+            ].join('\n');
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            const timestamp = new Date().toISOString().split('T')[0];
+            
+            link.setAttribute('href', url);
+            link.setAttribute('download', `Low_Stock_${timestamp}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            toast.success('CSV file exported successfully');
+        } catch (error) {
+            console.error('Error exporting CSV:', error);
+            toast.error('Failed to export CSV file');
+        }
+    };
+
+    // Export to PDF
+    const handleExportPDF = () => {
+        try {
+            const doc = new jsPDF();
+            
+            // Add title
+            doc.setFontSize(18);
+            doc.text('Low Stock Report', 14, 22);
+            
+            // Add date
+            doc.setFontSize(10);
+            doc.text(`Generated on: ${new Date().toLocaleDateString('en-US', { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            })}`, 14, 30);
+
+            // Prepare table data
+            const tableData = salesData.map((item, index) => [
+                index + 1,
+                item.productID,
+                item.productName,
+                item.unit,
+                item.costPrice,
+                item.mrp,
+                item.price,
+                item.supplier,
+                item.stockStatus
+            ]);
+
+            // Add table
+            autoTable(doc, {
+                startY: 35,
+                head: [['No', 'Product ID', 'Product Name', 'Unit', 'Cost Price', 'MRP', 'Price', 'Supplier', 'Stock Status']],
+                body: tableData,
+                theme: 'grid',
+                headStyles: {
+                    fillColor: [251, 146, 60],
+                    textColor: 255,
+                    fontStyle: 'bold'
+                },
+                styles: {
+                    fontSize: 8,
+                    cellPadding: 2
+                },
+                columnStyles: {
+                    0: { cellWidth: 10 },
+                    1: { cellWidth: 20 },
+                    2: { cellWidth: 30 },
+                    3: { cellWidth: 15 },
+                    4: { cellWidth: 20 },
+                    5: { cellWidth: 20 },
+                    6: { cellWidth: 20 },
+                    7: { cellWidth: 25 },
+                    8: { cellWidth: 25 }
+                }
+            });
+
+            const timestamp = new Date().toISOString().split('T')[0];
+            doc.save(`Low_Stock_${timestamp}.pdf`);
+            toast.success('PDF file exported successfully');
+        } catch (error) {
+            console.error('Error exporting PDF:', error);
+            toast.error('Failed to export PDF file');
+        }
     };
 
     // Load summary data
@@ -351,12 +488,8 @@ function LowStock() {
             {/* Stats Cards */}
             <div className={'grid md:grid-cols-5 grid-cols-1 gap-4'}>
                 {summaryCards.map((stat, i) => (
-                    <motion.div
+                    <div
                         key={i}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: i * 0.1 }}
-                        whileHover={{ scale: 1.05, y: -2 }}
                         className={`flex items-center p-4 space-x-3 transition-all bg-white rounded-2xl shadow-lg hover:shadow-xl ${stat.bgGlow} cursor-pointer group relative overflow-hidden`}
                     >
                         <div className="absolute inset-0 bg-gradient-to-br from-transparent via-gray-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
@@ -377,15 +510,12 @@ function LowStock() {
                             </div>
                             <p className="text-sm font-bold text-gray-700">{stat.value}</p>
                         </div>
-                    </motion.div>
+                    </div>
                 ))}
             </div>
 
             {/* Filter Section */}
-            <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.6 }}
+            <div
                 className={'bg-white rounded-xl p-4 flex flex-col shadow-lg'}
             >
                 <h2 className="text-xl font-semibold text-gray-700 mb-3">Filter</h2>
@@ -456,13 +586,10 @@ function LowStock() {
                         </button>
                     </div>
                 </div>
-            </motion.div>
+            </div>
 
             {/* Stock Table */}
-            <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.7 }}
+            <div
                 className={'flex flex-col bg-white rounded-xl h-full p-4 justify-between shadow-lg'}
             >
                 <div className="overflow-y-auto max-h-md md:h-[320px] lg:h-[500px] rounded-lg scrollbar-thin scrollbar-thumb-orange-300 scrollbar-track-gray-100">
@@ -599,25 +726,28 @@ function LowStock() {
                         </button>
                     </div>
                 </nav>
-            </motion.div>
+            </div>
 
             {/* Export Buttons */}
-            <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.8 }}
+            <div
                 className={'bg-white flex justify-center p-4 gap-4 rounded-xl shadow-lg'}
             >
-                <button className={'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 px-6 py-2 font-medium text-white rounded-lg flex gap-2 items-center shadow-lg shadow-emerald-200 hover:shadow-xl transition-all'}>
+                <button 
+                    onClick={handleExportExcel}
+                    className={'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 px-6 py-2 font-medium text-white rounded-lg flex gap-2 items-center shadow-lg shadow-emerald-200 hover:shadow-xl transition-all'}>
                     <FileText size={15} />Excel
                 </button>
-                <button className={'bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 px-6 py-2 font-medium text-white rounded-lg flex gap-2 items-center shadow-lg shadow-yellow-200 hover:shadow-xl transition-all'}>
+                <button 
+                    onClick={handleExportCSV}
+                    className={'bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 px-6 py-2 font-medium text-white rounded-lg flex gap-2 items-center shadow-lg shadow-yellow-200 hover:shadow-xl transition-all'}>
                     <FileText size={15} />CSV
                 </button>
-                <button className={'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 px-6 py-2 font-medium text-white rounded-lg flex gap-2 items-center shadow-lg shadow-red-200 hover:shadow-xl transition-all'}>
+                <button 
+                    onClick={handleExportPDF}
+                    className={'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 px-6 py-2 font-medium text-white rounded-lg flex gap-2 items-center shadow-lg shadow-red-200 hover:shadow-xl transition-all'}>
                     <FileText size={15} />PDF
                 </button>
-            </motion.div>
+            </div>
             <Toaster
                 position="top-right"
                 toastOptions={{

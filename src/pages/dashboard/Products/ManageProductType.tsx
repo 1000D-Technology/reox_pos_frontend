@@ -24,7 +24,7 @@ const ManageProductType = () => {
     const [newTypeName, setNewTypeName] = useState('');
     const [isSaving, setIsSaving] = useState(false);
     const [productTypes, setProductTypes] = useState<ProductType[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+    const [isLoading, setIsLoading] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [isSearching, setIsSearching] = useState(false);
     const [updateTypeName, setUpdateTypeName] = useState('');
@@ -36,6 +36,7 @@ const ManageProductType = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedType, setSelectedType] = useState<ProductType | null>(null);
     const [selectedIndex, setSelectedIndex] = useState(0);
+    const [isInitialMount, setIsInitialMount] = useState(true);
 
     const totalPages = Math.ceil(productTypes.length / itemsPerPage);
     const startIndex = (currentPage - 1) * itemsPerPage;
@@ -82,6 +83,12 @@ const ManageProductType = () => {
     }, []);
 
     useEffect(() => {
+        // Skip the search effect on initial mount
+        if (isInitialMount) {
+            setIsInitialMount(false);
+            return;
+        }
+
         const timeoutId = setTimeout(() => {
             fetchProductTypes(searchTerm);
             setCurrentPage(1);

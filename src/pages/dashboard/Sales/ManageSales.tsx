@@ -15,7 +15,6 @@ import {
     ArrowDownRight
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
 import toast, { Toaster } from 'react-hot-toast';
 
 interface Sale {
@@ -253,12 +252,8 @@ function ManageSales() {
 
                 <div className={'grid md:grid-cols-5 grid-cols-2 gap-4'}>
                     {summaryCards.map((stat, i) => (
-                        <motion.div
+                        <div
                             key={i}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: i * 0.1 }}
-                            whileHover={{ scale: 1.05, y: -2 }}
                             className={`flex items-center p-4 space-x-3 transition-all bg-white rounded-2xl shadow-lg hover:shadow-xl ${stat.bgGlow} cursor-pointer group relative overflow-hidden`}
                         >
                             <div className="absolute inset-0 bg-gradient-to-br from-transparent via-gray-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
@@ -279,13 +274,11 @@ function ManageSales() {
                                 </div>
                                 <p className="text-sm font-bold text-gray-700">{stat.value}</p>
                             </div>
-                        </motion.div>
+                        </div>
                     ))}
                 </div>
 
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
+                <div
                     className={'bg-white rounded-xl p-6 flex flex-col shadow-lg'}
                 >
                     <h2 className="text-xl font-semibold text-gray-700 mb-4">Filter</h2>
@@ -355,11 +348,9 @@ function ManageSales() {
                             </div>
                         </div>
                     </div>
-                </motion.div>
+                </div>
 
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
+                <div
                     className={'flex flex-col bg-white rounded-xl h-full p-6 justify-between shadow-lg'}
                 >
                     <div className="overflow-y-auto max-h-md md:h-[320px] lg:h-[500px] rounded-lg scrollbar-thin scrollbar-thumb-emerald-300 scrollbar-track-gray-100">
@@ -409,13 +400,9 @@ function ManageSales() {
                                 </tr>
                             ) : (
                                 paginatedSales.map((sale, index) => (
-                                    <motion.tr
+                                    <tr
                                         key={index}
-                                        initial={{ opacity: 0, x: -20 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        transition={{ delay: 0.05 * index }}
                                         onClick={() => setSelectedIndex(index)}
-                                        whileHover={{ backgroundColor: "rgba(16,185,129,0.05)" }}
                                         className={`cursor-pointer transition-all ${
                                             selectedIndex === index
                                                 ? 'bg-emerald-50 border-l-4 border-emerald-500'
@@ -462,7 +449,7 @@ function ManageSales() {
                                                 </button>
                                             </div>
                                         </td>
-                                    </motion.tr>
+                                    </tr>
                                 ))
                             )}
                             </tbody>
@@ -517,7 +504,7 @@ function ManageSales() {
                             </button>
                         </div>
                     </nav>
-                </motion.div>
+                </div>
             </div>
         </>
     );
