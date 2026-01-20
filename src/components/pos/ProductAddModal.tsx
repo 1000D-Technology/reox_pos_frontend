@@ -265,8 +265,8 @@ export const ProductAddModal = ({
                                         <button
                                             onClick={() => handleDiscountTypeChange('percentage')}
                                             className={`flex-1 py-3 rounded-lg transition-all flex items-center justify-center gap-2 ${discountType === 'percentage'
-                                                    ? 'bg-emerald-500 text-white shadow-md'
-                                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                                ? 'bg-emerald-500 text-white shadow-md'
+                                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                                                 }`}
                                         >
                                             <Percent className="w-4 h-4" />
@@ -275,8 +275,8 @@ export const ProductAddModal = ({
                                         <button
                                             onClick={() => handleDiscountTypeChange('price')}
                                             className={`flex-1 py-3 rounded-lg transition-all flex items-center justify-center gap-2 ${discountType === 'price'
-                                                    ? 'bg-blue-500 text-white shadow-md'
-                                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                                ? 'bg-blue-500 text-white shadow-md'
+                                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                                                 }`}
                                         >
                                             <DollarSign className="w-4 h-4" />
