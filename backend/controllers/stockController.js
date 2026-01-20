@@ -26,6 +26,7 @@ exports.getStockList = catchAsync(async (req, res, next) => {
     const transformedData = stockData.map(item => ({
         productID: item.product_id.toString(),
         productName: item.product_name,
+        barcode: item.barcode || 'N/A',
         unit: item.unit,
         discountAmount: '0.00', // Default since we removed discount from query
         costPrice: parseFloat(item.cost_price).toFixed(2),

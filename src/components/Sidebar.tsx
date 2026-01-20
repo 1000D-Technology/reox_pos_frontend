@@ -1,4 +1,4 @@
-import {Link, useLocation, useNavigate} from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
     LayoutDashboard,
     Users,
@@ -46,7 +46,7 @@ interface User {
     role_id: number;
 }
 
-export default function Sidebar({isOpen}: SidebarProps) {
+export default function Sidebar({ isOpen }: SidebarProps) {
     const location = useLocation();
     const navigate = useNavigate();
     const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
@@ -75,38 +75,38 @@ export default function Sidebar({isOpen}: SidebarProps) {
     const userRole = user?.role?.toLowerCase() || '';
 
     const allNavItems: NavItem[] = [
-        {label: "Dashboard", path: "/dashboard", icon: <LayoutDashboard size={20}/>, roles: ['superadmin', 'cashier', 'storekeeper']},
+        { label: "Dashboard", path: "/dashboard", icon: <LayoutDashboard size={20} />, roles: ['superadmin', 'cashier', 'storekeeper'] },
         {
             label: "Sales",
             path: "/sales",
-            icon: <AudioWaveform size={20}/>,
+            icon: <AudioWaveform size={20} />,
             roles: ['superadmin', 'cashier'],
             children: [
-                {label: "Manage Invoice", path: "/sales/manage-invoice"},
-                {label: "Manage Sales", path: "/sales/manage-sales"},
-                {label: "User Sales", path: "/sales/manage-user-sales"},
+                { label: "Manage Invoice", path: "/sales/manage-invoice" },
+                { label: "Manage Sales", path: "/sales/manage-sales" },
+                { label: "User Sales", path: "/sales/manage-user-sales" },
             ],
         },
         {
             label: "Quotation",
             path: "/quotation",
-            icon: <BadgePlus size={20}/>,
+            icon: <BadgePlus size={20} />,
             roles: ['superadmin', 'cashier', 'storekeeper'],
             children: [
-                {label: "Create Quotation", path: "/quotation/create-quotation"},
-                {label: "Quotation List", path: "/quotation/quotation-list"},
+                { label: "Create Quotation", path: "/quotation/create-quotation" },
+                { label: "Quotation List", path: "/quotation/quotation-list" },
             ],
         },
         {
             label: "Stock",
             path: "/stock",
-            icon: <FolderTree size={20}/>,
+            icon: <FolderTree size={20} />,
             roles: ['superadmin', 'storekeeper'],
             children: [
-                {label: "Stock List", path: "/stock/stock-list"},
-                {label: "Out of Stock", path: "/stock/out-of-stock"},
-                {label: "Damaged Stock", path: "/stock/damaged-stock"},
-                {label: "Low Stock", path: "/stock/low-stock"},
+                { label: "Stock List", path: "/stock/stock-list" },
+                { label: "Out of Stock", path: "/stock/out-of-stock" },
+                { label: "Damaged Stock", path: "/stock/damaged-stock" },
+                { label: "Low Stock", path: "/stock/low-stock" },
             ],
         },
         {
@@ -115,53 +115,53 @@ export default function Sidebar({isOpen}: SidebarProps) {
             icon: <FolderSymlink size={20} />,
             roles: ['superadmin', 'storekeeper'],
             children: [
-                {label: "Create GRN", path: "/grn/create-grn"},
-                {label: "GRN List", path: "/grn/grn-list"},
+                { label: "Create GRN", path: "/grn/create-grn" },
+                { label: "GRN List", path: "/grn/grn-list" },
             ],
         },
         {
             label: "Products",
             path: "/products",
-            icon: <Boxes size={20}/>,
+            icon: <Boxes size={20} />,
             roles: ['superadmin', 'storekeeper'],
             children: [
-                {label: "Create Product", path: "/products/create-product"},
-                {label: "Product List", path: "/products/product-list"},
-                {label: "Manage Product Type", path: "/products/manage-product-type"},
-                {label: "Manage Unit", path: "/products/manage-unit"},
-                {label: "Manage Category", path: "/products/manage-category"},
-                {label: "Manage Brand", path: "/products/manage-brand"},
-                {label: "Removed Products", path: "/products/removed-products"},
+                { label: "Create Product", path: "/products/create-product" },
+                { label: "Product List", path: "/products/product-list" },
+                { label: "Manage Product Type", path: "/products/manage-product-type" },
+                { label: "Manage Unit", path: "/products/manage-unit" },
+                { label: "Manage Category", path: "/products/manage-category" },
+                { label: "Manage Brand", path: "/products/manage-brand" },
+                { label: "Removed Products", path: "/products/removed-products" },
             ],
         },
         {
             label: "Supplier",
             path: "/supplier",
-            icon: <Truck size={20}/>,
+            icon: <Truck size={20} />,
             roles: ['superadmin'],
             children: [
-                {label: "Create Supplier", path: "/supplier/create-supplier"},
-                {label: "Manage Supplier", path: "/supplier/manage-supplier"},
-                {label: "Supplier GRN History", path: "/supplier/supplier-grn"},
-                {label: "Supplier Payments", path: "/supplier/supplier-payments"},
+                { label: "Create Supplier", path: "/supplier/create-supplier" },
+                { label: "Manage Supplier", path: "/supplier/manage-supplier" },
+                { label: "Supplier GRN History", path: "/supplier/supplier-grn" },
+                { label: "Supplier Payments", path: "/supplier/supplier-payments" },
             ],
         },
         {
             label: "Manage Customer",
             path: "/customer/manage-customer",
-            icon: <Users size={20}/>,
+            icon: <Users size={20} />,
             roles: ['superadmin', 'cashier'],
         },
         {
             label: "Manage User",
             path: "/manage-users",
-            icon: <UserCog size={20}/>,
+            icon: <UserCog size={20} />,
             roles: ['superadmin'],
         },
-        {label: "Accounts", path: "/accounts", icon: <CreditCard size={20}/>, roles: ['superadmin']},
-        {label: "Reports", path: "/reports", icon: <BarChart size={20}/>, roles: ['superadmin']},
-        {label: "Settings", path: "/setting", icon: <Settings size={20}/>, roles: ['superadmin']},
-        {label: "Back-Up", path: "/back-up", icon: <DatabaseBackup size={20}/>, roles: ['superadmin']},
+        { label: "Accounts", path: "/accounts", icon: <CreditCard size={20} />, roles: ['superadmin'] },
+        { label: "Reports", path: "/reports", icon: <BarChart size={20} />, roles: ['superadmin'] },
+        { label: "Settings", path: "/setting", icon: <Settings size={20} />, roles: ['superadmin'] },
+        { label: "Back-Up", path: "/back-up", icon: <DatabaseBackup size={20} />, roles: ['superadmin'] },
     ];
 
     // Filter navigation items based on user role
@@ -179,9 +179,9 @@ export default function Sidebar({isOpen}: SidebarProps) {
                 {/* Logo */}
                 <div className="flex items-center justify-center h-16">
                     {isOpen ? (
-                        <img src="/logo.png" alt="" className="h-8"/>
+                        <img src="/logo.png" alt="" className="h-8" />
                     ) : (
-                        <img src="/logo.png" alt="" className="h-3"/>
+                        <img src="/logo.png" alt="" className="h-3" />
                     )}
                 </div>
 
@@ -194,12 +194,11 @@ export default function Sidebar({isOpen}: SidebarProps) {
                                     <div className="mb-1">
                                         <Link
                                             to={item.path || "#"}
-                                            className={`flex items-center justify-between ${
-                                                isOpen ? "pr-2" : "justify-center"
-                                            } gap-3 px-3 py-2 text-sm transition
+                                            className={`flex items-center justify-between ${isOpen ? "pr-2" : "justify-center"
+                                                } gap-3 px-3 py-2 text-sm transition
                                             ${(location.pathname === item.path || location.pathname.startsWith(item.path + "/"))
-                                                ? "bg-gradient-to-l from-emerald-200 font-semibold border-e-4 border-emerald-600"
-                                                : "text-gray-700 hover:bg-green-50"}`}
+                                                    ? "bg-gradient-to-l from-emerald-200 font-semibold border-e-4 border-emerald-600"
+                                                    : "text-gray-700 hover:bg-green-50"}`}
                                             onClick={(e) => toggleDropdown(item.label, e)}
                                         >
                                             <span className="flex items-center gap-3">
@@ -209,9 +208,8 @@ export default function Sidebar({isOpen}: SidebarProps) {
                                             {isOpen && (
                                                 <ChevronDown
                                                     size={16}
-                                                    className={`transition-transform duration-300 ${
-                                                        expandedItems[item.label] ? "transform rotate-180" : ""
-                                                    }`}
+                                                    className={`transition-transform duration-300 ${expandedItems[item.label] ? "transform rotate-180" : ""
+                                                        }`}
                                                 />
                                             )}
                                         </Link>
@@ -227,8 +225,8 @@ export default function Sidebar({isOpen}: SidebarProps) {
                                                             to={child.path}
                                                             className={`flex items-center gap-2 px-3 py-1.5 text-xs transition pl-6
             ${location.pathname === child.path
-                                                                ? "bg-gradient-to-l from-emerald-200 text-black font-medium"
-                                                                : "text-gray-600 hover:bg-emerald-50"}`}
+                                                                    ? "bg-gradient-to-l from-emerald-200 text-black font-medium"
+                                                                    : "text-gray-600 hover:bg-emerald-50"}`}
                                                         >
                                                             {child.label}
                                                         </Link>
@@ -240,12 +238,11 @@ export default function Sidebar({isOpen}: SidebarProps) {
                                 ) : (
                                     <Link
                                         to={item.path || "#"}
-                                        className={`flex items-center ${
-                                            isOpen ? "justify-start" : "justify-center"
-                                        } gap-3 px-3 py-2 text-sm transition
+                                        className={`flex items-center ${isOpen ? "justify-start" : "justify-center"
+                                            } gap-3 px-3 py-2 text-sm transition
                                         ${location.pathname === item.path
-                                            ? "bg-gradient-to-l from-emerald-200 text-black font-semibold"
-                                            : "text-gray-700 hover:bg-green-50"}`}
+                                                ? "bg-gradient-to-l from-emerald-200 text-black font-semibold"
+                                                : "text-gray-700 hover:bg-green-50"}`}
                                     >
                                         {item.icon}
                                         {isOpen && item.label}
@@ -257,7 +254,7 @@ export default function Sidebar({isOpen}: SidebarProps) {
                 </nav>
 
                 {/* User Section */}
-                <div className="p-2 flex items-center justify-between shadow-2xl m-2 rounded-full">
+                <div className="p-2 flex items-center justify-between m-2">
                     {isOpen && user && (
                         <div className="flex items-center gap-2">
                             <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center text-white font-semibold">
@@ -273,12 +270,11 @@ export default function Sidebar({isOpen}: SidebarProps) {
                     )}
                     <button
                         onClick={handleLogout}
-                        className={`p-2 rounded-full bg-red-500 text-white hover:bg-red-600 transition ${
-                            isOpen ? "ml-auto" : "mx-auto"
-                        }`}
+                        className={`p-2 rounded-full bg-red-500 text-white hover:bg-red-600 transition ${isOpen ? "ml-auto" : "mx-auto"
+                            }`}
                         title="Logout"
                     >
-                        <LogOut size={16}/>
+                        <LogOut size={16} />
                     </button>
                 </div>
             </div>

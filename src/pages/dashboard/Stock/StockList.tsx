@@ -11,9 +11,11 @@ import {
     TrendingUp,
     Users,
     ShoppingCart,
+    Barcode,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import TypeableSelect from "../../../components/TypeableSelect.tsx";
+import BarcodePrintModal from "../../../components/modals/BarcodePrintModal.tsx";
 import { stockService } from "../../../services/stockService.ts";
 import toast, { Toaster } from 'react-hot-toast';
 import * as XLSX from 'xlsx';
@@ -92,12 +94,16 @@ function StockList() {
     const [selectedUnit, setSelectedUnit] = useState<string | null>(null);
     const [selectedSupplier, setSelectedSupplier] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState<string>('');
-    
+
     // Dropdown options state
     const [suppliers, setSuppliers] = useState<SelectOption[]>([]);
     const [units, setUnits] = useState<SelectOption[]>([]);
     const [categories, setCategories] = useState<SelectOption[]>([]);
     const [isLoadingDropdowns, setIsLoadingDropdowns] = useState(false);
+
+    // Barcode Modal State
+    const [isBarcodeModalOpen, setIsBarcodeModalOpen] = useState(false);
+    const [selectedProductForBarcode, setSelectedProductForBarcode] = useState<any>(null);
 
     // Load stock data
     const loadStockData = async () => {
@@ -168,7 +174,7 @@ function StockList() {
                 setSuppliers(supplierOptions);
             }
 
-        
+
 
         } catch (error) {
             console.error('Error loading dropdown data:', error);
@@ -190,7 +196,7 @@ function StockList() {
             };
 
             // Remove undefined values
-            Object.keys(filters).forEach(key => 
+            Object.keys(filters).forEach(key =>
                 filters[key as keyof typeof filters] === undefined && delete filters[key as keyof typeof filters]
             );
 
@@ -254,7 +260,7 @@ function StockList() {
             const ws = XLSX.utils.json_to_sheet(exportData);
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, 'Stock List');
-            
+
             const timestamp = new Date().toISOString().split('T')[0];
             XLSX.writeFile(wb, `Stock_List_All_Variations_${timestamp}.xlsx`);
             toast.success('Excel file exported successfully');
@@ -298,14 +304,14 @@ function StockList() {
             const link = document.createElement('a');
             const url = URL.createObjectURL(blob);
             const timestamp = new Date().toISOString().split('T')[0];
-            
+
             link.setAttribute('href', url);
             link.setAttribute('download', `Stock_List_All_Variations_${timestamp}.csv`);
             link.style.visibility = 'hidden';
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-            
+
             toast.success('CSV file exported successfully');
         } catch (error) {
             console.error('Error exporting CSV:', error);
@@ -324,10 +330,10 @@ function StockList() {
             
             // Add date
             doc.setFontSize(10);
-            doc.text(`Generated on: ${new Date().toLocaleDateString('en-US', { 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric' 
+            doc.text(`Generated on: ${new Date().toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
             })}`, 14, 30);
 
             // Prepare table data
@@ -594,14 +600,14 @@ function StockList() {
                             />
                         </div>
                         <div className={'grid grid-cols-2 md:items-end items-start gap-2 text-white font-medium'}>
-                            <button 
+                            <button
                                 onClick={handleSearch}
                                 disabled={isLoadingStock}
                                 className={'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 py-2 rounded-lg flex items-center justify-center shadow-lg shadow-emerald-200 hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed'}>
                                 <SearchCheck className={`mr-2 ${isLoadingStock ? 'animate-pulse' : ''}`} size={14} />
                                 {isLoadingStock ? 'Searching...' : 'Search'}
                             </button>
-                            <button 
+                            <button
                                 onClick={handleClearFilters}
                                 disabled={isLoadingStock}
                                 className={'bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 py-2 rounded-lg flex items-center justify-center shadow-lg shadow-gray-200 hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed'}>
@@ -728,11 +734,10 @@ function StockList() {
                             <button
                                 onClick={goToPreviousPage}
                                 disabled={currentPage === 1}
-                                className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${
-                                    currentPage === 1
-                                        ? 'text-gray-400 cursor-not-allowed'
-                                        : 'text-gray-600 hover:text-emerald-600 hover:bg-emerald-50'
-                                }`}
+                                className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${currentPage === 1
+                                    ? 'text-gray-400 cursor-not-allowed'
+                                    : 'text-gray-600 hover:text-emerald-600 hover:bg-emerald-50'
+                                    }`}
                             >
                                 <ChevronLeft className="mr-2 h-5 w-5" /> Previous
                             </button>
@@ -742,11 +747,10 @@ function StockList() {
                                     <button
                                         key={index}
                                         onClick={() => goToPage(page)}
-                                        className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${
-                                            currentPage === page
-                                                ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-md'
-                                                : 'text-gray-600 hover:bg-emerald-50 hover:text-emerald-600'
-                                        }`}
+                                        className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${currentPage === page
+                                            ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-md'
+                                            : 'text-gray-600 hover:bg-emerald-50 hover:text-emerald-600'
+                                            }`}
                                     >
                                         {page}
                                     </button>
@@ -760,11 +764,10 @@ function StockList() {
                             <button
                                 onClick={goToNextPage}
                                 disabled={currentPage === totalPages}
-                                className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${
-                                    currentPage === totalPages
-                                        ? 'text-gray-400 cursor-not-allowed'
-                                        : 'text-gray-600 hover:text-emerald-600 hover:bg-emerald-50'
-                                }`}
+                                className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${currentPage === totalPages
+                                    ? 'text-gray-400 cursor-not-allowed'
+                                    : 'text-gray-600 hover:text-emerald-600 hover:bg-emerald-50'
+                                    }`}
                             >
                                 Next <ChevronRight className="ml-2 h-5 w-5" />
                             </button>
@@ -776,24 +779,24 @@ function StockList() {
                 <div
                     className={'bg-white flex justify-center p-4 gap-4 rounded-xl shadow-lg'}
                 >
-                    <button 
+                    <button
                         onClick={handleExportExcel}
                         className={'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 px-6 py-2 font-medium text-white rounded-lg flex gap-2 items-center shadow-lg shadow-emerald-200 hover:shadow-xl transition-all'}>
                         <FileText size={15} />Excel
                     </button>
-                    <button 
+                    <button
                         onClick={handleExportCSV}
                         className={'bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 px-6 py-2 font-medium text-white rounded-lg flex gap-2 items-center shadow-lg shadow-yellow-200 hover:shadow-xl transition-all'}>
                         <FileText size={15} />CSV
                     </button>
-                    <button 
+                    <button
                         onClick={handleExportPDF}
                         className={'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 px-6 py-2 font-medium text-white rounded-lg flex gap-2 items-center shadow-lg shadow-red-200 hover:shadow-xl transition-all'}>
                         <FileText size={15} />PDF
                     </button>
                 </div>
             </div>
-            
+
             <Toaster
                 position="top-right"
                 toastOptions={{
@@ -815,6 +818,12 @@ function StockList() {
                         },
                     },
                 }}
+            />
+
+            <BarcodePrintModal
+                isOpen={isBarcodeModalOpen}
+                onClose={() => setIsBarcodeModalOpen(false)}
+                product={selectedProductForBarcode}
             />
         </>
     );

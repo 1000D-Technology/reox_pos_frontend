@@ -11,7 +11,7 @@ interface Product {
     stock: number;
     category: string;
     productCode: string;
-    isBulk: boolean;batch?: string;
+    isBulk: boolean; batch?: string;
 }
 
 interface ProductAddModalProps {
@@ -30,12 +30,12 @@ interface ProductAddModalProps {
 }
 
 export const ProductAddModal = ({
-                                    isOpen,
-                                    onClose,
-                                    product,
-                                    billingMode,
-                                    onAddToCart
-                                }: ProductAddModalProps) => {
+    isOpen,
+    onClose,
+    product,
+    billingMode,
+    onAddToCart
+}: ProductAddModalProps) => {
     const [quantity, setQuantity] = useState(1);
     const [discount, setDiscount] = useState(0);
     const [discountType, setDiscountType] = useState<'percentage' | 'price'>('percentage');
@@ -121,7 +121,7 @@ export const ProductAddModal = ({
 
     const incrementQty = () => {
         if (quantity < product.stock) {
-            setQuantity(prev => prev + 1);
+            setQuantity(prev => Math.min(product.stock, prev + 1));
         }
     };
 
@@ -225,7 +225,7 @@ export const ProductAddModal = ({
                                 <div className="flex items-center gap-2">
                                     <button
                                         onClick={decrementQty}
-                                        disabled={quantity <= 1}
+                                        disabled={quantity <= 0.001}
                                         className="w-12 h-12 bg-red-100 hover:bg-red-500 hover:text-white disabled:bg-gray-200 disabled:text-gray-400 text-red-600 rounded-lg flex items-center justify-center transition-colors touch-manipulation"
                                     >
                                         <Minus className="w-5 h-5" />
@@ -234,16 +234,18 @@ export const ProductAddModal = ({
                                         type="number"
                                         value={quantity}
                                         onChange={(e) => {
-                                            const val = Math.max(1, Math.min(product.stock, Number(e.target.value)));
+                                            const val = Math.max(0.001, Math.min(product.stock, Number(e.target.value)));
                                             setQuantity(val);
                                         }}
+                                        step="any"
                                         className="flex-1 text-center text-2xl font-bold py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-emerald-500"
-                                        min={1}
+                                        min={0.001}
                                         max={product.stock}
                                     />
                                     <button
                                         onClick={incrementQty}
                                         disabled={quantity >= product.stock}
+
                                         className="w-12 h-12 bg-emerald-100 hover:bg-emerald-500 hover:text-white disabled:bg-gray-200 disabled:text-gray-400 text-emerald-600 rounded-lg flex items-center justify-center transition-colors touch-manipulation"
                                     >
                                         <Plus className="w-5 h-5" />
@@ -262,22 +264,20 @@ export const ProductAddModal = ({
                                     <div className="flex gap-2 mb-3">
                                         <button
                                             onClick={() => handleDiscountTypeChange('percentage')}
-                                            className={`flex-1 py-3 rounded-lg transition-all flex items-center justify-center gap-2 ${
-                                                discountType === 'percentage'
-                                                    ? 'bg-emerald-500 text-white shadow-md'
-                                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                            }`}
+                                            className={`flex-1 py-3 rounded-lg transition-all flex items-center justify-center gap-2 ${discountType === 'percentage'
+                                                ? 'bg-emerald-500 text-white shadow-md'
+                                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                                }`}
                                         >
                                             <Percent className="w-4 h-4" />
                                             <span className="font-semibold">Percentage</span>
                                         </button>
                                         <button
                                             onClick={() => handleDiscountTypeChange('price')}
-                                            className={`flex-1 py-3 rounded-lg transition-all flex items-center justify-center gap-2 ${
-                                                discountType === 'price'
-                                                    ? 'bg-blue-500 text-white shadow-md'
-                                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                            }`}
+                                            className={`flex-1 py-3 rounded-lg transition-all flex items-center justify-center gap-2 ${discountType === 'price'
+                                                ? 'bg-blue-500 text-white shadow-md'
+                                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                                }`}
                                         >
                                             <DollarSign className="w-4 h-4" />
                                             <span className="font-semibold">Fixed Amount</span>
@@ -314,9 +314,9 @@ export const ProductAddModal = ({
                                         <span className="font-semibold">-Rs {discountAmount.toFixed(2)}</span>
                                     </div>
                                 )}<div className="flex justify-between text-sm text-blue-600">
-                                <span>Minimum (WSP × Qty):</span>
-                                <span className="font-semibold">Rs {(wholesalePrice * quantity).toFixed(2)}</span>
-                            </div>
+                                    <span>Minimum (WSP × Qty):</span>
+                                    <span className="font-semibold">Rs {(wholesalePrice * quantity).toFixed(2)}</span>
+                                </div>
                                 <div className="flex justify-between text-lg font-bold border-t pt-2 mt-2">
                                     <span className="text-gray-800">Total:</span>
                                     <span className="text-emerald-600">Rs {discountedPrice.toFixed(2)}</span>

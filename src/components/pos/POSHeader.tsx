@@ -1,4 +1,4 @@
-import {ShoppingCart, Wallet, Package, RotateCcw, BanknoteIcon, ArrowUpDown} from 'lucide-react';
+import { ShoppingCart, Wallet, Package, RotateCcw, BanknoteIcon, ArrowUpDown } from 'lucide-react';
 
 interface POSHeaderProps {
     billingMode: 'retail' | 'wholesale';
@@ -9,14 +9,14 @@ interface POSHeaderProps {
 }
 
 export const POSHeader = ({
-                              billingMode,
-                              onBillingModeChange,
-                              onCashManage,
-                              onBulkLoose,
-                              onReturn
-                          }: POSHeaderProps) => {
+    billingMode,
+    onBillingModeChange,
+    onCashManage,
+    onBulkLoose,
+    onReturn
+}: POSHeaderProps) => {
     return (
-        <div className="mb-3 flex items-center justify-between bg-white rounded-2xl shadow-lg p-3">
+        <div className="mb-3 flex items-center justify-between bg-white rounded-2xl border border-gray-200 p-3">
             <div className="flex items-center gap-3">
                 <div className="p-2.5 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl shadow-md">
                     <ShoppingCart className="w-6 h-6 text-white" />
@@ -34,7 +34,7 @@ export const POSHeader = ({
                     className={`px-5 py-2 rounded-lg font-semibold transition-all text-sm ${billingMode === 'retail'
                         ? 'bg-emerald-500 text-white shadow-md'
                         : 'text-gray-600 hover:bg-gray-200'
-                    }`}
+                        }`}
                 >
                     Retail
                 </button>
@@ -43,7 +43,7 @@ export const POSHeader = ({
                     className={`px-5 py-2 rounded-lg font-semibold transition-all text-sm ${billingMode === 'wholesale'
                         ? 'bg-emerald-500 text-white shadow-md'
                         : 'text-gray-600 hover:bg-gray-200'
-                    }`}
+                        }`}
                 >
                     Wholesale
                 </button>

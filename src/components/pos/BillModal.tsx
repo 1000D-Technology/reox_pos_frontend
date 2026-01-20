@@ -39,15 +39,15 @@ const paymentMethods = [
 ];
 
 export const BillModal = ({
-                              isOpen,
-                              onClose,
-                              cartItems,
-                              customer,
-                              subtotal,
-                              discount,
-                              total,
-                              paymentAmounts
-                          }: BillModalProps) => {
+    isOpen,
+    onClose,
+    cartItems,
+    customer,
+    subtotal,
+    discount,
+    total,
+    paymentAmounts
+}: BillModalProps) => {
     const calculateItemTotal = (item: CartItem) => {
         const itemTotal = item.price * item.quantity;
         const itemDiscount = (itemTotal * item.discount) / 100;

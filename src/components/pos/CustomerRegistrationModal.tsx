@@ -9,10 +9,10 @@ interface CustomerRegistrationModalProps {
 }
 
 export const CustomerRegistrationModal = ({
-                                              isOpen,
-                                              onClose,
-                                              onRegister
-                                          }: CustomerRegistrationModalProps) => {
+    isOpen,
+    onClose,
+    onRegister
+}: CustomerRegistrationModalProps) => {
     const [name, setName] = useState('');
     const [contact, setContact] = useState('');
     const [email, setEmail] = useState('');
@@ -21,8 +21,8 @@ export const CustomerRegistrationModal = ({
     const handleSubmit = () => {
         if (name.trim() && contact.trim()) {
             onRegister(
-                name, 
-                contact, 
+                name,
+                contact,
                 email.trim() || undefined,
                 creditBalance ? parseFloat(creditBalance) : undefined
             );

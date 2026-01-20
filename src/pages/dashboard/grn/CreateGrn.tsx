@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
-import { Plus, Trash2, ShoppingCart, Package, Calendar, DollarSign } from 'lucide-react';
+import { Plus, Trash2, ShoppingCart, Package, Calendar, DollarSign, Barcode } from 'lucide-react';
 import TypeableSelect from "../../../components/TypeableSelect.tsx";
 import { productService } from "../../../services/productService.ts";
 import { supplierService } from "../../../services/supplierService.ts";
 import { paymentTypeService } from "../../../services/paymentTypeService.ts";
 import { grnService } from "../../../services/grnService.ts";
 import toast, { Toaster } from 'react-hot-toast';
+import BarcodePrintModal from "../../../components/modals/BarcodePrintModal";
 
 function CreateGrn() {
     type SelectOption = {
@@ -65,6 +66,17 @@ function CreateGrn() {
     const [freeQty, setFreeQty] = useState<string>('');
     const [paidAmount, setPaidAmount] = useState<string>('');
     const [formKey, setFormKey] = useState<number>(0);
+
+    // Barcode Modal State
+    const [isBarcodeModalOpen, setIsBarcodeModalOpen] = useState(false);
+    // Use the updated Product interface structure from BarcodePrintModal
+    const [productToPrint, setProductToPrint] = useState<{
+        productID: number;
+        productName: string;
+        productCode: string;
+        barcode: string;
+        price?: number;
+    } | null>(null);
 
     // Generate bill number
     const generateBillNumber = (): string => {
@@ -190,7 +202,7 @@ function CreateGrn() {
         setIsLoadingProducts(true);
         setIsLoadingSuppliers(true);
         setIsLoadingPaymentTypes(true);
-        
+
         try {
             const [productsResponse, suppliersResponse, paymentTypesResponse] = await Promise.all([
                 productService.getProductsForDropdown(),
@@ -333,7 +345,7 @@ function CreateGrn() {
             }
         } catch (error: any) {
             console.error('Error creating GRN:', error);
-            
+
             // Handle validation errors (400 status)
             if (error.response && error.response.status === 400) {
                 const errorMessage = error.response.data?.message || 'Validation failed. Please check your input.';
@@ -435,6 +447,13 @@ function CreateGrn() {
                     },
                 }}
             />
+
+            <BarcodePrintModal
+                isOpen={isBarcodeModalOpen}
+                onClose={() => setIsBarcodeModalOpen(false)}
+                product={productToPrint}
+            />
+
             <div className={'flex flex-col gap-4 h-full'}>
                 <div>
                     <div className="text-sm text-gray-400 flex items-center">
@@ -692,101 +711,123 @@ function CreateGrn() {
                     <div className="overflow-y-auto max-h-md md:h-[320px] lg:h-[320px] rounded-lg scrollbar-thin scrollbar-thumb-emerald-300 scrollbar-track-gray-100">
                         <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-gradient-to-r from-emerald-500 to-emerald-600 sticky top-0 z-10">
-                            <tr>
-                                {[
-                                    "Product Name",
-                                    "Variant",
-                                    "Barcode",
-                                    "Batch",
-                                    "MFD",
-                                    "EXP",
-                                    "Cost",
-                                    "MRP",
-                                    "RSP",
-                                    "WSP",
-                                    "QTY",
-                                    "Free",
-                                    "Actions",
-                                ].map((header, i, arr) => (
-                                    <th
-                                        key={header}
-                                        className={`px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider ${
-                                            i === 0 ? 'rounded-tl-lg' : i === arr.length - 1 ? 'rounded-tr-lg' : ''
-                                        }`}
-                                    >
-                                        {header}
-                                    </th>
-                                ))}
-                            </tr>
+                                <tr>
+                                    {[
+                                        "Product Name",
+                                        "Variant",
+                                        "Barcode",
+                                        "Batch",
+                                        "MFD",
+                                        "EXP",
+                                        "Cost",
+                                        "MRP",
+                                        "RSP",
+                                        "WSP",
+                                        "QTY",
+                                        "Free",
+                                        "Actions",
+                                    ].map((header, i, arr) => (
+                                        <th
+                                            key={header}
+                                            className={`px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider ${i === 0 ? 'rounded-tl-lg' : i === arr.length - 1 ? 'rounded-tr-lg' : ''
+                                                }`}
+                                        >
+                                            {header}
+                                        </th>
+                                    ))}
+                                </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
-                            {grnData.length === 0 ? (
-                                <tr>
-                                    <td colSpan={13} className="px-6 py-8 text-center text-gray-500">
-                                        No items added yet. Add products to create GRN.
-                                    </td>
-                                </tr>
-                            ) : (
-                                grnData.map((sale, index) => (
-                                    <tr
-                                        key={index}
-                                        onClick={() => setSelectedIndex(index)}
-                                        className={`cursor-pointer transition-all ${
-                                            index === selectedIndex
-                                                ? 'bg-emerald-50 border-l-4 border-emerald-500'
-                                                : 'hover:bg-gray-50'
-                                        }`}
-                                    >
-                                        <td className="px-6 py-3 whitespace-nowrap text-sm font-medium text-gray-800">
-                                            {sale.productName}
-                                        </td>
-                                        <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-700">
-                                            {sale.productVariant}
-                                        </td>
-                                        <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-600">
-                                            {sale.barcode}
-                                        </td>
-                                        <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-600">
-                                            {sale.batch}
-                                        </td>
-                                        <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-600">
-                                            {sale.mfd || '-'}
-                                        </td>
-                                        <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-600">
-                                            {sale.exp || '-'}
-                                        </td>
-                                        <td className="px-6 py-3 whitespace-nowrap text-sm font-semibold text-gray-800">
-                                            {sale.cost}
-                                        </td>
-                                        <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-600">
-                                            {sale.mrp}
-                                        </td>
-                                        <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-600">
-                                            {sale.rsp}
-                                        </td>
-                                        <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-600">
-                                            {sale.wsp}
-                                        </td>
-                                        <td className="px-6 py-3 whitespace-nowrap text-sm font-semibold text-emerald-600">
-                                            {sale.qty}
-                                        </td>
-                                        <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-600">
-                                            {sale.free}
-                                        </td>
-                                        <td className="px-6 py-3 whitespace-nowrap text-sm">
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    removeItem(index);
-                                                }}
-                                                className="p-2 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all"
-                                            >
-                                                <Trash2 size={16} />
-                                            </button>
+                                {grnData.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={13} className="px-6 py-8 text-center text-gray-500">
+                                            No items added yet. Add products to create GRN.
                                         </td>
                                     </tr>
-                                ))
-                            )}
+                                ) : (
+                                    grnData.map((sale, index) => (
+                                        <tr
+                                            key={index}
+                                            onClick={() => setSelectedIndex(index)}
+                                            className={`cursor-pointer transition-all ${index === selectedIndex
+                                                ? 'bg-emerald-50 border-l-4 border-emerald-500'
+                                                : 'hover:bg-gray-50'
+                                                }`}
+                                        >
+                                            <td className="px-6 py-3 whitespace-nowrap text-sm font-medium text-gray-800">
+                                                {sale.productName}
+                                            </td>
+                                            <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-700">
+                                                {sale.productVariant}
+                                            </td>
+                                            <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-600">
+                                                {sale.barcode}
+                                            </td>
+                                            <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-600">
+                                                {sale.batch}
+                                            </td>
+                                            <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-600">
+                                                {sale.mfd || '-'}
+                                            </td>
+                                            <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-600">
+                                                {sale.exp || '-'}
+                                            </td>
+                                            <td className="px-6 py-3 whitespace-nowrap text-sm font-semibold text-gray-800">
+                                                {sale.cost}
+                                            </td>
+                                            <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-600">
+                                                {sale.mrp}
+                                            </td>
+                                            <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-600">
+                                                {sale.rsp}
+                                            </td>
+                                            <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-600">
+                                                {sale.wsp}
+                                            </td>
+                                            <td className="px-6 py-3 whitespace-nowrap text-sm font-semibold text-emerald-600">
+                                                {sale.qty}
+                                            </td>
+                                            <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-600">
+                                                {sale.free}
+                                            </td>
+                                            <td className="px-6 py-3 whitespace-nowrap text-sm">
+                                                <div className="flex gap-2">
+                                                    <div className="relative group">
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setProductToPrint({
+                                                                    productID: 0, // Dummy ID
+                                                                    productName: sale.productName,
+                                                                    productCode: '',
+                                                                    barcode: sale.barcode,
+                                                                    price: parseFloat(sale.mrp)
+                                                                });
+                                                                setIsBarcodeModalOpen(true);
+                                                            }}
+                                                            className="p-2 bg-gradient-to-r from-yellow-100 to-yellow-200 rounded-lg text-yellow-700 hover:from-yellow-200 hover:to-yellow-300 transition-all shadow-sm"
+                                                        >
+                                                            <Barcode size={16} />
+                                                        </button>
+                                                        <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max px-2 py-1 text-xs text-white bg-gray-900 rounded-md invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-opacity z-20">
+                                                            Print Barcode
+                                                        </span>
+                                                    </div>
+
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            removeItem(index);
+                                                        }}
+                                                        className="p-2 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all"
+                                                    >
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
                             </tbody>
                         </table>
                     </div>
