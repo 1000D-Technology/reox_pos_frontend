@@ -24,7 +24,7 @@ function ManageBrand() {
     const [newBrandName, setNewBrandName] = useState('');
     const [isSaving, setIsSaving] = useState(false);
     const [brands, setBrands] = useState<Brand[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+    const [isLoading, setIsLoading] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [isSearching, setIsSearching] = useState(false);
     const [updateBrandName, setUpdateBrandName] = useState('');
@@ -37,6 +37,7 @@ function ManageBrand() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedBrand, setSelectedBrand] = useState<Brand | null>(null);
     const [selectedIndex, setSelectedIndex] = useState(0);
+    const [isInitialMount, setIsInitialMount] = useState(true);
 
     const totalPages = Math.ceil(brands.length / itemsPerPage);
     const startIndex = (currentPage - 1) * itemsPerPage;
@@ -85,6 +86,12 @@ function ManageBrand() {
     }, []);
 
     useEffect(() => {
+        // Skip the search effect on initial mount
+        if (isInitialMount) {
+            setIsInitialMount(false);
+            return;
+        }
+
         const timeoutId = setTimeout(() => {
             fetchBrands(searchTerm);
             setCurrentPage(1);
