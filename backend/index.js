@@ -17,7 +17,10 @@ const setupRoutes = require('./routes/setup');
 const backupRoutes = require('./routes/backup.routes');
 const posRoutes = require('./routes/posRoutes');
 const customerRoutes = require('./routes/customerRoutes');
+const userRoutes = require('./routes/userRoutes');
+const roleRoutes = require('./routes/roleRoutes');
 const { scheduleBackup } = require('./schedulers/backupScheduler');
+const moneyExchangeRoutes = require('./routes/moneyExchangeRoutes');
 
 require('dotenv').config();
 const swaggerJsDoc = require('swagger-jsdoc');
@@ -54,7 +57,10 @@ app.use('/api/pos', posRoutes);
 app.use('/api/customers', customerRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api', cashSessionRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/roles', roleRoutes);
 
+app.use('/api/money-exchange', moneyExchangeRoutes);
 
 // Handle undefined routes
 app.use((req, res, next) => {
