@@ -1,5 +1,5 @@
 import {
-    Barcode,
+
     ChevronLeft,
     ChevronRight,
     FileText,
@@ -22,6 +22,7 @@ import { brandService } from "../../../services/brandService";
 import { unitService } from "../../../services/unitService";
 import { productTypeService } from "../../../services/productTypeService";
 
+
 interface Product {
     productID: number;
     productName: string;
@@ -35,6 +36,7 @@ interface Product {
     size: string;
     storage: string;
     createdOn: string;
+    price: number;
 }
 
 type SelectOption = {
@@ -75,6 +77,8 @@ function ProductList() {
     const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
     const [productToDeactivate, setProductToDeactivate] = useState<Product | null>(null);
     const [isDeactivating, setIsDeactivating] = useState(false);
+
+
 
     const [selected, setSelected] = useState<SelectOption | null>(null);
     const [searchTerm, setSearchTerm] = useState("");
@@ -687,6 +691,7 @@ function ProductList() {
             <div className="flex flex-col gap-4 h-full">
                 <EditProductModal />
 
+
                 <ConfirmationModal
                     isOpen={isConfirmModalOpen}
                     title="Deactivate Product"
@@ -871,14 +876,7 @@ function ProductList() {
                                                 </span>
                                             </div>
 
-                                            <div className="relative group">
-                                                <button className="p-2 bg-gradient-to-r from-yellow-100 to-yellow-200 rounded-lg text-yellow-700 hover:from-yellow-200 hover:to-yellow-300 transition-all shadow-sm">
-                                                    <Barcode size={15} />
-                                                </button>
-                                                <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max px-2 py-1 text-xs text-white bg-gray-900 rounded-md invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    Print Barcode
-                                                </span>
-                                            </div>
+
 
                                             <div className="relative group">
                                                 <button
