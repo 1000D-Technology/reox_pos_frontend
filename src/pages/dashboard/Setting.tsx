@@ -160,9 +160,8 @@ function Setting() {
                     <div
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id)}
-                        className={`flex items-center p-4 space-x-3 transition-all bg-white rounded-2xl shadow-lg hover:shadow-xl cursor-pointer group relative overflow-hidden ${
-                            activeTab === tab.id ? 'ring-2 ring-green-500' : ''
-                        }`}
+                        className={`flex items-center p-4 space-x-3 transition-all bg-white rounded-2xl shadow-lg hover:shadow-xl cursor-pointer group relative overflow-hidden ${activeTab === tab.id ? 'ring-2 ring-green-500' : ''
+                            }`}
                     >
                         <div className="absolute inset-0 bg-gradient-to-br from-transparent via-gray-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
 

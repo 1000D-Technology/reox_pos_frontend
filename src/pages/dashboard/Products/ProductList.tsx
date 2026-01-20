@@ -418,7 +418,7 @@ function ProductList() {
                                         })
                                     }
                                     placeholder="Type to search categories"
-                                    
+
                                 />
                             </div>
                             <div>
@@ -435,7 +435,7 @@ function ProductList() {
                                         })
                                     }
                                     placeholder="Type to search brands"
-                                   
+
                                 />
                             </div>
                             <div>
@@ -452,7 +452,7 @@ function ProductList() {
                                         })
                                     }
                                     placeholder="Type to search units"
-                                   
+
                                 />
                             </div>
                             <div>
@@ -469,7 +469,7 @@ function ProductList() {
                                         })
                                     }
                                     placeholder="Type to search types"
-                                    
+
                                 />
                             </div>
                         </div>
@@ -488,7 +488,7 @@ function ProductList() {
                                         setEditFormData({ ...editFormData, color: opt?.label || "" })
                                     }
                                     placeholder="Type to search Color"
-                                    
+
                                 />
                             </div>
                             <div>
@@ -623,7 +623,7 @@ function ProductList() {
                                 value={selected?.value || null}
                                 onChange={(opt) => opt ? setSelected({ value: String(opt.value), label: opt.label }) : setSelected(null)}
                                 placeholder="Search Product Types..."
-                                
+
                             />
                         </div>
                         <div className="md:col-span-2">
@@ -712,8 +712,8 @@ function ProductList() {
                                         key={index}
                                         onClick={() => setSelectedIndex(index)}
                                         className={`cursor-pointer transition-colors ${index === selectedIndex
-                                                ? "bg-emerald-50 border-l-4 border-emerald-600"
-                                                : "hover:bg-emerald-50/50"
+                                            ? "bg-emerald-50 border-l-4 border-emerald-600"
+                                            : "hover:bg-emerald-50/50"
                                             }`}
                                     >
                                         <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
@@ -805,8 +805,8 @@ function ProductList() {
                                 onClick={goToPreviousPage}
                                 disabled={currentPage === 1}
                                 className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${currentPage === 1
-                                        ? 'text-gray-300 cursor-not-allowed'
-                                        : 'text-gray-600 hover:bg-emerald-50 hover:text-emerald-600'
+                                    ? 'text-gray-300 cursor-not-allowed'
+                                    : 'text-gray-600 hover:bg-emerald-50 hover:text-emerald-600'
                                     }`}
                             >
                                 <ChevronLeft className="mr-1 h-4 w-4" /> Previous
@@ -818,8 +818,8 @@ function ProductList() {
                                         key={idx}
                                         onClick={() => goToPage(page)}
                                         className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${currentPage === page
-                                                ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-200'
-                                                : 'text-gray-600 hover:bg-emerald-50'
+                                            ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-200'
+                                            : 'text-gray-600 hover:bg-emerald-50'
                                             }`}
                                     >
                                         {page}
@@ -833,8 +833,8 @@ function ProductList() {
                                 onClick={goToNextPage}
                                 disabled={currentPage === totalPages}
                                 className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${currentPage === totalPages
-                                        ? 'text-gray-300 cursor-not-allowed'
-                                        : 'text-gray-600 hover:bg-emerald-50 hover:text-emerald-600'
+                                    ? 'text-gray-300 cursor-not-allowed'
+                                    : 'text-gray-600 hover:bg-emerald-50 hover:text-emerald-600'
                                     }`}
                             >
                                 Next <ChevronRight className="ml-1 h-4 w-4" />
