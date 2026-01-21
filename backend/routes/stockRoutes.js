@@ -2,7 +2,10 @@ const express = require('express');
 const router = express.Router();
 const stockController = require('../controllers/stockController');
 
-// Route to get stock data for the UI table
+// Route to get ALL stock data with individual variations (every row in stock table)
+router.get('/all-variations', stockController.getAllStockWithVariations);
+
+// Route to get stock data for the UI table (grouped by product)
 router.get('/', stockController.getStockList);
 router.get('/search', stockController.getSearchStock);
 router.get('/summary-cards', stockController.getSummaryCards);

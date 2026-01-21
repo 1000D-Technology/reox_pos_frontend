@@ -3,19 +3,23 @@ const User = require('../models/userModel');
 const bcrypt = require('bcrypt');
 const catchAsync = require("../utils/catchAsync");
 const { AppError } = require("../middleware/errorHandler");
-const db = require('../config/db'); 
+const prisma = require('../config/prismaClient'); 
 
 const userController = {
     addUser: catchAsync(async (req, res, next) => {
         const { name, email, contact, password, role } = req.body;
 
         // 1. Check if Email or Contact already exists in the DB
-        const [existing] = await db.execute(
-            'SELECT id FROM user WHERE email = ? OR contact = ?', 
-            [email, contact]
-        );
+        const existing = await prisma.user.findFirst({
+            where: {
+                OR: [
+                    { email },
+                    { contact }
+                ]
+            }
+        });
 
-        if (existing.length > 0) {
+        if (existing) {
             return next(new AppError("Email or Contact number already exists in the system.", 400));
         }
 

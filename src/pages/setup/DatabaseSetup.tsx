@@ -9,6 +9,7 @@ interface DBConfig {
     DB_PASSWORD: string;
     DB_NAME: string;
     PORT: string;
+    DB_PORT: string;
 }
 
 function DatabaseSetup() {
@@ -20,10 +21,11 @@ function DatabaseSetup() {
     const [isValidating, setIsValidating] = useState(false);
     const [config, setConfig] = useState<DBConfig>({
         DB_HOST: 'localhost',
-        DB_USER: 'root',
+        DB_USER: '',
         DB_PASSWORD: '',
-        DB_NAME: 'reox_db',
-        PORT: '5000'
+        DB_NAME: '',
+        PORT: '5000',
+        DB_PORT: '3306'
     });
     const [isChecking, setIsChecking] = useState(true);
     const [isTesting, setIsTesting] = useState(false);
@@ -294,6 +296,18 @@ function DatabaseSetup() {
                                         onChange={handleInputChange}
                                         className="bg-white border-2 border-emerald-200 focus:border-emerald-500 text-sm rounded-xl w-full p-3 focus:ring-4 focus:ring-emerald-100 transition-all"
                                         placeholder="reox_db"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block mb-2 text-sm font-medium text-gray-700">Database Port</label>
+                                    <input
+                                        type="text"
+                                        name="DB_PORT"
+                                        value={config.DB_PORT}
+                                        onChange={handleInputChange}
+                                        className="bg-white border-2 border-emerald-200 focus:border-emerald-500 text-sm rounded-xl w-full p-3 focus:ring-4 focus:ring-emerald-100 transition-all"
+                                        placeholder="3306"
                                     />
                                 </div>
 

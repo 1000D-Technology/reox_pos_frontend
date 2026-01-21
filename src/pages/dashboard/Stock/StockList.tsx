@@ -39,7 +39,7 @@ function StockList() {
             label: 'Total Products',
             value: summaryData.totalProducts.value,
             trend: '',
-            color: 'bg-gradient-to-br from-emerald-400 to-emerald-500',
+            color: 'bg-linear-to-br from-emerald-400 to-emerald-500',
             iconColor: 'text-white',
             bgGlow: 'shadow-emerald-200'
         },
@@ -48,7 +48,7 @@ function StockList() {
             label: 'Total Value',
             value: summaryData.totalValue.value,
             trend: '',
-            color: 'bg-gradient-to-br from-purple-400 to-purple-500',
+            color: 'bg-linear-to-br from-purple-400 to-purple-500',
             iconColor: 'text-white',
             bgGlow: 'shadow-purple-200'
         },
@@ -57,7 +57,7 @@ function StockList() {
             label: 'Low Stock Items',
             value: summaryData.lowStock.value,
             trend: '',
-            color: 'bg-gradient-to-br from-red-400 to-red-500',
+            color: 'bg-linear-to-br from-red-400 to-red-500',
             iconColor: 'text-white',
             bgGlow: 'shadow-red-200'
         },
@@ -66,7 +66,7 @@ function StockList() {
             label: 'Total Suppliers',
             value: summaryData.totalSuppliers.value,
             trend: '',
-            color: 'bg-gradient-to-br from-blue-400 to-blue-500',
+            color: 'bg-linear-to-br from-blue-400 to-blue-500',
             iconColor: 'text-white',
             bgGlow: 'shadow-blue-200'
         },
@@ -75,7 +75,7 @@ function StockList() {
             label: 'Categories',
             value: summaryData.totalCategories.value,
             trend: '',
-            color: 'bg-gradient-to-br from-yellow-400 to-yellow-500',
+            color: 'bg-linear-to-br from-yellow-400 to-yellow-500',
             iconColor: 'text-white',
             bgGlow: 'shadow-yellow-200'
         },
@@ -109,7 +109,7 @@ function StockList() {
     const loadStockData = async () => {
         setIsLoadingStock(true);
         try {
-            const response = await stockService.getStockList();
+            const response = await stockService.getAllStockWithVariations();
             if (response.data?.success) {
                 setStockData(response.data.data);
             } else {
@@ -242,11 +242,16 @@ function StockList() {
                 'Product Name': item.productName,
                 'Barcode': item.barcode,
                 'Unit': item.unit,
-                'Cost Price': item.costPrice,
-                'MRP': item.MRP,
-                'Selling Price': item.Price,
-                'Supplier': item.supplier,
-                'Stock QTY': item.stockQty
+                'Batch': item.batch_name || '-',
+                'Quantity': item.qty,
+                'Cost Price': item.cost_price,
+                'MRP': item.mrp,
+                'Selling Price': item.selling_price,
+                'Supplier': item.supplier || 'N/A',
+                'Category': item.category || '-',
+                'Brand': item.brand || '-',
+                'MFD': item.mfd || '-',
+                'EXP': item.exp || '-'
             }));
 
             const ws = XLSX.utils.json_to_sheet(exportData);
@@ -254,7 +259,7 @@ function StockList() {
             XLSX.utils.book_append_sheet(wb, ws, 'Stock List');
 
             const timestamp = new Date().toISOString().split('T')[0];
-            XLSX.writeFile(wb, `Stock_List_${timestamp}.xlsx`);
+            XLSX.writeFile(wb, `Stock_List_All_Variations_${timestamp}.xlsx`);
             toast.success('Excel file exported successfully');
         } catch (error) {
             console.error('Error exporting Excel:', error);
@@ -272,11 +277,16 @@ function StockList() {
                 item.productName,
                 item.barcode,
                 item.unit,
-                item.costPrice,
-                item.MRP,
-                item.Price,
-                item.supplier,
-                item.stockQty
+                item.batch_name || '-',
+                item.qty,
+                item.cost_price,
+                item.mrp,
+                item.selling_price,
+                item.supplier || 'N/A',
+                item.category || '-',
+                item.brand || '-',
+                item.mfd || '-',
+                item.exp || '-'
             ]);
 
             const csvContent = [
@@ -290,7 +300,7 @@ function StockList() {
             const timestamp = new Date().toISOString().split('T')[0];
 
             link.setAttribute('href', url);
-            link.setAttribute('download', `Stock_List_${timestamp}.csv`);
+            link.setAttribute('download', `Stock_List_All_Variations_${timestamp}.csv`);
             link.style.visibility = 'hidden';
             document.body.appendChild(link);
             link.click();
@@ -327,11 +337,11 @@ function StockList() {
                 item.productName,
                 item.barcode,
                 item.unit,
-                `LKR ${item.costPrice}`,
-                `LKR ${item.MRP}`,
-                `LKR ${item.Price}`,
-                item.supplier,
-                item.stockQty
+                item.batch_name || '-',
+                item.qty,
+                `LKR ${parseFloat(item.cost_price).toFixed(2)}`,
+                `LKR ${parseFloat(item.selling_price).toFixed(2)}`,
+                item.supplier || 'N/A'
             ]);
 
             // Add table
@@ -346,8 +356,8 @@ function StockList() {
                     fontStyle: 'bold'
                 },
                 styles: {
-                    fontSize: 8,
-                    cellPadding: 2
+                    fontSize: 7,
+                    cellPadding: 1.5
                 },
                 columnStyles: {
                     0: { cellWidth: 10 },
@@ -364,7 +374,7 @@ function StockList() {
             });
 
             const timestamp = new Date().toISOString().split('T')[0];
-            doc.save(`Stock_List_${timestamp}.pdf`);
+            doc.save(`Stock_List_All_Variations_${timestamp}.pdf`);
             toast.success('PDF file exported successfully');
         } catch (error) {
             console.error('Error exporting PDF:', error);
@@ -421,7 +431,7 @@ function StockList() {
                 e.preventDefault();
                 const selectedItem = currentStockData[selectedIndex];
                 if (selectedItem) {
-                    toast.success(`Selected: ${selectedItem.productName} (ID: ${selectedItem.productID})`);
+                    toast.success(`Selected: ${selectedItem.product_name} (Stock ID: ${selectedItem.stock_id})`);
                 }
             } else if (e.key === "Escape") {
                 e.preventDefault();
@@ -493,7 +503,7 @@ function StockList() {
                         <span className="mx-2">›</span>
                         <span className="text-gray-700 font-medium">Stock List</span>
                     </div>
-                    <h1 className="text-3xl font-semibold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
+                    <h1 className="text-3xl font-semibold bg-linear-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
                         Stock List
                     </h1>
                 </div>
@@ -505,7 +515,7 @@ function StockList() {
                             key={i}
                             className={`flex items-center p-4 space-x-3 transition-all bg-white rounded-2xl border border-gray-200 cursor-pointer group relative overflow-hidden`}
                         >
-                            <div className="absolute inset-0 bg-gradient-to-br from-transparent via-gray-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                            <div className="absolute inset-0 bg-linear-to-br from-transparent via-gray-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
 
                             <div className={`p-3 rounded-full ${stat.color} shadow-sm relative z-10`}>
                                 <stat.icon className={`w-6 h-6 ${stat.iconColor}`} />
@@ -587,14 +597,14 @@ function StockList() {
                             <button
                                 onClick={handleSearch}
                                 disabled={isLoadingStock}
-                                className={'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 py-2 rounded-lg flex items-center justify-center shadow-lg shadow-emerald-200 hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed'}>
+                                className={'bg-linear-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 py-2 rounded-lg flex items-center justify-center shadow-lg shadow-emerald-200 hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed'}>
                                 <SearchCheck className={`mr-2 ${isLoadingStock ? 'animate-pulse' : ''}`} size={14} />
                                 {isLoadingStock ? 'Searching...' : 'Search'}
                             </button>
                             <button
                                 onClick={handleClearFilters}
                                 disabled={isLoadingStock}
-                                className={'bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 py-2 rounded-lg flex items-center justify-center shadow-lg shadow-gray-200 hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed'}>
+                                className={'bg-linear-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 py-2 rounded-lg flex items-center justify-center shadow-lg shadow-gray-200 hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed'}>
                                 <RefreshCw className={`mr-2 ${(isLoadingDropdowns || isLoadingStock) ? 'animate-spin' : ''}`} size={14} />
                                 {(isLoadingDropdowns || isLoadingStock) ? 'Refreshing...' : 'Refresh'}
                             </button>
@@ -767,17 +777,17 @@ function StockList() {
                 >
                     <button
                         onClick={handleExportExcel}
-                        className={'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 px-6 py-2 font-medium text-white rounded-lg flex gap-2 items-center shadow-lg shadow-emerald-200 hover:shadow-xl transition-all'}>
+                        className={'bg-linear-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 px-6 py-2 font-medium text-white rounded-lg flex gap-2 items-center shadow-lg shadow-emerald-200 hover:shadow-xl transition-all'}>
                         <FileText size={15} />Excel
                     </button>
                     <button
                         onClick={handleExportCSV}
-                        className={'bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 px-6 py-2 font-medium text-white rounded-lg flex gap-2 items-center shadow-lg shadow-yellow-200 hover:shadow-xl transition-all'}>
+                        className={'bg-linear-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 px-6 py-2 font-medium text-white rounded-lg flex gap-2 items-center shadow-lg shadow-yellow-200 hover:shadow-xl transition-all'}>
                         <FileText size={15} />CSV
                     </button>
                     <button
                         onClick={handleExportPDF}
-                        className={'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 px-6 py-2 font-medium text-white rounded-lg flex gap-2 items-center shadow-lg shadow-red-200 hover:shadow-xl transition-all'}>
+                        className={'bg-linear-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 px-6 py-2 font-medium text-white rounded-lg flex gap-2 items-center shadow-lg shadow-red-200 hover:shadow-xl transition-all'}>
                         <FileText size={15} />PDF
                     </button>
                 </div>

@@ -1,74 +1,117 @@
-const db = require('../config/db');
+const prisma = require('../config/prismaClient');
 
 const User = {
     // Find user by email (for validation/login)
     findByEmail: async (email) => {
-        const [rows] = await db.execute('SELECT * FROM user WHERE email = ?', [email]);
-        return rows[0];
+        const user = await prisma.user.findFirst({
+            where: { email }
+        });
+        return user;
     },
 
     // Check if contact is used by another user
     checkContactExcludingSelf: async (contact, userId) => {
-        const sql = 'SELECT id FROM user WHERE contact = ? AND id != ?';
-        const [rows] = await db.execute(sql, [contact, userId]);
-        return rows.length > 0; 
+        const user = await prisma.user.findFirst({
+            where: {
+                contact,
+                id: { not: userId }
+            }
+        });
+        return !!user;
     },
 
     // Create a new user based on latest DB structure
     create: async (userData) => {
         const { name, contact, email, password, role } = userData;
 
-        const sql = `INSERT INTO user (name, contact, email, password, role_id, status_id) 
-                     VALUES (?, ?, ?, ?, ?, ?)`;
-
-        const [result] = await db.execute(sql, [name, contact, email, password, role, 1]);
-        return result.insertId;
+        const user = await prisma.user.create({
+            data: {
+                name,
+                contact,
+                email,
+                password,
+                role_id: role,
+                status_id: 1,
+                created_at: new Date()
+            }
+        });
+        return user.id;
     },
 
     // Get all users with their role and status names (excluding password)
     getAllUsers: async () => {
-        const sql = `
-            SELECT 
-                u.id, 
-                u.name, 
-                u.contact, 
-                u.email, 
-                u.created_at, 
-                r.user_role AS role_name, 
-                s.ststus AS status_name
-            FROM user u
-            INNER JOIN role r ON u.role_id = r.id
-            INNER JOIN status s ON u.status_id = s.id
-            ORDER BY u.id DESC`;
+        const users = await prisma.user.findMany({
+            include: {
+                role: {
+                    select: {
+                        user_role: true
+                    }
+                },
+                status: {
+                    select: {
+                        ststus: true
+                    }
+                }
+            },
+            orderBy: {
+                id: 'desc'
+            }
+        });
 
-        const [rows] = await db.execute(sql);
-        return rows;
+        return users.map(u => ({
+            id: u.id,
+            name: u.name,
+            contact: u.contact,
+            email: u.email,
+            created_at: u.created_at,
+            role_name: u.role.user_role,
+            status_name: u.status.ststus
+        }));
     },
 
     // Update user status
     updateStatus: async (userId, statusId) => {
-        const sql = 'UPDATE user SET status_id = ? WHERE id = ?';
-        const [result] = await db.execute(sql, [statusId, userId]);
-        return result;
+        try {
+            await prisma.user.update({
+                where: { id: parseInt(userId) },
+                data: {
+                    status_id: statusId
+                }
+            });
+            return { affectedRows: 1 };
+        } catch (error) {
+            if (error.code === 'P2025') {
+                return { affectedRows: 0 };
+            }
+            throw error;
+        }
     },
 
     // Update user details including optional password
     updateUser: async (userId, updateData) => {
         const { contact, role_id, password } = updateData;
         
-        let sql;
-        let params;
+        const data = {
+            contact,
+            role_id
+        };
 
         if (password) {
-            sql = 'UPDATE user SET contact = ?, role_id = ?, password = ? WHERE id = ?';
-            params = [contact, role_id, password, userId];
-        } else {
-            sql = 'UPDATE user SET contact = ?, role_id = ? WHERE id = ?';
-            params = [contact, role_id, userId];
+            data.password = password;
         }
 
-        const [result] = await db.execute(sql, params);
-        return result;
+        try {
+            await prisma.user.update({
+                where: { id: parseInt(userId) },
+                data
+            });
+            return { affectedRows: 1 };
+        } catch (error) {
+            if (error.code === 'P2025') {
+                return { affectedRows: 0 };
+            }
+            throw error;
+        }
     }
 
 };

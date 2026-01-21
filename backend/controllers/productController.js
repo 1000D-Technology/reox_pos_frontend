@@ -225,8 +225,9 @@ exports.updateProduct = catchAsync(async (req, res, next) => {
  * @route   GET /api/products/search
  */
 exports.searchProducts = catchAsync(async (req, res, next) => {
-    const { productTypeId, searchTerm } = req.query;
-    const products = await Product.searchProducts({ productTypeId, searchTerm }, 1);
+    const { productTypeId, searchTerm, unitId } = req.query;
+    console.log(`Searching Active Products - Type: ${productTypeId}, Unit: ${unitId}, Term: ${searchTerm}`);
+    const products = await Product.searchProducts({ productTypeId, searchTerm, unitId }, 1);
 
     res.status(200).json({ 
         success: true, 
@@ -239,8 +240,8 @@ exports.searchProducts = catchAsync(async (req, res, next) => {
  * @route   GET /api/products/search-deactive
  */
 exports.searchDeactiveProducts = catchAsync(async (req, res, next) => {
-    const { productTypeId, searchTerm } = req.query;
-    const products = await Product.searchProducts({ productTypeId, searchTerm }, 2);
+    const { productTypeId, searchTerm, unitId } = req.query;
+    const products = await Product.searchProducts({ productTypeId, searchTerm, unitId }, 2);
 
     res.status(200).json({ 
         success: true, 

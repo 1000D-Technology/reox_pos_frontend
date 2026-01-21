@@ -156,7 +156,18 @@ exports.getSupplierDropdownList = catchAsync(async (req, res, next) => {
 
 exports.updateSupplierContact = catchAsync(async (req, res, next) => {
     const { id } = req.params;
-    const { contactNumber } = req.body;
+    let { contactNumber } = req.body;
+
+    if (!contactNumber) {
+        return next(new AppError("Contact number is required.", 400));
+    }
+
+    // Clean the contact number (remove non-digits) to fit in 10 chars if possible
+    contactNumber = contactNumber.replace(/\D/g, '');
+
+    if (contactNumber.length > 10) {
+        return next(new AppError("Contact number exceeds the maximum length of 10 digits.", 400));
+    }
 
     const result = await Supplier.updateContact(id, contactNumber);
 

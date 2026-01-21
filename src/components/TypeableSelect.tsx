@@ -63,9 +63,13 @@ export default function TypeableSelect({
         return () => document.removeEventListener('mousedown', onDocClick);
     }, [selected]);
 
-    const filtered = options.filter(o =>
-        o && o.label && o.label.toLowerCase().includes(query.trim().toLowerCase())
-    );
+    const filtered = options.filter(o => {
+        // If query matches the selected label exactly (case-insensitive), show all options
+        if (selected && query.toLowerCase() === selected.label.toLowerCase()) {
+            return true;
+        }
+        return o && o.label && o.label.toLowerCase().includes(query.trim().toLowerCase());
+    });
 
     function handleSelect(option: SelectOption) {
         setSelected(option);

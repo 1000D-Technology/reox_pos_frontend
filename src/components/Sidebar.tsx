@@ -72,15 +72,15 @@ export default function Sidebar({ isOpen }: SidebarProps) {
         navigate('/signin', { replace: true });
     };
 
-    const userRole = user?.role?.toLowerCase() || '';
+    const userRole = user?.role || '';
 
     const allNavItems: NavItem[] = [
-        { label: "Dashboard", path: "/dashboard", icon: <LayoutDashboard size={20} />, roles: ['superadmin', 'cashier', 'storekeeper'] },
+        { label: "Dashboard", path: "/dashboard", icon: <LayoutDashboard size={20} />, roles: ['Admin', 'Cashier', 'Storekeeper'] },
         {
             label: "Sales",
             path: "/sales",
             icon: <AudioWaveform size={20} />,
-            roles: ['superadmin', 'cashier'],
+            roles: ['Admin', 'Cashier'],
             children: [
                 { label: "Manage Invoice", path: "/sales/manage-invoice" },
                 { label: "Manage Sales", path: "/sales/manage-sales" },
@@ -91,7 +91,7 @@ export default function Sidebar({ isOpen }: SidebarProps) {
             label: "Quotation",
             path: "/quotation",
             icon: <BadgePlus size={20} />,
-            roles: ['superadmin', 'cashier', 'storekeeper'],
+            roles: ['Admin', 'Cashier', 'Storekeeper'],
             children: [
                 { label: "Create Quotation", path: "/quotation/create-quotation" },
                 { label: "Quotation List", path: "/quotation/quotation-list" },
@@ -101,7 +101,7 @@ export default function Sidebar({ isOpen }: SidebarProps) {
             label: "Stock",
             path: "/stock",
             icon: <FolderTree size={20} />,
-            roles: ['superadmin', 'storekeeper'],
+            roles: ['Admin', 'Storekeeper'],
             children: [
                 { label: "Stock List", path: "/stock/stock-list" },
                 { label: "Out of Stock", path: "/stock/out-of-stock" },
@@ -113,7 +113,7 @@ export default function Sidebar({ isOpen }: SidebarProps) {
             label: "GRN",
             path: "/grn",
             icon: <FolderSymlink size={20} />,
-            roles: ['superadmin', 'storekeeper'],
+            roles: ['Admin', 'Storekeeper'],
             children: [
                 { label: "Create GRN", path: "/grn/create-grn" },
                 { label: "GRN List", path: "/grn/grn-list" },
@@ -123,7 +123,7 @@ export default function Sidebar({ isOpen }: SidebarProps) {
             label: "Products",
             path: "/products",
             icon: <Boxes size={20} />,
-            roles: ['superadmin', 'storekeeper'],
+            roles: ['Admin', 'Storekeeper'],
             children: [
                 { label: "Create Product", path: "/products/create-product" },
                 { label: "Product List", path: "/products/product-list" },
@@ -138,7 +138,7 @@ export default function Sidebar({ isOpen }: SidebarProps) {
             label: "Supplier",
             path: "/supplier",
             icon: <Truck size={20} />,
-            roles: ['superadmin'],
+            roles: ['Admin'],
             children: [
                 { label: "Create Supplier", path: "/supplier/create-supplier" },
                 { label: "Manage Supplier", path: "/supplier/manage-supplier" },
@@ -150,18 +150,18 @@ export default function Sidebar({ isOpen }: SidebarProps) {
             label: "Manage Customer",
             path: "/customer/manage-customer",
             icon: <Users size={20} />,
-            roles: ['superadmin', 'cashier'],
+            roles: ['Admin', 'Cashier'],
         },
         {
             label: "Manage User",
             path: "/manage-users",
             icon: <UserCog size={20} />,
-            roles: ['superadmin'],
+            roles: ['Admin'],
         },
-        { label: "Accounts", path: "/accounts", icon: <CreditCard size={20} />, roles: ['superadmin'] },
-        { label: "Reports", path: "/reports", icon: <BarChart size={20} />, roles: ['superadmin'] },
-        { label: "Settings", path: "/setting", icon: <Settings size={20} />, roles: ['superadmin'] },
-        { label: "Back-Up", path: "/back-up", icon: <DatabaseBackup size={20} />, roles: ['superadmin'] },
+        { label: "Accounts", path: "/accounts", icon: <CreditCard size={20} />, roles: ['Admin'] },
+        { label: "Reports", path: "/reports", icon: <BarChart size={20} />, roles: ['Admin'] },
+        { label: "Settings", path: "/setting", icon: <Settings size={20} />, roles: ['Admin'] },
+        { label: "Back-Up", path: "/back-up", icon: <DatabaseBackup size={20} />, roles: ['Admin'] },
     ];
 
     // Filter navigation items based on user role
