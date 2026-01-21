@@ -521,7 +521,7 @@ function CreateSupplier() {
                     <div className="flex gap-2">
                         <button
                             onClick={handleDownloadTemplate}
-                            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 hover:text-emerald-600 font-medium rounded-lg shadow-sm transition-all"
+                            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 hover:text-emerald-600 font-medium rounded-lg transition-all"
                             title="Download CSV Template"
                         >
                             <Download size={18} />
@@ -536,7 +536,7 @@ function CreateSupplier() {
                         />
                         <label
                             htmlFor="supplier-import"
-                            className={`flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 hover:text-emerald-600 font-medium rounded-lg shadow-sm transition-all cursor-pointer ${isImporting ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            className={`flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 hover:text-emerald-600 font-medium rounded-lg transition-all cursor-pointer ${isImporting ? 'opacity-50 cursor-not-allowed' : ''}`}
                         >
                             {isImporting ? <Loader2 size={18} className="animate-spin text-emerald-600" /> : <Upload size={18} />}
                             <span>{isImporting ? 'Importing...' : 'Import Suppliers'}</span>
@@ -545,7 +545,7 @@ function CreateSupplier() {
                 </div>
 
                 <div
-                    className={"bg-white rounded-xl p-6 flex flex-col shadow-lg"}
+                    className={"bg-white rounded-xl p-6 flex flex-col border border-gray-200"}
                 >
                     <div className="flex items-center gap-2 mb-4">
                         <Users className="text-emerald-600" size={24} />
@@ -562,7 +562,7 @@ function CreateSupplier() {
                                 value={supplierData.supplierName}
                                 onChange={(e) => setSupplierData({ ...supplierData, supplierName: e.target.value })}
                                 placeholder="Enter Supplier Name"
-                                className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all outline-none"
+                                className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-500 transition-all outline-none"
                             />
                         </div>
                         <div>
@@ -574,7 +574,7 @@ function CreateSupplier() {
                                 value={supplierData.email}
                                 onChange={(e) => setSupplierData({ ...supplierData, email: e.target.value })}
                                 placeholder="Enter Email"
-                                className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all outline-none"
+                                className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-500 transition-all outline-none"
                             />
                         </div>
                         <div>
@@ -586,7 +586,7 @@ function CreateSupplier() {
                                 value={supplierData.contactNumber}
                                 onChange={(e) => setSupplierData({ ...supplierData, contactNumber: e.target.value })}
                                 placeholder="Enter Contact Number"
-                                className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all outline-none"
+                                className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-500 transition-all outline-none"
                             />
                         </div>
                         <div>
@@ -620,7 +620,7 @@ function CreateSupplier() {
                                 value={supplierData.accountNumber}
                                 onChange={(e) => setSupplierData({ ...supplierData, accountNumber: e.target.value })}
                                 placeholder="Enter Account Number"
-                                className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all outline-none"
+                                className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-500 transition-all outline-none"
                             />
                         </div>
                     </div>
@@ -628,7 +628,7 @@ function CreateSupplier() {
                     <div className="flex justify-between items-center mt-6">
                         <button
                             onClick={() => setIsCompanyModalOpen(true)}
-                            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-medium rounded-lg shadow-lg shadow-blue-200 transition-all"
+                            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-medium rounded-lg transition-all"
                         >
                             <CirclePlus size={16} />
                             Add Company
@@ -636,7 +636,7 @@ function CreateSupplier() {
                         <button
                             onClick={handleSubmitSupplier}
                             disabled={isSubmittingSupplier}
-                            className={`flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-medium rounded-lg shadow-lg shadow-emerald-200 transition-all ${isSubmittingSupplier ? 'opacity-50 cursor-not-allowed' : ''
+                            className={`flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-medium rounded-lg transition-all ${isSubmittingSupplier ? 'opacity-50 cursor-not-allowed' : ''
                                 }`}
                         >
                             {isSubmittingSupplier ? 'Creating...' : 'Create Supplier'}
@@ -646,7 +646,7 @@ function CreateSupplier() {
                 </div>
 
                 <div
-                    className={"flex flex-col bg-white rounded-xl h-full p-6 justify-between shadow-lg"}
+                    className={"flex flex-col bg-white rounded-xl h-full p-6 justify-between border border-gray-200"}
                 >
                     <span className="text-lg font-semibold text-gray-800 block mb-4">Supplier List</span>
                     <div className="overflow-y-auto max-h-md md:h-[320px] lg:h-[420px] rounded-lg scrollbar-thin scrollbar-thumb-emerald-300 scrollbar-track-gray-100">
@@ -734,7 +734,7 @@ function CreateSupplier() {
                                         key={idx}
                                         onClick={() => goToPage(page)}
                                         className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${currentPage === page
-                                            ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-200'
+                                            ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white'
                                             : 'text-gray-600 hover:bg-emerald-50'
                                             }`}
                                     >
@@ -764,7 +764,7 @@ function CreateSupplier() {
             {isCompanyModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
                     <div
-                        className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md relative"
+                        className="bg-white rounded-2xl border border-gray-200 p-8 w-full max-w-md relative"
                     >
                         <button
                             onClick={handleCloseCompanyModal}
@@ -793,7 +793,7 @@ function CreateSupplier() {
                                     value={companyData.name}
                                     onChange={(e) => setCompanyData({ ...companyData, name: e.target.value })}
                                     placeholder="Enter Company Name"
-                                    className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none"
+                                    className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-blue-500 transition-all outline-none"
                                 />
                             </div>
                             <div>
