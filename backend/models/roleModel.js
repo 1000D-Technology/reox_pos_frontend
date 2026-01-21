@@ -1,14 +1,11 @@
-const prisma = require('../config/prismaClient');
+const db = require('../config/db');
 
 const Role = {
     // Get all roles from the database
     getAll: async () => {
-        const roles = await prisma.role.findMany({
-            orderBy: {
-                user_role: 'asc'
-            }
-        });
-        return roles;
+        const sql = 'SELECT * FROM role ORDER BY user_role ASC';
+        const [rows] = await db.execute(sql);
+        return rows;
     }
 };
 

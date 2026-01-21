@@ -1,268 +1,191 @@
-const prisma = require('../config/prismaClient');
+const db = require('../config/db');
 
 class Damaged {
     static async addDamagedStock(data) {
+        const connection = await db.getConnection();
         try {
-            return await prisma.$transaction(async (tx) => {
-                // 1. Check current stock level and lock the row for update
-                const stock = await tx.stock.findUnique({
-                    where: { id: data.stock_id },
-                    select: { qty: true }
-                });
+            // Start transaction to ensure data integrity
+            await connection.beginTransaction();
 
-                if (!stock) {
-                    throw new Error("Stock record not found.");
-                }
+            // 1. Check current stock level and lock the row for update
+            const [stockRows] = await connection.execute(
+                'SELECT qty FROM stock WHERE id = ? FOR UPDATE', 
+                [data.stock_id]
+            );
 
-                const currentQty = stock.qty;
+            if (stockRows.length === 0) {
+                throw new Error("Stock record not found.");
+            }
 
-                // 2. Validate if the damaged quantity is more than available stock
-                if (currentQty < data.qty) {
-                    throw new Error(`Insufficient stock. Available quantity is only ${currentQty}`);
-                }
+            const currentQty = stockRows[0].qty;
 
-                // 3. Insert record into the damaged table
-                await tx.damaged.create({
-                    data: {
-                        stock_id: data.stock_id,
-                        qty: data.qty,
-                        reason_id: data.reason_id,
-                        description: data.description,
-                        date: new Date(),
-                        return_status_id: data.status_id
-                    }
-                });
+            // 2. Validate if the damaged quantity is more than available stock
+            if (currentQty < data.qty) {
+                // Throw error if stock is insufficient
+                throw new Error(`Insufficient stock. Available quantity is only ${currentQty}`);
+            }
 
-                // 4. Update (deduct) the quantity in the stock table
-                await tx.stock.update({
-                    where: { id: data.stock_id },
-                    data: {
-                        qty: {
-                            decrement: data.qty
-                        }
-                    }
-                });
+            // 3. Insert record into the damaged table
+            const insertQuery = `
+                INSERT INTO damaged (stock_id, qty, reason_id, description, date, return_status_id) 
+                VALUES (?, ?, ?, ?, CURDATE(), ?)
+            `;
+            await connection.execute(insertQuery, [
+                data.stock_id,
+                data.qty,
+                data.reason_id,
+                data.description,
+                data.status_id
+            ]);
 
-                return { success: true };
-            });
+            // 4. Update (deduct) the quantity in the stock table
+            const updateStockQuery = `UPDATE stock SET qty = qty - ? WHERE id = ?`;
+            await connection.execute(updateStockQuery, [data.qty, data.stock_id]);
+
+            // Commit all changes if successful
+            await connection.commit();
+            return { success: true };
         } catch (error) {
-            throw error;
+            // Rollback changes if any step fails
+            await connection.rollback();
+            throw error; 
+        } finally {
+            // Release connection back to the pool
+            connection.release();
         }
     }
 
     // Get all damaged records for the table display
     static async getAllDamagedRecords() {
-        const damagedRecords = await prisma.damaged.findMany({
-            include: {
-                stock: {
-                    include: {
-                        product_variations: {
-                            include: {
-                                product: {
-                                    include: {
-                                        unit_id_product_unit_idTounit_id: true
-                                    }
-                                }
-                            }
-                        },
-                        batch: true,
-                        grn_items: {
-                            include: {
-                                grn: {
-                                    include: {
-                                        supplier: true
-                                    }
-                                }
-                            },
-                            take: 1
-                        }
-                    }
-                },
-                reason: true,
-                return_status: true
-            },
-            orderBy: {
-                id: 'desc'
-            }
-        });
-
-        return damagedRecords.map(d => {
-            const stock = d.stock;
-            const product = stock.product_variations.product;
-            const supplier = stock.grn_items[0]?.grn?.supplier;
-
-            return {
-                damaged_id: d.id,
-                product_id_code: product.product_code,
-                product_name: product.product_name,
-                unit: product.unit_id_product_unit_idTounit_id?.name,
-                damaged_qty: d.qty,
-                cost_price: stock.cost_price,
-                mrp: stock.mrp,
-                price: stock.rsp,
-                supplier: supplier?.supplier_name,
-                stock_label: stock.batch?.batch_name,
-                damage_reason: d.reason.reason,
-                status: d.return_status.return_status
-            };
-        });
+        const query = `
+            SELECT 
+                d.id AS damaged_id,
+                p.product_code AS product_id_code,
+                p.product_name,
+                u.name AS unit,
+                d.qty AS damaged_qty,
+                s.cost_price,
+                s.mrp,
+                s.rsp AS price,
+                sup.supplier_name AS supplier,
+                b.batch_name AS stock_label,
+                r.reason AS damage_reason,
+                rs.return_status AS status
+            FROM damaged d
+            INNER JOIN stock s ON d.stock_id = s.id
+            INNER JOIN product_variations pv ON s.product_variations_id = pv.id
+            INNER JOIN product p ON pv.product_id = p.id
+            INNER JOIN unit_id u ON p.unit_id = u.idunit_id
+            INNER JOIN batch b ON s.batch_id = b.id
+            INNER JOIN grn_items gi ON s.id = gi.stock_id
+            INNER JOIN grn g ON gi.grn_id = g.id
+            INNER JOIN supplier sup ON g.supplier_id = sup.id
+            INNER JOIN reason r ON d.reason_id = r.id
+            INNER JOIN return_status rs ON d.return_status_id = rs.id
+            ORDER BY d.id DESC
+        `;
+        const [rows] = await db.execute(query);
+        return rows;
     }
 
-    // Fetch filtered records from the damaged table
+    //  Fetch filtered records from the damaged table
     static async searchDamagedRecords(filters) {
-        const damagedRecords = await prisma.damaged.findMany({
-            include: {
-                stock: {
-                    include: {
-                        product_variations: {
-                            include: {
-                                product: {
-                                    include: {
-                                        unit_id_product_unit_idTounit_id: true
-                                    }
-                                }
-                            }
-                        },
-                        batch: true,
-                        grn_items: {
-                            include: {
-                                grn: {
-                                    include: {
-                                        supplier: true
-                                    }
-                                }
-                            },
-                            take: 1
-                        }
-                    }
-                },
-                reason: true,
-                return_status: true
-            },
-            orderBy: {
-                id: 'desc'
-            }
-        });
+        let query = `
+            SELECT 
+                d.id AS damaged_id,
+                p.product_code AS product_id_code,
+                p.product_name,
+                u.name AS unit,
+                d.qty AS damaged_qty,
+                s.cost_price,
+                s.mrp,
+                s.rsp AS price,
+                sup.supplier_name AS supplier,
+                b.batch_name AS stock_label,
+                r.reason AS damage_reason,
+                rs.return_status AS status,
+                d.date
+            FROM damaged d
+            INNER JOIN stock s ON d.stock_id = s.id
+            INNER JOIN product_variations pv ON s.product_variations_id = pv.id
+            INNER JOIN product p ON pv.product_id = p.id
+            INNER JOIN unit_id u ON p.unit_id = u.idunit_id
+            INNER JOIN batch b ON s.batch_id = b.id
+            INNER JOIN grn_items gi ON s.id = gi.stock_id
+            INNER JOIN grn g ON gi.grn_id = g.id
+            INNER JOIN supplier sup ON g.supplier_id = sup.id
+            INNER JOIN reason r ON d.reason_id = r.id
+            INNER JOIN return_status rs ON d.return_status_id = rs.id
+            WHERE 1=1
+        `;
 
-        // Filter in JavaScript
-        let filteredRecords = damagedRecords;
+        const queryParams = [];
 
+        //  Filter by Category ID
         if (filters.category_id) {
-            filteredRecords = filteredRecords.filter(d => 
-                d.stock.product_variations.product.category_id === parseInt(filters.category_id)
-            );
+            query += ` AND p.category_id = ?`;
+            queryParams.push(filters.category_id);
         }
 
+        //  Filter by Supplier ID
         if (filters.supplier_id) {
-            filteredRecords = filteredRecords.filter(d => 
-                d.stock.grn_items.some(gi => gi.grn?.supplier_id === parseInt(filters.supplier_id))
-            );
+            query += ` AND g.supplier_id = ?`;
+            queryParams.push(filters.supplier_id);
         }
 
+        //  Filter by Product (Main Product ID)
         if (filters.product_id) {
-            filteredRecords = filteredRecords.filter(d => 
-                d.stock.product_variations.product.id === parseInt(filters.product_id)
-            );
+            query += ` AND p.id = ?`;
+            queryParams.push(filters.product_id);
         }
 
+        //  Filter by Unit ID
         if (filters.unit_id) {
-            filteredRecords = filteredRecords.filter(d => 
-                d.stock.product_variations.product.unit_id === parseInt(filters.unit_id)
-            );
+            query += ` AND p.unit_id = ?`;
+            queryParams.push(filters.unit_id);
         }
 
+        //  Filter by Date Range (From Date to To Date)
         if (filters.fromDate && filters.toDate) {
-            const fromDate = new Date(filters.fromDate);
-            const toDate = new Date(filters.toDate);
-            filteredRecords = filteredRecords.filter(d => {
-                const damageDate = new Date(d.date);
-                return damageDate >= fromDate && damageDate <= toDate;
-            });
+            query += ` AND d.date BETWEEN ? AND ?`;
+            queryParams.push(filters.fromDate, filters.toDate);
         }
 
-        return filteredRecords.map(d => {
-            const stock = d.stock;
-            const product = stock.product_variations.product;
-            const supplier = stock.grn_items[0]?.grn?.supplier;
+        query += ` ORDER BY d.id DESC`;
 
-            return {
-                damaged_id: d.id,
-                product_id_code: product.product_code,
-                product_name: product.product_name,
-                unit: product.unit_id_product_unit_idTounit_id?.name,
-                damaged_qty: d.qty,
-                cost_price: stock.cost_price,
-                mrp: stock.mrp,
-                price: stock.rsp,
-                supplier: supplier?.supplier_name,
-                stock_label: stock.batch?.batch_name,
-                damage_reason: d.reason.reason,
-                status: d.return_status.return_status,
-                date: d.date
-            };
-        });
+        const [rows] = await db.execute(query, queryParams);
+        return rows;
     }
 
-    // Get summary statistics for the Damaged Stock dashboard
+    //  Get summary statistics for the Damaged Stock dashboard
     static async getDamagedSummary() {
-        const damagedRecords = await prisma.damaged.findMany({
-            include: {
-                stock: {
-                    include: {
-                        product_variations: {
-                            select: {
-                                product_id: true
-                            }
-                        },
-                        grn_items: {
-                            include: {
-                                grn: {
-                                    select: {
-                                        supplier_id: true
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        });
+        const query = `
+            SELECT 
+                -- 1. Total count of damaged records (entries)
+                COUNT(d.id) AS damaged_items_count,
 
-        // Calculate statistics in JavaScript
-        const uniqueProducts = new Set();
-        const uniqueSuppliers = new Set();
-        let totalLossValue = 0;
-        let thisMonthCount = 0;
+                -- 2. Count of unique products affected by damage
+                COUNT(DISTINCT p.id) AS total_products_affected,
 
-        const currentDate = new Date();
-        const currentMonth = currentDate.getMonth();
-        const currentYear = currentDate.getFullYear();
+                -- 3. Total financial loss (Sum of damaged qty * cost price)
+                SUM(d.qty * s.cost_price) AS total_loss_value,
 
-        damagedRecords.forEach(d => {
-            uniqueProducts.add(d.stock.product_variations.product_id);
-            totalLossValue += d.qty * d.stock.cost_price;
+                -- 4. Count of damage reports within the current month
+                COUNT(CASE WHEN MONTH(d.date) = MONTH(CURDATE()) AND YEAR(d.date) = YEAR(CURDATE()) THEN d.id END) AS this_month_count,
 
-            // Check if damage is from current month
-            const damageDate = new Date(d.date);
-            if (damageDate.getMonth() === currentMonth && damageDate.getFullYear() === currentYear) {
-                thisMonthCount++;
-            }
-
-            // Collect unique suppliers
-            d.stock.grn_items.forEach(gi => {
-                if (gi.grn?.supplier_id) {
-                    uniqueSuppliers.add(gi.grn.supplier_id);
-                }
-            });
-        });
-
-        return {
-            damaged_items_count: damagedRecords.length,
-            total_products_affected: uniqueProducts.size,
-            total_loss_value: totalLossValue,
-            this_month_count: thisMonthCount,
-            affected_suppliers_count: uniqueSuppliers.size
-        };
+                -- 5. Count of unique suppliers affected by damaged stock
+                COUNT(DISTINCT g.supplier_id) AS affected_suppliers_count
+            FROM damaged d
+            INNER JOIN stock s ON d.stock_id = s.id
+            INNER JOIN product_variations pv ON s.product_variations_id = pv.id
+            INNER JOIN product p ON pv.product_id = p.id
+            INNER JOIN grn_items gi ON s.id = gi.stock_id
+            INNER JOIN grn g ON gi.grn_id = g.id
+            WHERE 1=1
+        `;
+        
+        const [rows] = await db.execute(query);
+        return rows[0];
     }
 }
 

@@ -1,112 +1,74 @@
-const prisma = require("../config/prismaClient");
+const db = require("../config/db");
 
 class Category {
     /**
      * @desc Create a new category
      */
     static async createCategory(categoryName) {
-        const category = await prisma.category.create({
-            data: { name: categoryName }
-        });
-        return category.idcategory;
+        const query = `INSERT INTO category (name) VALUES (?)`;
+        const [result] = await db.execute(query, [categoryName]);
+        return result.insertId;
     }
 
     /**
      * @desc Get all categories ordered by name
      */
     static async getAllCategory() {
-        const categories = await prisma.category.findMany({
-            orderBy: {
-                created_at: 'desc'
-            }
-        });
-        return categories.map(c => ({
-            id: c.idcategory,
-            name: c.name,
-            created_at: c.created_at ? c.created_at.toISOString().split('T')[0] : null
-        }));
+        const query = `SELECT idcategory AS id, name, DATE_FORMAT(created_at, '%Y-%m-%d') AS created_at FROM category ORDER BY created_at DESC`;
+        const [rows] = await db.execute(query);
+        return rows;
     }
 
     /**
      * @desc Search categories by name
      */
     static async searchCategories(searchTerm) {
-        const categories = await prisma.category.findMany({
-            where: {
-                name: {
-                    contains: searchTerm
-                }
-            },
-            take: 100
-        });
-        return categories.map(c => ({
-            id: c.idcategory,
-            name: c.name,
-            created_at: c.created_at
-        }));
+        const query = "SELECT idcategory AS id, name, created_at FROM category WHERE name LIKE ? LIMIT 100";
+        const [rows] = await db.execute(query, [`%${searchTerm}%`]);
+        return rows;
     }
 
     /**
      * @desc Check if a category name already exists
      */
     static async checkNameExists(name, excludeId = null) {
-        const where = {
-            name: name.trim()
-        };
+        let query = "SELECT idcategory FROM category WHERE name = ?";
+        let params = [name.trim()];
 
         if (excludeId) {
-            where.idcategory = { not: parseInt(excludeId) };
+            query += " AND idcategory != ?";
+            params.push(excludeId);
         }
 
-        const category = await prisma.category.findFirst({ where });
-        return !!category;
+        const [rows] = await db.execute(query, params);
+        return rows.length > 0;
     }
 
     /**
      * @desc Update category name
      */
     static async updateCategory(id, name) {
-        try {
-            await prisma.category.update({
-                where: { idcategory: parseInt(id) },
-                data: { name }
-            });
-            return { affectedRows: 1 };
-        } catch (error) {
-            if (error.code === 'P2025') {
-                return { affectedRows: 0 };
-            }
-            throw error;
-        }
+        const query = `UPDATE category SET name = ? WHERE idcategory = ?`;
+        const [result] = await db.execute(query, [name, id]);
+        return result;
     }
 
     /**
      * @desc Check if category is being used by any product
      */
     static async isCategoryUsed(id) {
-        const product = await prisma.product.findFirst({
-            where: { category_id: parseInt(id) }
-        });
-        return !!product;
+        const query = `SELECT 1 FROM product WHERE category_id = ? LIMIT 1`;
+        const [rows] = await db.execute(query, [id]);
+        return rows.length > 0;
     }
 
     /**
      * @desc Delete category by ID
      */
     static async deleteCategory(id) {
-        try {
-            await prisma.category.delete({
-                where: { idcategory: parseInt(id) }
-            });
-            return { affectedRows: 1 };
-        } catch (error) {
-            if (error.code === 'P2025') {
-                return { affectedRows: 0 };
-            }
-            throw error;
-        }
+        const query = `DELETE FROM category WHERE idcategory = ?`;
+        return await db.execute(query, [id]);
     }
 }
 
 module.exports = Category;
-
