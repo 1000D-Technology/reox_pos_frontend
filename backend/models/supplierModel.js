@@ -2,9 +2,15 @@ const db = require("../config/db");
 
 class Supplier {
     static async checkCompanyExists(companyName) {
-        const query = "SELECT id FROM company WHERE LOWER(company_name) = LOWER(?)";
-        const [rows] = await db.execute(query, [companyName.trim()]);
-        return rows.length > 0;
+        const company = await prisma.company.findFirst({
+            where: {
+                company_name: {
+                    equals: companyName.trim(),
+                    mode: 'insensitive'
+                }
+            }
+        });
+        return !!company;
     }
 
     static async checkCompanyExistsById(companyId) {
