@@ -5,8 +5,7 @@ class Supplier {
         const company = await prisma.company.findFirst({
             where: {
                 company_name: {
-                    equals: companyName.trim(),
-                    mode: 'insensitive'
+                    equals: companyName.trim()
                 }
             }
         });

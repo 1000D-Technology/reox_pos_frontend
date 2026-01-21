@@ -164,6 +164,16 @@ async function main() {
     if (!exists) await prisma.cashier_counters.create({ data: { cashier_counter } });
   }
 
+  // 7. Payment Types (Cash, Card, Cheque, Online)
+  const paymentTypes = ['Cash', 'Card', 'Cheque', 'Online'];
+  for (const pType of paymentTypes) {
+    const exists = await prisma.payment_types.findFirst({ where: { payment_types: pType } });
+    if (!exists) {
+      await prisma.payment_types.create({ data: { payment_types: pType } });
+      console.log(`Created payment type: ${pType}`);
+    }
+  }
+
   console.log('Seeding finished.');
 }
 

@@ -39,7 +39,7 @@ function StockList() {
             label: 'Total Products',
             value: summaryData.totalProducts.value,
             trend: '',
-            color: 'bg-gradient-to-br from-emerald-400 to-emerald-500',
+            color: 'bg-linear-to-br from-emerald-400 to-emerald-500',
             iconColor: 'text-white',
             bgGlow: 'shadow-emerald-200'
         },
@@ -48,7 +48,7 @@ function StockList() {
             label: 'Total Value',
             value: summaryData.totalValue.value,
             trend: '',
-            color: 'bg-gradient-to-br from-purple-400 to-purple-500',
+            color: 'bg-linear-to-br from-purple-400 to-purple-500',
             iconColor: 'text-white',
             bgGlow: 'shadow-purple-200'
         },
@@ -57,7 +57,7 @@ function StockList() {
             label: 'Low Stock Items',
             value: summaryData.lowStock.value,
             trend: '',
-            color: 'bg-gradient-to-br from-red-400 to-red-500',
+            color: 'bg-linear-to-br from-red-400 to-red-500',
             iconColor: 'text-white',
             bgGlow: 'shadow-red-200'
         },
@@ -66,7 +66,7 @@ function StockList() {
             label: 'Total Suppliers',
             value: summaryData.totalSuppliers.value,
             trend: '',
-            color: 'bg-gradient-to-br from-blue-400 to-blue-500',
+            color: 'bg-linear-to-br from-blue-400 to-blue-500',
             iconColor: 'text-white',
             bgGlow: 'shadow-blue-200'
         },
@@ -75,7 +75,7 @@ function StockList() {
             label: 'Categories',
             value: summaryData.totalCategories.value,
             trend: '',
-            color: 'bg-gradient-to-br from-yellow-400 to-yellow-500',
+            color: 'bg-linear-to-br from-yellow-400 to-yellow-500',
             iconColor: 'text-white',
             bgGlow: 'shadow-yellow-200'
         },
@@ -509,7 +509,7 @@ function StockList() {
                         <span className="mx-2">›</span>
                         <span className="text-gray-700 font-medium">Stock List</span>
                     </div>
-                    <h1 className="text-3xl font-semibold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
+                    <h1 className="text-3xl font-semibold bg-linear-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
                         Stock List
                     </h1>
                 </div>
@@ -521,7 +521,7 @@ function StockList() {
                             key={i}
                             className={`flex items-center p-4 space-x-3 transition-all bg-white rounded-2xl shadow-lg hover:shadow-xl ${stat.bgGlow} cursor-pointer group relative overflow-hidden`}
                         >
-                            <div className="absolute inset-0 bg-gradient-to-br from-transparent via-gray-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                            <div className="absolute inset-0 bg-linear-to-br from-transparent via-gray-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
 
                             <div className={`p-3 rounded-full ${stat.color} shadow-md relative z-10`}>
                                 <stat.icon className={`w-6 h-6 ${stat.iconColor}`} />
@@ -603,14 +603,14 @@ function StockList() {
                             <button
                                 onClick={handleSearch}
                                 disabled={isLoadingStock}
-                                className={'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 py-2 rounded-lg flex items-center justify-center shadow-lg shadow-emerald-200 hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed'}>
+                                className={'bg-linear-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 py-2 rounded-lg flex items-center justify-center shadow-lg shadow-emerald-200 hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed'}>
                                 <SearchCheck className={`mr-2 ${isLoadingStock ? 'animate-pulse' : ''}`} size={14} />
                                 {isLoadingStock ? 'Searching...' : 'Search'}
                             </button>
                             <button
                                 onClick={handleClearFilters}
                                 disabled={isLoadingStock}
-                                className={'bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 py-2 rounded-lg flex items-center justify-center shadow-lg shadow-gray-200 hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed'}>
+                                className={'bg-linear-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 py-2 rounded-lg flex items-center justify-center shadow-lg shadow-gray-200 hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed'}>
                                 <RefreshCw className={`mr-2 ${(isLoadingDropdowns || isLoadingStock) ? 'animate-spin' : ''}`} size={14} />
                                 {(isLoadingDropdowns || isLoadingStock) ? 'Refreshing...' : 'Refresh'}
                             </button>
@@ -624,7 +624,7 @@ function StockList() {
                 >
                     <div className="overflow-y-auto max-h-md md:h-[320px] lg:h-[500px] rounded-lg scrollbar-thin scrollbar-thumb-emerald-300 scrollbar-track-gray-100">
                         <table className="min-w-full divide-y divide-gray-200">
-                            <thead className="bg-gradient-to-r from-emerald-500 to-emerald-600 sticky top-0 z-10">
+                            <thead className="bg-linear-to-r from-emerald-500 to-emerald-600 sticky top-0 z-10">
                             <tr>
                                 {[
                                     'Stock ID',
@@ -699,8 +699,8 @@ function StockList() {
                                         <td className="px-6 py-2 whitespace-nowrap">
                                             <span className={`px-3 py-1 text-xs font-semibold rounded-full ${
                                                 parseInt(sale.qty) < 30
-                                                    ? 'bg-gradient-to-r from-red-100 to-red-200 text-red-800'
-                                                    : 'bg-gradient-to-r from-emerald-100 to-emerald-200 text-emerald-800'
+                                                    ? 'bg-linear-to-r from-red-100 to-red-200 text-red-800'
+                                                    : 'bg-linear-to-r from-emerald-100 to-emerald-200 text-emerald-800'
                                             }`}>
                                                 {sale.qty}
                                             </span>
@@ -748,7 +748,7 @@ function StockList() {
                                         key={index}
                                         onClick={() => goToPage(page)}
                                         className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${currentPage === page
-                                            ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-md'
+                                            ? 'bg-linear-to-r from-emerald-500 to-emerald-600 text-white shadow-md'
                                             : 'text-gray-600 hover:bg-emerald-50 hover:text-emerald-600'
                                             }`}
                                     >
@@ -781,17 +781,17 @@ function StockList() {
                 >
                     <button
                         onClick={handleExportExcel}
-                        className={'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 px-6 py-2 font-medium text-white rounded-lg flex gap-2 items-center shadow-lg shadow-emerald-200 hover:shadow-xl transition-all'}>
+                        className={'bg-linear-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 px-6 py-2 font-medium text-white rounded-lg flex gap-2 items-center shadow-lg shadow-emerald-200 hover:shadow-xl transition-all'}>
                         <FileText size={15} />Excel
                     </button>
                     <button
                         onClick={handleExportCSV}
-                        className={'bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 px-6 py-2 font-medium text-white rounded-lg flex gap-2 items-center shadow-lg shadow-yellow-200 hover:shadow-xl transition-all'}>
+                        className={'bg-linear-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 px-6 py-2 font-medium text-white rounded-lg flex gap-2 items-center shadow-lg shadow-yellow-200 hover:shadow-xl transition-all'}>
                         <FileText size={15} />CSV
                     </button>
                     <button
                         onClick={handleExportPDF}
-                        className={'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 px-6 py-2 font-medium text-white rounded-lg flex gap-2 items-center shadow-lg shadow-red-200 hover:shadow-xl transition-all'}>
+                        className={'bg-linear-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 px-6 py-2 font-medium text-white rounded-lg flex gap-2 items-center shadow-lg shadow-red-200 hover:shadow-xl transition-all'}>
                         <FileText size={15} />PDF
                     </button>
                 </div>
