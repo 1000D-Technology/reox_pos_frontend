@@ -44,6 +44,12 @@ class Brand {
         return rows.length > 0;
     }
 
+    static async getIdByName(name) {
+        const query = "SELECT idbrand FROM brand WHERE name = ?";
+        const [rows] = await db.execute(query, [name.trim()]);
+        return rows.length > 0 ? rows[0].idbrand : null;
+    }
+
     /**
      * @desc Update brand name
      */

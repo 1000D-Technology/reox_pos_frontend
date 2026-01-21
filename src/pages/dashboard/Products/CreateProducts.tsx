@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, Plus, Trash2, Package, X, Loader2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Trash2, Package, X, Loader2, Upload, Download } from "lucide-react";
 import { useEffect, useState } from "react";
 import toast, { Toaster } from 'react-hot-toast';
 import TypeableSelect from "../../../components/TypeableSelect.tsx";
@@ -216,6 +216,63 @@ function CreateProducts() {
             toast.error(error.response?.data?.message || `Failed to create ${type}`);
         } finally {
             setIsAddingItem(false);
+        }
+    };
+
+    const [isImporting, setIsImporting] = useState(false);
+
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files.length > 0) {
+            const file = e.target.files[0];
+            const formData = new FormData();
+            formData.append('file', file);
+
+            setIsImporting(true);
+            try {
+                // @ts-ignore
+                const response = await productService.importProducts(formData);
+                const data = response.data;
+                if (data.success) {
+                    toast.success(`Imported: ${data.data.successCount}, Skipped: ${data.data.skippedCount}`);
+                    if (data.data.errors.length > 0) {
+                        data.data.errors.forEach((err: any) => {
+                            toast.error(`${err.name}: ${err.error}`, { duration: 5000 });
+                        });
+                    }
+                    fetchProducts();
+                } else {
+                    toast.error(data.message || 'Import failed');
+                }
+            } catch (error: any) {
+                console.error("Import error:", error);
+                toast.error(error.response?.data?.message || 'Failed to import products');
+            } finally {
+                setIsImporting(false);
+                // Clear input
+                e.target.value = '';
+            }
+        }
+    };
+
+    const handleDownloadTemplate = () => {
+        const headers = ['Name', 'Code', 'Category', 'Brand', 'Unit', 'Type', 'Barcode', 'Color', 'Size', 'Storage'];
+        const exampleRow = ['iPhone 14', 'IP14', 'Electronics', 'Apple', 'Piece', 'Mobile', '123456789012', 'Blue', 'N/A', '128GB'];
+
+        const csvContent = [
+            headers.join(','),
+            exampleRow.join(',')
+        ].join('\n');
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        if (link.download !== undefined) {
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', 'product_import_template.csv');
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         }
     };
 
@@ -505,15 +562,41 @@ function CreateProducts() {
                 }}
             />
             <div className={"flex flex-col gap-4 h-full"}>
-                <div>
-                    <div className="text-sm text-gray-400 flex items-center">
-                        <span>Products</span>
-                        <span className="mx-2">›</span>
-                        <span className="text-gray-700 font-medium">Create Product</span>
+                <div className="flex justify-between items-center">
+                    <div>
+                        <div className="text-sm text-gray-400 flex items-center">
+                            <span>Products</span>
+                            <span className="mx-2">›</span>
+                            <span className="text-gray-700 font-medium">Create Product</span>
+                        </div>
+                        <h1 className="text-3xl font-semibold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
+                            Create New Product
+                        </h1>
                     </div>
-                    <h1 className="text-3xl font-semibold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
-                        Create New Product
-                    </h1>
+                    <div className="flex gap-2">
+                        <button
+                            onClick={handleDownloadTemplate}
+                            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 hover:text-emerald-600 font-medium rounded-lg shadow-sm transition-all"
+                            title="Download CSV Template"
+                        >
+                            <Download size={18} />
+                            <span>Template</span>
+                        </button>
+                        <input
+                            type="file"
+                            accept=".xlsx, .xls, .csv"
+                            onChange={handleFileChange}
+                            className="hidden"
+                            id="product-import"
+                        />
+                        <label
+                            htmlFor="product-import"
+                            className={`flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 hover:text-emerald-600 font-medium rounded-lg shadow-sm transition-all cursor-pointer ${isImporting ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        >
+                            {isImporting ? <Loader2 size={18} className="animate-spin text-emerald-600" /> : <Upload size={18} />}
+                            <span>{isImporting ? 'Importing...' : 'Import Products'}</span>
+                        </label>
+                    </div>
                 </div>
 
                 <div
