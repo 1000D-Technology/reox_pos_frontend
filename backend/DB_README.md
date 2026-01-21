@@ -10,7 +10,7 @@ This guide explains how to configure, generate, and seed the database for the Re
 
 ## 2. Environment Configuration
 
-Ensure your `backend/.env` file is configured correctly. The application and seeds rely on these individual variables to construct the valid connection string properly.
+Ensure your `backend/.env` file is configured correctly. The application and our custom Prisma scripts rely on these individual variables to construct the valid connection string properly. **You do NOT need a `DATABASE_URL` variable in your `.env` file.**
 
 ```ini
 DB_HOST=localhost
@@ -21,11 +21,21 @@ DB_PORT=3306
 PORT=5000
 ```
 
-> **Note:** Password encoding is handled automatically by the application code. You don't need to manually encode special characters.
+> **Note:** Password encoding and URL construction are handled automatically by our scripts.
 
 ## 3. Database Generation
 
 You have two options for setting up the database: **Importing a Full Dump** (Recommended for dev) or **Syncing Schema** (Fresh start).
+
+**IMPORTANT Usage Note:**
+Since we do not use `DATABASE_URL` in `.env`, you cannot run `npx prisma` commands directly. Instead, use the provided npm scripts which handle authentication for you.
+
+| Standard Command      | Reox Replacement Command  |
+| :-------------------- | :------------------------ |
+| `npx prisma db push`  | `npm run prisma:push`     |
+| `npx prisma generate` | `npm run prisma:generate` |
+| `npx prisma studio`   | `npm run prisma:studio`   |
+| `npx prisma migrate`  | `npm run prisma:migrate`  |
 
 ### Option A: Import Full Database Dump (Production-like Data)
 
@@ -55,8 +65,7 @@ mysql -u root -p reox < full_db_dump_compatible.sql
 After importing, run this to ensure Prisma is in sync:
 
 ```bash
-npx prisma db pull
-npx prisma generate
+npm run prisma:generate
 ```
 
 ### Option B: Fresh Schema Setup (Using Prisma)
@@ -64,8 +73,8 @@ npx prisma generate
 If you just want the table structure defined in `prisma/schema.prisma` without the data:
 
 ```bash
-npx prisma db push
-npx prisma generate
+npm run prisma:push
+npm run prisma:generate
 ```
 
 ## 4. Seeding the Database
@@ -77,25 +86,28 @@ To populate the database with initial sample data (Roles, Statuses, Default Admi
 Run:
 
 ```bash
-npx prisma db seed
+npm run seed
 ```
+
+_(Or `node prisma/seed.js`)_
 
 **What gets seeded?**
 
-- **Roles:** Admin, Cashier, Manager
-- **Statuses:** Active, Inactive, Suspended
-- **User:** Super Admin (Email: `admin@reox.com`, Password: `123456`)
-- **Product Metadata:** Categories, Brands, Units, etc.
-- **Sample Product:** "Sample T-Shirt"
+- **Payment Types:** Cash, Cheque, Online, Card
+- **Roles:** Admin, Cashier, User
+- **Statuses:** Active, Inactive, etc.
+- **Reasons:** Transit damage, Customer return, etc.
+- **Banks:** Bank of Ceylon, People's Bank, etc.
 
 ## 5. Typical Workflow
 
 1.  **Clone/Pull latest code.**
 2.  **Install dependencies:** `npm install`
-3.  **Generate Client:** `npx prisma generate`
+3.  **Generate Client:** `npm run prisma:generate`
 4.  **Start Server:** `node index.js` (or `npm run dev`)
 
 ## Troubleshooting
 
-- **Connection Errors:** Double-check `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, and `DB_NAME` in `.env`. Password encoding is handled automatically.
-- **Prisma Client Errors:** If you change `schema.prisma` or the database structure, ANYTIME, you must run `npx prisma generate` to update the client.
+- **Connection Errors:** Double-check `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, and `DB_NAME` in `.env`.
+- **Prisma Client Errors:** If you change `schema.prisma` or the database structure, ANYTIME, you must run `npm run prisma:generate` to update the client.
+- **"Environment variable not found: DATABASE_URL"**: This means you tried running `npx prisma` directly. Use `npm run prisma:xxx` instead.
