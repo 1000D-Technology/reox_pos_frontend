@@ -1,6 +1,8 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Package, Plus, Minus, ArrowRightLeft, Check } from 'lucide-react';
 import { useState } from 'react';
+import { posService } from '../../services/posService';
+import toast from 'react-hot-toast';
 
 interface Product {
     id: number;
@@ -35,7 +37,7 @@ export const BulkLooseModal = ({ isOpen, onClose, products }: BulkLooseModalProp
     const [transferComplete, setTransferComplete] = useState(false);
 
     const bulkProducts = products.filter(p => p.isBulk);
-    const looseProducts = products.filter(p => !p.isBulk);
+    const looseProducts = products;
 
     const bulkProductOptions: SelectOption[] = bulkProducts.map(p => ({
         id: p.id,
@@ -52,31 +54,42 @@ export const BulkLooseModal = ({ isOpen, onClose, products }: BulkLooseModalProp
     const handleBulkLooseTransfer = async () => {
         if (!selectedBulkProduct || !selectedLooseProduct) return;
 
+        if (bulkQuantity <= 0 || looseQuantity <= 0) {
+            toast.error('Quantities must be greater than 0');
+            return;
+        }
+
         setIsTransferring(true);
+        try {
+            const totalLooseToAdd = bulkQuantity * looseQuantity;
+            const response = await posService.convertBulkToLoose({
+                bulkStockId: selectedBulkProduct.id,
+                looseStockId: selectedLooseProduct.id,
+                deductQty: bulkQuantity,
+                addQty: totalLooseToAdd
+            });
 
-        // Simulate transfer process
-        await new Promise(resolve => setTimeout(resolve, 2000));
+            if (response.data?.success) {
+                setTransferComplete(true);
+                toast.success('Stock transferred successfully!');
 
-        console.log('Transfer:', {
-            from: selectedBulkProduct,
-            to: selectedLooseProduct,
-            bulkQty: bulkQuantity,
-            looseQty: looseQuantity,
-            total: bulkQuantity * looseQuantity
-        });
-
-        setTransferComplete(true);
-        setIsTransferring(false);
-
-        // Reset after showing success
-        setTimeout(() => {
-            setTransferComplete(false);
-            setSelectedBulkProduct(null);
-            setSelectedLooseProduct(null);
-            setBulkQuantity(1);
-            setLooseQuantity(1);
-            onClose();
-        }, 1500);
+                setTimeout(() => {
+                    setTransferComplete(false);
+                    setSelectedBulkProduct(null);
+                    setSelectedLooseProduct(null);
+                    setBulkQuantity(1);
+                    setLooseQuantity(1);
+                    onClose();
+                    window.location.reload(); // Simple way to refresh data for now
+                }, 1500);
+            }
+        } catch (error: any) {
+            console.error('Transfer failed:', error);
+            const msg = error.response?.data?.message || 'Transfer failed';
+            toast.error(msg);
+        } finally {
+            setIsTransferring(false);
+        }
     };
 
     const handleClose = () => {
@@ -108,7 +121,7 @@ export const BulkLooseModal = ({ isOpen, onClose, products }: BulkLooseModalProp
                         onClick={(e) => e.stopPropagation()}
                     >
                         {/* Header */}
-                        <div className="sticky top-0 bg-gradient-to-r from-purple-600 to-purple-700 text-white p-4 rounded-t-2xl flex items-center justify-between">
+                        <div className="sticky top-0 bg-linear-to-r from-purple-600 to-purple-700 text-white p-4 rounded-t-2xl flex items-center justify-between">
                             <div className="flex items-center gap-3">
                                 <ArrowRightLeft className="w-6 h-6" />
                                 <div>
@@ -171,7 +184,7 @@ export const BulkLooseModal = ({ isOpen, onClose, products }: BulkLooseModalProp
                                 <label className="text-sm font-semibold text-gray-700">Bulk Quantity</label>
                                 <div className="flex items-center gap-2">
                                     <button
-                                        onClick={() => setBulkQuantity(Math.max(1, bulkQuantity - 1))}
+                                        onClick={() => setBulkQuantity(Math.max(0, bulkQuantity - 1))}
                                         disabled={isTransferring || !selectedBulkProduct}
                                         className="p-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
@@ -180,7 +193,7 @@ export const BulkLooseModal = ({ isOpen, onClose, products }: BulkLooseModalProp
                                     <input
                                         type="number"
                                         value={bulkQuantity}
-                                        onChange={(e) => setBulkQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                                        onChange={(e) => setBulkQuantity(Math.max(0, parseInt(e.target.value) || 0))}
                                         disabled={isTransferring || !selectedBulkProduct}
                                         className="flex-1 px-4 py-2 text-center text-lg font-semibold border-2 border-gray-200 rounded-lg focus:border-purple-400 focus:outline-none disabled:opacity-50"
                                     />
@@ -265,7 +278,7 @@ export const BulkLooseModal = ({ isOpen, onClose, products }: BulkLooseModalProp
                                 <label className="text-sm font-semibold text-gray-700">Loose Quantity (per bulk unit)</label>
                                 <div className="flex items-center gap-2">
                                     <button
-                                        onClick={() => setLooseQuantity(Math.max(1, looseQuantity - 1))}
+                                        onClick={() => setLooseQuantity(Math.max(0, looseQuantity - 1))}
                                         disabled={isTransferring || !selectedLooseProduct}
                                         className="p-2 bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200 disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
@@ -274,7 +287,7 @@ export const BulkLooseModal = ({ isOpen, onClose, products }: BulkLooseModalProp
                                     <input
                                         type="number"
                                         value={looseQuantity}
-                                        onChange={(e) => setLooseQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                                        onChange={(e) => setLooseQuantity(Math.max(0, parseInt(e.target.value) || 0))}
                                         disabled={isTransferring || !selectedLooseProduct}
                                         className="flex-1 px-4 py-2 text-center text-lg font-semibold border-2 border-gray-200 rounded-lg focus:border-emerald-400 focus:outline-none disabled:opacity-50"
                                     />
@@ -295,7 +308,7 @@ export const BulkLooseModal = ({ isOpen, onClose, products }: BulkLooseModalProp
                             <button
                                 onClick={handleBulkLooseTransfer}
                                 disabled={!selectedBulkProduct || !selectedLooseProduct || isTransferring || transferComplete}
-                                className="w-full py-3 bg-gradient-to-r from-purple-600 to-emerald-600 text-white font-semibold rounded-xl hover:from-purple-700 hover:to-emerald-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                className="w-full py-3 bg-linear-to-r from-purple-600 to-emerald-600 text-white font-semibold rounded-xl hover:from-purple-700 hover:to-emerald-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                             >
                                 {isTransferring ? (
                                     <>

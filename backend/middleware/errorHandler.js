@@ -89,7 +89,7 @@ const globalErrorHandler = (err, req, res, next) => {
         });
     }
 
-    if (process.env.NODE_ENV === 'development') {
+    if (process.env.NODE_ENV === 'development' || !process.env.NODE_ENV) {
         res.status(err.statusCode).json({
             success: false,
             status: err.status,
@@ -109,7 +109,9 @@ const globalErrorHandler = (err, req, res, next) => {
             res.status(500).json({
                 success: false,
                 status: 'error',
-                message: 'Something went wrong!'
+                message: 'Something went wrong!',
+                // Optionally include message even in production for now if requested
+                // originalError: err.message 
             });
         }
     }

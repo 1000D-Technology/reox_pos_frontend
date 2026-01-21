@@ -1,5 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, FileText, Printer, Download, Check, Banknote, CreditCard, Wallet } from 'lucide-react';
+import { X, FileText, Check, Banknote, CreditCard, Landmark } from 'lucide-react';
+import { useEffect } from 'react';
+
 
 interface CartItem {
     id: number;
@@ -13,7 +15,6 @@ interface Customer {
     id: number;
     name: string;
     contact: string;
-    credit: number;
 }
 
 interface PaymentAmount {
@@ -30,12 +31,13 @@ interface BillModalProps {
     discount: number;
     total: number;
     paymentAmounts: PaymentAmount[];
+    onComplete: () => void;
 }
 
 const paymentMethods = [
     { id: 'cash', label: 'Cash', icon: Banknote },
     { id: 'card', label: 'Card', icon: CreditCard },
-    { id: 'credit', label: 'Credit', icon: Wallet },
+    { id: 'bank', label: 'Bank Deposit', icon: Landmark },
 ];
 
 export const BillModal = ({
@@ -46,7 +48,8 @@ export const BillModal = ({
     subtotal,
     discount,
     total,
-    paymentAmounts
+    paymentAmounts,
+    onComplete
 }: BillModalProps) => {
     const calculateItemTotal = (item: CartItem) => {
         const itemTotal = item.price * item.quantity;
@@ -57,6 +60,21 @@ export const BillModal = ({
     const discountAmount = (subtotal * discount) / 100;
     const totalPaid = paymentAmounts.reduce((sum, p) => sum + p.amount, 0);
     const balanceAmount = totalPaid - total;
+
+    // Handle Enter key to complete invoice
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (isOpen && e.key === 'Enter') {
+                e.preventDefault();
+                onComplete();
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [isOpen, onComplete]);
+
+
 
     return (
         <AnimatePresence>
@@ -146,7 +164,7 @@ export const BillModal = ({
                         )}
 
                         {/* Bill Summary */}
-                        <div className="mb-6 p-4 bg-gradient-to-br from-emerald-600 to-emerald-700 rounded-xl text-white">
+                        <div className="mb-6 p-4 bg-linear-to-br from-emerald-600 to-emerald-700 rounded-xl text-white">
                             <div className="space-y-2">
                                 <div className="flex justify-between">
                                     <span>Subtotal:</span>
@@ -177,20 +195,12 @@ export const BillModal = ({
 
                         {/* Action Buttons */}
                         <div className="flex gap-3">
-                            <button className="flex-1 flex items-center justify-center gap-2 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-semibold transition-colors">
-                                <Printer className="w-4 h-4" />
-                                Print
-                            </button>
-                            <button className="flex-1 flex items-center justify-center gap-2 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-semibold transition-colors">
-                                <Download className="w-4 h-4" />
-                                Download
-                            </button>
                             <button
-                                onClick={onClose}
-                                className="flex-1 flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-xl font-semibold hover:shadow-lg transition-all"
+                                onClick={onComplete}
+                                className="flex-1 flex items-center justify-center gap-2 py-3 bg-linear-to-r from-emerald-500 to-emerald-600 text-white rounded-xl font-semibold hover:shadow-lg transition-all"
                             >
                                 <Check className="w-4 h-4" />
-                                Complete
+                                Complete (Enter)
                             </button>
                         </div>
                     </motion.div>

@@ -81,7 +81,7 @@ model creadit_book {
   invoice_id Int
   balance    Float
   status_id  Int
-  created_at DateTime @db.Date
+  created_at DateTime @db.DateTime(0)
   invoice    invoice  @relation(fields: [invoice_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_creadit_book_invoice1")
   status     status   @relation(fields: [status_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_creadit_book_status1")
 
@@ -94,7 +94,6 @@ model customer {
   name           String    @db.VarChar(100)
   contact        String    @db.VarChar(10)
   email          String?   @db.VarChar(45)
-  credit_balance String?   @db.VarChar(45)
   status_id      Int
   created_at     DateTime  @default(now()) @db.DateTime(0)
   status         status    @relation(fields: [status_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_customer_status1")
@@ -178,7 +177,8 @@ model invoice {
   discount         Float
   extra_discount   Float
   total            Float
-  created_at       DateTime        @db.Date
+  refunded_amount  Float           @default(0)
+  created_at       DateTime        @db.DateTime(0)
   cash_sessions_id Int
   invoice_type_id  Int
   creadit_book     creadit_book[]
@@ -186,6 +186,7 @@ model invoice {
   invoice_type     invoice_type    @relation(fields: [invoice_type_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_invoice_invoice_type1")
   invoice_items    invoice_items[]
   return_goods     return_goods[]
+  invoice_payments invoice_payments[]
 
   @@index([cash_sessions_id], map: "fk_invoice_cash_sessions1_idx")
   @@index([customer_id], map: "fk_invoice_customer1_idx")
@@ -200,6 +201,7 @@ model invoice_items {
   discount_percentage Float
   discount_amount     Float
   qty                 Float
+  returned_qty        Float   @default(0)
   invoice             invoice @relation(fields: [invoice_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_inoice_items_invoice1")
   stock               stock   @relation(fields: [stock_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_inoice_items_stock1")
 
@@ -227,10 +229,24 @@ model money_exchange {
   @@index([exchange_type_id1], map: "fk_money_exchange_exchange_type1_idx1")
 }
 
+model invoice_payments {
+  id               Int           @id @default(autoincrement())
+  invoice_id       Int
+  payment_types_id Int
+  amount           Float
+  payment_date     DateTime      @default(now()) @db.DateTime(0)
+  invoice          invoice       @relation(fields: [invoice_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_invoice_payments_invoice1")
+  payment_types    payment_types @relation(fields: [payment_types_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_invoice_payments_payment_types1")
+
+  @@index([invoice_id], map: "fk_invoice_payments_invoice1_idx")
+  @@index([payment_types_id], map: "fk_invoice_payments_payment_types1_idx")
+}
+
 model payment_types {
-  id            Int            @id @default(autoincrement())
-  payment_types String         @db.VarChar(45)
-  grn_payments  grn_payments[]
+  id               Int                @id @default(autoincrement())
+  payment_types    String             @db.VarChar(45)
+  grn_payments     grn_payments[]
+  invoice_payments invoice_payments[]
 }
 
 model product {
