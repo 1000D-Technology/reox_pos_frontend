@@ -535,6 +535,8 @@ const POSInterface = () => {
                     total={total}
                     cartItemsCount={itemsCount}
                     onCompletePayment={completePayment}
+                    customers={customers}
+                    customersLoading={customersLoading}
                 />
             </div>
 
