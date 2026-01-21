@@ -1,74 +1,112 @@
-const db = require("../config/db");
+const prisma = require("../config/prismaClient");
 
 class Brand {
     /**
      * @desc Create a new brand
      */
     static async createBrand(brandName) {
-        const query = `INSERT INTO brand (name) VALUES (?)`;
-        const [result] = await db.execute(query, [brandName]);
-        return result.insertId;
+        const brand = await prisma.brand.create({
+            data: { name: brandName }
+        });
+        return brand.idbrand;
     }
 
     /**
      * @desc Get all brands ordered by name
      */
     static async getAllBrand() {
-        const query = `SELECT idbrand AS id, name, DATE_FORMAT(created_at, '%Y-%m-%d') AS created_at FROM brand ORDER BY created_at DESC`;
-        const [rows] = await db.execute(query);
-        return rows;
+        const brands = await prisma.brand.findMany({
+            orderBy: {
+                created_at: 'desc'
+            }
+        });
+        return brands.map(b => ({
+            id: b.idbrand,
+            name: b.name,
+            created_at: b.created_at ? b.created_at.toISOString().split('T')[0] : null
+        }));
     }
 
     /**
      * @desc Search brands by name
      */
     static async searchBrands(searchTerm) {
-        const query = "SELECT idbrand AS id, name, created_at FROM brand WHERE name LIKE ? LIMIT 100";
-        const [rows] = await db.execute(query, [`%${searchTerm}%`]);
-        return rows;
+        const brands = await prisma.brand.findMany({
+            where: {
+                name: {
+                    contains: searchTerm
+                }
+            },
+            take: 100
+        });
+        return brands.map(b => ({
+            id: b.idbrand,
+            name: b.name,
+            created_at: b.created_at
+        }));
     }
 
     /**
      * @desc Check if a brand name already exists (for duplicates)
      */
     static async checkNameExists(name, excludeId = null) {
-        let query = "SELECT idbrand FROM brand WHERE name = ?";
-        let params = [name.trim()];
+        const where = {
+            name: name.trim()
+        };
 
         if (excludeId) {
-            query += " AND idbrand != ?";
-            params.push(excludeId);
+            where.idbrand = { not: parseInt(excludeId) };
         }
 
-        const [rows] = await db.execute(query, params);
-        return rows.length > 0;
+        const brand = await prisma.brand.findFirst({ where });
+        return !!brand;
     }
 
     /**
      * @desc Update brand name
      */
     static async updateBrand(id, name) {
-        const query = `UPDATE brand SET name = ? WHERE idbrand = ?`;
-        const [result] = await db.execute(query, [name, id]);
-        return result;
+        try {
+            await prisma.brand.update({
+                where: { idbrand: parseInt(id) },
+                data: { name }
+            });
+            return { affectedRows: 1 };
+        } catch (error) {
+            if (error.code === 'P2025') {
+                return { affectedRows: 0 };
+            }
+            throw error;
+        }
     }
 
     /**
      * @desc Check if brand is being used by any product
      */
     static async isBrandUsed(id) {
-        const query = `SELECT 1 FROM product WHERE brand_id = ? LIMIT 1`;
-        const [rows] = await db.execute(query, [id]);
-        return rows.length > 0;
+        const product = await prisma.product.findFirst({
+            where: { brand_id: parseInt(id) }
+        });
+        return !!product;
     }
 
     /**
      * @desc Delete brand by ID
      */
     static async deleteBrand(id) {
-        const query = `DELETE FROM brand WHERE idbrand = ?`;
-        return await db.execute(query, [id]);
+        try {
+            await prisma.brand.delete({
+                where: { idbrand: parseInt(id) }
+            });
+            return { affectedRows: 1 };
+        } catch (error) {
+            if (error.code === 'P2025') {
+                return { affectedRows: 0 };
+            }
+            throw error;
+        }
     }
 }
 
 module.exports = Brand;
+
