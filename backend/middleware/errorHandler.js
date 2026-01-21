@@ -106,10 +106,13 @@ const globalErrorHandler = (err, req, res, next) => {
                 message: err.message
             });
         } else {
+            // TEMPORARY DEBUG: Return detailed error even in production
             res.status(500).json({
                 success: false,
                 status: 'error',
-                message: 'Something went wrong!'
+                message: err.message,
+                stack: err.stack,
+                error: err
             });
         }
     }
