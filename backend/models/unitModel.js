@@ -1,73 +1,110 @@
-const db = require("../config/db");
+const prisma = require("../config/prismaClient");
 
 class Unit {
     /**
      * @desc Create a new unit
      */
     static async createUnit(unitName) {
-        const query = `INSERT INTO unit_id (name) VALUES (?)`;
-        const [result] = await db.execute(query, [unitName]);
-        return result.insertId;
+        const unit = await prisma.unit_id.create({
+            data: { name: unitName }
+        });
+        return unit.idunit_id;
     }
 
     /**
      * @desc Get all units ordered by name
      */
     static async getAllUnits() {
-        const query = `SELECT idunit_id AS id, name, created_at FROM unit_id ORDER BY created_at DESC`;
-        const [rows] = await db.execute(query);
-        return rows;
+        const units = await prisma.unit_id.findMany({
+            orderBy: {
+                created_at: 'desc'
+            }
+        });
+        return units.map(u => ({
+            id: u.idunit_id,
+            name: u.name,
+            created_at: u.created_at
+        }));
     }
 
     /**
      * @desc Search units by name
      */
     static async searchUnits(searchTerm) {
-        const query = "SELECT idunit_id AS id, name, created_at FROM unit_id WHERE name LIKE ? LIMIT 100";
-        const [rows] = await db.execute(query, [`%${searchTerm}%`]);
-        return rows;
+        const units = await prisma.unit_id.findMany({
+            where: {
+                name: {
+                    contains: searchTerm
+                }
+            },
+            take: 100
+        });
+        return units.map(u => ({
+            id: u.idunit_id,
+            name: u.name,
+            created_at: u.created_at
+        }));
     }
 
     /**
      * @desc Check if a unit name exists (for duplicates)
      */
     static async checkNameExists(name, excludeId = null) {
-        let query = "SELECT idunit_id FROM unit_id WHERE name = ?";
-        let params = [name.trim()];
+        const where = {
+            name: name.trim()
+        };
 
         if (excludeId) {
-            query += " AND idunit_id != ?";
-            params.push(excludeId);
+            where.idunit_id = { not: parseInt(excludeId) };
         }
 
-        const [rows] = await db.execute(query, params);
-        return rows.length > 0;
+        const unit = await prisma.unit_id.findFirst({ where });
+        return !!unit;
     }
 
     /**
      * @desc Update unit name by ID
      */
     static async updateUnit(id, name) {
-        const query = `UPDATE unit_id SET name = ? WHERE idunit_id = ?`;
-        const [result] = await db.execute(query, [name, id]);
-        return result;
+        try {
+            await prisma.unit_id.update({
+                where: { idunit_id: parseInt(id) },
+                data: { name }
+            });
+            return { affectedRows: 1 };
+        } catch (error) {
+            if (error.code === 'P2025') {
+                return { affectedRows: 0 };
+            }
+            throw error;
+        }
     }
 
     /**
      * @desc Check if unit is linked to products before deletion
      */
     static async isUnitUsed(id) {
-        const query = `SELECT 1 FROM product WHERE unit_id = ? LIMIT 1`;
-        const [rows] = await db.execute(query, [id]);
-        return rows.length > 0;
+        const product = await prisma.product.findFirst({
+            where: { unit_id: parseInt(id) }
+        });
+        return !!product;
     }
 
     /**
      * @desc Delete unit by ID
      */
     static async deleteUnit(id) {
-        const query = `DELETE FROM unit_id WHERE idunit_id = ?`;
-        return await db.execute(query, [id]);
+        try {
+            await prisma.unit_id.delete({
+                where: { idunit_id: parseInt(id) }
+            });
+            return { affectedRows: 1 };
+        } catch (error) {
+            if (error.code === 'P2025') {
+                return { affectedRows: 0 };
+            }
+            throw error;
+        }
     }
 }
 
