@@ -1,12 +1,13 @@
-const db = require("../config/db");
+const prisma = require("../config/prismaClient");
 
 class PaymentType {
     static async getPaymentType() {
-        const [rows] = await db.execute(
-            "SELECT id, payment_types FROM payment_types ORDER BY payment_types ASC"
-        );
-
-        return rows;
+        const paymentTypes = await prisma.payment_types.findMany({
+            orderBy: {
+                payment_types: 'asc'
+            }
+        });
+        return paymentTypes;
     }
 }
 

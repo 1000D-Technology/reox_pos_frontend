@@ -1,24 +1,47 @@
-const pool = require('../config/db');
+const prisma = require('../config/prismaClient');
 
 const cashSessionModel = {
     async checkActiveCashSession(userId, counterCode) {
         try {
             console.log('Checking session for:', { userId, counterCode });
 
-            const [rows] = await pool.query(
-                `SELECT cs.id, cs.opening_balance, cc.cashier_counter
-                 FROM cash_sessions cs
-                          JOIN cashier_counters cc ON cs.cashier_counters_id = cc.id
-                 WHERE cs.user_id = ?
-                   AND cc.cashier_counter = ?
-                   AND DATE(cs.opening_date_time) = CURDATE()
-                   AND cs.cash_status_id = 1
-                     LIMIT 1`,
-                [userId, counterCode]
-            );
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const tomorrow = new Date(today);
+            tomorrow.setDate(tomorrow.getDate() + 1);
 
-            console.log('Found session:', rows.length > 0 ? rows[0] : 'No session');
-            return rows.length > 0 ? rows[0] : null;
+            const session = await prisma.cash_sessions.findFirst({
+                where: {
+                    user_id: userId,
+                    cashier_counters: {
+                        cashier_counter: counterCode
+                    },
+                    opening_date_time: {
+                        gte: today,
+                        lt: tomorrow
+                    },
+                    cash_status_id: 1
+                },
+                include: {
+                    cashier_counters: {
+                        select: {
+                            cashier_counter: true
+                        }
+                    }
+                }
+            });
+
+            console.log('Found session:', session ? session : 'No session');
+            
+            if (session) {
+                return {
+                    id: session.id,
+                    opening_balance: session.opening_balance,
+                    cashier_counter: session.cashier_counters.cashier_counter
+                };
+            }
+            
+            return null;
         } catch (error) {
             console.error('Error checking cash session:', error);
             throw error;
@@ -27,10 +50,16 @@ const cashSessionModel = {
 
     async getCashierCounters() {
         try {
-            const [rows] = await pool.query(
-                'SELECT id, cashier_counter FROM cashier_counters ORDER BY cashier_counter'
-            );
-            return rows;
+            const counters = await prisma.cashier_counters.findMany({
+                select: {
+                    id: true,
+                    cashier_counter: true
+                },
+                orderBy: {
+                    cashier_counter: 'asc'
+                }
+            });
+            return counters;
         } catch (error) {
             console.error('Error fetching cashier counters:', error);
             throw error;
@@ -39,31 +68,19 @@ const cashSessionModel = {
 
     async createCashSession(session) {
         try {
-            const now = new Date();
-            const mysqlDatetime = now.getFullYear() + '-' +
-                String(now.getMonth() + 1).padStart(2, '0') + '-' +
-                String(now.getDate()).padStart(2, '0') + ' ' +
-                String(now.getHours()).padStart(2, '0') + ':' +
-                String(now.getMinutes()).padStart(2, '0') + ':' +
-                String(now.getSeconds()).padStart(2, '0');
-
-            const [result] = await pool.query(
-                `INSERT INTO cash_sessions
-                 (opening_date_time, user_id, opening_balance, cash_total, card_total,
-                  bank_total, cashier_counters_id, cash_status_id)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-                [
-                    mysqlDatetime,
-                    session.user_id,
-                    session.opening_balance,
-                    session.cash_total,
-                    session.card_total,
-                    session.bank_total,
-                    session.cashier_counter_id,
-                    session.cash_status_id
-                ]
-            );
-            return result.insertId;
+            const result = await prisma.cash_sessions.create({
+                data: {
+                    opening_date_time: new Date(),
+                    user_id: session.user_id,
+                    opening_balance: session.opening_balance,
+                    cash_total: session.cash_total,
+                    card_total: session.card_total,
+                    bank_total: session.bank_total,
+                    cashier_counters_id: session.cashier_counter_id,
+                    cash_status_id: session.cash_status_id
+                }
+            });
+            return result.id;
         } catch (error) {
             console.error('Error creating cash session:', error);
             throw error;

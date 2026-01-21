@@ -1,15 +1,21 @@
-const db = require('../config/db'); 
+const prisma = require('../config/prismaClient'); 
 
 class Reason {
     static async getAllReasons() {
-        const query = 'SELECT id, reason FROM reason ORDER BY id';
-        const [rows] = await db.execute(query);
-        return rows;
+        const reasons = await prisma.reason.findMany({
+            orderBy: {
+                id: 'asc'
+            }
+        });
+        return reasons;
     }
     
     static async createReason(reasonText) {
-        const query = 'INSERT INTO reason (reason) VALUES (?)';
-        const [result] = await db.execute(query, [reasonText]);
+        const result = await prisma.reason.create({
+            data: {
+                reason: reasonText
+            }
+        });
         return result;
     }
 }
