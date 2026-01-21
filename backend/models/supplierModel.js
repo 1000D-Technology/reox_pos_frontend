@@ -19,6 +19,18 @@ class Supplier {
         return rows.length > 0;
     }
 
+    static async getCompanyIdByName(companyName) {
+        const query = "SELECT id FROM company WHERE company_name = ? LIMIT 1";
+        const [rows] = await db.execute(query, [companyName.trim()]);
+        return rows.length > 0 ? rows[0].id : null;
+    }
+  
+    static async getBankIdByName(bankName) {
+        const query = "SELECT id FROM bank WHERE bank_name = ? LIMIT 1";
+        const [rows] = await db.execute(query, [bankName.trim()]);
+        return rows.length > 0 ? rows[0].id : null;
+    }
+
     static async checkBankExistsById(bankId) {
         const query = "SELECT id FROM bank WHERE id = ?";
         const [rows] = await db.execute(query, [bankId]);
