@@ -15,7 +15,6 @@ import {
     ArrowDownRight
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
 import toast, { Toaster } from 'react-hot-toast';
 
 interface Sale {
@@ -39,8 +38,7 @@ function ManageSales() {
             value: 'LKR 500,000.00',
             trend: '+12.5%',
             color: 'bg-gradient-to-br from-emerald-400 to-emerald-500',
-            iconColor: 'text-white',
-            bgGlow: 'shadow-emerald-200'
+            iconColor: 'text-white'
         },
         {
             icon: CreditCard,
@@ -48,8 +46,7 @@ function ManageSales() {
             value: '50',
             trend: '+8.3%',
             color: 'bg-gradient-to-br from-blue-400 to-blue-500',
-            iconColor: 'text-white',
-            bgGlow: 'shadow-blue-200'
+            iconColor: 'text-white'
         },
         {
             icon: ChartLine,
@@ -57,8 +54,7 @@ function ManageSales() {
             value: 'LKR 10,250.00',
             trend: '+15.7%',
             color: 'bg-gradient-to-br from-purple-400 to-purple-500',
-            iconColor: 'text-white',
-            bgGlow: 'shadow-purple-200'
+            iconColor: 'text-white'
         },
         {
             icon: Users,
@@ -66,8 +62,7 @@ function ManageSales() {
             value: '50',
             trend: '-3.2%',
             color: 'bg-gradient-to-br from-orange-400 to-orange-500',
-            iconColor: 'text-white',
-            bgGlow: 'shadow-orange-200'
+            iconColor: 'text-white'
         },
         {
             icon: Scale,
@@ -75,8 +70,7 @@ function ManageSales() {
             value: 'LKR 2,500.00',
             trend: '+5.1%',
             color: 'bg-gradient-to-br from-red-400 to-red-500',
-            iconColor: 'text-white',
-            bgGlow: 'shadow-red-200'
+            iconColor: 'text-white'
         },
     ];
 
@@ -253,17 +247,13 @@ function ManageSales() {
 
                 <div className={'grid md:grid-cols-5 grid-cols-2 gap-4'}>
                     {summaryCards.map((stat, i) => (
-                        <motion.div
+                        <div
                             key={i}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: i * 0.1 }}
-                            whileHover={{ scale: 1.05, y: -2 }}
-                            className={`flex items-center p-4 space-x-3 transition-all bg-white rounded-2xl shadow-lg hover:shadow-xl ${stat.bgGlow} cursor-pointer group relative overflow-hidden`}
+                            className={`flex items-center p-4 space-x-3 transition-all bg-white rounded-xl border border-gray-200 cursor-pointer group relative overflow-hidden`}
                         >
                             <div className="absolute inset-0 bg-gradient-to-br from-transparent via-gray-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
 
-                            <div className={`p-3 rounded-full ${stat.color} shadow-md relative z-10`}>
+                            <div className={`p-3 rounded-full ${stat.color} relative z-10`}>
                                 <stat.icon className={`w-6 h-6 ${stat.iconColor}`} />
                             </div>
 
@@ -279,14 +269,12 @@ function ManageSales() {
                                 </div>
                                 <p className="text-sm font-bold text-gray-700">{stat.value}</p>
                             </div>
-                        </motion.div>
+                        </div>
                     ))}
                 </div>
 
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className={'bg-white rounded-xl p-6 flex flex-col shadow-lg'}
+                <div
+                    className={'bg-white rounded-xl p-6 flex flex-col border border-gray-200'}
                 >
                     <h2 className="text-xl font-semibold text-gray-700 mb-4">Filter</h2>
                     <div className={'grid md:grid-cols-4 gap-4'}>
@@ -333,9 +321,9 @@ function ManageSales() {
                                 <button
                                     onClick={handleSearch}
                                     disabled={loading}
-                                    className={'w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 py-2 rounded-lg flex items-center justify-center shadow-lg shadow-emerald-200 hover:shadow-xl transition-all text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed'}
+                                    className={'w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 py-2 rounded-lg flex items-center justify-center transition-all text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed'}
                                 >
-                                    {loading ? <Loader2 className="mr-2 animate-spin" size={14}/> : <SearchCheck className="mr-2" size={14}/>}
+                                    {loading ? <Loader2 className="mr-2 animate-spin" size={14} /> : <SearchCheck className="mr-2" size={14} />}
                                     Search
                                 </button>
                                 <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max px-2 py-1 text-xs text-white bg-gray-900 rounded-md invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-opacity">
@@ -345,9 +333,9 @@ function ManageSales() {
                             <div className="relative group">
                                 <button
                                     onClick={handleClearFilters}
-                                    className={'w-full bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 py-2 rounded-lg flex items-center justify-center shadow-lg shadow-gray-200 hover:shadow-xl transition-all text-white font-medium'}
+                                    className={'w-full bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 py-2 rounded-lg flex items-center justify-center transition-all text-white font-medium'}
                                 >
-                                    <RefreshCw className="mr-2" size={14}/>Clear
+                                    <RefreshCw className="mr-2" size={14} />Clear
                                 </button>
                                 <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max px-2 py-1 text-xs text-white bg-gray-900 rounded-md invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-opacity">
                                     Press Delete to clear
@@ -355,116 +343,108 @@ function ManageSales() {
                             </div>
                         </div>
                     </div>
-                </motion.div>
+                </div>
 
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className={'flex flex-col bg-white rounded-xl h-full p-6 justify-between shadow-lg'}
+                <div
+                    className={'flex flex-col bg-white rounded-xl h-full p-6 justify-between border border-gray-200'}
                 >
                     <div className="overflow-y-auto max-h-md md:h-[320px] lg:h-[500px] rounded-lg scrollbar-thin scrollbar-thumb-emerald-300 scrollbar-track-gray-100">
                         <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-gradient-to-r from-emerald-500 to-emerald-600 sticky top-0 z-10">
-                            <tr>
-                                {[
-                                    'Invoice ID',
-                                    'Gross Amount',
-                                    'Customer',
-                                    'Discount',
-                                    'Net Amount',
-                                    'Cash Pay',
-                                    'Card Pay',
-                                    'Balance',
-                                    'Cashier',
-                                    'Issued At',
-                                    'Actions'
-                                ].map((header, i, arr) => (
-                                    <th
-                                        key={i}
-                                        className={`px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider ${
-                                            i === 0 ? 'rounded-tl-lg' : i === arr.length - 1 ? 'rounded-tr-lg' : ''
-                                        }`}
-                                    >
-                                        {header}
-                                    </th>
-                                ))}
-                            </tr>
+                                <tr>
+                                    {[
+                                        'Invoice ID',
+                                        'Gross Amount',
+                                        'Customer',
+                                        'Discount',
+                                        'Net Amount',
+                                        'Cash Pay',
+                                        'Card Pay',
+                                        'Balance',
+                                        'Cashier',
+                                        'Issued At',
+                                        'Actions'
+                                    ].map((header, i, arr) => (
+                                        <th
+                                            key={i}
+                                            className={`px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider ${i === 0 ? 'rounded-tl-lg' : i === arr.length - 1 ? 'rounded-tr-lg' : ''
+                                                }`}
+                                        >
+                                            {header}
+                                        </th>
+                                    ))}
+                                </tr>
                             </thead>
 
                             <tbody className="bg-white divide-y divide-gray-200">
-                            {loading ? (
-                                <tr>
-                                    <td colSpan={11} className="px-6 py-8 text-center">
-                                        <div className="flex items-center justify-center">
-                                            <Loader2 className="animate-spin text-emerald-600 mr-2" size={24}/>
-                                            <span className="text-gray-500">Loading sales data...</span>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ) : paginatedSales.length === 0 ? (
-                                <tr>
-                                    <td colSpan={11} className="px-6 py-8 text-center text-gray-500">
-                                        No sales data found
-                                    </td>
-                                </tr>
-                            ) : (
-                                paginatedSales.map((sale, index) => (
-                                    <motion.tr
-                                        key={index}
-                                        initial={{ opacity: 0, x: -20 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        transition={{ delay: 0.05 * index }}
-                                        onClick={() => setSelectedIndex(index)}
-                                        whileHover={{ backgroundColor: "rgba(16,185,129,0.05)" }}
-                                        className={`cursor-pointer transition-all ${
-                                            selectedIndex === index
-                                                ? 'bg-emerald-50 border-l-4 border-emerald-500'
-                                                : 'hover:bg-gray-50'
-                                        }`}
-                                    >
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-semibold text-gray-800">
-                                            {sale.invoiceId}
-                                        </td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-bold text-emerald-600">
-                                            LKR {sale.grossAmount}
-                                        </td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-gray-700">
-                                            {sale.customer}
-                                        </td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-red-600">
-                                            LKR {sale.discount}
-                                        </td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-bold text-blue-600">
-                                            LKR {sale.netAmount}
-                                        </td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-gray-600">
-                                            LKR {sale.cashPay}
-                                        </td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-gray-600">
-                                            LKR {sale.cardPay}
-                                        </td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-gray-600">
-                                            LKR {sale.balance}
-                                        </td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-gray-700">
-                                            {sale.cashier}
-                                        </td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-500">
-                                            {sale.issuedAt}
-                                        </td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
-                                            <div className="flex space-x-2">
-                                                <button className="p-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all shadow-md">
-                                                    <Eye size={16}/>
-                                                </button>
-                                                <button className="p-2 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-lg hover:from-emerald-600 hover:to-emerald-700 transition-all shadow-md">
-                                                    <Printer size={16}/>
-                                                </button>
+                                {loading ? (
+                                    <tr>
+                                        <td colSpan={11} className="px-6 py-8 text-center">
+                                            <div className="flex items-center justify-center">
+                                                <Loader2 className="animate-spin text-emerald-600 mr-2" size={24} />
+                                                <span className="text-gray-500">Loading sales data...</span>
                                             </div>
                                         </td>
-                                    </motion.tr>
-                                ))
-                            )}
+                                    </tr>
+                                ) : paginatedSales.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={11} className="px-6 py-8 text-center text-gray-500">
+                                            No sales data found
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    paginatedSales.map((sale, index) => (
+                                        <tr
+                                            key={index}
+                                            onClick={() => setSelectedIndex(index)}
+                                            className={`cursor-pointer transition-all ${selectedIndex === index
+                                                    ? 'bg-emerald-50 border-l-4 border-emerald-500'
+                                                    : 'hover:bg-gray-50'
+                                                }`}
+                                        >
+                                            <td className="px-6 py-2 whitespace-nowrap text-sm font-semibold text-gray-800">
+                                                {sale.invoiceId}
+                                            </td>
+                                            <td className="px-6 py-2 whitespace-nowrap text-sm font-bold text-emerald-600">
+                                                LKR {sale.grossAmount}
+                                            </td>
+                                            <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-gray-700">
+                                                {sale.customer}
+                                            </td>
+                                            <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-red-600">
+                                                LKR {sale.discount}
+                                            </td>
+                                            <td className="px-6 py-2 whitespace-nowrap text-sm font-bold text-blue-600">
+                                                LKR {sale.netAmount}
+                                            </td>
+                                            <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-gray-600">
+                                                LKR {sale.cashPay}
+                                            </td>
+                                            <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-gray-600">
+                                                LKR {sale.cardPay}
+                                            </td>
+                                            <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-gray-600">
+                                                LKR {sale.balance}
+                                            </td>
+                                            <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-gray-700">
+                                                {sale.cashier}
+                                            </td>
+                                            <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-500">
+                                                {sale.issuedAt}
+                                            </td>
+                                            <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
+                                                <div className="flex space-x-2">
+                                                    <button className="p-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all">
+                                                        <Eye size={16} />
+                                                    </button>
+                                                    <button className="p-2 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-lg hover:from-emerald-600 hover:to-emerald-700 transition-all">
+                                                        <Printer size={16} />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
                             </tbody>
                         </table>
                     </div>
@@ -477,13 +457,12 @@ function ManageSales() {
                             <button
                                 onClick={() => goToPage(currentPage - 1)}
                                 disabled={currentPage === 1}
-                                className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${
-                                    currentPage === 1
+                                className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${currentPage === 1
                                         ? 'text-gray-400 cursor-not-allowed'
                                         : 'text-gray-600 hover:text-emerald-600 hover:bg-emerald-50'
-                                }`}
+                                    }`}
                             >
-                                <ChevronLeft className="mr-1 h-4 w-4"/> Previous
+                                <ChevronLeft className="mr-1 h-4 w-4" /> Previous
                             </button>
 
                             {getPageNumbers().map((page, idx) => (
@@ -491,11 +470,10 @@ function ManageSales() {
                                     <button
                                         key={idx}
                                         onClick={() => goToPage(page)}
-                                        className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
-                                            currentPage === page
-                                                ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-md'
+                                        className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${currentPage === page
+                                                ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white'
                                                 : 'text-gray-600 hover:bg-emerald-50 hover:text-emerald-600'
-                                        }`}
+                                            }`}
                                     >
                                         {page}
                                     </button>
@@ -507,17 +485,16 @@ function ManageSales() {
                             <button
                                 onClick={() => goToPage(currentPage + 1)}
                                 disabled={currentPage === totalPages || totalPages === 0}
-                                className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${
-                                    currentPage === totalPages || totalPages === 0
+                                className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${currentPage === totalPages || totalPages === 0
                                         ? 'text-gray-400 cursor-not-allowed'
                                         : 'text-gray-600 hover:text-emerald-600 hover:bg-emerald-50'
-                                }`}
+                                    }`}
                             >
-                                Next <ChevronRight className="ml-1 h-4 w-4"/>
+                                Next <ChevronRight className="ml-1 h-4 w-4" />
                             </button>
                         </div>
                     </nav>
-                </motion.div>
+                </div>
             </div>
         </>
     );

@@ -14,7 +14,6 @@ import {
 
 import { useEffect, useState } from 'react';
 import toast, { Toaster } from 'react-hot-toast';
-import { motion } from 'framer-motion';
 import { supplierService } from '../../../services/supplierService';
 import { companyService } from '../../../services/companyService';
 import TypeableSelect from '../../../components/TypeableSelect';
@@ -444,9 +443,7 @@ function CreateSupplier() {
                     </h1>
                 </div>
 
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
+                <div
                     className={"bg-white rounded-xl p-6 flex flex-col shadow-lg"}
                 >
                     <div className="flex items-center gap-2 mb-4">
@@ -546,12 +543,9 @@ function CreateSupplier() {
                             <span className="text-xs text-emerald-100">(Shift + Enter)</span>
                         </button>
                     </div>
-                </motion.div>
+                </div>
 
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.2 }}
+                <div
                     className={"flex flex-col bg-white rounded-xl h-full p-6 justify-between shadow-lg"}
                 >
                     <span className="text-lg font-semibold text-gray-800 block mb-4">Supplier List</span>
@@ -668,15 +662,13 @@ function CreateSupplier() {
                             </button>
                         </div>
                     </nav>
-                </motion.div>
+                </div>
             </div>
 
             {/* Add Company Modal */}
             {isCompanyModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
+                    <div
                         className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md relative"
                     >
                         <button
@@ -752,16 +744,14 @@ function CreateSupplier() {
                                 {isSubmitting ? 'Creating...' : 'Create Company'}
                             </button>
                         </div>
-                    </motion.div>
+                    </div>
                 </div>
             )}
 
             {/* Update Supplier Modal */}
             {isModalOpen && selectedCategory && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
+                    <div
                         className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md relative"
                     >
                         <button
@@ -813,7 +803,7 @@ function CreateSupplier() {
                                 {isUpdatingContact ? 'Updating...' : 'Update Contact'}
                             </button>
                         </div>
-                    </motion.div>
+                    </div>
                 </div>
             )}
         </>

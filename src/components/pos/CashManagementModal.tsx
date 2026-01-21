@@ -178,22 +178,20 @@ export const CashManagementModal = ({ isOpen, onClose }: CashManagementModalProp
                                 <div className="flex gap-2 mb-4 bg-gray-100 p-2 rounded-xl">
                                     <button
                                         onClick={() => setTransactionType('cash-out')}
-                                        className={`flex-1 py-3 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 ${
-                                            transactionType === 'cash-out'
+                                        className={`flex-1 py-3 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 ${transactionType === 'cash-out'
                                                 ? 'bg-red-500 text-white shadow-md'
                                                 : 'text-gray-600 hover:bg-gray-200'
-                                        }`}
+                                            }`}
                                     >
                                         <TrendingDown className="w-4 h-4" />
                                         Cash Out
                                     </button>
                                     <button
                                         onClick={() => setTransactionType('cash-in')}
-                                        className={`flex-1 py-3 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 ${
-                                            transactionType === 'cash-in'
+                                        className={`flex-1 py-3 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 ${transactionType === 'cash-in'
                                                 ? 'bg-green-500 text-white shadow-md'
                                                 : 'text-gray-600 hover:bg-gray-200'
-                                        }`}
+                                            }`}
                                     >
                                         <TrendingUp className="w-4 h-4" />
                                         Cash In
@@ -273,9 +271,8 @@ export const CashManagementModal = ({ isOpen, onClose }: CashManagementModalProp
                                                             </p>
                                                         </div>
                                                     </div>
-                                                    <span className={`font-semibold ${
-                                                        txn.transaction_type === 'cash-in' ? 'text-green-600' : 'text-red-600'
-                                                    }`}>
+                                                    <span className={`font-semibold ${txn.transaction_type === 'cash-in' ? 'text-green-600' : 'text-red-600'
+                                                        }`}>
                                                         {txn.transaction_type === 'cash-in' ? '+' : '-'}Rs {Number(txn.amount).toFixed(2)}
                                                     </span>
                                                 </div>
@@ -288,11 +285,10 @@ export const CashManagementModal = ({ isOpen, onClose }: CashManagementModalProp
                                 <button
                                     onClick={handleSubmit}
                                     disabled={!amount || Number(amount) <= 0 || !description.trim() || submitting}
-                                    className={`w-full py-4 rounded-xl font-bold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
-                                        transactionType === 'cash-out'
+                                    className={`w-full py-4 rounded-xl font-bold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed ${transactionType === 'cash-out'
                                             ? 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700'
                                             : 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700'
-                                    }`}
+                                        }`}
                                 >
                                     {submitting ? 'Processing...' : `Confirm ${transactionType === 'cash-out' ? 'Cash Out' : 'Cash In'}`}
                                 </button>

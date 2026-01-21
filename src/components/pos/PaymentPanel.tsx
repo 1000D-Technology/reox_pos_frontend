@@ -40,19 +40,19 @@ const paymentMethods: PaymentMethod[] = [
 ];
 
 export const PaymentPanel = ({
-                                 selectedCustomer,
-                                 customerSearchTerm,
-                                 onCustomerSearchChange,
-                                 onCustomerSelect,
-                                 onRegisterCustomer,
-                                 paymentAmounts,
-                                 onPaymentAmountChange,
-                                 totalPaid,
-                                 remaining,
-                                 total,
-                                 cartItemsCount,
-                                 onCompletePayment
-                             }: PaymentPanelProps) => {
+    selectedCustomer,
+    customerSearchTerm,
+    onCustomerSearchChange,
+    onCustomerSelect,
+    onRegisterCustomer,
+    paymentAmounts,
+    onPaymentAmountChange,
+    totalPaid,
+    remaining,
+    total,
+    cartItemsCount,
+    onCompletePayment
+}: PaymentPanelProps) => {
     const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
     const [localSelectedCustomer, setLocalSelectedCustomer] = useState<Customer | null>(selectedCustomer);
     const [filteredCustomers, setFilteredCustomers] = useState<Customer[]>([]);
@@ -210,7 +210,7 @@ export const PaymentPanel = ({
     return (
         <div className="col-span-3 space-y-3 flex flex-col overflow-y-auto">
             {/* Customer Search */}
-            <div className="bg-white rounded-2xl shadow-lg p-3 relative">
+            <div className="bg-white rounded-2xl border border-gray-200 p-3 relative">
                 <div className="flex items-center justify-between mb-1.5">
                     <h3 className="text-xs font-semibold text-gray-600">Customer</h3>
                     <button
@@ -240,11 +240,10 @@ export const PaymentPanel = ({
                             <button
                                 key={customer.id}
                                 onClick={() => selectCustomer(customer)}
-                                className={`w-full px-3 py-2 text-left transition-colors border-b border-gray-100 last:border-0 ${
-                                    index === highlightedCustomerIndex
-                                        ? 'bg-emerald-100'
-                                        : 'hover:bg-emerald-50'
-                                }`}
+                                className={`w-full px-3 py-2 text-left transition-colors border-b border-gray-100 last:border-0 ${index === highlightedCustomerIndex
+                                    ? 'bg-emerald-100'
+                                    : 'hover:bg-emerald-50'
+                                    }`}
                             >
                                 <p className="text-sm font-semibold text-gray-800">{customer.name}</p>
                                 <p className="text-xs text-gray-500">{customer.contact}</p>
@@ -294,7 +293,7 @@ export const PaymentPanel = ({
             </div>
 
             {/* Payment Methods */}
-            <div className="bg-white rounded-2xl shadow-lg p-3">
+            <div className="bg-white rounded-2xl border border-gray-200 p-3">
                 <h3 className="text-xs font-semibold text-gray-600 mb-2">Payment Methods</h3>
                 <div className="space-y-2">
                     {paymentMethods.map((method, index) => {
@@ -321,9 +320,8 @@ export const PaymentPanel = ({
                                         }}
                                         onFocus={() => setSelectedPaymentMethod(index)}
                                         placeholder="Enter amount"
-                                        className={`w-full px-2 py-1.5 text-sm bg-gray-50 border-2 rounded-lg focus:outline-none focus:border-emerald-500 ${
-                                            selectedPaymentMethod === index ? 'border-emerald-400' : 'border-gray-200'
-                                        }`}
+                                        className={`w-full px-2 py-1.5 text-sm bg-gray-50 border-2 rounded-lg focus:outline-none focus:border-emerald-500 ${selectedPaymentMethod === index ? 'border-emerald-400' : 'border-gray-200'
+                                            }`}
                                         min="0"
                                         step="0.01"
                                     />
@@ -335,7 +333,7 @@ export const PaymentPanel = ({
             </div>
 
             {/* Total Summary */}
-            <div className="bg-gradient-to-br from-emerald-600 to-emerald-700 rounded-2xl shadow-lg p-3 text-white">
+            <div className="bg-gradient-to-br from-emerald-600 to-emerald-700 rounded-2xl border border-gray-200 p-3 text-white">
                 <div className="space-y-1.5">
                     <div className="flex justify-between text-xs">
                         <span>Paid Amount:</span>

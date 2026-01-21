@@ -121,10 +121,12 @@ function GrnList() {
     const [selectedGrn, setSelectedGrn] = useState<any>(null);
     const [isViewPopupOpen, setIsViewPopupOpen] = useState(false);
     const [isLoadingDetails, setIsLoadingDetails] = useState(false);
+    const [shouldAutoPrint, setShouldAutoPrint] = useState(false);
 
     // Add function to fetch GRN details
-    const fetchGrnDetails = async (grnId: number) => {
+    const fetchGrnDetails = async (grnId: number, autoPrint: boolean = false) => {
         setIsLoadingDetails(true);
+        setShouldAutoPrint(autoPrint);
         try {
             const response = await grnService.getGRNDetails(grnId);
             if (response.data.success) {
@@ -293,8 +295,8 @@ function GrnList() {
         setSelectedIndex(0);
     }, [grnListData.length]);
 
-// src/pages/dashboard/grn/GrnList.tsx
-// Update the keyboard event handler useEffect
+    // src/pages/dashboard/grn/GrnList.tsx
+    // Update the keyboard event handler useEffect
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             // Don't handle keys if calculator or any modal is open
@@ -320,7 +322,7 @@ function GrnList() {
             else if (e.key === "Enter" && e.shiftKey) {
                 e.preventDefault();
                 if (currentPageData[selectedIndex]) {
-                    fetchGrnDetails(currentPageData[selectedIndex].id);
+                    fetchGrnDetails(currentPageData[selectedIndex].id, false);
                 }
             }
 
@@ -464,9 +466,8 @@ function GrnList() {
                             <button
                                 onClick={searchGRNs}
                                 disabled={isSearching}
-                                className={`bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 rounded-lg py-2 px-4 flex items-center justify-center gap-2 shadow-lg shadow-emerald-200 hover:shadow-xl transition-all ${
-                                    isSearching ? 'opacity-50 cursor-not-allowed' : ''
-                                }`}
+                                className={`bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 rounded-lg py-2 px-4 flex items-center justify-center gap-2 shadow-lg shadow-emerald-200 hover:shadow-xl transition-all ${isSearching ? 'opacity-50 cursor-not-allowed' : ''
+                                    }`}
                             >
                                 <SearchCheck size={18} />
                                 {isSearching ? 'Searching...' : 'Search'}
@@ -504,85 +505,86 @@ function GrnList() {
                     <div className="overflow-y-auto max-h-md md:h-[320px] lg:h-[500px] rounded-lg scrollbar-thin scrollbar-thumb-emerald-300 scrollbar-track-gray-100">
                         <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-gradient-to-r from-emerald-600 to-emerald-700 sticky top-0 z-10">
-                            <tr>
-                                {[
-                                    'No', 'Supplier Name', 'Bill Number', 'Total Amount', 'Paid Amount', 'Balance', 'GRN Date', 'Status', 'Actions'
-                                ].map((header, i, arr) => (
-                                    <th
-                                        key={i}
-                                        className={`px-6 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider ${
-                                            i === 0 ? 'rounded-tl-lg' : i === arr.length - 1 ? 'rounded-tr-lg' : ''
-                                        }`}
-                                    >
-                                        {header}
-                                    </th>
-                                ))}
-                            </tr>
+                                <tr>
+                                    {[
+                                        'No', 'Supplier Name', 'Bill Number', 'Total Amount', 'Paid Amount', 'Balance', 'GRN Date', 'Status', 'Actions'
+                                    ].map((header, i, arr) => (
+                                        <th
+                                            key={i}
+                                            className={`px-6 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider ${i === 0 ? 'rounded-tl-lg' : i === arr.length - 1 ? 'rounded-tr-lg' : ''
+                                                }`}
+                                        >
+                                            {header}
+                                        </th>
+                                    ))}
+                                </tr>
                             </thead>
 
                             <tbody className="bg-white divide-y divide-gray-200">
-                            {isLoadingGrnList ? (
-                                <tr>
-                                    <td colSpan={9} className="px-6 py-8 text-center">
-                                        <div className="flex items-center justify-center gap-2">
-                                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-emerald-600"></div>
-                                            <span className="text-sm text-gray-500">Loading GRN records...</span>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ) : currentPageData.length === 0 ? (
-                                <tr>
-                                    <td colSpan={9} className="px-6 py-8 text-center text-sm text-gray-500">
-                                        No GRN records found
-                                    </td>
-                                </tr>
-                            ) : (
-                                currentPageData.map((grn, index) => (
-                                    <tr
-                                        key={grn.id}
-                                        className={`hover:bg-emerald-50 transition-colors ${
-                                            selectedIndex === index ? 'bg-emerald-100' : ''
-                                        }`}
-                                    >
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{startIndex + index + 1}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{grn.supplierName}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{grn.billNumber}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">LKR {grn.totalAmount.toFixed(2)}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">LKR {grn.paidAmount.toFixed(2)}</td>
-                                        <td className={`px-6 py-4 whitespace-nowrap text-sm ${getBalanceColorClass(grn.balanceAmount)}`}>
-                                            LKR {grn.balanceAmount.toFixed(2)}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                            {new Date(grn.grnDate).toLocaleDateString('en-US', {
-                                                year: 'numeric',
-                                                month: '2-digit',
-                                                day: '2-digit'
-                                            })}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                                                grn.statusName === 'Active' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'
-                                            }`}>
-                                                {grn.statusName === 'Active' ? 'Pending' : 'Complete'}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                            <div className="flex gap-4">
-                                                <button
-                                                    onClick={() => fetchGrnDetails(grn.id)}
-                                                    disabled={isLoadingDetails}
-                                                    className="text-blue-600 hover:text-blue-900 transition-colors disabled:opacity-50"
-                                                >
-                                                    <Eye size={18} />
-                                                </button>
-                                                <button className="text-emerald-600 hover:text-emerald-900 transition-colors">
-                                                    <Printer size={18} />
-                                                </button>
+                                {isLoadingGrnList ? (
+                                    <tr>
+                                        <td colSpan={9} className="px-6 py-8 text-center">
+                                            <div className="flex items-center justify-center gap-2">
+                                                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-emerald-600"></div>
+                                                <span className="text-sm text-gray-500">Loading GRN records...</span>
                                             </div>
                                         </td>
                                     </tr>
-                                ))
-                            )}
+                                ) : currentPageData.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={9} className="px-6 py-8 text-center text-sm text-gray-500">
+                                            No GRN records found
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    currentPageData.map((grn, index) => (
+                                        <tr
+                                            key={grn.id}
+                                            className={`hover:bg-emerald-50 transition-colors ${selectedIndex === index ? 'bg-emerald-100' : ''
+                                                }`}
+                                        >
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{startIndex + index + 1}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{grn.supplierName}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{grn.billNumber}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">LKR {grn.totalAmount.toFixed(2)}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">LKR {grn.paidAmount.toFixed(2)}</td>
+                                            <td className={`px-6 py-4 whitespace-nowrap text-sm ${getBalanceColorClass(grn.balanceAmount)}`}>
+                                                LKR {grn.balanceAmount.toFixed(2)}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                {new Date(grn.grnDate).toLocaleDateString('en-US', {
+                                                    year: 'numeric',
+                                                    month: '2-digit',
+                                                    day: '2-digit'
+                                                })}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${grn.statusName === 'Active' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'
+                                                    }`}>
+                                                    {grn.statusName === 'Active' ? 'Pending' : 'Complete'}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                                <div className="flex gap-4">
+                                                    <button
+                                                        onClick={() => fetchGrnDetails(grn.id, false)}
+                                                        disabled={isLoadingDetails}
+                                                        className="text-blue-600 hover:text-blue-900 transition-colors disabled:opacity-50"
+                                                    >
+                                                        <Eye size={18} />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => fetchGrnDetails(grn.id, true)}
+                                                        disabled={isLoadingDetails}
+                                                        className="text-emerald-600 hover:text-emerald-900 transition-colors disabled:opacity-50"
+                                                    >
+                                                        <Printer size={18} />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
                             </tbody>
                         </table>
                     </div>
@@ -605,13 +607,12 @@ function GrnList() {
                                     key={index}
                                     onClick={() => typeof page === 'number' && goToPage(page)}
                                     disabled={page === '...'}
-                                    className={`px-3 py-1 rounded-lg text-sm font-medium transition-all ${
-                                        page === currentPage
-                                            ? 'bg-emerald-600 text-white shadow-lg'
-                                            : page === '...'
-                                                ? 'cursor-default text-gray-400'
-                                                : 'bg-gray-100 text-gray-700 hover:bg-emerald-100 hover:text-emerald-600'
-                                    }`}
+                                    className={`px-3 py-1 rounded-lg text-sm font-medium transition-all ${page === currentPage
+                                        ? 'bg-emerald-600 text-white shadow-lg'
+                                        : page === '...'
+                                            ? 'cursor-default text-gray-400'
+                                            : 'bg-gray-100 text-gray-700 hover:bg-emerald-100 hover:text-emerald-600'
+                                        }`}
                                 >
                                     {page}
                                 </button>
@@ -630,6 +631,7 @@ function GrnList() {
                         isOpen={isViewPopupOpen}
                         onClose={() => setIsViewPopupOpen(false)}
                         grnData={selectedGrn}
+                        autoPrint={shouldAutoPrint}
                     />
                 </div>
             </div>

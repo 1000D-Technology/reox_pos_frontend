@@ -72,6 +72,7 @@ const POSInterface = () => {
     const [showCashModal, setShowCashModal] = useState(false);
     const [showReturnModal, setShowReturnModal] = useState(false);
     const [customers, setCustomers] = useState<Customer[]>(demoCustomers);
+    const [customersLoading, setCustomersLoading] = useState(false);
     const [sessionChecked, setSessionChecked] = useState(false);
     const [showProductAddModal, setShowProductAddModal] = useState(false);
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -214,14 +215,15 @@ const POSInterface = () => {
             if (e.key === 'F1') {
                 e.preventDefault();
                 setShowCashModal(true);
-            }if (e.key === 'F2') {
+            } if (e.key === 'F2') {
                 e.preventDefault();
                 setShowBulkLooseModal(true);
             }
             if (e.key === 'F3') {
                 e.preventDefault();
                 setShowReturnModal(true);
-            }};
+            }
+        };
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
@@ -272,7 +274,7 @@ const POSInterface = () => {
         setSelectedProduct(product);
         setShowProductAddModal(true);
     };
-// Update the addToCartWithDetails function signature and implementation
+    // Update the addToCartWithDetails function signature and implementation
     const addToCartWithDetails = (
         product: Product,
         quantity: number,
@@ -299,7 +301,7 @@ const POSInterface = () => {
                 if (newQuantity > product.stock) {
                     toast.error("Cannot add more than available stock");
                     return prevCart;
-                }return prevCart.map(item =>
+                } return prevCart.map(item =>
                     item.id === product.id
                         ? {
                             ...item,
@@ -420,6 +422,11 @@ const POSInterface = () => {
     const handleCustomerSearch = async (value: string) => {
         setCustomerSearchTerm(value);
         if (!value) setSelectedCustomer(null);
+    };
+
+    const handleCustomerSelect = (customer: Customer) => {
+        setSelectedCustomer(customer);
+        setCustomerSearchTerm(customer.name);
     };
 
     const registerCustomer = async (name: string, contact: string, email?: string, creditBalance?: number) => {

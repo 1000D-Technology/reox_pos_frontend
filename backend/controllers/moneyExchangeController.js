@@ -1,52 +1,29 @@
-const db = require('../config/db');
+const prisma = require('../config/prismaClient');
 
 class MoneyExchangeController {
+    constructor() {
+        this.getCurrentBalance = this.getCurrentBalance.bind(this);
+        this.createTransaction = this.createTransaction.bind(this);
+        this.getTransactionHistory = this.getTransactionHistory.bind(this);
+        this._getBalanceData = this._getBalanceData.bind(this);
+    }
+
     async getCurrentBalance(req, res) {
         try {
             const userId = req.user.id;
-            const today = new Date().toISOString().split('T')[0];
+            const balanceData = await this._getBalanceData(userId);
 
-            // Get current session
-            const [sessions] = await db.query(
-                `SELECT id, opening_balance, cash_amount
-                 FROM cash_sessions
-                 WHERE user_id = ? AND DATE(created_at) = ? AND status = 'open'
-                 ORDER BY created_at DESC LIMIT 1`,
-                [userId, today]
-            );
-
-            if (sessions.length === 0) {
+            return res.json({
+                success: true,
+                data: balanceData
+            });
+        } catch (error) {
+            if (error.message === 'No active session found') {
                 return res.status(404).json({
                     success: false,
                     message: 'No active session found'
                 });
             }
-
-            const session = sessions[0];
-            let currentBalance = session.opening_balance + session.cash_amount;
-
-            // Get money exchange transactions for current session
-            const [exchanges] = await db.query(
-                `SELECT SUM(CASE WHEN transaction_type = 'cash-in' THEN amount ELSE -amount END) as exchange_total
-                 FROM money_exchange
-                 WHERE session_id = ?`,
-                [session.id]
-            );
-
-            const exchangeTotal = exchanges[0]?.exchange_total || 0;
-            currentBalance += exchangeTotal;
-
-            return res.json({
-                success: true,
-                data: {
-                    sessionId: session.id,
-                    openingBalance: session.opening_balance,
-                    cashAmount: session.cash_amount,
-                    exchangeTotal: exchangeTotal,
-                    currentBalance: currentBalance
-                }
-            });
-        } catch (error) {
             console.error('Get balance error:', error);
             return res.status(500).json({
                 success: false,
@@ -76,24 +53,35 @@ class MoneyExchangeController {
             }
 
             // Verify session belongs to user and is open
-            const [sessions] = await db.query(
-                'SELECT * FROM cash_sessions WHERE id = ? AND user_id = ? AND status = "open"',
-                [sessionId, userId]
-            );
+            const session = await prisma.cash_sessions.findFirst({
+                where: {
+                    id: parseInt(sessionId),
+                    user_id: userId,
+                    cash_status_id: 1
+                }
+            });
 
-            if (sessions.length === 0) {
+            if (!session) {
                 return res.status(403).json({
                     success: false,
                     message: 'Invalid or closed session'
                 });
             }
 
+            // Map transaction type to ID (1: Cash In, 2: Cash Out)
+            const exchangeTypeId = transactionType === 'cash-in' ? 1 : 2;
+            const now = new Date();
+
             // Insert transaction
-            const [result] = await db.query(
-                `INSERT INTO money_exchange (session_id, transaction_type, amount, description, created_by)
-                 VALUES (?, ?, ?, ?, ?)`,
-                [sessionId, transactionType, amount, description || null, userId]
-            );
+            const result = await prisma.money_exchange.create({
+                data: {
+                    cash_sessions_id: parseInt(sessionId),
+                    exchange_type_id1: exchangeTypeId,
+                    amount: parseFloat(amount),
+                    reason: description || '',
+                    datetime: now
+                }
+            });
 
             // Get updated balance
             const balanceData = await this._getBalanceData(userId);
@@ -102,7 +90,7 @@ class MoneyExchangeController {
                 success: true,
                 message: `${transactionType === 'cash-in' ? 'Cash in' : 'Cash out'} recorded successfully`,
                 data: {
-                    transactionId: result.insertId,
+                    transactionId: result.id,
                     ...balanceData
                 }
             });
@@ -121,27 +109,45 @@ class MoneyExchangeController {
             const userId = req.user.id;
             const { sessionId } = req.query;
 
-            let query = `
-                SELECT me.*, u.username as created_by_name
-                FROM money_exchange me
-                         LEFT JOIN users u ON me.created_by = u.id
-                         INNER JOIN cash_sessions cs ON me.session_id = cs.id
-                WHERE cs.user_id = ?
-            `;
-            const params = [userId];
+            const whereClause = {
+                cash_sessions: {
+                    user_id: userId
+                }
+            };
 
             if (sessionId) {
-                query += ' AND me.session_id = ?';
-                params.push(sessionId);
+                whereClause.cash_sessions_id = parseInt(sessionId);
             }
 
-            query += ' ORDER BY me.created_at DESC';
-
-            const [transactions] = await db.query(query, params);
+            const transactions = await prisma.money_exchange.findMany({
+                where: whereClause,
+                include: {
+                    cash_sessions: {
+                        include: {
+                            user: true
+                        }
+                    },
+                    exchange_type: true
+                },
+                orderBy: {
+                    datetime: 'desc'
+                }
+            });
+            
+            // Map keys to frontend expectation
+            const mappedTransactions = transactions.map(t => ({
+                id: t.id,
+                session_id: t.cash_sessions_id,
+                transaction_type: t.exchange_type_id1 === 1 ? 'cash-in' : 'cash-out',
+                amount: t.amount,
+                description: t.reason,
+                created_at: t.datetime,
+                created_by_name: t.cash_sessions?.user?.name
+            }));
 
             return res.json({
                 success: true,
-                data: transactions
+                data: mappedTransactions
             });
         } catch (error) {
             console.error('Get history error:', error);
@@ -157,35 +163,46 @@ class MoneyExchangeController {
     async _getBalanceData(userId) {
         const today = new Date().toISOString().split('T')[0];
 
-        const [sessions] = await db.query(
-            `SELECT id, opening_balance, cash_amount
-             FROM cash_sessions
-             WHERE user_id = ? AND DATE(created_at) = ? AND status = 'open'
-             ORDER BY created_at DESC LIMIT 1`,
-            [userId, today]
-        );
+        // Maintain existing logic using raw query for DATE check
+        const sessions = await prisma.$queryRaw`
+            SELECT id, opening_balance, cash_total
+            FROM cash_sessions
+            WHERE user_id = ${userId} 
+            AND DATE(opening_date_time) = ${today} 
+            AND cash_status_id = 1
+            ORDER BY opening_date_time DESC LIMIT 1
+        `;
 
         if (sessions.length === 0) {
             throw new Error('No active session found');
         }
 
         const session = sessions[0];
-        let currentBalance = session.opening_balance + session.cash_amount;
+        let currentBalance = parseFloat(session.opening_balance) + parseFloat(session.cash_total);
 
-        const [exchanges] = await db.query(
-            `SELECT SUM(CASE WHEN transaction_type = 'cash-in' THEN amount ELSE -amount END) as exchange_total
-             FROM money_exchange
-             WHERE session_id = ?`,
-            [session.id]
-        );
+        // Get money exchange transactions aggregation
+        const aggregations = await prisma.money_exchange.groupBy({
+             by: ['exchange_type_id1'],
+             where: { cash_sessions_id: session.id },
+             _sum: { amount: true }
+        });
 
-        const exchangeTotal = exchanges[0]?.exchange_total || 0;
+        let exchangeTotal = 0;
+        aggregations.forEach(agg => {
+            const amt = agg._sum.amount || 0;
+            if (agg.exchange_type_id1 === 1) {
+                exchangeTotal += amt;
+            } else {
+                exchangeTotal -= amt;
+            }
+        });
+
         currentBalance += exchangeTotal;
 
         return {
             sessionId: session.id,
             openingBalance: session.opening_balance,
-            cashAmount: session.cash_amount,
+            cashAmount: session.cash_total,
             exchangeTotal: exchangeTotal,
             currentBalance: currentBalance
         };

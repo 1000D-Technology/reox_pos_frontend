@@ -11,7 +11,11 @@ export const stockService = {
         supplierService.getSupplierDropdownList()
     ]),
 
-    // Get stock list data
+    // Get ALL stock data with individual variations (every row)
+    getAllStockWithVariations: () => 
+        axiosInstance.get('/api/stock/all-variations'),
+
+    // Get stock list data (grouped by product)
     getStockList: () => 
         axiosInstance.get('/api/stock'),
 

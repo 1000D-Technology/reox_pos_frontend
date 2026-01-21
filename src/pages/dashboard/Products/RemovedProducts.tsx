@@ -1,6 +1,5 @@
 import { ChevronLeft, ChevronRight, RefreshCw, SearchCheck, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
 import toast, { Toaster } from 'react-hot-toast';
 import TypeableSelect from "../../../components/TypeableSelect.tsx";
 import { productService } from "../../../services/productService";
@@ -233,9 +232,7 @@ function RemovedProducts() {
                     </h1>
                 </div>
 
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
+                <div
                     className="bg-white rounded-xl p-6 shadow-lg"
                 >
                     <div className="grid md:grid-cols-4 gap-4">
@@ -296,11 +293,9 @@ function RemovedProducts() {
                             </div>
                         </div>
                     </div>
-                </motion.div>
+                </div>
 
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
+                <div
                     className="flex flex-col bg-white rounded-xl p-6 justify-between gap-6 shadow-lg"
                 >
                     <div className="overflow-y-auto max-h-md md:h-[320px] lg:h-[600px] rounded-lg scrollbar-thin scrollbar-thumb-red-300 scrollbar-track-gray-100">
@@ -465,7 +460,7 @@ function RemovedProducts() {
                             </button>
                         </div>
                     </nav>
-                </motion.div>
+                </div>
             </div>
         </>
     );

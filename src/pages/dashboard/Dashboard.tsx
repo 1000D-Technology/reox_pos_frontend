@@ -1,4 +1,3 @@
-import { motion,  } from "framer-motion";
 import {
     ChartNoAxesCombined,
     FileSpreadsheet,
@@ -36,13 +35,13 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, T
 
 export default function Dashboard() {
     const stats = [
-        { icon: ChartNoAxesCombined, label: "Today Sales", value: "LKR 500,000.00", trend: "+12%", color: "bg-gradient-to-br from-emerald-400 to-emerald-500", iconColor: "text-white", bgGlow: "shadow-emerald-200" },
-        { icon: FileSpreadsheet, label: "Today Invoice", value: "20", trend: "+8%", color: "bg-gradient-to-br from-blue-400 to-blue-500", iconColor: "text-white", bgGlow: "shadow-blue-200" },
-        { icon: UserCheck, label: "Supplier", value: "20", trend: "+5%", color: "bg-gradient-to-br from-red-400 to-red-500", iconColor: "text-white", bgGlow: "shadow-red-200" },
-        { icon: Boxes, label: "Product", value: "20", trend: "+15%", color: "bg-gradient-to-br from-purple-400 to-purple-500", iconColor: "text-white", bgGlow: "shadow-purple-200" },
-        { icon: Users, label: "Customer", value: "20", trend: "+10%", color: "bg-gradient-to-br from-cyan-400 to-cyan-500", iconColor: "text-white", bgGlow: "shadow-cyan-200" },
-        { icon: Zap, label: "Employee", value: "5000", trend: "+3%", color: "bg-gradient-to-br from-orange-400 to-orange-500", iconColor: "text-white", bgGlow: "shadow-orange-200" },
-        { icon: BadgeInfo, label: "Low Stock", value: "37", trend: "-5%", color: "bg-gradient-to-br from-yellow-400 to-yellow-500", iconColor: "text-white", bgGlow: "shadow-yellow-200" },
+        { icon: ChartNoAxesCombined, label: "Today Sales", value: "LKR 500,000.00", trend: "+12%", color: "bg-gradient-to-br from-emerald-400 to-emerald-500", iconColor: "text-white" },
+        { icon: FileSpreadsheet, label: "Today Invoice", value: "20", trend: "+8%", color: "bg-gradient-to-br from-blue-400 to-blue-500", iconColor: "text-white" },
+        { icon: UserCheck, label: "Supplier", value: "20", trend: "+5%", color: "bg-gradient-to-br from-red-400 to-red-500", iconColor: "text-white" },
+        { icon: Boxes, label: "Product", value: "20", trend: "+15%", color: "bg-gradient-to-br from-purple-400 to-purple-500", iconColor: "text-white" },
+        { icon: Users, label: "Customer", value: "20", trend: "+10%", color: "bg-gradient-to-br from-cyan-400 to-cyan-500", iconColor: "text-white" },
+        { icon: Zap, label: "Employee", value: "5000", trend: "+3%", color: "bg-gradient-to-br from-orange-400 to-orange-500", iconColor: "text-white" },
+        { icon: BadgeInfo, label: "Low Stock", value: "37", trend: "-5%", color: "bg-gradient-to-br from-yellow-400 to-yellow-500", iconColor: "text-white" },
     ];
 
     return (
@@ -60,17 +59,13 @@ export default function Dashboard() {
 
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-7">
                 {stats.map((stat, i) => (
-                    <motion.div
+                    <div
                         key={i}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: i * 0.1 }}
-                        whileHover={{ scale: 1.05, y: -2 }}
-                        className={`flex items-center p-4 space-x-3 transition-all bg-white rounded-2xl shadow-lg hover:shadow-xl ${stat.bgGlow} cursor-pointer group relative overflow-hidden`}
+                        className={`flex items-center p-4 space-x-3 transition-all bg-white rounded-xl border border-gray-200 cursor-pointer group relative overflow-hidden`}
                     >
                         <div className="absolute inset-0 bg-gradient-to-br from-transparent via-gray-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
 
-                        <div className={`p-3 rounded-full ${stat.color} shadow-md relative z-10`}>
+                        <div className={`p-3 rounded-full ${stat.color} relative z-10`}>
                             <stat.icon className={`w-6 h-6 ${stat.iconColor}`} />
                         </div>
 
@@ -86,7 +81,7 @@ export default function Dashboard() {
                             </div>
                             <p className="text-sm font-bold text-gray-700">{stat.value}</p>
                         </div>
-                    </motion.div>
+                    </div>
                 ))}
             </div>
 
@@ -172,11 +167,8 @@ export function SalesChart() {
     };
 
     return (
-        <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="p-6 bg-white rounded-xl shadow-lg hover:shadow-xl transition-all"
+        <div
+            className="p-6 bg-white rounded-xl border border-gray-200 transition-all"
         >
             <div className="flex flex-col mb-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
@@ -190,26 +182,23 @@ export function SalesChart() {
                 </div>
                 <div className="flex gap-2 mt-3 sm:mt-0">
                     {filters.map((item) => (
-                        <motion.button
+                        <button
                             key={item}
                             onClick={() => setFilter(item)}
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            className={`px-4 py-2 text-sm font-medium rounded-lg border-2 transition-all ${
-                                filter === item
-                                    ? "bg-gradient-to-r from-emerald-500 to-emerald-600 text-white border-emerald-500 shadow-md shadow-emerald-200"
-                                    : "text-gray-600 border-gray-200 hover:border-emerald-300 hover:text-emerald-600"
-                            }`}
+                            className={`px-4 py-2 text-sm font-medium rounded-lg border-2 transition-all ${filter === item
+                                ? "bg-gradient-to-r from-emerald-500 to-emerald-600 text-white border-emerald-500"
+                                : "text-gray-600 border-gray-200 hover:border-emerald-300 hover:text-emerald-600"
+                                }`}
                         >
                             {item}
-                        </motion.button>
+                        </button>
                     ))}
                 </div>
             </div>
             <div className="h-[390px] w-[95%] mx-auto overflow-y-hidden">
                 <Line data={data} options={options} />
             </div>
-        </motion.div>
+        </div>
     );
 }
 
@@ -222,32 +211,23 @@ export function Summary() {
         { label: "Net Profit", value: "LKR.14500.00", bgColor: "bg-gradient-to-r from-cyan-50 to-cyan-100", textColor: "text-cyan-700", borderColor: "border-cyan-200" },
     ];
 
-    const [clickedIndex, setClickedIndex] = useState<number | null>(null);
-
     return (
-        <motion.div
-            className="p-6 bg-white rounded-xl h-[320px] overflow-y-auto shadow-lg hover:shadow-xl transition-all"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-        >
+        <div className="p-6 bg-white rounded-xl h-[320px] overflow-y-auto border border-gray-200 transition-all">
             <h2 className="mb-4 text-lg font-semibold text-gray-800">
                 Summary of October 2025 Sales
             </h2>
             <div className="space-y-2">
                 {summary.map((item, index) => (
-                    <motion.div
+                    <div
                         key={index}
-                        className={`flex justify-between items-center py-3 px-4 rounded-xl cursor-pointer border-2 ${item.bgColor} ${item.borderColor} ${clickedIndex === index ? 'shadow-md' : ''}`}
-                        whileHover={{ scale: 1.02, x: 4 }}
-                        whileTap={{ scale: 0.98 }}
-                        onClick={() => setClickedIndex(index)}
+                        className={`flex justify-between items-center py-3 px-4 rounded-xl cursor-pointer border-2 ${item.bgColor} ${item.borderColor}`}
                     >
                         <span className={`font-semibold text-sm ${item.textColor}`}>{item.label}</span>
                         <span className={`font-bold text-sm ${item.textColor}`}>{item.value}</span>
-                    </motion.div>
+                    </div>
                 ))}
             </div>
-        </motion.div>
+        </div>
     );
 }
 
@@ -278,20 +258,14 @@ export function ClockCard() {
     const Icon: LucideIcon = isDayTime ? SunDim : Moon;
 
     return (
-        <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className={`flex flex-col items-center justify-center h-full p-6 text-white rounded-xl shadow-lg hover:shadow-xl transition-all ${
-                isDayTime ? 'bg-gradient-to-br from-amber-400 to-orange-500' : 'bg-gradient-to-br from-indigo-500 to-purple-600'
-            }`}
+        <div
+            className={`flex flex-col items-center justify-center h-full p-6 text-white rounded-xl border border-gray-200 transition-all ${isDayTime ? 'bg-gradient-to-br from-amber-400 to-orange-500' : 'bg-gradient-to-br from-indigo-500 to-purple-600'
+                }`}
         >
-            <motion.div
-                animate={{ rotate: isDayTime ? 360 : 0 }}
-                transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+            <div
             >
-                <Icon className="mb-2 drop-shadow-lg" size={100} />
-            </motion.div>
+                <Icon className="mb-2" size={100} />
+            </div>
 
             <div className="mt-2 text-sm opacity-90">
                 {currentTime.toLocaleDateString("en-US", {
@@ -307,7 +281,7 @@ export function ClockCard() {
             </div>
 
             <div className="mt-1 text-2xl font-semibold">{getGreeting()}</div>
-        </motion.div>
+        </div>
     );
 }
 
@@ -334,32 +308,25 @@ export function CalendarCard() {
     const today = new Date();
 
     return (
-        <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-            className="h-full p-5 bg-white rounded-xl shadow-lg hover:shadow-xl transition-all"
+        <div
+            className="h-full p-5 bg-white rounded-xl border border-gray-200 transition-all"
         >
             <div className="flex items-center justify-between mb-2">
-                <motion.button
-                    whileHover={{ scale: 1.2 }}
-                    whileTap={{ scale: 0.9 }}
+                <button
                     onClick={() => changeMonth(-1)}
                     className="text-gray-600 hover:text-emerald-500 font-bold text-2xl w-8 h-8 flex items-center justify-center rounded-lg hover:bg-emerald-50 transition-all"
                 >
                     ‹
-                </motion.button>
+                </button>
                 <span className="text-lg font-semibold bg-gradient-to-r from-emerald-600 to-emerald-500 bg-clip-text text-transparent">
                     {monthNames[selectedDate.getMonth()]} {selectedDate.getFullYear()}
                 </span>
-                <motion.button
-                    whileHover={{ scale: 1.2 }}
-                    whileTap={{ scale: 0.9 }}
+                <button
                     onClick={() => changeMonth(1)}
                     className="text-gray-600 hover:text-emerald-500 font-bold text-2xl w-8 h-8 flex items-center justify-center rounded-lg hover:bg-emerald-50 transition-all"
                 >
                     ›
-                </motion.button>
+                </button>
             </div>
             <div className="grid grid-cols-7 gap-y-6 gap-x-1 text-center">
                 {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((day) => (
@@ -378,22 +345,19 @@ export function CalendarCard() {
                         selectedDate.getMonth() === today.getMonth() &&
                         selectedDate.getFullYear() === today.getFullYear();
                     return (
-                        <motion.button
+                        <button
                             key={day}
-                            whileHover={{ scale: 1.15 }}
-                            whileTap={{ scale: 0.95 }}
-                            className={`rounded-xl text-sm py-2 font-medium transition-all ${
-                                isToday
-                                    ? "bg-gradient-to-br from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-200"
-                                    : "hover:bg-emerald-50 text-gray-700 hover:text-emerald-600"
-                            }`}
+                            className={`rounded-xl text-sm py-2 font-medium transition-all ${isToday
+                                ? "bg-gradient-to-br from-emerald-500 to-emerald-600 text-white"
+                                : "hover:bg-emerald-50 text-gray-700 hover:text-emerald-600"
+                                }`}
                         >
                             {day}
-                        </motion.button>
+                        </button>
                     );
                 })}
             </div>
-        </motion.div>
+        </div>
     );
 }
 
@@ -438,11 +402,8 @@ export function SystemStatus() {
     ];
 
     return (
-        <motion.div
-            initial={{ opacity: 0, y: 18 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.36 }}
-            className="p-6 transition-all bg-white rounded-xl shadow-lg hover:shadow-xl"
+        <div
+            className="p-6 transition-all bg-white rounded-xl border border-gray-200"
         >
             <div className="flex items-center gap-2 mb-4">
                 <div className="p-2 bg-gradient-to-br from-blue-400 to-blue-500 rounded-xl">
@@ -455,18 +416,14 @@ export function SystemStatus() {
 
             <div className="grid grid-cols-2 gap-2">
                 {status.map((item, idx) => (
-                    <motion.div
+                    <div
                         key={idx}
-                        initial={{ scale: 0.9, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        transition={{ delay: 0.1 * idx }}
-                        whileHover={{ scale: 1.03 }}
-                        className="flex flex-col items-center justify-center p-4 text-center bg-gradient-to-br from-gray-50 to-gray-100 border-2 border-gray-200 rounded-xl hover:shadow-md transition-all"
+                        className="flex flex-col items-center justify-center p-4 text-center bg-gradient-to-br from-gray-50 to-gray-100 border-2 border-gray-200 rounded-xl transition-all"
                     >
                         <div className="relative mb-2">
                             <svg width="80" height="80" viewBox="0 0 96 96" className="-rotate-90">
                                 <circle cx="48" cy="48" r="38" stroke="#e5e7eb" strokeWidth="8" fill="none" />
-                                <motion.circle
+                                <circle
                                     cx="48"
                                     cy="48"
                                     r="38"
@@ -476,9 +433,6 @@ export function SystemStatus() {
                                     strokeDasharray={2 * Math.PI * 38}
                                     strokeDashoffset={`${2 * Math.PI * 38 * (1 - item.value / 100)}`}
                                     strokeLinecap="round"
-                                    initial={{ strokeDashoffset: 2 * Math.PI * 38 }}
-                                    animate={{ strokeDashoffset: `${2 * Math.PI * 38 * (1 - item.value / 100)}` }}
-                                    transition={{ duration: 1, ease: "easeOut" }}
                                 />
                             </svg>
                             <div className="absolute inset-0 flex items-center justify-center">
@@ -488,18 +442,17 @@ export function SystemStatus() {
 
                         <div>
                             <div className="text-sm font-semibold text-gray-700 mb-1">{item.label}</div>
-                            <div className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                                item.value > 80 ? "bg-red-100 text-red-600" :
-                                    item.value > 60 ? "bg-orange-100 text-orange-600" :
-                                        "bg-emerald-100 text-emerald-600"
-                            }`}>
+                            <div className={`px-2 py-1 rounded-full text-xs font-semibold ${item.value > 80 ? "bg-red-100 text-red-600" :
+                                item.value > 60 ? "bg-orange-100 text-orange-600" :
+                                    "bg-emerald-100 text-emerald-600"
+                                }`}>
                                 {getStatusText(item.value)}
                             </div>
                         </div>
-                    </motion.div>
+                    </div>
                 ))}
             </div>
-        </motion.div>
+        </div>
     );
 }
 
@@ -510,11 +463,8 @@ export function TopProducts() {
     ];
 
     return (
-        <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6 }}
-            className="w-full h-full p-6 transition-all bg-white rounded-xl shadow-lg hover:shadow-xl"
+        <div
+            className="w-full h-full p-6 transition-all bg-white rounded-xl border border-gray-200"
         >
             <div className="flex items-center gap-2 mb-4">
                 <div className="p-2 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-xl">
@@ -528,48 +478,44 @@ export function TopProducts() {
             <div className="overflow-x-auto overflow-y-hidden w-full">
                 <table className="w-full min-w-max border-separate border-spacing-0">
                     <thead>
-                    <tr className="bg-gradient-to-r from-emerald-400 to-emerald-500">
-                        <th className="px-4 py-3 text-xs font-semibold tracking-wider text-left text-white uppercase rounded-tl-lg">
-                            Product ID
-                        </th>
-                        <th className="px-4 py-3 text-xs font-semibold tracking-wider text-left text-white uppercase">
-                            Name
-                        </th>
-                        <th className="px-4 py-3 text-xs font-semibold tracking-wider text-left text-white uppercase">
-                            MRP
-                        </th>
-                        <th className="px-4 py-3 text-xs font-semibold tracking-wider text-left text-white uppercase">
-                            Barcode
-                        </th>
-                        <th className="px-4 py-3 text-xs font-semibold tracking-wider text-left text-white uppercase rounded-tr-lg">
-                            Quantity
-                        </th>
-                    </tr>
+                        <tr className="bg-gradient-to-r from-emerald-400 to-emerald-500">
+                            <th className="px-4 py-3 text-xs font-semibold tracking-wider text-left text-white uppercase rounded-tl-lg">
+                                Product ID
+                            </th>
+                            <th className="px-4 py-3 text-xs font-semibold tracking-wider text-left text-white uppercase">
+                                Name
+                            </th>
+                            <th className="px-4 py-3 text-xs font-semibold tracking-wider text-left text-white uppercase">
+                                MRP
+                            </th>
+                            <th className="px-4 py-3 text-xs font-semibold tracking-wider text-left text-white uppercase">
+                                Barcode
+                            </th>
+                            <th className="px-4 py-3 text-xs font-semibold tracking-wider text-left text-white uppercase rounded-tr-lg">
+                                Quantity
+                            </th>
+                        </tr>
                     </thead>
                     <tbody>
-                    {products.map((product, index) => (
-                        <motion.tr
-                            key={product.id}
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: 0.1 * index }}
-                            whileHover={{ backgroundColor: "rgba(16,185,129,0.05)", x: 4 }}
-                            className="border-b border-gray-100 transition-colors cursor-pointer"
-                        >
-                            <td className="px-4 py-3 text-sm font-semibold text-gray-700">{product.id}</td>
-                            <td className="px-4 py-3 text-sm font-semibold text-gray-700">{product.name}</td>
-                            <td className="px-4 py-3 text-sm font-semibold text-emerald-600">LKR {product.mrp}</td>
-                            <td className="px-4 py-3 text-sm font-medium text-gray-600">{product.barcode}</td>
-                            <td className="px-4 py-3 text-sm">
-                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-blue-100 to-blue-200 text-blue-700">
-                                    {product.quantity}
-                                </span>
-                            </td>
-                        </motion.tr>
-                    ))}
+                        {products.map((product) => (
+                            <tr
+                                key={product.id}
+                                className="border-b border-gray-100 transition-colors cursor-pointer"
+                            >
+                                <td className="px-4 py-3 text-sm font-semibold text-gray-700">{product.id}</td>
+                                <td className="px-4 py-3 text-sm font-semibold text-gray-700">{product.name}</td>
+                                <td className="px-4 py-3 text-sm font-semibold text-emerald-600">LKR {product.mrp}</td>
+                                <td className="px-4 py-3 text-sm font-medium text-gray-600">{product.barcode}</td>
+                                <td className="px-4 py-3 text-sm">
+                                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-blue-100 to-blue-200 text-blue-700">
+                                        {product.quantity}
+                                    </span>
+                                </td>
+                            </tr>
+                        ))}
                     </tbody>
                 </table>
             </div>
-        </motion.div>
+        </div>
     );
 }

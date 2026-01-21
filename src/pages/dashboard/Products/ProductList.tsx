@@ -1,5 +1,5 @@
 import {
-    Barcode,
+
     ChevronLeft,
     ChevronRight,
     FileText,
@@ -9,6 +9,9 @@ import {
     Trash,
     X,
 } from "lucide-react";
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { useEffect, useState } from "react";
 import toast, { Toaster } from "react-hot-toast";
 import TypeableSelect from "../../../components/TypeableSelect.tsx";
@@ -18,6 +21,7 @@ import { categoryService } from "../../../services/categoryService";
 import { brandService } from "../../../services/brandService";
 import { unitService } from "../../../services/unitService";
 import { productTypeService } from "../../../services/productTypeService";
+
 
 interface Product {
     productID: number;
@@ -32,6 +36,7 @@ interface Product {
     size: string;
     storage: string;
     createdOn: string;
+    price: number;
 }
 
 type SelectOption = {
@@ -72,6 +77,8 @@ function ProductList() {
     const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
     const [productToDeactivate, setProductToDeactivate] = useState<Product | null>(null);
     const [isDeactivating, setIsDeactivating] = useState(false);
+
+
 
     const [selected, setSelected] = useState<SelectOption | null>(null);
     const [searchTerm, setSearchTerm] = useState("");
@@ -418,7 +425,7 @@ function ProductList() {
                                         })
                                     }
                                     placeholder="Type to search categories"
-                                    
+
                                 />
                             </div>
                             <div>
@@ -435,7 +442,7 @@ function ProductList() {
                                         })
                                     }
                                     placeholder="Type to search brands"
-                                   
+
                                 />
                             </div>
                             <div>
@@ -452,7 +459,7 @@ function ProductList() {
                                         })
                                     }
                                     placeholder="Type to search units"
-                                   
+
                                 />
                             </div>
                             <div>
@@ -469,7 +476,7 @@ function ProductList() {
                                         })
                                     }
                                     placeholder="Type to search types"
-                                    
+
                                 />
                             </div>
                         </div>
@@ -488,7 +495,7 @@ function ProductList() {
                                         setEditFormData({ ...editFormData, color: opt?.label || "" })
                                     }
                                     placeholder="Type to search Color"
-                                    
+
                                 />
                             </div>
                             <div>
@@ -558,6 +565,105 @@ function ProductList() {
         return () => window.removeEventListener("keydown", handleKeyDown);
     }, [currentPageData.length, isEditModalOpen, isUpdating]);
 
+    const formatDataForExport = (data: Product[]) => {
+        return data.map(item => ({
+            'Product ID': item.productID,
+            'Name': item.productName,
+            'Code': item.productCode,
+            'Barcode': item.barcode,
+            'Category': item.category,
+            'Brand': item.brand,
+            'Unit': item.unit,
+            'Type': item.productType,
+            'Color': item.color,
+            'Size': item.size,
+            'Storage': item.storage,
+            'Created On': item.createdOn
+        }));
+    };
+
+    const handleExportExcel = () => {
+        if (salesData.length === 0) {
+            toast.error('No data to export');
+            return;
+        }
+        const formattedData = formatDataForExport(salesData);
+        const ws = XLSX.utils.json_to_sheet(formattedData);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Products");
+        XLSX.writeFile(wb, "products_list.xlsx");
+        toast.success('Exported to Excel successfully');
+    };
+
+    const handleExportCSV = () => {
+        if (salesData.length === 0) {
+            toast.error('No data to export');
+            return;
+        }
+        const formattedData = formatDataForExport(salesData);
+        const ws = XLSX.utils.json_to_sheet(formattedData);
+        const csv = XLSX.utils.sheet_to_csv(ws);
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        link.setAttribute("href", url);
+        link.setAttribute("download", "products_list.csv");
+        link.style.visibility = "hidden";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        toast.success('Exported to CSV successfully');
+    };
+
+    const handleExportPDF = () => {
+        if (salesData.length === 0) {
+            toast.error('No data to export');
+            return;
+        }
+        // Use landscape orientation ('l') for better column fit
+        const doc = new jsPDF('l', 'mm', 'a4');
+
+        doc.setFontSize(18);
+        doc.text("Product List", 14, 22);
+
+        doc.setFontSize(11);
+        doc.setTextColor(100);
+        doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 30);
+
+        const tableColumn = [
+            "ID", "Name", "Code", "Barcode", "Category", "Brand",
+            "Unit", "Type", "Color", "Size", "Storage", "Created On"
+        ];
+
+        const tableRows = salesData.map(item => [
+            item.productID,
+            item.productName,
+            item.productCode,
+            item.barcode,
+            item.category,
+            item.brand,
+            item.unit,
+            item.productType,
+            item.color || '-',
+            item.size || '-',
+            item.storage || '-',
+            item.createdOn
+        ]);
+
+        autoTable(doc, {
+            head: [tableColumn],
+            body: tableRows,
+            startY: 40,
+            theme: 'grid',
+            styles: { fontSize: 8, cellPadding: 2 },
+            headStyles: { fillColor: [16, 185, 129] }, // Emerald-500
+            // optimize column widths if needed, or let autotable handle it
+        });
+
+        doc.save("products_list.pdf");
+        toast.success('Exported to PDF successfully');
+    };
+
     return (
         <>
             <Toaster
@@ -584,6 +690,7 @@ function ProductList() {
             />
             <div className="flex flex-col gap-4 h-full">
                 <EditProductModal />
+
 
                 <ConfirmationModal
                     isOpen={isConfirmModalOpen}
@@ -623,7 +730,7 @@ function ProductList() {
                                 value={selected?.value || null}
                                 onChange={(opt) => opt ? setSelected({ value: String(opt.value), label: opt.label }) : setSelected(null)}
                                 placeholder="Search Product Types..."
-                                
+
                             />
                         </div>
                         <div className="md:col-span-2">
@@ -712,8 +819,8 @@ function ProductList() {
                                         key={index}
                                         onClick={() => setSelectedIndex(index)}
                                         className={`cursor-pointer transition-colors ${index === selectedIndex
-                                                ? "bg-emerald-50 border-l-4 border-emerald-600"
-                                                : "hover:bg-emerald-50/50"
+                                            ? "bg-emerald-50 border-l-4 border-emerald-600"
+                                            : "hover:bg-emerald-50/50"
                                             }`}
                                     >
                                         <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
@@ -769,14 +876,7 @@ function ProductList() {
                                                 </span>
                                             </div>
 
-                                            <div className="relative group">
-                                                <button className="p-2 bg-gradient-to-r from-yellow-100 to-yellow-200 rounded-lg text-yellow-700 hover:from-yellow-200 hover:to-yellow-300 transition-all shadow-sm">
-                                                    <Barcode size={15} />
-                                                </button>
-                                                <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max px-2 py-1 text-xs text-white bg-gray-900 rounded-md invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    Print Barcode
-                                                </span>
-                                            </div>
+
 
                                             <div className="relative group">
                                                 <button
@@ -798,43 +898,47 @@ function ProductList() {
 
                     <nav className="bg-white flex items-center justify-between sm:px-6 pt-4 border-t-2 border-gray-100">
                         <div className="text-sm text-gray-600">
-                            Showing <span className="font-medium text-emerald-600">{currentPageData.length === 0 ? 0 : startIndex + 1}</span> to <span className="font-medium text-emerald-600">{Math.min(endIndex, totalItems)}</span> of <span className="font-medium text-emerald-600">{totalItems}</span> products
+                            Showing <span className="font-semibold text-gray-800">{startIndex + 1}</span> to{' '}
+                            <span className="font-semibold text-gray-800">{Math.min(endIndex, totalItems)}</span> of{' '}
+                            <span className="font-semibold text-gray-800">{totalItems}</span> results
                         </div>
                         <div className="flex items-center space-x-2">
                             <button
                                 onClick={goToPreviousPage}
                                 disabled={currentPage === 1}
                                 className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${currentPage === 1
-                                        ? 'text-gray-300 cursor-not-allowed'
-                                        : 'text-gray-600 hover:bg-emerald-50 hover:text-emerald-600'
+                                    ? 'text-gray-400 cursor-not-allowed'
+                                    : 'text-gray-600 hover:text-emerald-600 hover:bg-emerald-50'
                                     }`}
                             >
-                                <ChevronLeft className="mr-1 h-4 w-4" /> Previous
+                                <ChevronLeft className="mr-2 h-5 w-5" /> Previous
                             </button>
 
-                            {getPageNumbers().map((page, idx) => (
+                            {getPageNumbers().map((page, index) =>
                                 typeof page === 'number' ? (
                                     <button
-                                        key={idx}
+                                        key={index}
                                         onClick={() => goToPage(page)}
-                                        className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${currentPage === page
-                                                ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-200'
-                                                : 'text-gray-600 hover:bg-emerald-50'
+                                        className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${currentPage === page
+                                            ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-md'
+                                            : 'text-gray-600 hover:bg-emerald-50 hover:text-emerald-600'
                                             }`}
                                     >
                                         {page}
                                     </button>
                                 ) : (
-                                    <span key={idx} className="text-gray-400 px-2">...</span>
+                                    <span key={index} className="text-gray-400 px-2">
+                                        {page}
+                                    </span>
                                 )
-                            ))}
+                            )}
 
                             <button
                                 onClick={goToNextPage}
                                 disabled={currentPage === totalPages}
                                 className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${currentPage === totalPages
-                                        ? 'text-gray-300 cursor-not-allowed'
-                                        : 'text-gray-600 hover:bg-emerald-50 hover:text-emerald-600'
+                                    ? 'text-gray-400 cursor-not-allowed'
+                                    : 'text-gray-600 hover:text-emerald-600 hover:bg-emerald-50'
                                     }`}
                             >
                                 Next <ChevronRight className="ml-1 h-4 w-4" />
@@ -846,17 +950,26 @@ function ProductList() {
                 <div
                     className="bg-white flex justify-center p-4 gap-4 rounded-xl shadow-lg"
                 >
-                    <button className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-medium rounded-lg shadow-lg shadow-emerald-200 hover:shadow-xl transition-all">
+                    <button
+                        onClick={handleExportExcel}
+                        className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-medium rounded-lg shadow-lg shadow-emerald-200 hover:shadow-xl transition-all"
+                    >
                         <FileText size={20} />
-                        Export to Excel
+                        Excel
                     </button>
-                    <button className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-medium rounded-lg shadow-lg shadow-blue-200 hover:shadow-xl transition-all">
+                    <button
+                        onClick={handleExportCSV}
+                        className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-medium rounded-lg shadow-lg shadow-blue-200 hover:shadow-xl transition-all"
+                    >
                         <FileText size={20} />
-                        Export to CSV
+                        CSV
                     </button>
-                    <button className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-medium rounded-lg shadow-lg shadow-red-200 hover:shadow-xl transition-all">
+                    <button
+                        onClick={handleExportPDF}
+                        className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-medium rounded-lg shadow-lg shadow-red-200 hover:shadow-xl transition-all"
+                    >
                         <FileText size={20} />
-                        Export to PDF
+                        PDF
                     </button>
 
                 </div>

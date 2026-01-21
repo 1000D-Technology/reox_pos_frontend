@@ -103,3 +103,28 @@ exports.processPayment = catchAsync(async (req, res, next) => {
         });
     }
 });
+
+exports.getGRNDetails = catchAsync(async (req, res, next) => {
+    const { id } = req.params;
+
+    if (!id) {
+        return res.status(400).json({
+            success: false,
+            message: "GRN ID is required"
+        });
+    }
+
+    const grn = await Grn.getGRNDetailsById(id);
+
+    if (!grn) {
+        return res.status(404).json({
+            success: false,
+            message: "GRN not found"
+        });
+    }
+
+    res.status(200).json({
+        success: true,
+        data: grn
+    });
+});

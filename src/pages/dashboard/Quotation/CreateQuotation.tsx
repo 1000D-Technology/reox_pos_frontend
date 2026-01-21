@@ -10,7 +10,6 @@ import {
     DollarSign,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
 import toast, { Toaster } from 'react-hot-toast';
 
 interface QuotationItem {
@@ -199,9 +198,7 @@ function CreateQuotation() {
                     </h1>
                 </div>
 
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
+                <div
                     className={'bg-white rounded-xl p-6 shadow-lg'}
                 >
                     <h2 className="text-xl font-semibold text-gray-700 mb-4">Quotation Details</h2>
@@ -270,11 +267,9 @@ function CreateQuotation() {
                             />
                         </div>
                     </div>
-                </motion.div>
+                </div>
 
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
+                <div
                     className={'flex flex-col bg-white rounded-xl p-6 justify-between gap-6 shadow-lg'}
                 >
                     <div className="overflow-y-auto max-h-md md:h-[320px] lg:h-[400px] rounded-lg scrollbar-thin scrollbar-thumb-emerald-300 scrollbar-track-gray-100">
@@ -414,11 +409,9 @@ function CreateQuotation() {
                             </button>
                         </div>
                     </nav>
-                </motion.div>
+                </div>
 
-                <motion.div
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
+                <div
                     className="bg-gradient-to-r from-emerald-500 to-emerald-600 p-4 rounded-xl flex text-lg shadow-xl shadow-emerald-200"
                 >
                     <div className="text-white w-1/4 pl-5 flex items-center">
@@ -437,46 +430,38 @@ function CreateQuotation() {
                         <Receipt className="mr-2" size={20}/>
                         Total: <span className='font-bold ml-2'>LKR {totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                     </div>
-                </motion.div>
+                </div>
 
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
+                <div
                     className={'bg-white rounded-xl p-6 shadow-lg flex justify-center'}
                 >
                     <div className={'grid md:grid-cols-3 gap-4 '}>
-                        <motion.button
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
+                        <button
                             onClick={handleSave}
                             className='flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-medium rounded-lg shadow-lg shadow-emerald-200 hover:shadow-xl transition-all'
                         >
                             <Save size={20}/>
                             Save Quotation
-                        </motion.button>
+                        </button>
 
-                        <motion.button
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
+                        <button
                             onClick={handlePrint}
                             className='flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-medium rounded-lg shadow-lg shadow-blue-200 hover:shadow-xl transition-all'
                         >
                             <Printer size={20}/>
                             Print Quotation
-                        </motion.button>
+                        </button>
 
-                        <motion.button
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
+                        <button
                             onClick={handleClear}
                             className='flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-medium rounded-lg shadow-lg shadow-red-200 hover:shadow-xl transition-all'
                         >
                             <Trash size={20}/>
                             Clear All
-                        </motion.button>
+                        </button>
 
                     </div>
-                </motion.div>
+                </div>
             </div>
         </>
     );
