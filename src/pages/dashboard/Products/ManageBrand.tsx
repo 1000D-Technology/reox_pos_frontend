@@ -321,7 +321,7 @@ function ManageBrand() {
                 </div>
 
                 <div
-                    className={'flex flex-col bg-white rounded-xl p-6 justify-between gap-6 shadow-lg'}
+                    className={'flex flex-col bg-white rounded-xl p-6 justify-between gap-6 border border-gray-200'}
                 >
                     <div className={'grid md:grid-cols-5 gap-4'}>
                         <div>
@@ -352,9 +352,8 @@ function ManageBrand() {
                             <button
                                 onClick={handleSaveBrand}
                                 disabled={isSaving}
-                                className={`bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 py-2 rounded-lg shadow-lg shadow-emerald-200 hover:shadow-xl transition-all ${
-                                    isSaving ? 'opacity-50 cursor-not-allowed' : ''
-                                }`}
+                                className={`bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 py-2 rounded-lg shadow-lg shadow-emerald-200 hover:shadow-xl transition-all ${isSaving ? 'opacity-50 cursor-not-allowed' : ''
+                                    }`}
                             >
                                 {isSaving ? 'Adding...' : 'Add Brand'}
                             </button>
@@ -364,71 +363,69 @@ function ManageBrand() {
                     <div className="overflow-y-auto max-h-md md:h-[320px] lg:h-[690px] rounded-lg scrollbar-thin scrollbar-thumb-emerald-300 scrollbar-track-gray-100">
                         <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-gradient-to-r from-emerald-500 to-emerald-600 sticky top-0 z-10">
-                            <tr>
-                                {['No', 'Brand Name', 'Created On', 'Actions'].map((header, i, arr) => (
-                                    <th
-                                        key={i}
-                                        className={`px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider ${
-                                            i === 0 ? 'rounded-tl-lg' : i === arr.length - 1 ? 'rounded-tr-lg' : ''
-                                        }`}
-                                    >
-                                        {header}
-                                    </th>
-                                ))}
-                            </tr>
+                                <tr>
+                                    {['No', 'Brand Name', 'Created On', 'Actions'].map((header, i, arr) => (
+                                        <th
+                                            key={i}
+                                            className={`px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider ${i === 0 ? 'rounded-tl-lg' : i === arr.length - 1 ? 'rounded-tr-lg' : ''
+                                                }`}
+                                        >
+                                            {header}
+                                        </th>
+                                    ))}
+                                </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
-                            {isLoading ? (
-                                <tr>
-                                    <td colSpan={4} className="px-6 py-8 text-center text-gray-500">
-                                        <div className="flex justify-center items-center">
-                                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500"></div>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ) : salesData.length === 0 ? (
-                                <tr>
-                                    <td colSpan={4} className="px-6 py-8 text-center text-gray-500">
-                                        No brands found
-                                    </td>
-                                </tr>
-                            ) : (
-                                salesData.map((brand, index) => (
-                                    <tr
-                                        key={brand.id}
-                                        className={`hover:bg-emerald-50 transition-colors cursor-pointer ${
-                                            index === selectedIndex ? 'bg-emerald-100 border-l-4 border-emerald-500' : ''
-                                        }`}
-                                        onClick={() => setSelectedIndex(index)}
-                                    >
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                            {brand.no}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 font-medium">
-                                            {brand.brandname}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                            {brand.createdon}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                            <div className="flex gap-2">
-                                                <button
-                                                    onClick={() => handleEditClick(brand)}
-                                                    className="p-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all"
-                                                >
-                                                    <Pencil size={16}/>
-                                                </button>
-                                                <button
-                                                    onClick={(e) => handleDeleteBrand(brand, e)}
-                                                    className="p-2 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all"
-                                                >
-                                                    <Trash size={16}/>
-                                                </button>
+                                {isLoading ? (
+                                    <tr>
+                                        <td colSpan={4} className="px-6 py-8 text-center text-gray-500">
+                                            <div className="flex justify-center items-center">
+                                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500"></div>
                                             </div>
                                         </td>
                                     </tr>
-                                ))
-                            )}
+                                ) : salesData.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={4} className="px-6 py-8 text-center text-gray-500">
+                                            No brands found
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    salesData.map((brand, index) => (
+                                        <tr
+                                            key={brand.id}
+                                            className={`hover:bg-emerald-50 transition-colors cursor-pointer ${index === selectedIndex ? 'bg-emerald-100 border-l-4 border-emerald-500' : ''
+                                                }`}
+                                            onClick={() => setSelectedIndex(index)}
+                                        >
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                                {brand.no}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 font-medium">
+                                                {brand.brandname}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                {brand.createdon}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                                <div className="flex gap-2">
+                                                    <button
+                                                        onClick={() => handleEditClick(brand)}
+                                                        className="p-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all"
+                                                    >
+                                                        <Pencil size={16} />
+                                                    </button>
+                                                    <button
+                                                        onClick={(e) => handleDeleteBrand(brand, e)}
+                                                        className="p-2 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all"
+                                                    >
+                                                        <Trash size={16} />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
                             </tbody>
                         </table>
                     </div>
@@ -442,13 +439,12 @@ function ManageBrand() {
                             <button
                                 onClick={() => goToPage(currentPage - 1)}
                                 disabled={currentPage === 1}
-                                className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${
-                                    currentPage === 1
+                                className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${currentPage === 1
                                         ? 'text-gray-400 cursor-not-allowed'
                                         : 'text-gray-600 hover:bg-gray-100'
-                                }`}
+                                    }`}
                             >
-                                <ChevronLeft className="mr-2 h-5 w-5"/> Previous
+                                <ChevronLeft className="mr-2 h-5 w-5" /> Previous
                             </button>
                             {getPageNumbers().map((page, index) =>
                                 page === '...' ? (
@@ -457,11 +453,10 @@ function ManageBrand() {
                                     <button
                                         key={page}
                                         onClick={() => goToPage(page as number)}
-                                        className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
-                                            currentPage === page
+                                        className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${currentPage === page
                                                 ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-200'
                                                 : 'text-gray-600 hover:bg-gray-100'
-                                        }`}
+                                            }`}
                                     >
                                         {page}
                                     </button>
@@ -470,13 +465,12 @@ function ManageBrand() {
                             <button
                                 onClick={() => goToPage(currentPage + 1)}
                                 disabled={currentPage === totalPages}
-                                className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${
-                                    currentPage === totalPages
+                                className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${currentPage === totalPages
                                         ? 'text-gray-400 cursor-not-allowed'
                                         : 'text-gray-600 hover:bg-gray-100'
-                                }`}
+                                    }`}
                             >
-                                Next <ChevronRight className="ml-2 h-5 w-5"/>
+                                Next <ChevronRight className="ml-2 h-5 w-5" />
                             </button>
                         </div>
                     </nav>
@@ -491,7 +485,7 @@ function ManageBrand() {
                                 onClick={handleCloseModal}
                                 className="absolute top-4 right-4 p-2 hover:bg-gray-100 rounded-full transition-all"
                             >
-                                <X size={20} className="text-gray-600"/>
+                                <X size={20} className="text-gray-600" />
                             </button>
 
                             <h2 className="text-2xl font-bold text-gray-800 mb-6">Update Brand</h2>
@@ -517,9 +511,8 @@ function ManageBrand() {
                                 <button
                                     onClick={handleUpdateBrand}
                                     disabled={isUpdating}
-                                    className={`flex-1 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-medium rounded-lg shadow-lg shadow-emerald-200 hover:shadow-xl transition-all ${
-                                        isUpdating ? 'opacity-50 cursor-not-allowed' : ''
-                                    }`}
+                                    className={`flex-1 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-medium rounded-lg shadow-lg shadow-emerald-200 hover:shadow-xl transition-all ${isUpdating ? 'opacity-50 cursor-not-allowed' : ''
+                                        }`}
                                 >
                                     {isUpdating ? 'Updating...' : 'Update Brand'}
                                 </button>

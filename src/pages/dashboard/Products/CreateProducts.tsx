@@ -600,7 +600,7 @@ function CreateProducts() {
                 </div>
 
                 <div
-                    className={"bg-white rounded-xl p-6 flex flex-col shadow-lg"}
+                    className={"bg-white rounded-xl p-6 flex flex-col border border-gray-200"}
                 >
                     <div className="flex items-center gap-2 mb-4">
                         <Package className="text-emerald-600" size={24} />
@@ -838,8 +838,7 @@ function CreateProducts() {
                 </div>
 
                 <div
-
-                    className={"flex flex-col bg-white rounded-xl h-full p-6 justify-between shadow-lg"}
+                    className={"flex flex-col bg-white rounded-xl h-full p-6 justify-between border border-gray-200"}
                 >
                     <span className="text-lg font-semibold text-gray-800 block mb-4">Product List</span>
                     <div className="overflow-y-auto max-h-md md:h-[320px] lg:h-[320px] rounded-lg scrollbar-thin scrollbar-thumb-emerald-300 scrollbar-track-gray-100">
