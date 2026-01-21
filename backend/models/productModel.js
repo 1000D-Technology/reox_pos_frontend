@@ -74,13 +74,9 @@ class Product {
         productCode: p.product_code,
         barcode: pv.barcode,
         category: categoryName,
-        categoryId: p.category_id,
         brand: brandName,
-        brandId: p.brand_id,
         unit: unitName,
-        unitId: p.unit_id,
         productType: typeName,
-        productTypeId: p.product_type_id,
         color: pv.color,
         size: pv.size,
         storage: pv.storage_capacity,
@@ -139,13 +135,8 @@ class Product {
 
   static async updateProductVariation(pvID, productData, variationData) {
     return await prisma.$transaction(async (tx) => {
-      const parsedPvID = parseInt(pvID);
-      if (isNaN(parsedPvID)) {
-        throw new Error("Invalid product variation ID");
-      }
-
       const variation = await tx.product_variations.findUnique({
-        where: { id: parsedPvID },
+        where: { id: pvID },
         select: { product_id: true },
       });
 
@@ -155,38 +146,26 @@ class Product {
 
       const productId = variation.product_id;
 
-      // Parse and validate IDs
-      const categoryId = parseInt(productData.categoryId);
-      const brandId = parseInt(productData.brandId);
-      const unitId = parseInt(productData.unitId);
-      const typeId = parseInt(productData.typeId);
-
-      if (isNaN(categoryId) || isNaN(brandId) || isNaN(unitId) || isNaN(typeId)) {
-        throw new Error("Invalid product data: category, brand, unit, or type ID is not a valid number");
-      }
-
       await tx.product.update({
         where: { id: productId },
         data: {
           product_name: productData.name,
           product_code: productData.code,
-          category_id: categoryId,
-          brand_id: brandId,
-          unit_id: unitId,
-          product_type_id: typeId,
+          category_id: productData.categoryId,
+          brand_id: productData.brandId,
+          unit_id: productData.unitId,
+          product_type_id: productData.typeId,
         },
       });
 
-      const statusId = parseInt(variationData.statusId);
-      
       await tx.product_variations.update({
-        where: { id: parsedPvID },
+        where: { id: pvID },
         data: {
           barcode: variationData.barcode,
-          color: variationData.color || 'Default',
-          size: variationData.size || 'Default',
-          storage_capacity: variationData.storage || 'N/A',
-          product_status_id: isNaN(statusId) ? 1 : statusId,
+          color: variationData.color,
+          size: variationData.size,
+          storage_capacity: variationData.storage,
+          product_status_id: variationData.statusId || 1,
         },
       });
 
@@ -294,18 +273,11 @@ class Product {
   }
 
   static async updateProductStatus(pvId, statusId) {
-    try {
-      await prisma.product_variations.update({
-        where: { id: parseInt(pvId) },
-        data: { product_status_id: parseInt(statusId) },
-      });
-      return { affectedRows: 1 };
-    } catch (error) {
-      if (error.code === 'P2025') {
-        return { affectedRows: 0 };
-      }
-      throw error;
-    }
+    const result = await prisma.product_variations.update({
+      where: { id: pvId },
+      data: { product_status_id: statusId },
+    });
+    return result;
   }
 }
 

@@ -1,107 +1,67 @@
-const prisma = require("../config/prismaClient");
+const db = require("../config/db");
 
 class POS {
     // Get POS products with stock greater than 0
     static async getPOSProducts() {
-        const stocks = await prisma.stock.findMany({
-            where: {
-                qty: { gt: 0 },
-                product_variations: {
-                    product_status_id: 1
-                }
-            },
-            include: {
-                product_variations: {
-                    include: {
-                        product: {
-                            include: {
-                                unit_id_product_unit_idTounit_id: true
-                            }
-                        }
-                    }
-                },
-                batch: true
-            },
-            orderBy: [
-                { product_variations: { product: { product_name: 'asc' } } },
-                { mfd: 'asc' }
-            ]
-        });
-
-        return stocks.map(s => {
-            const pv = s.product_variations;
-            const p = pv.product;
-            
-            return {
-                stockID: s.id,
-                productName: p.product_name,
-                barcode: s.barcode,
-                pvBarcode: pv.barcode,
-                unit: p.unit_id_product_unit_idTounit_id?.name,
-                price: s.rsp,
-                wholesalePrice: s.wsp || '',
-                currentStock: s.qty,
-                batchName: s.batch.batch_name,
-                productCode: p.product_code,
-                color: pv.color,
-                size: pv.size,
-                storage_capacity: pv.storage_capacity,
-                expiry: s.exp ? s.exp.toISOString().split('T')[0] : null
-            };
-        });
+        const query = `
+            SELECT
+                s.id AS stockID,
+                p.product_name AS productName,
+                s.barcode AS barcode,
+                pv.barcode AS pvBarcode,
+                u.name AS unit,
+                s.rsp AS price,
+                IFNULL(s.wsp, '') AS wholesalePrice,
+                s.qty AS currentStock,
+                b.batch_name AS batchName,
+                p.product_code AS productCode,
+                pv.color,
+                pv.size,
+                pv.storage_capacity,
+                DATE_FORMAT(s.exp, '%Y-%m-%d') AS expiry
+            FROM stock s
+                     JOIN product_variations pv ON s.product_variations_id = pv.id
+                     JOIN product p ON pv.product_id = p.id
+                     JOIN batch b ON s.batch_id = b.id
+                     LEFT JOIN unit_id u ON p.unit_id = u.idunit_id
+            WHERE pv.product_status_id = 1
+              AND s.qty > 0
+            ORDER BY p.product_name ASC, s.mfd ASC
+        `;
+        const [rows] = await db.execute(query);
+        return rows;
     }
 
     // Search product by barcode (checks both stock and product_variations barcodes)
     static async searchByBarcode(barcode) {
-        const stocks = await prisma.stock.findMany({
-            where: {
-                OR: [
-                    { barcode: barcode },
-                    { product_variations: { barcode: barcode } }
-                ],
-                qty: { gt: 0 },
-                product_variations: {
-                    product_status_id: 1
-                }
-            },
-            include: {
-                product_variations: {
-                    include: {
-                        product: {
-                            include: {
-                                unit_id_product_unit_idTounit_id: true
-                            }
-                        }
-                    }
-                },
-                batch: true
-            },
-            orderBy: {
-                mfd: 'asc'
-            },
-            take: 1
-        });
-
-        return stocks.map(s => {
-            const pv = s.product_variations;
-            const p = pv.product;
-            
-            return {
-                stockID: s.id,
-                productName: p.product_name,
-                barcode: s.barcode,
-                unit: p.unit_id_product_unit_idTounit_id?.name,
-                price: s.rsp,
-                wholesalePrice: s.wsp || '',
-                productCode: p.product_code,
-                currentStock: s.qty,
-                batchName: s.batch.batch_name,
-                expiry: s.exp ? s.exp.toISOString().split('T')[0] : null,
-                color: pv.color,
-                size: pv.size,
-                storage_capacity: pv.storage_capacity
-            };
-        });
+        const query = `
+            SELECT
+                s.id AS stockID,
+                p.product_name AS productName,
+                s.barcode AS barcode,
+                u.name AS unit,
+                s.rsp AS price,
+                IFNULL(s.wsp, '') AS wholesalePrice,
+                p.product_code AS productCode,
+                s.qty AS currentStock,
+                b.batch_name AS batchName,
+                DATE_FORMAT(s.exp, '%Y-%m-%d') AS expiry,
+                pv.color,
+                pv.size,
+                pv.storage_capacity
+            FROM stock s
+                     JOIN product_variations pv ON s.product_variations_id = pv.id
+                     JOIN product p ON pv.product_id = p.id
+                     JOIN batch b ON s.batch_id = b.id
+                     LEFT JOIN unit_id u ON p.unit_id = u.idunit_id
+            WHERE (s.barcode = ? OR pv.barcode = ?)
+              AND pv.product_status_id = 1
+              AND s.qty > 0
+            ORDER BY s.mfd ASC
+                LIMIT 1
+        `;
+        const [rows] = await db.execute(query, [barcode, barcode]);
+        return rows;
     }
 }
 

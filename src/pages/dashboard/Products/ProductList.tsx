@@ -29,13 +29,9 @@ interface Product {
     productCode: string;
     barcode: string;
     category: string;
-    categoryId?: number;
     brand: string;
-    brandId?: number;
     unit: string;
-    unitId?: number;
     productType: string;
-    productTypeId?: number;
     color: string;
     size: string;
     storage: string;
@@ -258,39 +254,19 @@ function ProductList() {
 
     useEffect(() => {
         if (selectedProduct && isEditModalOpen) {
-            // Priority: Use ID if available, otherwise try to match by name (fallback)
-            const getCategoryId = () => {
-                if (selectedProduct.categoryId) return String(selectedProduct.categoryId);
-                const match = categories.find(c => c.label.trim().toLowerCase() === selectedProduct.category?.trim().toLowerCase());
-                return match?.value || "";
-            };
-
-            const getBrandId = () => {
-                if (selectedProduct.brandId) return String(selectedProduct.brandId);
-                const match = brands.find(b => b.label.trim().toLowerCase() === selectedProduct.brand?.trim().toLowerCase());
-                return match?.value || "";
-            };
-
-            const getUnitId = () => {
-                if (selectedProduct.unitId) return String(selectedProduct.unitId);
-                const match = units.find(u => u.label.trim().toLowerCase() === selectedProduct.unit?.trim().toLowerCase());
-                return match?.value || "";
-            };
-
-            const getTypeId = () => {
-                if (selectedProduct.productTypeId) return String(selectedProduct.productTypeId);
-                const match = productType.find(t => t.label.trim().toLowerCase() === selectedProduct.productType?.trim().toLowerCase());
-                return match?.value || "";
-            };
+            const categoryMatch = categories.find(c => c.label === selectedProduct.category);
+            const brandMatch = brands.find(b => b.label === selectedProduct.brand);
+            const unitMatch = units.find(u => u.label === selectedProduct.unit);
+            const typeMatch = productType.find(t => t.label === selectedProduct.productType);
 
             setEditFormData({
                 productName: selectedProduct.productName || "",
                 productCode: selectedProduct.productCode || "",
                 barcode: selectedProduct.barcode || "",
-                categoryId: getCategoryId(),
-                brandId: getBrandId(),
-                unitId: getUnitId(),
-                typeId: getTypeId(),
+                categoryId: categoryMatch?.value || "",
+                brandId: brandMatch?.value || "",
+                unitId: unitMatch?.value || "",
+                typeId: typeMatch?.value || "",
                 color: selectedProduct.color || "",
                 size: selectedProduct.size || "",
                 storage: selectedProduct.storage || ""
