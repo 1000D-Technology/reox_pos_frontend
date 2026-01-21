@@ -9,7 +9,10 @@ import {
     Phone,
     Mail,
     CreditCard,
-    Briefcase
+    Briefcase,
+    Upload,
+    Download,
+    Loader2
 } from 'lucide-react';
 
 import { useEffect, useState } from 'react';
@@ -40,13 +43,13 @@ function CreateSupplier() {
     const [isCompanyModalOpen, setIsCompanyModalOpen] = useState(false);
 
     // State for company selection
-    const [companies, setCompanies] = useState<{value: string | number, label: string}[]>([]);
-    const [selectedCompany, setSelectedCompany] = useState<{value: string | number, label: string} | null>(null);
+    const [companies, setCompanies] = useState<{ value: string | number, label: string }[]>([]);
+    const [selectedCompany, setSelectedCompany] = useState<{ value: string | number, label: string } | null>(null);
     const [isLoadingCompanies, setIsLoadingCompanies] = useState(false);
 
     // State for bank selection
-    const [banks, setBanks] = useState<{value: string | number, label: string}[]>([]);
-    const [selectedBank, setSelectedBank] = useState<{value: string | number, label: string} | null>(null);
+    const [banks, setBanks] = useState<{ value: string | number, label: string }[]>([]);
+    const [selectedBank, setSelectedBank] = useState<{ value: string | number, label: string } | null>(null);
     const [isLoadingBanks, setIsLoadingBanks] = useState(false);
 
     // State for supplier form
@@ -98,6 +101,78 @@ function CreateSupplier() {
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
     }, [currentPageData.length, isSubmittingSupplier, supplierData, selectedCompany, selectedBank]);
+
+    const [isImporting, setIsImporting] = useState(false);
+
+    const handleDownloadTemplate = () => {
+        const headers = ['Supplier Name', 'Email', 'Contact Number', 'Company', 'Bank', 'Account Number'];
+        const exampleRow = ['John Doe', 'john@example.com', '1234567890', 'Tech Corp', 'City Bank', '987654321'];
+
+        const csvContent = [
+            headers.join(','),
+            exampleRow.join(',')
+        ].join('\n');
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        if (link.download !== undefined) {
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', 'supplier_import_template.csv');
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    };
+
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files.length > 0) {
+            const file = e.target.files[0];
+            const formData = new FormData();
+            formData.append('file', file);
+
+            setIsImporting(true);
+            try {
+                // @ts-ignore
+                const response = await supplierService.importSuppliers(formData);
+                const data = response.data;
+                if (data.success) {
+                    toast.success(`Imported: ${data.data.successCount}, Skipped: ${data.data.skippedCount}`);
+                    if (data.data.errors.length > 0) {
+                        data.data.errors.forEach((err: any) => {
+                            toast.error(`${err.name}: ${err.error}`, { duration: 5000 });
+                        });
+                    }
+                    // Refresh supplier list
+                    const getRes = await supplierService.getSuppliers();
+                    if (getRes.data.success) {
+                        const transformedData = getRes.data.data.map((supplier: any, index: number) => ({
+                            id: supplier.id.toString(),
+                            no: (index + 1).toString(),
+                            name: supplier.supplierName || '',
+                            email: supplier.email || '',
+                            contact: supplier.contactNumber || '',
+                            company: supplier.companyName || '',
+                            bank: supplier.bankName || '',
+                            account: supplier.accountNumber || '',
+                        }));
+                        setSalesData(transformedData);
+                        setTotalItems(transformedData.length);
+                    }
+                } else {
+                    toast.error(data.message || 'Import failed');
+                }
+            } catch (error: any) {
+                console.error("Import error:", error);
+                toast.error(error.response?.data?.message || 'Failed to import suppliers');
+            } finally {
+                setIsImporting(false);
+                // Clear input
+                e.target.value = '';
+            }
+        }
+    };
 
     // Function to search companies and banks
     const searchCompaniesAndBanks = async () => {
@@ -432,19 +507,45 @@ function CreateSupplier() {
                 }}
             />
             <div className={"flex flex-col gap-4 h-full"}>
-                <div>
-                    <div className="text-sm text-gray-400 flex items-center">
-                        <span>Suppliers</span>
-                        <span className="mx-2">›</span>
-                        <span className="text-gray-700 font-medium">Create Supplier</span>
+                <div className="flex justify-between items-center">
+                    <div>
+                        <div className="text-sm text-gray-400 flex items-center">
+                            <span>Suppliers</span>
+                            <span className="mx-2">›</span>
+                            <span className="text-gray-700 font-medium">Create Supplier</span>
+                        </div>
+                        <h1 className="text-3xl font-semibold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
+                            Create New Supplier
+                        </h1>
                     </div>
-                    <h1 className="text-3xl font-semibold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
-                        Create New Supplier
-                    </h1>
+                    <div className="flex gap-2">
+                        <button
+                            onClick={handleDownloadTemplate}
+                            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 hover:text-emerald-600 font-medium rounded-lg transition-all"
+                            title="Download CSV Template"
+                        >
+                            <Download size={18} />
+                            <span>Template</span>
+                        </button>
+                        <input
+                            type="file"
+                            accept=".xlsx, .xls, .csv"
+                            onChange={handleFileChange}
+                            className="hidden"
+                            id="supplier-import"
+                        />
+                        <label
+                            htmlFor="supplier-import"
+                            className={`flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 hover:text-emerald-600 font-medium rounded-lg transition-all cursor-pointer ${isImporting ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        >
+                            {isImporting ? <Loader2 size={18} className="animate-spin text-emerald-600" /> : <Upload size={18} />}
+                            <span>{isImporting ? 'Importing...' : 'Import Suppliers'}</span>
+                        </label>
+                    </div>
                 </div>
 
                 <div
-                    className={"bg-white rounded-xl p-6 flex flex-col shadow-lg"}
+                    className={"bg-white rounded-xl p-6 flex flex-col border border-gray-200"}
                 >
                     <div className="flex items-center gap-2 mb-4">
                         <Users className="text-emerald-600" size={24} />
@@ -459,9 +560,9 @@ function CreateSupplier() {
                             <input
                                 type="text"
                                 value={supplierData.supplierName}
-                                onChange={(e) => setSupplierData({...supplierData, supplierName: e.target.value})}
+                                onChange={(e) => setSupplierData({ ...supplierData, supplierName: e.target.value })}
                                 placeholder="Enter Supplier Name"
-                                className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all outline-none"
+                                className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-500 transition-all outline-none"
                             />
                         </div>
                         <div>
@@ -471,9 +572,9 @@ function CreateSupplier() {
                             <input
                                 type="email"
                                 value={supplierData.email}
-                                onChange={(e) => setSupplierData({...supplierData, email: e.target.value})}
+                                onChange={(e) => setSupplierData({ ...supplierData, email: e.target.value })}
                                 placeholder="Enter Email"
-                                className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all outline-none"
+                                className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-500 transition-all outline-none"
                             />
                         </div>
                         <div>
@@ -483,9 +584,9 @@ function CreateSupplier() {
                             <input
                                 type="text"
                                 value={supplierData.contactNumber}
-                                onChange={(e) => setSupplierData({...supplierData, contactNumber: e.target.value})}
+                                onChange={(e) => setSupplierData({ ...supplierData, contactNumber: e.target.value })}
                                 placeholder="Enter Contact Number"
-                                className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all outline-none"
+                                className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-500 transition-all outline-none"
                             />
                         </div>
                         <div>
@@ -517,9 +618,9 @@ function CreateSupplier() {
                             <input
                                 type="text"
                                 value={supplierData.accountNumber}
-                                onChange={(e) => setSupplierData({...supplierData, accountNumber: e.target.value})}
+                                onChange={(e) => setSupplierData({ ...supplierData, accountNumber: e.target.value })}
                                 placeholder="Enter Account Number"
-                                className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all outline-none"
+                                className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-500 transition-all outline-none"
                             />
                         </div>
                     </div>
@@ -527,7 +628,7 @@ function CreateSupplier() {
                     <div className="flex justify-between items-center mt-6">
                         <button
                             onClick={() => setIsCompanyModalOpen(true)}
-                            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-medium rounded-lg shadow-lg shadow-blue-200 transition-all"
+                            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-medium rounded-lg transition-all"
                         >
                             <CirclePlus size={16} />
                             Add Company
@@ -535,9 +636,8 @@ function CreateSupplier() {
                         <button
                             onClick={handleSubmitSupplier}
                             disabled={isSubmittingSupplier}
-                            className={`flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-medium rounded-lg shadow-lg shadow-emerald-200 transition-all ${
-                                isSubmittingSupplier ? 'opacity-50 cursor-not-allowed' : ''
-                            }`}
+                            className={`flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-medium rounded-lg transition-all ${isSubmittingSupplier ? 'opacity-50 cursor-not-allowed' : ''
+                                }`}
                         >
                             {isSubmittingSupplier ? 'Creating...' : 'Create Supplier'}
                             <span className="text-xs text-emerald-100">(Shift + Enter)</span>
@@ -546,70 +646,68 @@ function CreateSupplier() {
                 </div>
 
                 <div
-                    className={"flex flex-col bg-white rounded-xl h-full p-6 justify-between shadow-lg"}
+                    className={"flex flex-col bg-white rounded-xl h-full p-6 justify-between border border-gray-200"}
                 >
                     <span className="text-lg font-semibold text-gray-800 block mb-4">Supplier List</span>
                     <div className="overflow-y-auto max-h-md md:h-[320px] lg:h-[420px] rounded-lg scrollbar-thin scrollbar-thumb-emerald-300 scrollbar-track-gray-100">
                         <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-gradient-to-r from-emerald-600 to-emerald-700 sticky top-0 z-10">
-                            <tr>
-                                {['No', 'Name', 'Email', 'Contact', 'Company', 'Bank', 'Account', 'Actions'].map((header, i, arr) => (
-                                    <th
-                                        key={i}
-                                        className={`px-6 py-3 text-left text-sm font-medium text-white tracking-wider ${
-                                            i === 0 ? 'rounded-tl-lg' : i === arr.length - 1 ? 'rounded-tr-lg' : ''
-                                        }`}
-                                    >
-                                        {header}
-                                    </th>
-                                ))}
-                            </tr>
+                                <tr>
+                                    {['No', 'Name', 'Email', 'Contact', 'Company', 'Bank', 'Account', 'Actions'].map((header, i, arr) => (
+                                        <th
+                                            key={i}
+                                            className={`px-6 py-3 text-left text-sm font-medium text-white tracking-wider ${i === 0 ? 'rounded-tl-lg' : i === arr.length - 1 ? 'rounded-tr-lg' : ''
+                                                }`}
+                                        >
+                                            {header}
+                                        </th>
+                                    ))}
+                                </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
-                            {isLoadingSuppliers ? (
-                                <tr>
-                                    <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
-                                        Loading suppliers...
-                                    </td>
-                                </tr>
-                            ) : currentPageData.length === 0 ? (
-                                <tr>
-                                    <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
-                                        No suppliers found
-                                    </td>
-                                </tr>
-                            ) : (
-                                currentPageData.map((supplier, index) => (
-                                    <tr
-                                        key={supplier.id}
-                                        onClick={() => setSelectedIndex(index)}
-                                        className={`cursor-pointer transition-colors ${
-                                            selectedIndex === index
-                                                ? "bg-emerald-50 border-l-4 border-emerald-600"
-                                                : "hover:bg-emerald-50/50"
-                                        }`}
-                                    >
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">{supplier.no}</td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">{supplier.name}</td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">{supplier.email}</td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">{supplier.contact}</td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">{supplier.company}</td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">{supplier.bank}</td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">{supplier.account}</td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm">
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleEditClick(supplier);
-                                                }}
-                                                className="text-emerald-600 hover:text-emerald-800 p-1 rounded transition-colors"
-                                            >
-                                                <Pencil size={16} />
-                                            </button>
+                                {isLoadingSuppliers ? (
+                                    <tr>
+                                        <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
+                                            Loading suppliers...
                                         </td>
                                     </tr>
-                                ))
-                            )}
+                                ) : currentPageData.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
+                                            No suppliers found
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    currentPageData.map((supplier, index) => (
+                                        <tr
+                                            key={supplier.id}
+                                            onClick={() => setSelectedIndex(index)}
+                                            className={`cursor-pointer transition-colors ${selectedIndex === index
+                                                ? "bg-emerald-50 border-l-4 border-emerald-600"
+                                                : "hover:bg-emerald-50/50"
+                                                }`}
+                                        >
+                                            <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">{supplier.no}</td>
+                                            <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">{supplier.name}</td>
+                                            <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">{supplier.email}</td>
+                                            <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">{supplier.contact}</td>
+                                            <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">{supplier.company}</td>
+                                            <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">{supplier.bank}</td>
+                                            <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">{supplier.account}</td>
+                                            <td className="px-6 py-2 whitespace-nowrap text-sm">
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleEditClick(supplier);
+                                                    }}
+                                                    className="text-emerald-600 hover:text-emerald-800 p-1 rounded transition-colors"
+                                                >
+                                                    <Pencil size={16} />
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
                             </tbody>
                         </table>
                     </div>
@@ -622,13 +720,12 @@ function CreateSupplier() {
                             <button
                                 onClick={goToPreviousPage}
                                 disabled={currentPage === 1}
-                                className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${
-                                    currentPage === 1
-                                        ? 'text-gray-300 cursor-not-allowed'
-                                        : 'text-gray-600 hover:bg-emerald-50 hover:text-emerald-600'
-                                }`}
+                                className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${currentPage === 1
+                                    ? 'text-gray-300 cursor-not-allowed'
+                                    : 'text-gray-600 hover:bg-emerald-50 hover:text-emerald-600'
+                                    }`}
                             >
-                                <ChevronLeft className="mr-1 h-4 w-4"/> Previous
+                                <ChevronLeft className="mr-1 h-4 w-4" /> Previous
                             </button>
 
                             {getPageNumbers().map((page, idx) => (
@@ -636,11 +733,10 @@ function CreateSupplier() {
                                     <button
                                         key={idx}
                                         onClick={() => goToPage(page)}
-                                        className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
-                                            currentPage === page
-                                                ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-200'
-                                                : 'text-gray-600 hover:bg-emerald-50'
-                                        }`}
+                                        className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${currentPage === page
+                                            ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white'
+                                            : 'text-gray-600 hover:bg-emerald-50'
+                                            }`}
                                     >
                                         {page}
                                     </button>
@@ -652,13 +748,12 @@ function CreateSupplier() {
                             <button
                                 onClick={goToNextPage}
                                 disabled={currentPage === totalPages}
-                                className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${
-                                    currentPage === totalPages
-                                        ? 'text-gray-300 cursor-not-allowed'
-                                        : 'text-gray-600 hover:bg-emerald-50 hover:text-emerald-600'
-                                }`}
+                                className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${currentPage === totalPages
+                                    ? 'text-gray-300 cursor-not-allowed'
+                                    : 'text-gray-600 hover:bg-emerald-50 hover:text-emerald-600'
+                                    }`}
                             >
-                                Next <ChevronRight className="ml-1 h-4 w-4"/>
+                                Next <ChevronRight className="ml-1 h-4 w-4" />
                             </button>
                         </div>
                     </nav>
@@ -669,7 +764,7 @@ function CreateSupplier() {
             {isCompanyModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
                     <div
-                        className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md relative"
+                        className="bg-white rounded-2xl border border-gray-200 p-8 w-full max-w-md relative"
                     >
                         <button
                             onClick={handleCloseCompanyModal}
@@ -696,9 +791,9 @@ function CreateSupplier() {
                                 <input
                                     type="text"
                                     value={companyData.name}
-                                    onChange={(e) => setCompanyData({...companyData, name: e.target.value})}
+                                    onChange={(e) => setCompanyData({ ...companyData, name: e.target.value })}
                                     placeholder="Enter Company Name"
-                                    className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none"
+                                    className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-blue-500 transition-all outline-none"
                                 />
                             </div>
                             <div>
@@ -708,7 +803,7 @@ function CreateSupplier() {
                                 <input
                                     type="email"
                                     value={companyData.email}
-                                    onChange={(e) => setCompanyData({...companyData, email: e.target.value})}
+                                    onChange={(e) => setCompanyData({ ...companyData, email: e.target.value })}
                                     placeholder="Enter Email"
                                     className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none"
                                 />
@@ -720,7 +815,7 @@ function CreateSupplier() {
                                 <input
                                     type="text"
                                     value={companyData.contact}
-                                    onChange={(e) => setCompanyData({...companyData, contact: e.target.value})}
+                                    onChange={(e) => setCompanyData({ ...companyData, contact: e.target.value })}
                                     placeholder="Enter Contact"
                                     className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none"
                                 />
@@ -737,9 +832,8 @@ function CreateSupplier() {
                             <button
                                 onClick={handleSubmitCompany}
                                 disabled={isSubmitting}
-                                className={`px-6 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-medium rounded-lg shadow-lg shadow-blue-200 transition-all ${
-                                    isSubmitting ? 'opacity-50 cursor-not-allowed' : ''
-                                }`}
+                                className={`px-6 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-medium rounded-lg shadow-lg shadow-blue-200 transition-all ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''
+                                    }`}
                             >
                                 {isSubmitting ? 'Creating...' : 'Create Company'}
                             </button>
@@ -796,9 +890,8 @@ function CreateSupplier() {
                             <button
                                 onClick={handleUpdateContact}
                                 disabled={isUpdatingContact}
-                                className={`px-6 py-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-medium rounded-lg shadow-lg shadow-emerald-200 transition-all ${
-                                    isUpdatingContact ? 'opacity-50 cursor-not-allowed' : ''
-                                }`}
+                                className={`px-6 py-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-medium rounded-lg shadow-lg shadow-emerald-200 transition-all ${isUpdatingContact ? 'opacity-50 cursor-not-allowed' : ''
+                                    }`}
                             >
                                 {isUpdatingContact ? 'Updating...' : 'Update Contact'}
                             </button>

@@ -62,6 +62,12 @@ class Category {
         return !!category;
     }
 
+    static async getIdByName(name) {
+        const query = "SELECT idcategory FROM category WHERE name = ?";
+        const [rows] = await db.execute(query, [name.trim()]);
+        return rows.length > 0 ? rows[0].idcategory : null;
+    }
+
     /**
      * @desc Update category name
      */

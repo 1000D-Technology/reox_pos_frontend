@@ -68,7 +68,7 @@ function ManageSupplier() {
             trend: '+12%',
             color: 'bg-gradient-to-br from-emerald-400 to-emerald-500',
             iconColor: 'text-white',
-            bgGlow: 'shadow-emerald-200'
+            bgGlow: ''
         },
         {
             icon: CheckCircle,
@@ -77,7 +77,7 @@ function ManageSupplier() {
             trend: '+8%',
             color: 'bg-gradient-to-br from-blue-400 to-blue-500',
             iconColor: 'text-white',
-            bgGlow: 'shadow-blue-200'
+            bgGlow: ''
         },
         {
             icon: Building2,
@@ -86,7 +86,7 @@ function ManageSupplier() {
             trend: '+5%',
             color: 'bg-gradient-to-br from-purple-400 to-purple-500',
             iconColor: 'text-white',
-            bgGlow: 'shadow-purple-200'
+            bgGlow: ''
         },
     ];
 
@@ -307,11 +307,11 @@ function ManageSupplier() {
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: i * 0.1 }}
                             whileHover={{ scale: 1.05, y: -2 }}
-                            className={`flex items-center p-4 space-x-3 transition-all bg-white rounded-2xl shadow-lg hover:shadow-xl ${stat.bgGlow} cursor-pointer group relative overflow-hidden`}
+                            className={`flex items-center p-4 space-x-3 transition-all bg-white rounded-2xl border border-gray-200 cursor-pointer group relative overflow-hidden`}
                         >
                             <div className="absolute inset-0 bg-gradient-to-br from-transparent via-gray-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
 
-                            <div className={`p-3 rounded-full ${stat.color} shadow-md relative z-10`}>
+                            <div className={`p-3 rounded-full ${stat.color} relative z-10`}>
                                 <stat.icon className={`w-6 h-6 ${stat.iconColor}`} />
                             </div>
 
@@ -335,7 +335,7 @@ function ManageSupplier() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.4 }}
-                    className="bg-white rounded-xl p-4 shadow-lg"
+                    className="bg-white rounded-xl p-4 border border-gray-200"
                 >
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
@@ -344,7 +344,7 @@ function ManageSupplier() {
                             value={searchQuery}
                             onChange={(e) => handleSearch(e.target.value)}
                             placeholder="Search suppliers by name, email, contact, or company..."
-                            className="w-full pl-10 pr-4 py-2.5 text-sm border-2 border-gray-200 rounded-lg focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all outline-none"
+                            className="w-full pl-10 pr-4 py-2.5 text-sm border-2 border-gray-200 rounded-lg focus:border-emerald-500 transition-all outline-none"
                         />
                     </div>
                 </div>
@@ -353,108 +353,106 @@ function ManageSupplier() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.5 }}
-                    className={'flex flex-col bg-white rounded-xl p-4 justify-between gap-8 shadow-lg'}
+                    className={'flex flex-col bg-white rounded-xl p-4 justify-between gap-8 border border-gray-200'}
                 >
                     <div
                         className="overflow-y-auto max-h-md md:h-[320px] lg:h-[550px] rounded-lg scrollbar-thin scrollbar-thumb-emerald-300 scrollbar-track-gray-100">
                         <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-gradient-to-r from-emerald-500 to-emerald-600 sticky top-0 z-10">
-                            <tr>
-                                {['#', 'Name', 'Email', 'Contact Number', 'Company Name', 'Bank', 'Account Number', 'Status', 'Actions'].map((header, i, arr) => (
-                                    <th
-                                        key={header}
-                                        scope="col"
-                                        className={`px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider
+                                <tr>
+                                    {['#', 'Name', 'Email', 'Contact Number', 'Company Name', 'Bank', 'Account Number', 'Status', 'Actions'].map((header, i, arr) => (
+                                        <th
+                                            key={header}
+                                            scope="col"
+                                            className={`px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider
                                                 ${i === 0 ? "rounded-tl-lg" : ""}
                                                 ${i === arr.length - 1 ? "rounded-tr-lg" : ""}`}
-                                    >
-                                        {header}
-                                    </th>
-                                ))}
-                            </tr>
+                                        >
+                                            {header}
+                                        </th>
+                                    ))}
+                                </tr>
                             </thead>
 
                             <tbody className="bg-white divide-y divide-gray-200">
-                            {isLoading ? (
-                                <tr>
-                                    <td colSpan={9} className="px-6 py-8 text-center">
-                                        <div className="flex justify-center items-center">
-                                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500"></div>
-                                            <span className="ml-3 text-gray-600">Loading suppliers...</span>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ) : salesData.length === 0 ? (
-                                <tr>
-                                    <td colSpan={9} className="px-6 py-8 text-center text-gray-500">
-                                        No suppliers found
-                                    </td>
-                                </tr>
-                            ) : (
-                                salesData.map((category, index) => (
-                                    <tr
-                                        key={category.id}
-                                        onClick={() => setSelectedIndex(index)}
-                                        className={`cursor-pointer transition-all ${
-                                            selectedIndex === index
-                                                ? 'bg-emerald-50 border-l-4 border-l-emerald-500'
-                                                : 'hover:bg-gray-50'
-                                        }`}
-                                    >
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-600">
-                                            {category.no}
-                                        </td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-gray-800">
-                                            {category.name}
-                                        </td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-600">
-                                            {category.email}
-                                        </td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-gray-700">
-                                            {category.contact}
-                                        </td>
-                                        <td className="px-6 py-2 whitespace-nowrap">
-                    <span className="px-3 py-1 text-xs font-semibold rounded-full bg-gradient-to-r from-purple-100 to-purple-200 text-purple-800">
-                        {category.company}
-                    </span>
-                                        </td>
-                                        <td className="px-6 py-2 whitespace-nowrap">
-                    <span className="px-3 py-1 text-xs font-semibold rounded-full bg-gradient-to-r from-blue-100 to-blue-200 text-blue-800">
-                        {category.bank}
-                    </span>
-                                        </td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-gray-700">
-                                            {category.account}
-                                        </td>
-                                        <td className="px-6 py-2 whitespace-nowrap">
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleStatusToggle(category.id, category.statusId);
-                                                }}
-                                                className={`px-4 py-1.5 text-xs font-semibold rounded-full transition-all transform hover:scale-105 ${
-                                                    category.status === 'Active'
-                                                        ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-200 hover:from-emerald-600 hover:to-emerald-700'
-                                                        : 'bg-gradient-to-r from-gray-400 to-gray-500 text-white shadow-lg shadow-gray-200 hover:from-gray-500 hover:to-gray-600'
-                                                }`}
-                                            >
-                                                {category.status === 'Active' ? 'Active' : 'Inactive'}
-                                            </button>
-                                        </td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleEditClick(category);
-                                                }}
-                                                className="p-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all"
-                                            >
-                                                <Pencil size={16} />
-                                            </button>
+                                {isLoading ? (
+                                    <tr>
+                                        <td colSpan={9} className="px-6 py-8 text-center">
+                                            <div className="flex justify-center items-center">
+                                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500"></div>
+                                                <span className="ml-3 text-gray-600">Loading suppliers...</span>
+                                            </div>
                                         </td>
                                     </tr>
-                                ))
-                            )}
+                                ) : salesData.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={9} className="px-6 py-8 text-center text-gray-500">
+                                            No suppliers found
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    salesData.map((category, index) => (
+                                        <tr
+                                            key={category.id}
+                                            onClick={() => setSelectedIndex(index)}
+                                            className={`cursor-pointer transition-all ${selectedIndex === index
+                                                    ? 'bg-emerald-50 border-l-4 border-l-emerald-500'
+                                                    : 'hover:bg-gray-50'
+                                                }`}
+                                        >
+                                            <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-600">
+                                                {category.no}
+                                            </td>
+                                            <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-gray-800">
+                                                {category.name}
+                                            </td>
+                                            <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-600">
+                                                {category.email}
+                                            </td>
+                                            <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-gray-700">
+                                                {category.contact}
+                                            </td>
+                                            <td className="px-6 py-2 whitespace-nowrap">
+                                                <span className="px-3 py-1 text-xs font-semibold rounded-full bg-gradient-to-r from-purple-100 to-purple-200 text-purple-800">
+                                                    {category.company}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-2 whitespace-nowrap">
+                                                <span className="px-3 py-1 text-xs font-semibold rounded-full bg-gradient-to-r from-blue-100 to-blue-200 text-blue-800">
+                                                    {category.bank}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-gray-700">
+                                                {category.account}
+                                            </td>
+                                            <td className="px-6 py-2 whitespace-nowrap">
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleStatusToggle(category.id, category.statusId);
+                                                    }}
+                                                    className={`px-4 py-1.5 text-xs font-semibold rounded-full transition-all transform hover:scale-105 ${category.status === 'Active'
+                                                            ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white hover:from-emerald-600 hover:to-emerald-700'
+                                                            : 'bg-gradient-to-r from-gray-400 to-gray-500 text-white hover:from-gray-500 hover:to-gray-600'
+                                                        }`}
+                                                >
+                                                    {category.status === 'Active' ? 'Active' : 'Inactive'}
+                                                </button>
+                                            </td>
+                                            <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleEditClick(category);
+                                                    }}
+                                                    className="p-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg transition-all"
+                                                >
+                                                    <Pencil size={16} />
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
                             </tbody>
 
                         </table>
@@ -469,11 +467,10 @@ function ManageSupplier() {
                             <button
                                 onClick={() => goToPage(currentPage - 1)}
                                 disabled={currentPage === 1}
-                                className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${
-                                    currentPage === 1
+                                className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${currentPage === 1
                                         ? 'text-gray-400 cursor-not-allowed'
                                         : 'text-gray-600 hover:bg-emerald-50 hover:text-emerald-600'
-                                }`}
+                                    }`}
                             >
                                 <ChevronLeft className="mr-2 h-5 w-5" /> Previous
                             </button>
@@ -484,11 +481,10 @@ function ManageSupplier() {
                                     <button
                                         key={page}
                                         onClick={() => goToPage(page as number)}
-                                        className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
-                                            currentPage === page
-                                                ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-200'
+                                        className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${currentPage === page
+                                                ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white'
                                                 : 'text-gray-600 hover:bg-emerald-50 hover:text-emerald-600'
-                                        }`}
+                                            }`}
                                     >
                                         {page}
                                     </button>
@@ -497,11 +493,10 @@ function ManageSupplier() {
                             <button
                                 onClick={() => goToPage(currentPage + 1)}
                                 disabled={currentPage === totalPages}
-                                className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${
-                                    currentPage === totalPages
+                                className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${currentPage === totalPages
                                         ? 'text-gray-400 cursor-not-allowed'
                                         : 'text-gray-600 hover:bg-emerald-50 hover:text-emerald-600'
-                                }`}
+                                    }`}
                             >
                                 Next <ChevronRight className="ml-2 h-5 w-5" />
                             </button>
@@ -515,7 +510,7 @@ function ManageSupplier() {
                     <div
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md relative"
+                        className="bg-white rounded-2xl border border-gray-200 p-8 w-full max-w-md relative"
                     >
                         <button
                             onClick={handleCloseModal}
@@ -547,7 +542,7 @@ function ManageSupplier() {
                                     value={newContactNumber}
                                     onChange={(e) => setNewContactNumber(e.target.value)}
                                     placeholder="Enter Contact Number"
-                                    className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all outline-none"
+                                    className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-500 transition-all outline-none"
                                     maxLength={10}
                                 />
                             </div>
@@ -563,9 +558,8 @@ function ManageSupplier() {
                             <button
                                 onClick={handleUpdateContact}
                                 disabled={isUpdatingContact}
-                                className={`px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-semibold rounded-lg shadow-lg transition-all ${
-                                    isUpdatingContact ? 'opacity-50 cursor-not-allowed' : ''
-                                }`}
+                                className={`px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-semibold rounded-lg transition-all ${isUpdatingContact ? 'opacity-50 cursor-not-allowed' : ''
+                                    }`}
                             >
                                 {isUpdatingContact ? 'Updating...' : 'Update Contact'}
                             </button>

@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const productController = require('../controllers/productController');
 const { validateProduct, validateUpdateMiddleware} = require('../middleware/productValidator');
+const upload = require('../middleware/fileUpload');
 
 /**
  * @swagger
@@ -435,6 +436,8 @@ const { validateProduct, validateUpdateMiddleware} = require('../middleware/prod
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
+ 
+router.post('/import', upload.single('file'), productController.importProducts);
 router.post('/create', validateProduct, productController.addProduct);
 router.get('/', productController.getProducts);
 router.get('/dropdown', productController.getProductsForDropdown);

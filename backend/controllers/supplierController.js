@@ -1,6 +1,92 @@
+const fs = require('fs');
+const path = require('path');
+const xlsx = require('xlsx');
 const Supplier = require("../models/supplierModel");
 const catchAsync = require("../utils/catchAsync");
 const { AppError } = require("../middleware/errorHandler");
+
+// ... (existing imports and methods)
+
+exports.importSuppliers = catchAsync(async (req, res, next) => {
+    if (!req.file) {
+        return next(new AppError('Please upload a file!', 400));
+    }
+
+    const filePath = req.file.path;
+    let successCount = 0;
+    let skippedCount = 0;
+    let errors = [];
+
+    try {
+        const workbook = xlsx.readFile(filePath);
+        const sheetName = workbook.SheetNames[0];
+        const rows = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName]);
+
+        if (rows.length === 0) {
+            fs.unlinkSync(filePath);
+            return next(new AppError('File is empty!', 400));
+        }
+
+        for (const row of rows) {
+            // Expected headers: Supplier Name, Email, Contact Number, Company, Bank, Account Number
+            const supplierName = (row['Supplier Name'] || row['Name'] || '').toString().trim();
+            const email = (row['Email'] || '').toString().trim();
+            const contactNumber = (row['Contact Number'] || row['Phone'] || '').toString().trim();
+            const companyName = (row['Company'] || '').toString().trim();
+            const bankName = (row['Bank'] || '').toString().trim();
+            const accountNumber = (row['Account Number'] || row['Account'] || '').toString().trim();
+
+            if (!supplierName || !contactNumber || !companyName) {
+                skippedCount++;
+                errors.push({ name: supplierName || 'Unknown', error: 'Missing required fields (Supplier Name, Contact Number, Company)' });
+                continue;
+            }
+
+            try {
+                // Lookup IDs
+                const companyId = await Supplier.getCompanyIdByName(companyName);
+                if (!companyId) throw new Error(`Company '${companyName}' not found`);
+
+                let bankId = null;
+                if (bankName) {
+                    bankId = await Supplier.getBankIdByName(bankName);
+                    if (!bankId) throw new Error(`Bank '${bankName}' not found`);
+                }
+
+                // Prepare Data
+                const supplierData = {
+                    supplierName,
+                    email,
+                    contactNumber,
+                    companyId,
+                    bankId,
+                    accountNumber
+                };
+
+                await Supplier.createSupplier(supplierData);
+                successCount++;
+
+            } catch (err) {
+                skippedCount++;
+                errors.push({ name: supplierName, error: err.message });
+            }
+        }
+
+    } catch (error) {
+        console.error("File processing error:", error);
+        return next(new AppError('Error processing file', 500));
+    } finally {
+        if (fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath);
+        }
+    }
+
+    res.status(200).json({
+        success: true,
+        message: `Import processed. Success: ${successCount}, Skipped: ${skippedCount}`,
+        data: { successCount, skippedCount, errors }
+    });
+});
 
 exports.addCompany = catchAsync(async (req, res, next) => {
     const { name, email, contact } = req.body;

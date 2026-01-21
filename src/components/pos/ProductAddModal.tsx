@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import { X, Plus, Minus, Percent, DollarSign, Package } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -36,7 +37,7 @@ export const ProductAddModal = ({
     billingMode,
     onAddToCart
 }: ProductAddModalProps) => {
-    const [quantity, setQuantity] = useState(1);
+    const [quantity, setQuantity] = useState<number | string>(1);
     const [discount, setDiscount] = useState(0);
     const [discountType, setDiscountType] = useState<'percentage' | 'price'>('percentage');
 
@@ -95,23 +96,30 @@ export const ProductAddModal = ({
     if (!product) return null;
 
     const price = billingMode === 'retail' ? product.price : product.wholesalePrice;
-    const subtotal = price * quantity;
+    const qty = Number(quantity) || 0;
+    const subtotal = price * qty;
     const wholesalePrice = product.wholesalePrice;
-    const maxDiscountAmount = Math.max(0, subtotal - (wholesalePrice * quantity));
+    const maxDiscountAmount = Math.max(0, subtotal - (wholesalePrice * qty));
 
     const discountAmount = billingMode === 'retail'
         ? (discountType === 'percentage' ? (subtotal * discount) / 100 : discount)
         : 0;
-    const discountedPrice = Math.max(wholesalePrice * quantity, subtotal - discountAmount);
+    const discountedPrice = Math.max(wholesalePrice * qty, subtotal - discountAmount);
 
     const handleAddToCart = () => {
         if (!product) return;
+
+        const qty = Number(quantity);
+        if (qty <= 0) {
+            toast.error("Quantity must be greater than 0");
+            return;
+        }
 
         const finalDiscount = billingMode === 'wholesale' ? 0 : discount;
         const finalDiscountAmount = billingMode === 'wholesale' ? 0 : discountAmount;
         const finalDiscountedPrice = billingMode === 'wholesale' ? subtotal : discountedPrice;
 
-        onAddToCart(product, quantity, finalDiscount, discountType, finalDiscountAmount, finalDiscountedPrice);
+        onAddToCart(product, qty, finalDiscount, discountType, finalDiscountAmount, finalDiscountedPrice);
         onClose();
     };
 
@@ -120,14 +128,16 @@ export const ProductAddModal = ({
     };
 
     const incrementQty = () => {
-        if (quantity < product.stock) {
-            setQuantity(prev => Math.min(product.stock, prev + 1));
+        const currentQty = Number(quantity) || 0;
+        if (currentQty < product.stock) {
+            setQuantity(Math.min(product.stock, currentQty + 1));
         }
     };
 
     const decrementQty = () => {
-        if (quantity > 1) {
-            setQuantity(prev => prev - 1);
+        const currentQty = Number(quantity) || 0;
+        if (currentQty > 1) {
+            setQuantity(currentQty - 1);
         }
     };
 
@@ -225,7 +235,7 @@ export const ProductAddModal = ({
                                 <div className="flex items-center gap-2">
                                     <button
                                         onClick={decrementQty}
-                                        disabled={quantity <= 0.001}
+                                        disabled={Number(quantity) <= 0}
                                         className="w-12 h-12 bg-red-100 hover:bg-red-500 hover:text-white disabled:bg-gray-200 disabled:text-gray-400 text-red-600 rounded-lg flex items-center justify-center transition-colors touch-manipulation"
                                     >
                                         <Minus className="w-5 h-5" />
@@ -234,17 +244,27 @@ export const ProductAddModal = ({
                                         type="number"
                                         value={quantity}
                                         onChange={(e) => {
-                                            const val = Math.max(0.001, Math.min(product.stock, Number(e.target.value)));
-                                            setQuantity(val);
+                                            const val = e.target.value;
+                                            if (val === '') {
+                                                setQuantity('');
+                                                return;
+                                            }
+                                            const numVal = Number(val);
+                                            if (numVal > product.stock) {
+                                                // toast.error(`Cannot exceed available stock: ${product.stock}`);
+                                                setQuantity(product.stock);
+                                            } else {
+                                                setQuantity(numVal);
+                                            }
                                         }}
                                         step="any"
                                         className="flex-1 text-center text-2xl font-bold py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-emerald-500"
-                                        min={0.001}
+                                        min={0}
                                         max={product.stock}
                                     />
                                     <button
                                         onClick={incrementQty}
-                                        disabled={quantity >= product.stock}
+                                        disabled={Number(quantity) >= product.stock}
 
                                         className="w-12 h-12 bg-emerald-100 hover:bg-emerald-500 hover:text-white disabled:bg-gray-200 disabled:text-gray-400 text-emerald-600 rounded-lg flex items-center justify-center transition-colors touch-manipulation"
                                     >
@@ -305,7 +325,7 @@ export const ProductAddModal = ({
                                     <span className="font-semibold text-gray-800">Rs {price.toFixed(2)}</span>
                                 </div>
                                 <div className="flex justify-between text-sm">
-                                    <span className="text-gray-600">Subtotal ({quantity} × {price.toFixed(2)}):</span>
+                                    <span className="text-gray-600">Subtotal ({qty} × {price.toFixed(2)}):</span>
                                     <span className="font-semibold text-gray-800">Rs {subtotal.toFixed(2)}</span>
                                 </div>
                                 {billingMode === 'retail' && discount > 0 && (
@@ -315,7 +335,7 @@ export const ProductAddModal = ({
                                     </div>
                                 )}<div className="flex justify-between text-sm text-blue-600">
                                     <span>Minimum (WSP × Qty):</span>
-                                    <span className="font-semibold">Rs {(wholesalePrice * quantity).toFixed(2)}</span>
+                                    <span className="font-semibold">Rs {(wholesalePrice * qty).toFixed(2)}</span>
                                 </div>
                                 <div className="flex justify-between text-lg font-bold border-t pt-2 mt-2">
                                     <span className="text-gray-800">Total:</span>

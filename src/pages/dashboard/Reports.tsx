@@ -109,7 +109,7 @@ function Reports() {
                         trend: '+12.5%',
                         color: 'bg-gradient-to-br from-green-500 to-green-600',
                         iconColor: 'text-white',
-                        bgGlow: 'shadow-green-200'
+                        bgGlow: ''
                     },
                     {
                         icon: TrendingUp,
@@ -118,7 +118,7 @@ function Reports() {
                         trend: '+8.3%',
                         color: 'bg-gradient-to-br from-emerald-500 to-emerald-600',
                         iconColor: 'text-white',
-                        bgGlow: 'shadow-emerald-200'
+                        bgGlow: ''
                     },
                     {
                         icon: ShoppingCart,
@@ -127,7 +127,7 @@ function Reports() {
                         trend: '+15.7%',
                         color: 'bg-gradient-to-br from-green-500 to-green-600',
                         iconColor: 'text-white',
-                        bgGlow: 'shadow-green-200'
+                        bgGlow: ''
                     },
                     {
                         icon: BarChart3,
@@ -136,16 +136,16 @@ function Reports() {
                         trend: '+5.2%',
                         color: 'bg-gradient-to-br from-emerald-500 to-emerald-600',
                         iconColor: 'text-white',
-                        bgGlow: 'shadow-emerald-200'
+                        bgGlow: ''
                     }
                 ].map((stat, i) => (
                     <div
                         key={i}
-                        className={`flex items-center p-4 space-x-3 transition-all bg-white rounded-2xl shadow-lg hover:shadow-xl ${stat.bgGlow} cursor-pointer group relative overflow-hidden`}
+                        className={`flex items-center p-4 space-x-3 bg-white rounded-2xl border border-gray-200 cursor-pointer group relative overflow-hidden`}
                     >
-                        <div className="absolute inset-0 bg-gradient-to-br from-transparent via-gray-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                        <div className="absolute inset-0 bg-gradient-to-br from-transparent via-gray-50/50 to-transparent opacity-0 group-hover:opacity-100 duration-300"></div>
 
-                        <div className={`p-3 rounded-full ${stat.color} shadow-md relative z-10`}>
+                        <div className={`p-3 rounded-full ${stat.color} relative z-10`}>
                             <stat.icon className={`w-6 h-6 ${stat.iconColor}`} />
                         </div>
 
@@ -165,7 +165,7 @@ function Reports() {
             </div>
 
             {/* Filter Section */}
-            <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+            <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
                 <div className="flex items-center justify-between mb-4">
                     <h2 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
                         <Filter className="w-5 h-5 text-green-600" />
@@ -173,7 +173,7 @@ function Reports() {
                     </h2>
                     <button
                         onClick={() => setShowFilter(!showFilter)}
-                        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
                     >
                         {showFilter ? 'Hide Filters' : 'Show Filters'}
                     </button>
@@ -246,25 +246,25 @@ function Reports() {
                         <div className="flex gap-3">
                             <button
                                 onClick={generateReport}
-                                className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+                                className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium"
                             >
                                 Generate Report
                             </button>
                             <button
                                 onClick={() => exportReport('pdf')}
-                                className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+                                className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium"
                             >
                                 Export PDF
                             </button>
                             <button
                                 onClick={() => exportReport('excel')}
-                                className="px-6 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium"
+                                className="px-6 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-medium"
                             >
                                 Export Excel
                             </button>
                             <button
                                 onClick={() => exportReport('csv')}
-                                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
                             >
                                 Export CSV
                             </button>
@@ -279,12 +279,11 @@ function Reports() {
                     <div
                         key={report.id}
                         onClick={() => setSelectedReport(report.id)}
-                        className={`bg-white rounded-lg shadow-md p-6 cursor-pointer transition-all hover:shadow-xl transform hover:-translate-y-1 ${
-                            selectedReport === report.id ? 'ring-2 ring-green-500 shadow-lg' : ''
-                        }`}
+                        className={`bg-white rounded-lg border border-gray-200 p-6 cursor-pointer hover:bg-gray-50 ${selectedReport === report.id ? 'ring-2 ring-green-500' : ''
+                            }`}
                     >
                         <div className="flex items-center justify-between mb-4">
-                            <div className={`${report.color} p-3 rounded-lg shadow-md`}>
+                            <div className={`${report.color} p-3 rounded-lg`}>
                                 <report.icon className="w-6 h-6 text-white" />
                             </div>
                             <div className="flex gap-2">
@@ -306,7 +305,7 @@ function Reports() {
             {/* Chart and Top Products Section */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                 {/* Visual Analytics Chart */}
-                <div className="bg-white rounded-lg shadow-md p-6">
+                <div className="bg-white rounded-lg border border-gray-200 p-6">
                     <div className="flex items-center justify-between mb-6">
                         <h3 className="text-xl font-semibold text-gray-800">Financial Overview</h3>
                         <PieChart className="w-6 h-6 text-green-600" />
@@ -320,7 +319,7 @@ function Reports() {
                                 </div>
                                 <div className="w-full bg-gray-200 rounded-full h-3">
                                     <div
-                                        className={`${item.color} h-3 rounded-full transition-all duration-500`}
+                                        className={`${item.color} h-3 rounded-full`}
                                         style={{ width: `${(item.value / chartData[0].value) * 100}%` }}
                                     />
                                 </div>
@@ -330,7 +329,7 @@ function Reports() {
                 </div>
 
                 {/* Top Products */}
-                <div className="bg-white rounded-lg shadow-md p-6">
+                <div className="bg-white rounded-lg border border-gray-200 p-6">
                     <div className="flex items-center justify-between mb-6">
                         <h3 className="text-xl font-semibold text-gray-800">Top Selling Products</h3>
                         <Package className="w-6 h-6 text-green-600" />
@@ -363,24 +362,22 @@ function Reports() {
             </div>
 
             {/* View Mode Toggle */}
-            <div className="bg-white rounded-lg shadow-md p-4 mb-6">
+            <div className="bg-white rounded-lg border border-gray-200 p-4 mb-6">
                 <div className="flex items-center justify-between">
                     <h3 className="text-lg font-semibold text-gray-800">Report Data View</h3>
                     <div className="flex gap-2">
                         <button
                             onClick={() => setViewMode('table')}
-                            className={`px-4 py-2 rounded-lg transition-colors ${
-                                viewMode === 'table' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                            }`}
+                            className={`px-4 py-2 rounded-lg ${viewMode === 'table' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                }`}
                         >
                             <FileText className="w-5 h-5 inline mr-2" />
                             Table View
                         </button>
                         <button
                             onClick={() => setViewMode('chart')}
-                            className={`px-4 py-2 rounded-lg transition-colors ${
-                                viewMode === 'chart' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                            }`}
+                            className={`px-4 py-2 rounded-lg ${viewMode === 'chart' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                }`}
                         >
                             <LineChart className="w-5 h-5 inline mr-2" />
                             Chart View
@@ -391,7 +388,7 @@ function Reports() {
 
             {/* Report Data Table */}
             {viewMode === 'table' && (
-                <div className="bg-white rounded-lg shadow-md overflow-hidden">
+                <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
                     <div className="p-4 bg-gradient-to-r from-green-600 to-emerald-600 text-white">
                         <h3 className="text-xl font-semibold">Detailed Report - {reportTypes.find(r => r.id === selectedReport)?.name}</h3>
                         <p className="text-sm text-green-100 mt-1">Showing {mockReportData.length} entries</p>
@@ -399,39 +396,39 @@ function Reports() {
                     <div className="overflow-x-auto">
                         <table className="w-full">
                             <thead className="bg-gray-50 border-b-2 border-green-600">
-                            <tr>
-                                <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Date</th>
-                                <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Total Sales</th>
-                                <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Profit</th>
-                                <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Orders</th>
-                                <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Customers</th>
-                                <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Products</th>
-                                <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Tax</th>
-                                <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Discount</th>
-                            </tr>
+                                <tr>
+                                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Date</th>
+                                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Total Sales</th>
+                                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Profit</th>
+                                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Orders</th>
+                                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Customers</th>
+                                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Products</th>
+                                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Tax</th>
+                                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Discount</th>
+                                </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
-                            {mockReportData.map((data) => (
-                                <tr key={data.id} className="hover:bg-green-50 transition-colors">
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{data.date}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-green-600">Rs. {data.totalSales.toFixed(2)}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-emerald-600">Rs. {data.profit.toFixed(2)}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{data.totalOrders}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{data.totalCustomers}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{data.totalProducts}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">Rs. {data.tax.toFixed(2)}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-red-600">-Rs. {data.discount.toFixed(2)}</td>
-                                </tr>
-                            ))}
+                                {mockReportData.map((data) => (
+                                    <tr key={data.id} className="hover:bg-green-50">
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{data.date}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-green-600">Rs. {data.totalSales.toFixed(2)}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-emerald-600">Rs. {data.profit.toFixed(2)}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{data.totalOrders}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{data.totalCustomers}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{data.totalProducts}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">Rs. {data.tax.toFixed(2)}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-red-600">-Rs. {data.discount.toFixed(2)}</td>
+                                    </tr>
+                                ))}
                             </tbody>
                             <tfoot className="bg-green-50 border-t-2 border-green-600">
-                            <tr>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">TOTALS</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-green-600">Rs. {totalSales.toFixed(2)}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-emerald-600">Rs. {totalProfit.toFixed(2)}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">{totalOrders}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900" colSpan={4}></td>
-                            </tr>
+                                <tr>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">TOTALS</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-green-600">Rs. {totalSales.toFixed(2)}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-emerald-600">Rs. {totalProfit.toFixed(2)}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">{totalOrders}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900" colSpan={4}></td>
+                                </tr>
                             </tfoot>
                         </table>
                     </div>
@@ -440,7 +437,7 @@ function Reports() {
 
             {/* Chart View */}
             {viewMode === 'chart' && (
-                <div className="bg-white rounded-lg shadow-md p-6">
+                <div className="bg-white rounded-lg border border-gray-200 p-6">
                     <h3 className="text-xl font-semibold text-gray-800 mb-6">Sales Trend Analysis</h3>
                     <div className="h-96 flex items-end justify-between gap-4">
                         {mockReportData.map((data) => {
@@ -448,8 +445,8 @@ function Reports() {
                             const height = (data.totalSales / maxSales) * 100;
                             return (
                                 <div key={data.id} className="flex-1 flex flex-col items-center">
-                                    <div className="w-full bg-gradient-to-t from-green-500 to-green-400 rounded-t-lg hover:from-green-600 hover:to-green-500 transition-all cursor-pointer relative group" style={{ height: `${height}%` }}>
-                                        <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-2 py-1 rounded text-xs opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                                    <div className="w-full bg-gradient-to-t from-green-500 to-green-400 rounded-t-lg hover:from-green-600 hover:to-green-500 cursor-pointer relative group" style={{ height: `${height}%` }}>
+                                        <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-2 py-1 rounded text-xs opacity-0 group-hover:opacity-100 whitespace-nowrap">
                                             Rs. {data.totalSales.toFixed(2)}
                                         </div>
                                     </div>

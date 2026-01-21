@@ -75,7 +75,7 @@ function SupplierGrn() {
             trend: '',
             color: 'bg-gradient-to-br from-emerald-400 to-emerald-500',
             iconColor: 'text-white',
-            bgGlow: 'shadow-emerald-200'
+            bgGlow: ''
         },
         {
             icon: DollarSign,
@@ -84,7 +84,7 @@ function SupplierGrn() {
             trend: '',
             color: 'bg-gradient-to-br from-purple-400 to-purple-500',
             iconColor: 'text-white',
-            bgGlow: 'shadow-purple-200'
+            bgGlow: ''
         },
         {
             icon: Download,
@@ -93,7 +93,7 @@ function SupplierGrn() {
             trend: '',
             color: 'bg-gradient-to-br from-blue-400 to-blue-500',
             iconColor: 'text-white',
-            bgGlow: 'shadow-blue-200'
+            bgGlow: ''
         },
         {
             icon: DollarSign,
@@ -102,7 +102,7 @@ function SupplierGrn() {
             trend: '',
             color: 'bg-gradient-to-br from-red-400 to-red-500',
             iconColor: 'text-white',
-            bgGlow: 'shadow-red-200'
+            bgGlow: ''
         },
 
     ];
@@ -374,11 +374,11 @@ function SupplierGrn() {
                     {summaryCards.map((stat, i) => (
                         <div
                             key={i}
-                            className={`flex items-center p-4 space-x-3 transition-all bg-white rounded-2xl shadow-lg hover:shadow-xl ${stat.bgGlow} cursor-pointer group relative overflow-hidden`}
+                            className={`flex items-center p-4 space-x-3 transition-all bg-white rounded-2xl border border-gray-200 cursor-pointer group relative overflow-hidden`}
                         >
                             <div className="absolute inset-0 bg-gradient-to-br from-transparent via-gray-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
 
-                            <div className={`p-3 rounded-full ${stat.color} shadow-md relative z-10`}>
+                            <div className={`p-3 rounded-full ${stat.color} relative z-10`}>
                                 <stat.icon className={`w-6 h-6 ${stat.iconColor}`} />
                             </div>
 
@@ -400,7 +400,7 @@ function SupplierGrn() {
 
                 {/* Filter Section */}
                 <div
-                    className={'bg-white rounded-xl p-4 flex flex-col shadow-lg'}
+                    className={'bg-white rounded-xl p-4 flex flex-col border border-gray-200'}
                 >
                     <h2 className="text-xl font-semibold text-gray-700 mb-3">Filter</h2>
                     <div className={'grid md:grid-cols-4 gap-4'}>
@@ -444,7 +444,7 @@ function SupplierGrn() {
                             <button
                                 onClick={handleSearch}
                                 disabled={isSearching}
-                                className={'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 py-2 rounded-lg flex items-center justify-center shadow-lg shadow-emerald-200 hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed'}
+                                className={'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 py-2 rounded-lg flex items-center justify-center transition-all disabled:opacity-50 disabled:cursor-not-allowed'}
                             >
                                 {isSearching ? (
                                     <RefreshCw className="animate-spin mr-2" size={14} />
@@ -456,7 +456,7 @@ function SupplierGrn() {
                             <button
                                 onClick={handleReset}
                                 disabled={isSearching || isLoadingGRN}
-                                className={'bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 py-2 rounded-lg flex items-center justify-center shadow-lg shadow-gray-200 hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed'}
+                                className={'bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 py-2 rounded-lg flex items-center justify-center transition-all disabled:opacity-50 disabled:cursor-not-allowed'}
                             >
                                 <RefreshCw className="mr-2" size={14} />Clear
                             </button>
@@ -466,7 +466,7 @@ function SupplierGrn() {
 
                 {/* GRN Table */}
                 <div
-                    className={'flex flex-col bg-white rounded-xl h-full p-4 justify-between shadow-lg'}
+                    className={'flex flex-col bg-white rounded-xl h-full p-4 justify-between border border-gray-200'}
                 >
                     <div className="overflow-y-auto max-h-md md:h-[320px] lg:h-[500px] rounded-lg scrollbar-thin scrollbar-thumb-emerald-300 scrollbar-track-gray-100">
                         <table className="min-w-full divide-y divide-gray-200">
@@ -556,7 +556,7 @@ function SupplierGrn() {
                                                             fetchGrnDetails(grn.id, false);
                                                         }}
                                                         disabled={isLoadingDetails}
-                                                        className="p-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all disabled:opacity-50"
+                                                        className="p-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg transition-all disabled:opacity-50"
                                                     >
                                                         <Eye size={16} />
                                                     </button>
@@ -566,7 +566,7 @@ function SupplierGrn() {
                                                             fetchGrnDetails(grn.id, true);
                                                         }}
                                                         disabled={isLoadingDetails}
-                                                        className="p-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all disabled:opacity-50"
+                                                        className="p-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white rounded-lg transition-all disabled:opacity-50"
                                                     >
                                                         <Printer size={16} />
                                                     </button>
@@ -576,7 +576,7 @@ function SupplierGrn() {
                                                             navigator.clipboard.writeText(grn.billNumber);
                                                             toast.success('Bill number copied to clipboard');
                                                         }}
-                                                        className="p-2 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all"
+                                                        className="p-2 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white rounded-lg transition-all"
                                                     >
                                                         <Copy size={16} />
                                                     </button>
@@ -613,7 +613,7 @@ function SupplierGrn() {
                                         key={index}
                                         onClick={() => goToPage(page)}
                                         className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${currentPage === page
-                                            ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-md'
+                                            ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white'
                                             : 'text-gray-600 hover:bg-emerald-50 hover:text-emerald-600'
                                             }`}
                                     >

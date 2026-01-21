@@ -62,6 +62,12 @@ class Unit {
         return !!unit;
     }
 
+    static async getIdByName(name) {
+        const query = "SELECT idunit_id FROM unit_id WHERE name = ?";
+        const [rows] = await db.execute(query, [name.trim()]);
+        return rows.length > 0 ? rows[0].idunit_id : null;
+    }
+
     /**
      * @desc Update unit name by ID
      */
