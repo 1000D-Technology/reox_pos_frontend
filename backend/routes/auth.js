@@ -32,11 +32,6 @@ router.post('/login', async (req, res) => {
                     select: {
                         user_role: true
                     }
-                },
-                status: {
-                    select: {
-                        ststus: true
-                    }
                 }
             }
         });
@@ -58,11 +53,16 @@ router.post('/login', async (req, res) => {
             });
         }
 
+        // Fetch user status
+        const userStatus = await prisma.status.findUnique({
+            where: { id: user.status_id }
+        });
+
         // Check if user is active
         if (user.status_id !== 1) {
             return res.status(403).json({
                 success: false,
-                message: `Account is ${user.status?.ststus || 'inactive'}. Please contact support.`
+                message: `Account is ${userStatus?.ststus || 'inactive'}. Please contact support.`
             });
         }
 
@@ -86,7 +86,7 @@ router.post('/login', async (req, res) => {
             role_id: user.role_id,
             status_id: user.status_id,
             role: user.role?.user_role,
-            ststus: user.status?.ststus
+            ststus: userStatus?.ststus
         };
 
         res.status(200).json({

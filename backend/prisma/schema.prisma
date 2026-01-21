@@ -394,9 +394,9 @@ model user {
   role_id       Int
   created_at    DateTime        @db.Date
   status_id     Int
+  status        status          @relation(fields: [status_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_user_status1")
   cash_sessions cash_sessions[]
   role          role            @relation(fields: [role_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_user_role1")
-  status        status          @relation(fields: [status_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_user_status1")
 
   @@index([role_id], map: "fk_user_role1_idx")
   @@index([status_id], map: "fk_user_status1_idx")
