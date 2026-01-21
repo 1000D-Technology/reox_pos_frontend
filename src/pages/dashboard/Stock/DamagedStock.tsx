@@ -28,7 +28,7 @@ function DamagedStock() {
         thisMonth: 0,
         affectedSuppliers: 0
     });
-    
+
     const summaryCards = [
         {
             icon: AlertTriangle,
@@ -269,7 +269,7 @@ function DamagedStock() {
         try {
             setLoadingTable(true);
             const response = await stockService.getDamagedTableData();
-            
+
             if (response.data?.success) {
                 // Map API response to table format
                 const mappedData = response.data.data.map((item: any) => ({
@@ -392,7 +392,7 @@ function DamagedStock() {
             if (toDate) filters.toDate = toDate;
 
             const response = await stockService.searchDamagedRecords(filters);
-            
+
             if (response.data?.success) {
                 // Map API response to table format
                 const mappedData = response.data.data.map((item: any) => ({
@@ -411,7 +411,7 @@ function DamagedStock() {
                 setSalesData(mappedData);
                 setCurrentPage(1); // Reset to first page
                 setSelectedIndex(0);
-                
+
                 if (mappedData.length > 0) {
                     toast.success(`Found ${response.data.count || mappedData.length} records`);
                 } else {
@@ -514,11 +514,11 @@ function DamagedStock() {
                 {summaryCards.map((stat, i) => (
                     <div
                         key={i}
-                        className={`flex items-center p-4 space-x-3 transition-all bg-white rounded-2xl shadow-lg hover:shadow-xl ${stat.bgGlow} cursor-pointer group relative overflow-hidden`}
+                        className={`flex items-center p-4 space-x-3 transition-all bg-white rounded-2xl border border-gray-200 cursor-pointer group relative overflow-hidden`}
                     >
                         <div className="absolute inset-0 bg-gradient-to-br from-transparent via-gray-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
 
-                        <div className={`p-3 rounded-full ${stat.color} shadow-md relative z-10`}>
+                        <div className={`p-3 rounded-full ${stat.color} shadow-sm relative z-10`}>
                             <stat.icon className={`w-6 h-6 ${stat.iconColor}`} />
                         </div>
 
@@ -540,7 +540,7 @@ function DamagedStock() {
 
             {/* Filter & Add Section */}
             <div
-                className={'bg-white rounded-xl p-4 flex flex-col shadow-lg'}
+                className={'bg-white rounded-xl p-4 flex flex-col border border-gray-200'}
             >
                 <h2 className="text-xl font-semibold text-gray-700 mb-3">Filter</h2>
                 <div className={'grid md:grid-cols-5 gap-4'}>
@@ -621,7 +621,7 @@ function DamagedStock() {
                         </div>
                     </div>
                     <div className={'grid grid-cols-2 md:items-end items-start gap-2 text-white font-medium'}>
-                        <button 
+                        <button
                             onClick={handleSearch}
                             disabled={isSearching || loading}
                             className={'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 py-2 rounded-lg flex items-center justify-center shadow-lg shadow-red-200 hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed'}
@@ -629,8 +629,8 @@ function DamagedStock() {
                             <SearchCheck className="mr-2" size={14} />
                             {isSearching ? 'Searching...' : 'Search'}
                         </button>
-                        <button 
-                            onClick={handleClearFilters} 
+                        <button
+                            onClick={handleClearFilters}
                             disabled={loading || loadingTable}
                             className={'bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 py-2 rounded-lg flex items-center justify-center shadow-lg shadow-gray-200 hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed'}
                         >
@@ -768,7 +768,7 @@ function DamagedStock() {
 
             {/* Table */}
             <div
-                className={'flex flex-col bg-white rounded-xl h-full p-4 justify-between shadow-lg'}
+                className={'flex flex-col bg-white rounded-xl h-full p-4 justify-between border border-gray-200'}
             >
                 <div className="overflow-y-auto max-h-md md:h-[320px] lg:h-[500px] rounded-lg scrollbar-thin scrollbar-thumb-red-300 scrollbar-track-gray-100">
                     <table className="min-w-full divide-y divide-gray-200">
@@ -800,8 +800,8 @@ function DamagedStock() {
                                         key={index}
                                         onClick={() => setSelectedIndex(index)}
                                         className={`cursor-pointer transition-all ${selectedIndex === index
-                                                ? 'bg-gradient-to-r from-red-50 to-red-100 shadow-md'
-                                                : 'hover:bg-gray-50'
+                                            ? 'bg-gradient-to-r from-red-50 to-red-100 shadow-md'
+                                            : 'hover:bg-gray-50'
                                             }`}
                                     >
                                         <td className="px-6 py-2 whitespace-nowrap text-sm font-semibold text-gray-800">
@@ -837,13 +837,12 @@ function DamagedStock() {
                                             {sale.reason}
                                         </td>
                                         <td className="px-6 py-2 whitespace-nowrap">
-                                            <span className={`px-3 py-1 text-xs font-semibold rounded-full ${
-                                                sale.status === 'Damaged' ? 'bg-gradient-to-r from-red-100 to-red-200 text-red-800' :
-                                                sale.status === 'Pending Review' ? 'bg-gradient-to-r from-yellow-100 to-yellow-200 text-yellow-800' :
-                                                sale.status === 'Under Review' ? 'bg-gradient-to-r from-yellow-100 to-yellow-200 text-yellow-800' :
-                                                sale.status === 'Disposed' ? 'bg-gradient-to-r from-gray-100 to-gray-200 text-gray-800' :
-                                                'bg-gradient-to-r from-blue-100 to-blue-200 text-blue-800'
-                                            }`}>
+                                            <span className={`px-3 py-1 text-xs font-semibold rounded-full ${sale.status === 'Damaged' ? 'bg-gradient-to-r from-red-100 to-red-200 text-red-800' :
+                                                    sale.status === 'Pending Review' ? 'bg-gradient-to-r from-yellow-100 to-yellow-200 text-yellow-800' :
+                                                        sale.status === 'Under Review' ? 'bg-gradient-to-r from-yellow-100 to-yellow-200 text-yellow-800' :
+                                                            sale.status === 'Disposed' ? 'bg-gradient-to-r from-gray-100 to-gray-200 text-gray-800' :
+                                                                'bg-gradient-to-r from-blue-100 to-blue-200 text-blue-800'
+                                                }`}>
                                                 {sale.status}
                                             </span>
                                         </td>
@@ -865,8 +864,8 @@ function DamagedStock() {
                             onClick={goToPreviousPage}
                             disabled={currentPage === 1}
                             className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${currentPage === 1
-                                    ? 'text-gray-400 cursor-not-allowed'
-                                    : 'text-gray-600 hover:text-red-600 hover:bg-red-50'
+                                ? 'text-gray-400 cursor-not-allowed'
+                                : 'text-gray-600 hover:text-red-600 hover:bg-red-50'
                                 }`}
                         >
                             <ChevronLeft className="mr-2 h-5 w-5" /> Previous
@@ -878,8 +877,8 @@ function DamagedStock() {
                                     key={index}
                                     onClick={() => goToPage(page)}
                                     className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${currentPage === page
-                                            ? 'bg-gradient-to-r from-red-500 to-red-600 text-white shadow-md'
-                                            : 'text-gray-600 hover:bg-red-50 hover:text-red-600'
+                                        ? 'bg-gradient-to-r from-red-500 to-red-600 text-white shadow-md'
+                                        : 'text-gray-600 hover:bg-red-50 hover:text-red-600'
                                         }`}
                                 >
                                     {page}
@@ -895,8 +894,8 @@ function DamagedStock() {
                             onClick={goToNextPage}
                             disabled={currentPage === totalPages}
                             className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${currentPage === totalPages
-                                    ? 'text-gray-400 cursor-not-allowed'
-                                    : 'text-gray-600 hover:text-red-600 hover:bg-red-50'
+                                ? 'text-gray-400 cursor-not-allowed'
+                                : 'text-gray-600 hover:text-red-600 hover:bg-red-50'
                                 }`}
                         >
                             Next <ChevronRight className="ml-2 h-5 w-5" />
@@ -907,7 +906,7 @@ function DamagedStock() {
 
             {/* Export Buttons */}
             <div
-                className={'bg-white flex justify-center p-4 gap-4 rounded-xl shadow-lg'}
+                className={'bg-white flex justify-center p-4 gap-4 rounded-xl border border-gray-200'}
             >
                 <button className={'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 px-6 py-2 font-medium text-white rounded-lg flex gap-2 items-center shadow-lg shadow-emerald-200 hover:shadow-xl transition-all'}>
                     <FileText size={15} />Excel

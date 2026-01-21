@@ -503,11 +503,11 @@ function StockList() {
                     {summaryCards.map((stat, i) => (
                         <div
                             key={i}
-                            className={`flex items-center p-4 space-x-3 transition-all bg-white rounded-2xl shadow-lg hover:shadow-xl ${stat.bgGlow} cursor-pointer group relative overflow-hidden`}
+                            className={`flex items-center p-4 space-x-3 transition-all bg-white rounded-2xl border border-gray-200 cursor-pointer group relative overflow-hidden`}
                         >
                             <div className="absolute inset-0 bg-gradient-to-br from-transparent via-gray-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
 
-                            <div className={`p-3 rounded-full ${stat.color} shadow-md relative z-10`}>
+                            <div className={`p-3 rounded-full ${stat.color} shadow-sm relative z-10`}>
                                 <stat.icon className={`w-6 h-6 ${stat.iconColor}`} />
                             </div>
 
@@ -529,7 +529,7 @@ function StockList() {
 
                 {/* Filter Section */}
                 <div
-                    className={'bg-white rounded-xl p-4 flex flex-col shadow-lg'}
+                    className={'bg-white rounded-xl p-4 flex flex-col border border-gray-200'}
                 >
                     <h2 className="text-xl font-semibold text-gray-700 mb-3">Filter</h2>
                     <div className={'grid md:grid-cols-5 gap-4'}>
@@ -604,7 +604,7 @@ function StockList() {
 
                 {/* Stock Table */}
                 <div
-                    className={'flex flex-col bg-white rounded-xl h-full p-4 justify-between shadow-lg'}
+                    className={'flex flex-col bg-white rounded-xl h-full p-4 justify-between border border-gray-200'}
                 >
                     <div className="overflow-y-auto max-h-md md:h-[320px] lg:h-[500px] rounded-lg scrollbar-thin scrollbar-thumb-emerald-300 scrollbar-track-gray-100">
                         <table className="min-w-full divide-y divide-gray-200">
@@ -763,7 +763,7 @@ function StockList() {
 
                 {/* Export Buttons */}
                 <div
-                    className={'bg-white flex justify-center p-4 gap-4 rounded-xl shadow-lg'}
+                    className={'bg-white flex justify-center p-4 gap-4 rounded-xl border border-gray-200'}
                 >
                     <button
                         onClick={handleExportExcel}
