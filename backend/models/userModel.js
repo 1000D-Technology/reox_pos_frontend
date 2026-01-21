@@ -14,7 +14,7 @@ const User = {
         const user = await prisma.user.findFirst({
             where: {
                 contact,
-                id: { not: userId }
+                id: { not: parseInt(userId) }
             }
         });
         return !!user;
@@ -24,8 +24,22 @@ const User = {
     create: async (userData) => {
         const { name, contact, email, password, role } = userData;
 
+        // Get the maximum user ID to generate the next one
+        const maxUser = await prisma.user.findFirst({
+            orderBy: {
+                id: 'desc'
+            },
+            select: {
+                id: true
+            }
+        });
+
+        // Generate next ID (start from 1 if no users exist)
+        const nextId = maxUser ? maxUser.id + 1 : 1;
+
         const user = await prisma.user.create({
             data: {
+                id: nextId,
                 name,
                 contact,
                 email,

@@ -15,10 +15,10 @@ exports.validateCompany = (req, res, next) => {
         if (!emailRegex.test(email)) return next(new AppError("Invalid email format", 400));
     }
 
-    // Sri Lankan mobile check
-    const sriLankanMobileRegex = /^(\+94|0)?7[0-9]{8}$/;
-    if (!sriLankanMobileRegex.test(contact.replace(/\s/g, ''))) {
-        return next(new AppError("Invalid Sri Lankan mobile number format.", 400));
+    // Contact can be any format (office phone, mobile, international, etc.)
+    // Just ensure it's not too long for the database field
+    if (contact.length > 45) {
+        return next(new AppError("Contact number is too long (max 45 characters).", 400));
     }
 
     next();
