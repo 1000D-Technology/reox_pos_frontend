@@ -283,6 +283,11 @@ const POSInterface = () => {
         discountAmount: number,
         discountedPrice: number
     ) => {
+        if (quantity <= 0) {
+            toast.error("Quantity must be greater than 0");
+            return;
+        }
+
         if (product.stock <= 0) {
             toast.error("Product is out of stock!");
             return;
