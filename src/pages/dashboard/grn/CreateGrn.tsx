@@ -468,7 +468,7 @@ function CreateGrn() {
 
                 {/* Basic Bill Information */}
                 <div
-                    className={'bg-white rounded-xl p-6 shadow-lg'}
+                    className={'bg-white rounded-xl p-6 border border-gray-200'}
                 >
                     <div className="flex items-center gap-2 mb-4">
                         <ShoppingCart className="text-emerald-600" size={24} />
@@ -510,7 +510,7 @@ function CreateGrn() {
 
                 {/* GRN Item Details */}
                 <div
-                    className={'bg-white rounded-xl p-6 shadow-lg'}
+                    className={'bg-white rounded-xl p-6 border border-gray-200'}
                 >
                     <div className="flex items-center gap-2 mb-4">
                         <Package className="text-emerald-600" size={24} />
@@ -705,7 +705,7 @@ function CreateGrn() {
 
                 {/* GRN Items Table */}
                 <div
-                    className={'bg-white rounded-xl p-6 shadow-lg'}
+                    className={'bg-white rounded-xl p-6 border border-gray-200'}
                 >
                     <span className="text-lg font-semibold text-gray-800 block mb-4">GRN Items</span>
                     <div className="overflow-y-auto max-h-md md:h-[320px] lg:h-[320px] rounded-lg scrollbar-thin scrollbar-thumb-emerald-300 scrollbar-track-gray-100">
@@ -835,7 +835,7 @@ function CreateGrn() {
 
                 {/* Payment & Summary */}
                 <div
-                    className={'bg-white rounded-xl p-6 shadow-lg'}
+                    className={'bg-white rounded-xl p-6 border border-gray-200'}
                 >
                     <div className={'flex justify-between gap-6'}>
                         <div className={'w-1/2'}>
