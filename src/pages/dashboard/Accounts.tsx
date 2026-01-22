@@ -2,177 +2,295 @@ import {
     ChevronLeft,
     ChevronRight,
     TrendingUp,
-    TrendingDown,
     Calendar,
     Clock,
     User,
-    Search,
-    Filter,
     Download,
     Eye,
     X,
     Banknote,
     ArrowRightLeft,
-    CheckCircle,
     AlertCircle
 } from 'lucide-react';
 
 import { useEffect, useState } from 'react';
 import toast, { Toaster } from 'react-hot-toast';
+import { cashSessionService } from '../../services/cashSessionService';
 
-
-interface Cashier {
+interface User {
     id: number;
     name: string;
     email: string;
-    contactNumber: string;
+    contact: string;
+}
+
+interface Counter {
+    id: number;
+    cashier_counter: string;
 }
 
 interface CashierSession {
     id: number;
-    cashierId: number;
-    cashierName: string;
+    cashier: User;
+    counter: string;
     date: string;
     openingTime: string;
-    closingTime: string | null;
     openingBalance: number;
-    closingBalance: number | null;
+    cashTotal: number;
+    cardTotal: number;
+    bankTotal: number;
     totalSales: number;
-    totalExpenses: number;
     cashIn: number;
     cashOut: number;
     expectedBalance: number;
-    actualBalance: number | null;
-    difference: number | null;
-    status: 'Open' | 'Closed';
+    status: string;
+    statusId: number;
+    transactionCount: number;
 }
 
 interface Transaction {
     id: number;
-    sessionId: number;
-    type: 'Sale' | 'Expense' | 'Cash In' | 'Cash Out';
+    type: string;
+    typeId: number;
     amount: number;
     description: string;
     time: string;
-    reference: string;
+    datetime: Date;
 }
 
 interface SessionDetail {
-    session: CashierSession;
+    session: {
+        id: number;
+        cashier: string;
+        counter: string;
+        date: string;
+        openingTime: string;
+        openingBalance: number;
+        cashTotal: number;
+        cardTotal: number;
+        bankTotal: number;
+        totalSales: number;
+        cashIn: number;
+        cashOut: number;
+        expectedBalance: number;
+        status: string;
+    };
     transactions: Transaction[];
 }
 
 function Accounts() {
-    const [cashiers] = useState<Cashier[]>([
-        { id: 1, name: 'John Doe', email: 'john@example.com', contactNumber: '0771234567' },
-        { id: 2, name: 'Jane Smith', email: 'jane@example.com', contactNumber: '0777654321' },
-        { id: 3, name: 'Bob Wilson', email: 'bob@example.com', contactNumber: '0761234567' }
-    ]);
-
-    const [sessions, setSessions] = useState<CashierSession[]>([
-        {
-            id: 1,
-            cashierId: 1,
-            cashierName: 'John Doe',
-            date: '2024-01-15',
-            openingTime: '08:00 AM',
-            closingTime: '05:00 PM',
-            openingBalance: 10000,
-            closingBalance: 45000,
-            totalSales: 50000,
-            totalExpenses: 5000,
-            cashIn: 10000,
-            cashOut: 8000,
-            expectedBalance: 57000,
-            actualBalance: 45000,
-            difference: -12000,
-            status: 'Closed'
-        },
-        {
-            id: 2,
-            cashierId: 2,
-            cashierName: 'Jane Smith',
-            date: '2024-01-15',
-            openingTime: '08:30 AM',
-            closingTime: null,
-            openingBalance: 15000,
-            closingBalance: null,
-            totalSales: 35000,
-            totalExpenses: 3000,
-            cashIn: 5000,
-            cashOut: 2000,
-            expectedBalance: 50000,
-            actualBalance: null,
-            difference: null,
-            status: 'Open'
-        },
-        {
-            id: 3,
-            cashierId: 1,
-            cashierName: 'John Doe',
-            date: '2024-01-14',
-            openingTime: '08:00 AM',
-            closingTime: '05:15 PM',
-            openingBalance: 10000,
-            closingBalance: 38000,
-            totalSales: 42000,
-            totalExpenses: 4000,
-            cashIn: 8000,
-            cashOut: 6000,
-            expectedBalance: 50000,
-            actualBalance: 38000,
-            difference: -12000,
-            status: 'Closed'
-        }
-    ]);
-
-    const [sessionTransactions] = useState<{ [key: number]: Transaction[] }>({
-        1: [
-            { id: 1, sessionId: 1, type: 'Sale', amount: 15000, description: 'Invoice INV-001', time: '09:30 AM', reference: 'INV-001' },
-            { id: 2, sessionId: 1, type: 'Sale', amount: 20000, description: 'Invoice INV-002', time: '11:00 AM', reference: 'INV-002' },
-            { id: 3, sessionId: 1, type: 'Expense', amount: 3000, description: 'Office supplies', time: '12:30 PM', reference: 'EXP-001' },
-            { id: 4, sessionId: 1, type: 'Cash In', amount: 10000, description: 'Bank deposit', time: '02:00 PM', reference: 'CI-001' },
-            { id: 5, sessionId: 1, type: 'Sale', amount: 15000, description: 'Invoice INV-003', time: '03:30 PM', reference: 'INV-003' },
-            { id: 6, sessionId: 1, type: 'Cash Out', amount: 8000, description: 'Petty cash withdrawal', time: '04:00 PM', reference: 'CO-001' }
-        ],
-        2: [
-            { id: 7, sessionId: 2, type: 'Sale', amount: 18000, description: 'Invoice INV-004', time: '09:00 AM', reference: 'INV-004' },
-            { id: 8, sessionId: 2, type: 'Sale', amount: 17000, description: 'Invoice INV-005', time: '11:30 AM', reference: 'INV-005' },
-            { id: 9, sessionId: 2, type: 'Expense', amount: 3000, description: 'Utilities payment', time: '01:00 PM', reference: 'EXP-002' },
-            { id: 10, sessionId: 2, type: 'Cash In', amount: 5000, description: 'Customer payment', time: '02:30 PM', reference: 'CI-002' }
-        ]
-    });
-
-    const [filteredSessions, setFilteredSessions] = useState<CashierSession[]>(sessions);
-    const [searchQuery, setSearchQuery] = useState('');
+    const [users, setUsers] = useState<User[]>([]);
+    const [counters, setCounters] = useState<Counter[]>([]);
+    const [sessions, setSessions] = useState<CashierSession[]>([]);
+    const [filteredSessions, setFilteredSessions] = useState<CashierSession[]>([]);
+    const [loading, setLoading] = useState(true);
+    
     const [selectedCashier, setSelectedCashier] = useState<number | null>(null);
+    const [selectedCounter, setSelectedCounter] = useState<number | null>(null);
     const [selectedDate, setSelectedDate] = useState('');
-    const [selectedStatus, setSelectedStatus] = useState<'All' | 'Open' | 'Closed'>('All');
+    const [fromDate, setFromDate] = useState('');
+    const [toDate, setToDate] = useState('');
+    const [selectedStatus, setSelectedStatus] = useState<number | null>(null);
 
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage] = useState(10);
 
     const [selectedSession, setSelectedSession] = useState<SessionDetail | null>(null);
     const [showDetailModal, setShowDetailModal] = useState(false);
-    const [showFilters, setShowFilters] = useState(false);
+    const [selectedRowIndex, setSelectedRowIndex] = useState<number>(0);
+
+    // Fetch users
+    const fetchUsers = async () => {
+        try {
+            const response = await cashSessionService.getAllUsers();
+            if (response.success) {
+                setUsers(response.data);
+            }
+        } catch (error) {
+            console.error('Error fetching users:', error);
+        }
+    };
+
+    // Fetch counters
+    const fetchCounters = async () => {
+        try {
+            const counters = await cashSessionService.getCashierCounters();
+            setCounters(counters);
+        } catch (error) {
+            console.error('Error fetching counters:', error);
+        }
+    };
+
+    // Fetch sessions
+    const fetchSessions = async () => {
+        try {
+            setLoading(true);
+            const params: any = {};
+            
+            if (selectedDate) {
+                params.date = selectedDate;
+            } else if (fromDate && toDate) {
+                params.fromDate = fromDate;
+                params.toDate = toDate;
+            }
+            // If no date filters, defaults to today in backend
+            
+            if (selectedCashier) {
+                params.userId = selectedCashier;
+            }
+            
+            if (selectedCounter) {
+                params.counterId = selectedCounter;
+            }
+            
+            if (selectedStatus) {
+                params.status = selectedStatus;
+            }
+
+            console.log('fetchSessions - Params being sent:', params);
+
+            const response = await cashSessionService.getAllSessions(params);
+            
+            if (response.success) {
+                setSessions(response.data);
+                setFilteredSessions(response.data);
+            }
+        } catch (error: any) {
+            console.error('Error fetching sessions:', error);
+            toast.error(error.response?.data?.message || 'Failed to fetch sessions');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchUsers();
+        fetchCounters();
+        fetchSessions();
+    }, [selectedDate, selectedCashier, selectedCounter, selectedStatus, fromDate, toDate]);
+
+    useEffect(() => {
+        setFilteredSessions(sessions);
+    }, [sessions]);
 
     const totalPages = Math.ceil(filteredSessions.length / itemsPerPage);
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
     const currentSessions = filteredSessions.slice(startIndex, endIndex);
 
+    // Keyboard shortcuts
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            // Ctrl + R: Generate Report
+            if (e.ctrlKey && e.key === 'r') {
+                e.preventDefault();
+                generateExcelReport();
+                return;
+            }
+
+            // Ctrl + Shift + R: Reset Filters
+            if (e.ctrlKey && e.shiftKey && e.key === 'R') {
+                e.preventDefault();
+                resetFilters();
+                return;
+            }
+
+            // Escape: Close modal
+            if (e.key === 'Escape' && showDetailModal) {
+                setShowDetailModal(false);
+                return;
+            }
+
+            // Don't handle navigation keys if modal is open or user is typing in input
+            if (showDetailModal || (e.target as HTMLElement).tagName === 'INPUT' || (e.target as HTMLElement).tagName === 'SELECT') {
+                return;
+            }
+
+            // Arrow Up: Select previous row
+            if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                setSelectedRowIndex(prev => Math.max(0, prev - 1));
+                return;
+            }
+
+            // Arrow Down: Select next row
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                setSelectedRowIndex(prev => Math.min(currentSessions.length - 1, prev + 1));
+                return;
+            }
+
+            // Page Up: Scroll table up
+            if (e.key === 'PageUp') {
+                e.preventDefault();
+                const tableContainer = document.querySelector('.overflow-y-auto');
+                if (tableContainer) {
+                    tableContainer.scrollBy({ top: -300, behavior: 'smooth' });
+                }
+                return;
+            }
+
+            // Page Down: Scroll table down
+            if (e.key === 'PageDown') {
+                e.preventDefault();
+                const tableContainer = document.querySelector('.overflow-y-auto');
+                if (tableContainer) {
+                    tableContainer.scrollBy({ top: 300, behavior: 'smooth' });
+                }
+                return;
+            }
+
+            // Arrow Left: Previous page
+            if (e.key === 'ArrowLeft' && currentPage > 1) {
+                e.preventDefault();
+                goToPage(currentPage - 1);
+                setSelectedRowIndex(0); // Reset to first row on page change
+                return;
+            }
+
+            // Arrow Right: Next page
+            if (e.key === 'ArrowRight' && currentPage < totalPages) {
+                e.preventDefault();
+                goToPage(currentPage + 1);
+                setSelectedRowIndex(0); // Reset to first row on page change
+                return;
+            }
+
+            // Home: First page
+            if (e.key === 'Home') {
+                e.preventDefault();
+                goToPage(1);
+                setSelectedRowIndex(0);
+                return;
+            }
+
+            // End: Last page
+            if (e.key === 'End') {
+                e.preventDefault();
+                goToPage(totalPages);
+                setSelectedRowIndex(0);
+                return;
+            }
+
+            // Enter: View details of selected row
+            if (e.key === 'Enter' && currentSessions[selectedRowIndex]) {
+                e.preventDefault();
+                handleViewDetails(currentSessions[selectedRowIndex]);
+                return;
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [currentPage, totalPages, showDetailModal, currentSessions, selectedRowIndex]);
+
     // Stats calculation
     const stats = {
-        totalOpenSessions: sessions.filter(s => s.status === 'Open').length,
-        todayTotalSales: sessions
-            .filter(s => s.date === new Date().toISOString().split('T')[0])
-            .reduce((sum, s) => sum + s.totalSales, 0),
-        todayTotalCash: sessions
-            .filter(s => s.date === new Date().toISOString().split('T')[0])
-            .reduce((sum, s) => sum + (s.actualBalance || s.expectedBalance), 0),
-        totalDifferences: sessions
-            .filter(s => s.status === 'Closed' && s.difference !== null)
-            .reduce((sum, s) => sum + (s.difference || 0), 0)
+        totalOpenSessions: sessions.filter(s => s.statusId === 1).length,
+        todayTotalSales: sessions.reduce((sum, s) => sum + s.totalSales, 0),
+        todayTotalCash: sessions.reduce((sum, s) => sum + s.expectedBalance, 0),
+        totalCashIn: sessions.reduce((sum, s) => sum + s.cashIn, 0),
+        totalCashOut: sessions.reduce((sum, s) => sum + s.cashOut, 0)
     };
 
     const summaryCards = [
@@ -183,106 +301,249 @@ function Accounts() {
             trend: 'Active',
             color: 'bg-gradient-to-br from-emerald-400 to-emerald-500',
             iconColor: 'text-white',
-            bgGlow: ''
         },
         {
             icon: TrendingUp,
-            label: 'Today\'s Sales',
+            label: 'Total Sales',
             value: `Rs. ${stats.todayTotalSales.toLocaleString()}`,
-            trend: '+12%',
+            trend: '',
             color: 'bg-gradient-to-br from-blue-400 to-blue-500',
             iconColor: 'text-white',
-            bgGlow: ''
         },
         {
             icon: Banknote,
-            label: 'Today\'s Cash',
+            label: 'Expected Cash',
             value: `Rs. ${stats.todayTotalCash.toLocaleString()}`,
-            trend: '+8%',
+            trend: '',
             color: 'bg-gradient-to-br from-green-400 to-green-500',
             iconColor: 'text-white',
-            bgGlow: ''
         },
         {
-            icon: stats.totalDifferences >= 0 ? TrendingUp : TrendingDown,
-            label: 'Cash Differences',
-            value: `Rs. ${stats.totalDifferences.toLocaleString()}`,
-            trend: stats.totalDifferences >= 0 ? 'Surplus' : 'Shortage',
-            color: stats.totalDifferences >= 0
-                ? 'bg-gradient-to-br from-emerald-400 to-emerald-500'
-                : 'bg-gradient-to-br from-red-400 to-red-500',
+            icon: ArrowRightLeft,
+            label: 'Cash In/Out',
+            value: `+${stats.totalCashIn.toLocaleString()} / -${stats.totalCashOut.toLocaleString()}`,
+            trend: '',
+            color: 'bg-gradient-to-br from-purple-400 to-purple-500',
             iconColor: 'text-white',
-            bgGlow: ''
         }
     ];
 
-    const handleSearch = () => {
-        let filtered = sessions;
-
-        if (searchQuery.trim()) {
-            const lowercaseQuery = searchQuery.toLowerCase();
-            filtered = filtered.filter(session =>
-                session.cashierName.toLowerCase().includes(lowercaseQuery) ||
-                session.date.includes(lowercaseQuery)
-            );
-        }
-
-        if (selectedCashier) {
-            filtered = filtered.filter(session => session.cashierId === selectedCashier);
-        }
-
-        if (selectedDate) {
-            filtered = filtered.filter(session => session.date === selectedDate);
-        }
-
-        if (selectedStatus !== 'All') {
-            filtered = filtered.filter(session => session.status === selectedStatus);
-        }
-
-        setFilteredSessions(filtered);
-        setCurrentPage(1);
-    };
-
-    useEffect(() => {
-        handleSearch();
-    }, [searchQuery, selectedCashier, selectedDate, selectedStatus]);
-
-    const handleViewDetails = (session: CashierSession) => {
-        const transactions = sessionTransactions[session.id] || [];
-        setSelectedSession({ session, transactions });
-        setShowDetailModal(true);
-    };
-
-    const handleCloseSession = (sessionId: number) => {
-        const updatedSessions = sessions.map(session => {
-            if (session.id === sessionId && session.status === 'Open') {
-                const actualBalance = session.expectedBalance; // In real app, this would be user input
-                const difference = actualBalance - session.expectedBalance;
-                return {
-                    ...session,
-                    status: 'Closed' as const,
-                    closingTime: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-                    closingBalance: actualBalance,
-                    actualBalance: actualBalance,
-                    difference: difference
-                };
+    const handleViewDetails = async (session: CashierSession) => {
+        try {
+            const response = await cashSessionService.getSessionDetails(session.id);
+            if (response.success) {
+                setSelectedSession(response.data);
+                setShowDetailModal(true);
             }
-            return session;
-        });
-        setSessions(updatedSessions);
-        setFilteredSessions(updatedSessions);
-        toast.success('Session closed successfully!');
+        } catch (error: any) {
+            console.error('Error fetching session details:', error);
+            toast.error('Failed to fetch session details');
+        }
     };
 
     const resetFilters = () => {
-        setSearchQuery('');
         setSelectedCashier(null);
+        setSelectedCounter(null);
         setSelectedDate('');
-        setSelectedStatus('All');
+        setFromDate('');
+        setToDate('');
+        setSelectedStatus(null);
     };
 
-    const exportToCSV = () => {
-        toast.success('Export functionality will be implemented');
+    const generateExcelReport = async () => {
+        try {
+            toast.loading('Generating report...');
+            
+            // Import xlsx dynamically
+            const XLSX = await import('xlsx');
+            
+            // Create a new workbook
+            const workbook = XLSX.utils.book_new();
+
+            // Prepare summary data
+            const summaryData = [
+                ['Cash Session Report'],
+                ['Generated Date:', new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' })],
+                [''],
+                ['Summary Statistics'],
+                ['Total Sessions:', filteredSessions.length],
+                ['Open Sessions:', stats.totalOpenSessions],
+                ['Total Sales (All Sessions):', `Rs. ${stats.todayTotalSales.toLocaleString()}`],
+                ['Expected Cash (All Sessions):', `Rs. ${stats.todayTotalCash.toLocaleString()}`],
+                ['Total Cash In:', `Rs. ${stats.totalCashIn.toLocaleString()}`],
+                ['Total Cash Out:', `Rs. ${stats.totalCashOut.toLocaleString()}`],
+                ['']
+            ];
+
+            // Add filter information
+            if (selectedCashier || selectedCounter || selectedDate || (fromDate && toDate) || selectedStatus) {
+                summaryData.push(['Applied Filters:']);
+                if (selectedCashier) {
+                    const cashier = users.find(u => u.id === selectedCashier);
+                    summaryData.push(['Cashier:', cashier?.name || '']);
+                }
+                if (selectedCounter) {
+                    const counter = counters.find(c => c.id === selectedCounter);
+                    summaryData.push(['Counter:', counter?.cashier_counter || '']);
+                }
+                if (selectedDate) {
+                    summaryData.push(['Date:', selectedDate]);
+                } else if (fromDate && toDate) {
+                    summaryData.push(['Date Range:', `${fromDate} to ${toDate}`]);
+                }
+                if (selectedStatus) {
+                    summaryData.push(['Status:', selectedStatus === 1 ? 'Open' : 'Closed']);
+                }
+                summaryData.push(['']);
+            }
+
+            // Create summary worksheet
+            const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
+            XLSX.utils.book_append_sheet(workbook, summarySheet, 'Summary');
+
+            // Prepare detailed session data
+            const sessionHeaders = [
+                'Session ID',
+                'Cashier Name',
+                'Cashier Email',
+                'Counter',
+                'Date',
+                'Opening Time',
+                'Opening Balance',
+                'Cash Total',
+                'Card Total',
+                'Bank Total',
+                'Total Sales',
+                'Cash In',
+                'Cash Out',
+                'Expected Balance',
+                'Status',
+                'Transactions Count'
+            ];
+
+            const sessionRows = filteredSessions.map(session => [
+                session.id,
+                session.cashier.name,
+                session.cashier.email,
+                session.counter,
+                session.date,
+                session.openingTime,
+                session.openingBalance,
+                session.cashTotal,
+                session.cardTotal,
+                session.bankTotal,
+                session.totalSales,
+                session.cashIn,
+                session.cashOut,
+                session.expectedBalance,
+                session.status,
+                session.transactionCount
+            ]);
+
+            // Combine headers and data
+            const sessionData = [sessionHeaders, ...sessionRows];
+
+            // Create sessions worksheet
+            const sessionsSheet = XLSX.utils.aoa_to_sheet(sessionData);
+
+            // Set column widths
+            const wscols = [
+                { wch: 12 }, // Session ID
+                { wch: 20 }, // Cashier Name
+                { wch: 25 }, // Cashier Email
+                { wch: 15 }, // Counter
+                { wch: 12 }, // Date
+                { wch: 15 }, // Opening Time
+                { wch: 18 }, // Opening Balance
+                { wch: 15 }, // Cash Total
+                { wch: 15 }, // Card Total
+                { wch: 15 }, // Bank Total
+                { wch: 15 }, // Total Sales
+                { wch: 12 }, // Cash In
+                { wch: 12 }, // Cash Out
+                { wch: 18 }, // Expected Balance
+                { wch: 10 }, // Status
+                { wch: 18 }  // Transactions Count
+            ];
+            sessionsSheet['!cols'] = wscols;
+
+            XLSX.utils.book_append_sheet(workbook, sessionsSheet, 'Sessions');
+
+            // Fetch and prepare transaction details for all sessions
+            const transactionHeaders = [
+                'Session ID',
+                'Cashier',
+                'Counter',
+                'Date',
+                'Transaction Time',
+                'Transaction Type',
+                'Amount',
+                'Description'
+            ];
+
+            const allTransactions: any[] = [];
+
+            // Fetch transactions for each session
+            for (const session of filteredSessions) {
+                try {
+                    const response = await cashSessionService.getSessionDetails(session.id);
+                    if (response.success && response.data.transactions) {
+                        response.data.transactions.forEach((transaction: any) => {
+                            allTransactions.push([
+                                session.id,
+                                session.cashier.name,
+                                session.counter,
+                                session.date,
+                                transaction.time,
+                                transaction.type,
+                                transaction.amount,
+                                transaction.description
+                            ]);
+                        });
+                    }
+                } catch (error) {
+                    console.error(`Error fetching transactions for session ${session.id}:`, error);
+                }
+            }
+
+            // Create transactions worksheet
+            const transactionData = allTransactions.length > 0 
+                ? [transactionHeaders, ...allTransactions]
+                : [transactionHeaders, ['No transactions found', '', '', '', '', '', '', '']];
+
+            const transactionsSheet = XLSX.utils.aoa_to_sheet(transactionData);
+
+            // Set column widths for transactions
+            const transWscols = [
+                { wch: 12 }, // Session ID
+                { wch: 20 }, // Cashier
+                { wch: 15 }, // Counter
+                { wch: 12 }, // Date
+                { wch: 15 }, // Transaction Time
+                { wch: 15 }, // Transaction Type
+                { wch: 15 }, // Amount
+                { wch: 50 }  // Description
+            ];
+            transactionsSheet['!cols'] = transWscols;
+
+            XLSX.utils.book_append_sheet(workbook, transactionsSheet, 'Money Exchange Transactions');
+
+            // Generate filename with current date and time
+            const now = new Date();
+            const dateStr = now.toISOString().split('T')[0];
+            const timeStr = now.toTimeString().split(' ')[0].replace(/:/g, '-');
+            const filename = `Cash_Session_Report_${dateStr}_${timeStr}.xlsx`;
+
+            // Write file
+            XLSX.writeFile(workbook, filename);
+
+            toast.dismiss();
+            toast.success('Full report generated successfully!');
+        } catch (error) {
+            console.error('Error generating report:', error);
+            toast.dismiss();
+            toast.error('Failed to generate report');
+        }
     };
 
     const goToPage = (page: number) => {
@@ -320,22 +581,18 @@ function Accounts() {
         return pages;
     };
 
-    const getStatusBadge = (status: string) => {
-        return status === 'Open'
+    const getStatusBadge = (statusId: number) => {
+        return statusId === 1
             ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white'
             : 'bg-gradient-to-r from-gray-500 to-gray-600 text-white';
     };
 
-    const getTransactionTypeBadge = (type: string) => {
-        switch (type) {
-            case 'Sale':
+    const getTransactionTypeBadge = (typeId: number) => {
+        switch (typeId) {
+            case 1:
                 return 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white';
-            case 'Expense':
+            case 2:
                 return 'bg-gradient-to-r from-red-500 to-red-600 text-white';
-            case 'Cash In':
-                return 'bg-gradient-to-r from-blue-500 to-blue-600 text-white';
-            case 'Cash Out':
-                return 'bg-gradient-to-r from-orange-500 to-orange-600 text-white';
             default:
                 return 'bg-gradient-to-r from-gray-400 to-gray-500 text-white';
         }
@@ -379,20 +636,54 @@ function Accounts() {
                     </div>
                     <div className="flex gap-3">
                         <button
-
-                            onClick={() => setShowFilters(!showFilters)}
-                            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white font-semibold rounded-xl transition-all"
-                        >
-                            <Filter size={18} />
-                            Filters
-                        </button>
-                        <button
-                            onClick={exportToCSV}
+                            onClick={generateExcelReport}
                             className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-semibold rounded-xl transition-all"
                         >
                             <Download size={18} />
-                            Export
+                            Generate Report
                         </button>
+                    </div>
+                </div>
+
+                {/* Keyboard Shortcuts Help */}
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-3 border border-blue-200 shadow-sm">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <span className="text-sm font-semibold text-blue-700">⌨️ Keyboard Shortcuts:</span>
+                        </div>
+                        <div className="flex flex-wrap gap-4 text-xs">
+                            <div className="flex items-center gap-2">
+                                <kbd className="px-2 py-1 bg-white rounded border border-blue-300 shadow-sm font-mono text-blue-700">Ctrl+R</kbd>
+                                <span className="text-blue-600">Generate Report</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <kbd className="px-2 py-1 bg-white rounded border border-blue-300 shadow-sm font-mono text-blue-700">Ctrl+Shift+R</kbd>
+                                <span className="text-blue-600">Reset Filters</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <kbd className="px-2 py-1 bg-white rounded border border-blue-300 shadow-sm font-mono text-blue-700">↑</kbd>
+                                <kbd className="px-2 py-1 bg-white rounded border border-blue-300 shadow-sm font-mono text-blue-700">↓</kbd>
+                                <span className="text-blue-600">Select Row</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <kbd className="px-2 py-1 bg-white rounded border border-blue-300 shadow-sm font-mono text-blue-700">PgUp</kbd>
+                                <kbd className="px-2 py-1 bg-white rounded border border-blue-300 shadow-sm font-mono text-blue-700">PgDn</kbd>
+                                <span className="text-blue-600">Scroll Table</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <kbd className="px-2 py-1 bg-white rounded border border-blue-300 shadow-sm font-mono text-blue-700">←</kbd>
+                                <kbd className="px-2 py-1 bg-white rounded border border-blue-300 shadow-sm font-mono text-blue-700">→</kbd>
+                                <span className="text-blue-600">Prev/Next Page</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <kbd className="px-2 py-1 bg-white rounded border border-blue-300 shadow-sm font-mono text-blue-700">Enter</kbd>
+                                <span className="text-blue-600">View Details</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <kbd className="px-2 py-1 bg-white rounded border border-blue-300 shadow-sm font-mono text-blue-700">Esc</kbd>
+                                <span className="text-blue-600">Close Modal</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -400,7 +691,6 @@ function Accounts() {
                     {summaryCards.map((stat, i) => (
                         <div
                             key={i}
-
                             className={`flex items-center p-4 space-x-3 transition-all bg-white rounded-2xl border border-gray-200 cursor-pointer group relative overflow-hidden`}
                         >
                             <div className="absolute inset-0 bg-gradient-to-br from-transparent via-gray-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
@@ -414,9 +704,11 @@ function Accounts() {
                             <div className="relative z-10 flex-1">
                                 <div className="flex items-center justify-between">
                                     <p className="text-xs text-gray-500">{stat.label}</p>
-                                    <span className="text-xs font-semibold text-emerald-600 flex items-center">
-                                        {stat.trend}
-                                    </span>
+                                    {stat.trend && (
+                                        <span className="text-xs font-semibold text-emerald-600 flex items-center">
+                                            {stat.trend}
+                                        </span>
+                                    )}
                                 </div>
                                 <p className="text-sm font-bold text-gray-700">{stat.value}</p>
                             </div>
@@ -425,11 +717,8 @@ function Accounts() {
                 </div>
 
                 {/* Filters Section */}
-                {showFilters && (
-                    <div
-                        className="bg-white rounded-xl p-4 border border-gray-200"
-                    >
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="bg-white rounded-xl p-4 border border-gray-200">
+                        <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
                                     Cashier
@@ -440,21 +729,73 @@ function Accounts() {
                                     className="w-full px-3 py-2 text-sm border-2 border-gray-200 rounded-lg focus:border-emerald-500 transition-all outline-none"
                                 >
                                     <option value="">All Cashiers</option>
-                                    {cashiers.map(cashier => (
-                                        <option key={cashier.id} value={cashier.id}>{cashier.name}</option>
+                                    {users.map(user => (
+                                        <option key={user.id} value={user.id}>{user.name}</option>
                                     ))}
                                 </select>
                             </div>
 
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Date
+                                    Counter
+                                </label>
+                                <select
+                                    value={selectedCounter || ''}
+                                    onChange={(e) => setSelectedCounter(e.target.value ? Number(e.target.value) : null)}
+                                    className="w-full px-3 py-2 text-sm border-2 border-gray-200 rounded-lg focus:border-emerald-500 transition-all outline-none"
+                                >
+                                    <option value="">All Counters</option>
+                                    {counters.map(counter => (
+                                        <option key={counter.id} value={counter.id}>{counter.cashier_counter}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Specific Date
                                 </label>
                                 <input
                                     type="date"
                                     value={selectedDate}
-                                    onChange={(e) => setSelectedDate(e.target.value)}
+                                    onChange={(e) => {
+                                        setSelectedDate(e.target.value);
+                                        setFromDate('');
+                                        setToDate('');
+                                    }}
                                     className="w-full px-3 py-2 text-sm border-2 border-gray-200 rounded-lg focus:border-emerald-500 transition-all outline-none"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    From Date
+                                </label>
+                                <input
+                                    type="date"
+                                    value={fromDate}
+                                    onChange={(e) => {
+                                        setFromDate(e.target.value);
+                                        setSelectedDate('');
+                                    }}
+                                    disabled={!!selectedDate}
+                                    className="w-full px-3 py-2 text-sm border-2 border-gray-200 rounded-lg focus:border-emerald-500 transition-all outline-none disabled:bg-gray-100"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    To Date
+                                </label>
+                                <input
+                                    type="date"
+                                    value={toDate}
+                                    onChange={(e) => {
+                                        setToDate(e.target.value);
+                                        setSelectedDate('');
+                                    }}
+                                    disabled={!!selectedDate}
+                                    className="w-full px-3 py-2 text-sm border-2 border-gray-200 rounded-lg focus:border-emerald-500 transition-all outline-none disabled:bg-gray-100"
                                 />
                             </div>
 
@@ -463,227 +804,194 @@ function Accounts() {
                                     Status
                                 </label>
                                 <select
-                                    value={selectedStatus}
-                                    onChange={(e) => setSelectedStatus(e.target.value as 'All' | 'Open' | 'Closed')}
+                                    value={selectedStatus || ''}
+                                    onChange={(e) => setSelectedStatus(e.target.value ? Number(e.target.value) : null)}
                                     className="w-full px-3 py-2 text-sm border-2 border-gray-200 rounded-lg focus:border-emerald-500 transition-all outline-none"
                                 >
-                                    <option value="All">All Status</option>
-                                    <option value="Open">Open</option>
-                                    <option value="Closed">Closed</option>
+                                    <option value="">All Status</option>
+                                    <option value="1">Open</option>
+                                    <option value="2">Closed</option>
                                 </select>
                             </div>
-
-                            <div className="flex items-end">
-                                <button
-                                    onClick={resetFilters}
-                                    className="w-full px-4 py-2 bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white font-semibold rounded-lg transition-all"
-                                >
-                                    Reset Filters
-                                </button>
-                            </div>
                         </div>
-                    </div>
-                )}
-
-                <div
-
-                    className="bg-white rounded-xl p-4 border border-gray-200"
-                >
-                    <div className="relative">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-                        <input
-                            type="text"
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            placeholder="Search by cashier name or date..."
-                            className="w-full pl-10 pr-4 py-2.5 text-sm border-2 border-gray-200 rounded-lg focus:border-emerald-500 transition-all outline-none"
-                        />
-                    </div>
-                </div>
-
-                <div
-
-                    className={'flex flex-col bg-white rounded-xl p-4 justify-between gap-8 border border-gray-200'}
-                >
-                    <div className="overflow-y-auto max-h-md md:h-[320px] lg:h-[450px] rounded-lg scrollbar-thin scrollbar-thumb-emerald-300 scrollbar-track-gray-100">
-                        <table className="min-w-full divide-y divide-gray-200">
-                            <thead className="bg-gradient-to-r from-emerald-500 to-emerald-600 sticky top-0 z-10">
-                                <tr>
-                                    {['#', 'Cashier', 'Date', 'Opening Time', 'Closing Time', 'Opening Balance', 'Expected Balance', 'Actual Balance', 'Difference', 'Status', 'Actions'].map((header, i, arr) => (
-                                        <th
-                                            key={header}
-                                            className={`px-6 py-4 text-left text-xs font-bold text-white uppercase tracking-wider ${i === 0 ? 'rounded-tl-lg' : i === arr.length - 1 ? 'rounded-tr-lg' : ''
-                                                }`}
-                                        >
-                                            {header}
-                                        </th>
-                                    ))}
-                                </tr>
-                            </thead>
-
-                            <tbody className="bg-white divide-y divide-gray-200">
-                                {currentSessions.length === 0 ? (
-                                    <tr>
-                                        <td colSpan={11} className="px-6 py-8 text-center">
-                                            <div className="flex flex-col items-center justify-center text-gray-400">
-                                                <AlertCircle size={48} className="mb-2" />
-                                                <p className="text-lg font-semibold">No sessions found</p>
-                                                <p className="text-sm">Try adjusting your filters</p>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ) : (
-                                    currentSessions.map((session, index) => (
-                                        <tr
-                                            className="hover:bg-gray-50 transition-colors"
-                                        >
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                                {startIndex + index + 1}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <div className="flex items-center">
-                                                    <div className="flex-shrink-0 h-10 w-10">
-                                                        <div className="h-10 w-10 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-500 flex items-center justify-center">
-                                                            <User className="h-5 w-5 text-white" />
-                                                        </div>
-                                                    </div>
-                                                    <div className="ml-4">
-                                                        <div className="text-sm font-medium text-gray-900">{session.cashierName}</div>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <div className="flex items-center text-sm text-gray-900">
-                                                    <Calendar className="mr-2 h-4 w-4 text-gray-400" />
-                                                    {session.date}
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <div className="flex items-center text-sm text-gray-900">
-                                                    <Clock className="mr-2 h-4 w-4 text-emerald-500" />
-                                                    {session.openingTime}
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <div className="flex items-center text-sm text-gray-900">
-                                                    {session.closingTime ? (
-                                                        <>
-                                                            <Clock className="mr-2 h-4 w-4 text-red-500" />
-                                                            {session.closingTime}
-                                                        </>
-                                                    ) : (
-                                                        <span className="text-gray-400">-</span>
-                                                    )}
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
-                                                Rs. {session.openingBalance.toLocaleString()}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-blue-600">
-                                                Rs. {session.expectedBalance.toLocaleString()}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-emerald-600">
-                                                {session.actualBalance ? `Rs. ${session.actualBalance.toLocaleString()}` : '-'}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-bold">
-                                                {session.difference !== null ? (
-                                                    <span className={session.difference >= 0 ? 'text-emerald-600' : 'text-red-600'}>
-                                                        {session.difference >= 0 ? '+' : ''}Rs. {session.difference.toLocaleString()}
-                                                    </span>
-                                                ) : (
-                                                    <span className="text-gray-400">-</span>
-                                                )}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadge(session.status)}`}>
-                                                    {session.status}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                                <div className="flex items-center gap-2">
-                                                    <button
-                                                        onClick={() => handleViewDetails(session)}
-                                                        className="p-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white rounded-lg transition-all"
-                                                        title="View Details"
-                                                    >
-                                                        <Eye size={16} />
-                                                    </button>
-                                                    {session.status === 'Open' && (
-                                                        <button
-                                                            onClick={() => handleCloseSession(session.id)}
-                                                            className="p-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg transition-all"
-                                                            title="Close Session"
-                                                        >
-                                                            <CheckCircle size={16} />
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <nav className="bg-white flex items-center justify-between sm:px-6 pt-4 border-t-2 border-gray-100">
-                        <div className="text-sm text-gray-600">
-                            Showing <span className="font-bold text-gray-800">{currentSessions.length === 0 ? 0 : startIndex + 1}-{Math.min(endIndex, filteredSessions.length)}</span> of{' '}
-                            <span className="font-bold text-gray-800">{filteredSessions.length}</span> sessions
-                        </div>
-                        <div className="flex items-center space-x-2">
+                        <div className="mt-4">
                             <button
-                                onClick={() => goToPage(currentPage - 1)}
-                                disabled={currentPage === 1}
-                                className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${currentPage === 1
-                                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                        : 'bg-white text-gray-700 hover:bg-emerald-50 border-2 border-gray-200 hover:border-emerald-500'
-                                    }`}
+                                onClick={resetFilters}
+                                className="px-4 py-2 bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white font-semibold rounded-lg transition-all"
                             >
-                                <ChevronLeft className="mr-2 h-5 w-5" /> Previous
+                                Reset Filters
                             </button>
-                            {getPageNumbers().map((page, index) =>
-                                page === '...' ? (
-                                    <span key={`ellipsis-${index}`} className="px-4 py-2 text-gray-400">...</span>
-                                ) : (
+                        </div>
+                    </div>
+
+                <div className={'flex flex-col bg-white rounded-xl p-4 justify-between gap-8 border border-gray-200'}>
+                    {loading ? (
+                        <div className="flex items-center justify-center py-12">
+                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500"></div>
+                        </div>
+                    ) : (
+                        <>
+                            <div className="overflow-y-auto max-h-md md:h-[320px] lg:h-[450px] rounded-lg scrollbar-thin scrollbar-thumb-emerald-300 scrollbar-track-gray-100">
+                                <table className="min-w-full divide-y divide-gray-200">
+                                    <thead className="bg-gradient-to-r from-emerald-500 to-emerald-600 sticky top-0 z-10">
+                                        <tr>
+                                            {['#', 'Cashier', 'Counter', 'Date', 'Opening Time', 'Opening Balance', 'Total Sales', 'Cash In', 'Cash Out', 'Expected Balance', 'Status', 'Actions'].map((header, i, arr) => (
+                                                <th
+                                                    key={header}
+                                                    className={`px-6 py-4 text-left text-xs font-bold text-white uppercase tracking-wider ${i === 0 ? 'rounded-tl-lg' : i === arr.length - 1 ? 'rounded-tr-lg' : ''
+                                                        }`}
+                                                >
+                                                    {header}
+                                                </th>
+                                            ))}
+                                        </tr>
+                                    </thead>
+
+                                    <tbody className="bg-white divide-y divide-gray-200">
+                                        {currentSessions.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={12} className="px-6 py-8 text-center">
+                                                    <div className="flex flex-col items-center justify-center text-gray-400">
+                                                        <AlertCircle size={48} className="mb-2" />
+                                                        <p className="text-lg font-semibold">No sessions found</p>
+                                                        <p className="text-sm">Try adjusting your filters</p>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ) : (
+                                            currentSessions.map((session, index) => (
+                                                <tr
+                                                    key={session.id}
+                                                    className={`transition-colors ${
+                                                        index === selectedRowIndex 
+                                                            ? 'bg-blue-100 hover:bg-blue-200 border-l-4 border-blue-500' 
+                                                            : 'hover:bg-gray-50'
+                                                    }`}
+                                                >
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                                        {startIndex + index + 1}
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap">
+                                                        <div className="flex items-center">
+                                                            <div className="flex-shrink-0 h-10 w-10">
+                                                                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-500 flex items-center justify-center">
+                                                                    <User className="h-5 w-5 text-white" />
+                                                                </div>
+                                                            </div>
+                                                            <div className="ml-4">
+                                                                <div className="text-sm font-medium text-gray-900">{session.cashier.name}</div>
+                                                                <div className="text-xs text-gray-500">{session.cashier.email}</div>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                        {session.counter}
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap">
+                                                        <div className="flex items-center text-sm text-gray-900">
+                                                            <Calendar className="mr-2 h-4 w-4 text-gray-400" />
+                                                            {session.date}
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap">
+                                                        <div className="flex items-center text-sm text-gray-900">
+                                                            <Clock className="mr-2 h-4 w-4 text-emerald-500" />
+                                                            {session.openingTime}
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
+                                                        Rs. {session.openingBalance.toLocaleString()}
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-blue-600">
+                                                        Rs. {session.totalSales.toLocaleString()}
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-emerald-600">
+                                                        Rs. {session.cashIn.toLocaleString()}
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-red-600">
+                                                        Rs. {session.cashOut.toLocaleString()}
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-purple-600">
+                                                        Rs. {session.expectedBalance.toLocaleString()}
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap">
+                                                        <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadge(session.statusId)}`}>
+                                                            {session.status}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                                        <button
+                                                            onClick={() => handleViewDetails(session)}
+                                                            className="p-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white rounded-lg transition-all"
+                                                            title="View Details"
+                                                        >
+                                                            <Eye size={16} />
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <nav className="bg-white flex items-center justify-between sm:px-6 pt-4 border-t-2 border-gray-100">
+                                <div className="text-sm text-gray-600">
+                                    Showing <span className="font-bold text-gray-800">{currentSessions.length === 0 ? 0 : startIndex + 1}-{Math.min(endIndex, filteredSessions.length)}</span> of{' '}
+                                    <span className="font-bold text-gray-800">{filteredSessions.length}</span> sessions
+                                </div>
+                                <div className="flex items-center space-x-2">
                                     <button
-                                        key={page}
-                                        onClick={() => goToPage(page as number)}
-                                        className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${currentPage === page
-                                                ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white'
+                                        onClick={() => goToPage(currentPage - 1)}
+                                        disabled={currentPage === 1}
+                                        className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${currentPage === 1
+                                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                                                 : 'bg-white text-gray-700 hover:bg-emerald-50 border-2 border-gray-200 hover:border-emerald-500'
                                             }`}
                                     >
-                                        {page}
+                                        <ChevronLeft className="mr-2 h-5 w-5" /> Previous
                                     </button>
-                                )
-                            )}
-                            <button
-                                onClick={() => goToPage(currentPage + 1)}
-                                disabled={currentPage === totalPages}
-                                className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${currentPage === totalPages
-                                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                        : 'bg-white text-gray-700 hover:bg-emerald-50 border-2 border-gray-200 hover:border-emerald-500'
-                                    }`}
-                            >
-                                Next <ChevronRight className="ml-2 h-5 w-5" />
-                            </button>
-                        </div>
-                    </nav>
+                                    {getPageNumbers().map((page, index) =>
+                                        page === '...' ? (
+                                            <span key={`ellipsis-${index}`} className="px-4 py-2 text-gray-400">...</span>
+                                        ) : (
+                                            <button
+                                                key={page}
+                                                onClick={() => goToPage(page as number)}
+                                                className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${currentPage === page
+                                                        ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white'
+                                                        : 'bg-white text-gray-700 hover:bg-emerald-50 border-2 border-gray-200 hover:border-emerald-500'
+                                                    }`}
+                                            >
+                                                {page}
+                                            </button>
+                                        )
+                                    )}
+                                    <button
+                                        onClick={() => goToPage(currentPage + 1)}
+                                        disabled={currentPage === totalPages}
+                                        className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${currentPage === totalPages
+                                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                                : 'bg-white text-gray-700 hover:bg-emerald-50 border-2 border-gray-200 hover:border-emerald-500'
+                                            }`}
+                                    >
+                                        Next <ChevronRight className="ml-2 h-5 w-5" />
+                                    </button>
+                                </div>
+                            </nav>
+                        </>
+                    )}
                 </div>
             </div>
 
             {/* Session Detail Modal */}
             {showDetailModal && selectedSession && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-                    <div
-
-                        className="bg-white rounded-2xl border border-gray-200 w-full max-w-5xl max-h-[90vh] overflow-hidden"
-                    >
+                    <div className="bg-white rounded-2xl border border-gray-200 w-full max-w-5xl max-h-[90vh] overflow-hidden">
                         <div className="bg-gradient-to-r from-emerald-500 to-emerald-600 px-6 py-4 flex justify-between items-center">
                             <div>
                                 <h2 className="text-2xl font-bold text-white">Session Details</h2>
-                                <p className="text-sm text-emerald-100">{selectedSession.session.cashierName} - {selectedSession.session.date}</p>
+                                <p className="text-sm text-emerald-100">{selectedSession.session.cashier} - {selectedSession.session.date}</p>
                             </div>
                             <button
                                 onClick={() => setShowDetailModal(false)}
@@ -704,57 +1012,64 @@ function Accounts() {
                                     <p className="text-xs text-blue-600 font-semibold mb-1">Total Sales</p>
                                     <p className="text-lg font-bold text-blue-900">Rs. {selectedSession.session.totalSales.toLocaleString()}</p>
                                 </div>
-                                <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-lg p-4 border-2 border-red-200">
-                                    <p className="text-xs text-red-600 font-semibold mb-1">Total Expenses</p>
-                                    <p className="text-lg font-bold text-red-900">Rs. {selectedSession.session.totalExpenses.toLocaleString()}</p>
+                                <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-4 border-2 border-green-200">
+                                    <p className="text-xs text-green-600 font-semibold mb-1">Cash In</p>
+                                    <p className="text-lg font-bold text-green-900">Rs. {selectedSession.session.cashIn.toLocaleString()}</p>
                                 </div>
-                                <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-4 border-2 border-purple-200">
-                                    <p className="text-xs text-purple-600 font-semibold mb-1">Net Cash Flow</p>
-                                    <p className="text-lg font-bold text-purple-900">Rs. {(selectedSession.session.cashIn - selectedSession.session.cashOut).toLocaleString()}</p>
+                                <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-lg p-4 border-2 border-red-200">
+                                    <p className="text-xs text-red-600 font-semibold mb-1">Cash Out</p>
+                                    <p className="text-lg font-bold text-red-900">Rs. {selectedSession.session.cashOut.toLocaleString()}</p>
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4 mb-6">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                                 <div className="bg-gray-50 rounded-lg p-4">
-                                    <p className="text-sm text-gray-600 mb-3 font-semibold">Session Timing</p>
+                                    <p className="text-sm text-gray-600 mb-3 font-semibold">Payment Breakdown</p>
                                     <div className="space-y-2">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-xs text-gray-500">Cash Total:</span>
+                                            <span className="text-sm font-semibold text-gray-900">Rs. {selectedSession.session.cashTotal.toLocaleString()}</span>
+                                        </div>
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-xs text-gray-500">Card Total:</span>
+                                            <span className="text-sm font-semibold text-gray-900">Rs. {selectedSession.session.cardTotal.toLocaleString()}</span>
+                                        </div>
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-xs text-gray-500">Bank Total:</span>
+                                            <span className="text-sm font-semibold text-gray-900">Rs. {selectedSession.session.bankTotal.toLocaleString()}</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="bg-gray-50 rounded-lg p-4">
+                                    <p className="text-sm text-gray-600 mb-3 font-semibold">Session Info</p>
+                                    <div className="space-y-2">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-xs text-gray-500">Counter:</span>
+                                            <span className="text-sm font-semibold text-gray-900">{selectedSession.session.counter}</span>
+                                        </div>
                                         <div className="flex items-center justify-between">
                                             <span className="text-xs text-gray-500">Opening Time:</span>
                                             <span className="text-sm font-semibold text-gray-900">{selectedSession.session.openingTime}</span>
                                         </div>
                                         <div className="flex items-center justify-between">
-                                            <span className="text-xs text-gray-500">Closing Time:</span>
-                                            <span className="text-sm font-semibold text-gray-900">{selectedSession.session.closingTime || '-'}</span>
+                                            <span className="text-xs text-gray-500">Status:</span>
+                                            <span className="text-sm font-semibold text-gray-900">{selectedSession.session.status}</span>
                                         </div>
                                     </div>
                                 </div>
-                                <div className="bg-gray-50 rounded-lg p-4">
-                                    <p className="text-sm text-gray-600 mb-3 font-semibold">Cash Reconciliation</p>
-                                    <div className="space-y-2">
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-xs text-gray-500">Expected Balance:</span>
-                                            <span className="text-sm font-semibold text-blue-600">Rs. {selectedSession.session.expectedBalance.toLocaleString()}</span>
-                                        </div>
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-xs text-gray-500">Actual Balance:</span>
-                                            <span className="text-sm font-semibold text-emerald-600">{selectedSession.session.actualBalance ? `Rs. ${selectedSession.session.actualBalance.toLocaleString()}` : '-'}</span>
-                                        </div>
-                                        {selectedSession.session.difference !== null && (
-                                            <div className="flex items-center justify-between pt-2 border-t border-gray-200">
-                                                <span className="text-xs text-gray-500 font-bold">Difference:</span>
-                                                <span className={`text-sm font-bold ${selectedSession.session.difference >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                                                    {selectedSession.session.difference >= 0 ? '+' : ''}Rs. {selectedSession.session.difference.toLocaleString()}
-                                                </span>
-                                            </div>
-                                        )}
-                                    </div>
+
+                                <div className="bg-purple-50 rounded-lg p-4 border-2 border-purple-200">
+                                    <p className="text-sm text-purple-600 mb-3 font-semibold">Expected Balance</p>
+                                    <p className="text-2xl font-bold text-purple-900">Rs. {selectedSession.session.expectedBalance.toLocaleString()}</p>
+                                    <p className="text-xs text-purple-600 mt-2">Opening + Sales + Cash In - Cash Out</p>
                                 </div>
                             </div>
 
-                            {/* Transactions */}
+                            {/* Money Exchange Transactions */}
                             <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
                                 <ArrowRightLeft className="text-emerald-600" size={24} />
-                                Transactions
+                                Money Exchange Transactions ({selectedSession.transactions.length})
                             </h3>
                             <div className="border-2 border-gray-200 rounded-lg overflow-hidden">
                                 <table className="w-full">
@@ -763,37 +1078,39 @@ function Accounts() {
                                             <th className="px-4 py-3 text-left text-xs font-bold text-gray-700">Time</th>
                                             <th className="px-4 py-3 text-left text-xs font-bold text-gray-700">Type</th>
                                             <th className="px-4 py-3 text-left text-xs font-bold text-gray-700">Description</th>
-                                            <th className="px-4 py-3 text-left text-xs font-bold text-gray-700">Reference</th>
                                             <th className="px-4 py-3 text-right text-xs font-bold text-gray-700">Amount</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-200">
-                                        {selectedSession.transactions.map((transaction) => (
-                                            <tr key={transaction.id} className="hover:bg-gray-50">
-                                                <td className="px-4 py-3 text-sm text-gray-600">
-                                                    <div className="flex items-center gap-2">
-                                                        <Clock size={14} className="text-gray-400" />
-                                                        {transaction.time}
-                                                    </div>
-                                                </td>
-                                                <td className="px-4 py-3">
-                                                    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getTransactionTypeBadge(transaction.type)}`}>
-                                                        {transaction.type}
-                                                    </span>
-                                                </td>
-                                                <td className="px-4 py-3 text-sm text-gray-900">{transaction.description}</td>
-                                                <td className="px-4 py-3 text-sm text-gray-600 font-mono">{transaction.reference}</td>
-                                                <td className="px-4 py-3 text-sm text-right font-bold">
-                                                    <span className={
-                                                        transaction.type === 'Sale' || transaction.type === 'Cash In'
-                                                            ? 'text-emerald-600'
-                                                            : 'text-red-600'
-                                                    }>
-                                                        {transaction.type === 'Sale' || transaction.type === 'Cash In' ? '+' : '-'}Rs. {transaction.amount.toLocaleString()}
-                                                    </span>
+                                        {selectedSession.transactions.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={4} className="px-4 py-8 text-center text-gray-400">
+                                                    No money exchange transactions
                                                 </td>
                                             </tr>
-                                        ))}
+                                        ) : (
+                                            selectedSession.transactions.map((transaction) => (
+                                                <tr key={transaction.id} className="hover:bg-gray-50">
+                                                    <td className="px-4 py-3 text-sm text-gray-600">
+                                                        <div className="flex items-center gap-2">
+                                                            <Clock size={14} className="text-gray-400" />
+                                                            {transaction.time}
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-4 py-3">
+                                                        <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getTransactionTypeBadge(transaction.typeId)}`}>
+                                                            {transaction.type}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-4 py-3 text-sm text-gray-900">{transaction.description}</td>
+                                                    <td className="px-4 py-3 text-sm text-right font-bold">
+                                                        <span className={transaction.typeId === 1 ? 'text-emerald-600' : 'text-red-600'}>
+                                                            {transaction.typeId === 1 ? '+' : '-'}Rs. {transaction.amount.toLocaleString()}
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        )}
                                     </tbody>
                                 </table>
                             </div>
