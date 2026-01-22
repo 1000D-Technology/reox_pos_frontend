@@ -81,37 +81,11 @@ class Stock {
      * @desc Get all current stock with product and supplier details (grouped by product)
      */
     static async getAllStock() {
-        const query = `
-            SELECT 
-                p.id AS product_id,
-                CONCAT(p.product_name, 
-                       IF(pv.color IS NOT NULL AND pv.color != '', CONCAT(' - ', pv.color), ''), 
-                       IF(pv.size IS NOT NULL AND pv.size != '', CONCAT(' - ', pv.size), '')
-                ) AS product_name,
-                s.barcode,
-                u.name AS unit,
-                s.cost_price,
-                s.mrp,
-                s.rsp AS selling_price,
-                sup.supplier_name AS supplier,
-                SUM(s.qty) AS stock_qty
-            FROM stock s
-            INNER JOIN product_variations pv ON s.product_variations_id = pv.id
-            INNER JOIN product p ON pv.product_id = p.id
-            INNER JOIN unit_id u ON p.unit_id = u.idunit_id
-            LEFT JOIN grn_items gi ON s.id = gi.stock_id
-            LEFT JOIN grn g ON gi.grn_id = g.id
-            LEFT JOIN supplier sup ON g.supplier_id = sup.id
-            WHERE s.qty > 0
-            GROUP BY p.id, p.product_name, pv.color, pv.size, s.barcode, u.name, s.cost_price, s.mrp, s.rsp, sup.supplier_name
-            ORDER BY p.product_name ASC
-        `;
-        const [rows] = await db.execute(query);
-        return rows;
+        return this.searchStock({});
     }
 
     static async searchStock(filters) {
-        // Get all stock items using pure Prisma
+        // Fetch all stocks with relations using Prisma
         const stocks = await prisma.stock.findMany({
             where: {
                 qty: { gt: 0 }
@@ -122,8 +96,7 @@ class Stock {
                         product: {
                             include: {
                                 unit_id_product_unit_idTounit_id: true,
-                                category: true,
-                                brand: true
+                                category: true
                             }
                         }
                     }
@@ -140,23 +113,22 @@ class Stock {
             }
         });
 
-        // Filter in JavaScript
         let filteredStocks = stocks;
 
         if (filters.category) {
-            filteredStocks = filteredStocks.filter(s => 
+            filteredStocks = filteredStocks.filter(s =>
                 s.product_variations.product.category_id === parseInt(filters.category)
             );
         }
 
         if (filters.unit) {
-            filteredStocks = filteredStocks.filter(s => 
+            filteredStocks = filteredStocks.filter(s =>
                 s.product_variations.product.unit_id === parseInt(filters.unit)
             );
         }
 
         if (filters.supplier) {
-            filteredStocks = filteredStocks.filter(s => 
+            filteredStocks = filteredStocks.filter(s =>
                 s.grn_items.some(gi => gi.grn?.supplier_id === parseInt(filters.supplier))
             );
         }
@@ -165,8 +137,10 @@ class Stock {
             const query = filters.searchQuery.toLowerCase();
             filteredStocks = filteredStocks.filter(s => {
                 const product = s.product_variations.product;
-                return product.product_name.toLowerCase().includes(query) || 
-                       product.id.toString() === filters.searchQuery;
+                const barcode = s.barcode || '';
+                return product.product_name.toLowerCase().includes(query) ||
+                    product.id.toString() === filters.searchQuery ||
+                    barcode.toLowerCase().includes(query);
             });
         }
 
@@ -208,9 +182,9 @@ class Stock {
             product_id: data.product_id,
             product_name: data.product_name,
             unit: data.unit,
-            cost_price: data.cost_prices.reduce((a, b) => a + b, 0) / data.cost_prices.length,
-            mrp: data.mrps.reduce((a, b) => a + b, 0) / data.mrps.length,
-            selling_price: data.rsps.reduce((a, b) => a + b, 0) / data.rsps.length,
+            cost_price: data.cost_prices.length > 0 ? data.cost_prices.reduce((a, b) => a + b, 0) / data.cost_prices.length : 0,
+            mrp: data.mrps.length > 0 ? data.mrps.reduce((a, b) => a + b, 0) / data.mrps.length : 0,
+            selling_price: data.rsps.length > 0 ? data.rsps.reduce((a, b) => a + b, 0) / data.rsps.length : 0,
             supplier: Array.from(data.suppliers).join(', '),
             stock_qty: data.total_qty
         }));
