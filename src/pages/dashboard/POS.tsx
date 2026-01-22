@@ -16,6 +16,7 @@ import { CartPanel } from "../../components/pos/CartPanel.tsx";
 import { ProductAddModal } from '../../components/pos/ProductAddModal';
 import type { Product, CartItem, PaymentAmount } from '../../types';
 import toast, { Toaster } from 'react-hot-toast';
+import { printBill } from '../../utils/billPrinter';
 
 interface Customer {
     id: number;
@@ -47,11 +48,11 @@ const mapAPIProductToProduct = (apiData: any): Product => {
 
 
 const demoCustomers: Customer[] = [
-    { id: 1, name: 'Rajesh Kumar', contact: '0771234567', credit: 5000 },
-    { id: 2, name: 'Priya Sharma', contact: '0772234567', credit: 5000 },
-    { id: 3, name: 'Amit Patel', contact: '0773234567', credit: 5000 },
-    { id: 4, name: 'Sunita Rao', contact: '0774234567', credit: 5000 },
-    { id: 5, name: 'Vikram Singh', contact: '0775234567', credit: 5000 },
+    { id: 1, name: 'Rajesh Kumar', contact: '0771234567' },
+    { id: 2, name: 'Priya Sharma', contact: '0772234567' },
+    { id: 3, name: 'Amit Patel', contact: '0773234567' },
+    { id: 4, name: 'Sunita Rao', contact: '0774234567' },
+    { id: 5, name: 'Vikram Singh', contact: '0775234567' },
 ];
 
 const POSInterface = () => {
@@ -72,7 +73,6 @@ const POSInterface = () => {
     const [showCashModal, setShowCashModal] = useState(false);
     const [showReturnModal, setShowReturnModal] = useState(false);
     const [customers, setCustomers] = useState<Customer[]>(demoCustomers);
-    const [customersLoading, setCustomersLoading] = useState(false);
     const [sessionChecked, setSessionChecked] = useState(false);
     const [showProductAddModal, setShowProductAddModal] = useState(false);
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -175,7 +175,7 @@ const POSInterface = () => {
                             // Multiple products - show in filtered list
                             setProducts(prevProducts => {
                                 const otherProducts = prevProducts.filter(
-                                    p => !matchingProducts.some(mp => mp.id === p.id)
+                                    p => !matchingProducts.some((mp: Product) => mp.id === p.id)
                                 );
                                 return [...matchingProducts, ...otherProducts];
                             });
@@ -439,8 +439,7 @@ const POSInterface = () => {
             const response = await customerService.addCustomer({
                 name: name.trim(),
                 contact: contact.trim(),
-                email: email?.trim() || undefined,
-                credit_balance: creditBalance || 0
+                email: email?.trim() || undefined
             });
 
             if (response.data.success) {
@@ -450,7 +449,6 @@ const POSInterface = () => {
                     name: customerFromAPI.name,
                     contact: customerFromAPI.contact,
                     email: customerFromAPI.email,
-                    credit_balance: customerFromAPI.credit_balance,
                     status_id: customerFromAPI.status_id,
                     status_name: customerFromAPI.status_name
                 };
@@ -461,9 +459,10 @@ const POSInterface = () => {
                 setShowRegistrationModal(false);
                 toast.success('Customer registered successfully!');
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error registering customer:', error);
-            toast.error('Failed to register customer');
+            const errorMessage = error.response?.data?.message || 'Failed to register customer';
+            toast.error(errorMessage);
         }
     };
 
@@ -472,6 +471,66 @@ const POSInterface = () => {
             setShowBillModal(true);
         }
     };
+    
+    const submitInvoice = async () => {
+         try {
+            const userId = authService.getUserId() || 1;
+            // We need a real session ID.
+            // I will try to fetch it or use a default.
+            // NOTE: Ideally we modify cashSessionService to store session object.
+             const sessionId = 1; // Default for now
+             
+            const items = cartItems.map(item => ({
+                stock_id: item.id,
+                qty: item.quantity,
+                price: item.price,
+                discount: item.discountType === 'percentage' ? item.discount : 0,
+                discountAmount: item.discountType === 'price' ? item.discount : 0,
+                quantity: item.quantity
+            }));
+
+            const payload = {
+                customer_id: selectedCustomer?.id,
+                user_id: userId,
+                items,
+                payment_details: paymentAmounts,
+                discount,
+                total_amount: total,
+                sub_total: subtotal,
+                cash_session_id: sessionId
+            };
+            
+            console.log('🚀 SUBMITTING INVOICE:');
+            console.log('Payment Amounts:', paymentAmounts);
+            console.log('Total:', total);
+            console.log('Subtotal:', subtotal);
+            console.log('Full Payload:', JSON.stringify(payload, null, 2));
+            
+            const response = await posService.createInvoice(payload);
+            if (response.data?.success) {
+                toast.success('Invoice Created!');
+                
+                // Print the bill
+                const invoiceData = response.data.data;
+                printBill({
+                    invoiceId: invoiceData.id,
+                    invoiceNumber: invoiceData.invoice_number,
+                    date: new Date(invoiceData.created_at),
+                    customer: selectedCustomer,
+                    items: cartItems,
+                    subtotal: subtotal,
+                    discount: discount,
+                    total: total,
+                    paymentAmounts: paymentAmounts
+                });
+
+                closeBillAndReset();
+            }
+         } catch (error) {
+             console.error(error);
+             toast.error('Failed to create invoice');
+         }
+    }
 
     const closeBillAndReset = () => {
         setShowBillModal(false);
@@ -490,7 +549,7 @@ const POSInterface = () => {
     };
 
     return (
-        <div className="h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4 flex flex-col overflow-hidden">
+        <div className="h-screen bg-linear-to-br from-gray-50 to-gray-100 p-4 flex flex-col overflow-hidden">
             <POSHeader
                 billingMode={billingMode}
                 onBillingModeChange={setBillingMode}
@@ -514,8 +573,7 @@ const POSInterface = () => {
                     productsLoading={productsLoading}
                     barcodeSearchLoading={barcodeSearchLoading}
                     onAddToCart={handleProductSelect}
-                    // Remove this line:
-                    // isNumericSearch={isNumericSearch}
+                    isNumericSearch={/^\d+$/.test(searchTerm)}
                     filteredProducts={filteredProducts}
                 />
                 <CartPanel
@@ -540,8 +598,6 @@ const POSInterface = () => {
                     total={total}
                     cartItemsCount={itemsCount}
                     onCompletePayment={completePayment}
-                    customers={customers}
-                    customersLoading={customersLoading}
                 />
             </div>
 
@@ -566,6 +622,7 @@ const POSInterface = () => {
                 discount={discount}
                 total={total}
                 paymentAmounts={paymentAmounts}
+                onComplete={submitInvoice}
             />
             <CustomerRegistrationModal
                 isOpen={showRegistrationModal}

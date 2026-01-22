@@ -374,17 +374,158 @@ function ProductList() {
         setProductToDeactivate(null);
     };
 
-    const EditProductModal = () => {
-        if (!isEditModalOpen || !selectedProduct) return null;
 
-        return (
-            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">
+
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === "ArrowDown") {
+                setSelectedIndex((prev) => (prev < currentPageData.length - 1 ? prev + 1 : prev));
+            } else if (e.key === "ArrowUp") {
+                setSelectedIndex((prev) => (prev > 0 ? prev - 1 : prev));
+            } else if (e.key === "Enter" && e.shiftKey && isEditModalOpen) {
+                e.preventDefault();
+                if (!isUpdating) {
+                    handleUpdateProduct();
+                }
+            }
+        };
+
+        window.addEventListener("keydown", handleKeyDown);
+        return () => window.removeEventListener("keydown", handleKeyDown);
+    }, [currentPageData.length, isEditModalOpen, isUpdating]);
+
+    const formatDataForExport = (data: Product[]) => {
+        return data.map(item => ({
+            'Product ID': item.productID,
+            'Name': item.productName,
+            'Code': item.productCode,
+            'Barcode': item.barcode,
+            'Category': item.category,
+            'Brand': item.brand,
+            'Unit': item.unit,
+            'Type': item.productType,
+            'Color': item.color,
+            'Size': item.size,
+            'Storage': item.storage,
+            'Created On': item.createdOn
+        }));
+    };
+
+    const handleExportExcel = () => {
+        if (salesData.length === 0) {
+            toast.error('No data to export');
+            return;
+        }
+        const formattedData = formatDataForExport(salesData);
+        const ws = XLSX.utils.json_to_sheet(formattedData);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Products");
+        XLSX.writeFile(wb, "products_list.xlsx");
+        toast.success('Exported to Excel successfully');
+    };
+
+    const handleExportCSV = () => {
+        if (salesData.length === 0) {
+            toast.error('No data to export');
+            return;
+        }
+        const formattedData = formatDataForExport(salesData);
+        const ws = XLSX.utils.json_to_sheet(formattedData);
+        const csv = XLSX.utils.sheet_to_csv(ws);
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        link.setAttribute("href", url);
+        link.setAttribute("download", "products_list.csv");
+        link.style.visibility = "hidden";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        toast.success('Exported to CSV successfully');
+    };
+
+    const handleExportPDF = () => {
+        if (salesData.length === 0) {
+            toast.error('No data to export');
+            return;
+        }
+        // Use landscape orientation ('l') for better column fit
+        const doc = new jsPDF('l', 'mm', 'a4');
+
+        doc.setFontSize(18);
+        doc.text("Product List", 14, 22);
+
+        doc.setFontSize(11);
+        doc.setTextColor(100);
+        doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 30);
+
+        const tableColumn = [
+            "ID", "Name", "Code", "Barcode", "Category", "Brand",
+            "Unit", "Type", "Color", "Size", "Storage", "Created On"
+        ];
+
+        const tableRows = salesData.map(item => [
+            item.productID,
+            item.productName,
+            item.productCode,
+            item.barcode,
+            item.category,
+            item.brand,
+            item.unit,
+            item.productType,
+            item.color || '-',
+            item.size || '-',
+            item.storage || '-',
+            item.createdOn
+        ]);
+
+        autoTable(doc, {
+            head: [tableColumn],
+            body: tableRows,
+            startY: 40,
+            theme: 'grid',
+            styles: { fontSize: 8, cellPadding: 2 },
+            headStyles: { fillColor: [16, 185, 129] }, // Emerald-500
+            // optimize column widths if needed, or let autotable handle it
+        });
+
+        doc.save("products_list.pdf");
+        toast.success('Exported to PDF successfully');
+    };
+
+    return (
+        <>
+            <Toaster
+                position="top-right"
+                toastOptions={{
+                    duration: 4000,
+                    style: {
+                        background: '#363636',
+                        color: '#fff',
+                    },
+                    success: {
+                        duration: 3000,
+                        style: {
+                            background: '#10b981',
+                        },
+                    },
+                    error: {
+                        duration: 4000,
+                        style: {
+                            background: '#ef4444',
+                        },
+                    },
+                }}
+            />
+            <div className="flex flex-col gap-4 h-full">
+                {isEditModalOpen && selectedProduct && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">
                 <div
 
                     className="bg-white rounded-2xl p-8 w-full max-w-7xl max-h-[90vh] overflow-y-auto shadow-2xl"
                 >
                     <div className="flex justify-between items-center mb-6">
-                        <h2 className="text-2xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
+                        <h2 className="text-2xl font-bold bg-linear-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
                             Edit Product
                         </h2>
                         <button
@@ -395,7 +536,7 @@ function ProductList() {
                         </button>
                     </div>
 
-                    <div className="bg-gradient-to-br from-gray-50 to-white rounded-xl p-6 border border-gray-100">
+                    <div className="bg-linear-to-br from-gray-50 to-white rounded-xl p-6 border border-gray-100">
                         <h3 className="text-lg font-semibold text-gray-700 mb-4">Basic Product Information</h3>
 
                         <div className="grid md:grid-cols-3 gap-4">
@@ -558,7 +699,7 @@ function ProductList() {
                             <button
                                 onClick={handleUpdateProduct}
                                 disabled={isUpdating}
-                                className={`flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-medium rounded-lg shadow-lg shadow-emerald-200 transition-all ${isUpdating ? 'opacity-50 cursor-not-allowed' : ''
+                                className={`flex items-center gap-2 px-6 py-2.5 bg-linear-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-medium rounded-lg shadow-lg shadow-emerald-200 transition-all ${isUpdating ? 'opacity-50 cursor-not-allowed' : ''
                                     }`}
                             >
                                 {isUpdating ? 'Updating...' : 'Update Product'}
@@ -568,152 +709,7 @@ function ProductList() {
                     </div>
                 </div>
             </div>
-        );
-    };
-
-    useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === "ArrowDown") {
-                setSelectedIndex((prev) => (prev < currentPageData.length - 1 ? prev + 1 : prev));
-            } else if (e.key === "ArrowUp") {
-                setSelectedIndex((prev) => (prev > 0 ? prev - 1 : prev));
-            } else if (e.key === "Enter" && e.shiftKey && isEditModalOpen) {
-                e.preventDefault();
-                if (!isUpdating) {
-                    handleUpdateProduct();
-                }
-            }
-        };
-
-        window.addEventListener("keydown", handleKeyDown);
-        return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [currentPageData.length, isEditModalOpen, isUpdating]);
-
-    const formatDataForExport = (data: Product[]) => {
-        return data.map(item => ({
-            'Product ID': item.productID,
-            'Name': item.productName,
-            'Code': item.productCode,
-            'Barcode': item.barcode,
-            'Category': item.category,
-            'Brand': item.brand,
-            'Unit': item.unit,
-            'Type': item.productType,
-            'Color': item.color,
-            'Size': item.size,
-            'Storage': item.storage,
-            'Created On': item.createdOn
-        }));
-    };
-
-    const handleExportExcel = () => {
-        if (salesData.length === 0) {
-            toast.error('No data to export');
-            return;
-        }
-        const formattedData = formatDataForExport(salesData);
-        const ws = XLSX.utils.json_to_sheet(formattedData);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Products");
-        XLSX.writeFile(wb, "products_list.xlsx");
-        toast.success('Exported to Excel successfully');
-    };
-
-    const handleExportCSV = () => {
-        if (salesData.length === 0) {
-            toast.error('No data to export');
-            return;
-        }
-        const formattedData = formatDataForExport(salesData);
-        const ws = XLSX.utils.json_to_sheet(formattedData);
-        const csv = XLSX.utils.sheet_to_csv(ws);
-        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement("a");
-        const url = URL.createObjectURL(blob);
-        link.setAttribute("href", url);
-        link.setAttribute("download", "products_list.csv");
-        link.style.visibility = "hidden";
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        toast.success('Exported to CSV successfully');
-    };
-
-    const handleExportPDF = () => {
-        if (salesData.length === 0) {
-            toast.error('No data to export');
-            return;
-        }
-        // Use landscape orientation ('l') for better column fit
-        const doc = new jsPDF('l', 'mm', 'a4');
-
-        doc.setFontSize(18);
-        doc.text("Product List", 14, 22);
-
-        doc.setFontSize(11);
-        doc.setTextColor(100);
-        doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 30);
-
-        const tableColumn = [
-            "ID", "Name", "Code", "Barcode", "Category", "Brand",
-            "Unit", "Type", "Color", "Size", "Storage", "Created On"
-        ];
-
-        const tableRows = salesData.map(item => [
-            item.productID,
-            item.productName,
-            item.productCode,
-            item.barcode,
-            item.category,
-            item.brand,
-            item.unit,
-            item.productType,
-            item.color || '-',
-            item.size || '-',
-            item.storage || '-',
-            item.createdOn
-        ]);
-
-        autoTable(doc, {
-            head: [tableColumn],
-            body: tableRows,
-            startY: 40,
-            theme: 'grid',
-            styles: { fontSize: 8, cellPadding: 2 },
-            headStyles: { fillColor: [16, 185, 129] }, // Emerald-500
-            // optimize column widths if needed, or let autotable handle it
-        });
-
-        doc.save("products_list.pdf");
-        toast.success('Exported to PDF successfully');
-    };
-
-    return (
-        <>
-            <Toaster
-                position="top-right"
-                toastOptions={{
-                    duration: 4000,
-                    style: {
-                        background: '#363636',
-                        color: '#fff',
-                    },
-                    success: {
-                        duration: 3000,
-                        style: {
-                            background: '#10b981',
-                        },
-                    },
-                    error: {
-                        duration: 4000,
-                        style: {
-                            background: '#ef4444',
-                        },
-                    },
-                }}
-            />
-            <div className="flex flex-col gap-4 h-full">
-                <EditProductModal />
+            )}
 
 
                 <ConfirmationModal
@@ -736,7 +732,7 @@ function ProductList() {
                         <span className="mx-2">›</span>
                         <span className="text-gray-700 font-medium">Product List</span>
                     </div>
-                    <h1 className="text-3xl font-semibold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
+                    <h1 className="text-3xl font-semibold bg-linear-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
                         Product List
                     </h1>
                 </div>
@@ -773,7 +769,7 @@ function ProductList() {
                         <div className="grid md:items-end gap-2">
                             <button
                                 onClick={handleSearch}
-                                className="flex items-center justify-center gap-2 py-2 px-4 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-medium rounded-lg shadow-lg shadow-emerald-200 transition-all"
+                                className="flex items-center justify-center gap-2 py-2 px-4 bg-linear-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-medium rounded-lg shadow-lg shadow-emerald-200 transition-all"
                             >
                                 <SearchCheck size={16} />
                                 Search
@@ -782,7 +778,7 @@ function ProductList() {
                         <div className="grid md:items-end gap-2">
                             <button
                                 onClick={handleClear}
-                                className="flex items-center justify-center gap-2 py-2 px-4 bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white font-medium rounded-lg shadow-lg shadow-gray-200 transition-all"
+                                className="flex items-center justify-center gap-2 py-2 px-4 bg-linear-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white font-medium rounded-lg shadow-lg shadow-gray-200 transition-all"
                             >
                                 <RefreshCw size={16} />
                                 Clear
@@ -796,7 +792,7 @@ function ProductList() {
                 >
                     <div className="overflow-y-auto max-h-md md:h-[320px] lg:h-[520px] rounded-lg scrollbar-thin scrollbar-thumb-emerald-300 scrollbar-track-gray-100">
                         <table className="min-w-full divide-y divide-gray-200">
-                            <thead className="bg-gradient-to-r from-emerald-600 to-emerald-700 sticky top-0 z-10">
+                            <thead className="bg-linear-to-r from-emerald-600 to-emerald-700 sticky top-0 z-10">
                                 <tr>
                                     {[
                                         "Product ID",
@@ -891,7 +887,7 @@ function ProductList() {
                                                         setSelectedProduct(sale);
                                                         setIsEditModalOpen(true);
                                                     }}
-                                                    className="p-2 bg-gradient-to-r from-blue-100 to-blue-200 rounded-lg text-blue-700 hover:from-blue-200 hover:to-blue-300 transition-all shadow-sm"
+                                                    className="p-2 bg-linear-to-r from-blue-100 to-blue-200 rounded-lg text-blue-700 hover:from-blue-200 hover:to-blue-300 transition-all shadow-sm"
                                                 >
                                                     <Pencil size={15} />
                                                 </button>
@@ -905,7 +901,7 @@ function ProductList() {
                                             <div className="relative group">
                                                 <button
                                                     onClick={(e) => handleDeactivateProduct(sale, e)}
-                                                    className="p-2 bg-gradient-to-r from-red-100 to-red-200 rounded-lg text-red-700 hover:from-red-200 hover:to-red-300 transition-all shadow-sm"
+                                                    className="p-2 bg-linear-to-r from-red-100 to-red-200 rounded-lg text-red-700 hover:from-red-200 hover:to-red-300 transition-all shadow-sm"
                                                 >
                                                     <Trash size={15} />
                                                 </button>
@@ -944,7 +940,7 @@ function ProductList() {
                                         key={index}
                                         onClick={() => goToPage(page)}
                                         className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${currentPage === page
-                                            ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-md'
+                                            ? 'bg-linear-to-r from-emerald-500 to-emerald-600 text-white shadow-md'
                                             : 'text-gray-600 hover:bg-emerald-50 hover:text-emerald-600'
                                             }`}
                                     >
@@ -976,21 +972,21 @@ function ProductList() {
                 >
                     <button
                         onClick={handleExportExcel}
-                        className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-medium rounded-lg shadow-lg shadow-emerald-200 hover:shadow-xl transition-all"
+                        className="flex items-center gap-2 px-6 py-3 bg-linear-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-medium rounded-lg shadow-lg shadow-emerald-200 hover:shadow-xl transition-all"
                     >
                         <FileText size={20} />
                         Excel
                     </button>
                     <button
                         onClick={handleExportCSV}
-                        className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-medium rounded-lg shadow-lg shadow-blue-200 hover:shadow-xl transition-all"
+                        className="flex items-center gap-2 px-6 py-3 bg-linear-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-medium rounded-lg shadow-lg shadow-blue-200 hover:shadow-xl transition-all"
                     >
                         <FileText size={20} />
                         CSV
                     </button>
                     <button
                         onClick={handleExportPDF}
-                        className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-medium rounded-lg shadow-lg shadow-red-200 hover:shadow-xl transition-all"
+                        className="flex items-center gap-2 px-6 py-3 bg-linear-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-medium rounded-lg shadow-lg shadow-red-200 hover:shadow-xl transition-all"
                     >
                         <FileText size={20} />
                         PDF

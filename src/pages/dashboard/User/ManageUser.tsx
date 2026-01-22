@@ -215,16 +215,47 @@ function ManageUser() {
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === "ArrowDown") {
-                setSelectedIndex((prev) => (prev < userData.length - 1 ? prev + 1 : prev));
-            } else if (e.key === "ArrowUp") {
-                setSelectedIndex((prev) => (prev > 0 ? prev - 1 : prev));
+            // Global shortcuts
+            if (e.key === "Escape") {
+                if (isAddModalOpen) handleCloseAddModal();
+                if (isEditModalOpen) handleCloseEditModal();
+                return;
+            }
+
+            // Shortcuts when modals are NOT open
+            if (!isAddModalOpen && !isEditModalOpen) {
+                if (e.key === "ArrowDown") {
+                    e.preventDefault();
+                    setSelectedIndex((prev) => {
+                        const next = prev < userData.length - 1 ? prev + 1 : prev;
+                        // Optional: Scroll logic could be added here if you had a ref to the list container
+                        return next;
+                    });
+                } else if (e.key === "ArrowUp") {
+                    e.preventDefault();
+                    setSelectedIndex((prev) => (prev > 0 ? prev - 1 : prev));
+                } else if (e.key === "Insert") {
+                    e.preventDefault();
+                    handleAddUser();
+                } else if (e.key === "Enter") {
+                    e.preventDefault();
+                    if (userData[selectedIndex]) {
+                        handleEditClick(userData[selectedIndex]);
+                    }
+                } else if (e.key === "Delete") {
+                    const user = userData[selectedIndex];
+                    if (user) {
+                        // Optional: confirmation dialog before toggle? 
+                        // For now, direct action as per request implies quick access.
+                        handleStatusToggle(user.id, user.isActive);
+                    }
+                }
             }
         };
 
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [userData.length]);
+    }, [userData, selectedIndex, isAddModalOpen, isEditModalOpen, userRoles]); // Added dependencies for clarity and correctness
 
     const handleAddUser = () => {
         setAddForm({
@@ -496,6 +527,16 @@ function ManageUser() {
                     </button>
                 </div>
 
+                {/* Keyboard Shortcuts Legend */}
+                <div className="bg-white rounded-xl p-4 shadow-lg flex flex-wrap gap-4 text-xs text-gray-500">
+                    <span className="font-semibold text-gray-700">Keyboard Shortcuts:</span>
+                    <span className="flex items-center gap-1"><kbd className="px-2 py-0.5 bg-gray-100 border border-gray-300 rounded font-mono text-gray-600">Insert</kbd> Add User</span>
+                    <span className="flex items-center gap-1"><kbd className="px-2 py-0.5 bg-gray-100 border border-gray-300 rounded font-mono text-gray-600">Enter</kbd> Edit Selection</span>
+                    <span className="flex items-center gap-1"><kbd className="px-2 py-0.5 bg-gray-100 border border-gray-300 rounded font-mono text-gray-600">Delete</kbd> Toggle Status</span>
+                    <span className="flex items-center gap-1"><kbd className="px-2 py-0.5 bg-gray-100 border border-gray-300 rounded font-mono text-gray-600">Esc</kbd> Close Modal</span>
+                    <span className="flex items-center gap-1"><kbd className="px-2 py-0.5 bg-gray-100 border border-gray-300 rounded font-mono text-gray-600">↑</kbd> <kbd className="px-2 py-0.5 bg-gray-100 border border-gray-300 rounded font-mono text-gray-600">↓</kbd> Navigate</span>
+                </div>
+
                 <div className={'grid md:grid-cols-3 grid-cols-1 gap-4'}>
                     {summaryCards.map((stat, i) => (
                         <div
@@ -681,6 +722,8 @@ function ManageUser() {
                         </div>
                     </nav>
                 </div>
+
+
             </div>
 
             {/* Add User Modal */}

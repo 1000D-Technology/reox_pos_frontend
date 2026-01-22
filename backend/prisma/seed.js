@@ -165,6 +165,7 @@ async function main() {
   }
 
   // 7. Payment Types (Cash, Card, Cheque, Online)
+  // 7. Payment Types (Cash, Card, Cheque, Online)
   const paymentTypes = ['Cash', 'Card', 'Cheque', 'Online'];
   for (const pType of paymentTypes) {
     const exists = await prisma.payment_types.findFirst({ where: { payment_types: pType } });
@@ -172,6 +173,20 @@ async function main() {
       await prisma.payment_types.create({ data: { payment_types: pType } });
       console.log(`Created payment type: ${pType}`);
     }
+  }
+
+  // 8. Invoice Types (Sales, Return)
+  const invoiceTypes = ['Sales', 'Return'];
+  for (const iType of invoiceTypes) {
+     // Check if existing by ID or Name. Since ID is auto-inc, check by name is safer for idempotency if ID logic varies.
+     // Schema has 'Invoice_type' (capital I? schema says 'Invoice_type' string field).
+     // Let's check schema again.
+     // model invoice_type { ... Invoice_type String ... }
+     const exists = await prisma.invoice_type.findFirst({ where: { Invoice_type: iType } });
+     if (!exists) {
+       await prisma.invoice_type.create({ data: { Invoice_type: iType } });
+       console.log(`Created invoice type: ${iType}`);
+     }
   }
 
   console.log('Seeding finished.');

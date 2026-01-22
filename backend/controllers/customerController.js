@@ -5,7 +5,7 @@ const { AppError } = require("../middleware/errorHandler");
 const customerController = {
     // Add a new customer
     addCustomer: catchAsync(async (req, res, next) => {
-        const { name, contact, email, credit_balance } = req.body;
+        const { name, contact, email } = req.body;
 
         // Check if phone number already exists
         const existing = await prisma.customer.findFirst({
@@ -21,7 +21,6 @@ const customerController = {
                 name,
                 contact,
                 email: email || null,
-                credit_balance: credit_balance || '0.0',
                 status_id: 1
             },
             include: {
@@ -51,6 +50,11 @@ const customerController = {
                     select: {
                         ststus: true
                     }
+                },
+                invoice: {
+                    include: {
+                        creadit_book: true
+                    }
                 }
             },
             orderBy: {
@@ -58,10 +62,21 @@ const customerController = {
             }
         });
 
-        const formattedCustomers = customers.map(c => ({
-            ...c,
-            status_name: c.status.ststus
-        }));
+        // Calculate credit balance for each customer from creadit_book
+        const formattedCustomers = customers.map(c => {
+            // Sum all credit book balances for this customer's invoices
+            const creditBalance = c.invoice.reduce((total, inv) => {
+                const invoiceCredit = inv.creadit_book.reduce((sum, cb) => sum + cb.balance, 0);
+                return total + invoiceCredit;
+            }, 0);
+
+            return {
+                ...c,
+                credit_balance: creditBalance,
+                status_name: c.status.ststus,
+                invoice: undefined // Remove invoice details from response
+            };
+        });
         
         res.status(200).json({
             success: true,
@@ -138,15 +153,31 @@ const customerController = {
                     select: {
                         ststus: true
                     }
+                },
+                invoice: {
+                    include: {
+                        creadit_book: true
+                    }
                 }
             },
             take: 10
         });
 
-        const formattedCustomers = customers.map(c => ({
-            ...c,
-            status_name: c.status.ststus
-        }));
+        // Calculate credit balance for each customer from creadit_book
+        const formattedCustomers = customers.map(c => {
+            // Sum all credit book balances for this customer's invoices
+            const creditBalance = c.invoice.reduce((total, inv) => {
+                const invoiceCredit = inv.creadit_book.reduce((sum, cb) => sum + cb.balance, 0);
+                return total + invoiceCredit;
+            }, 0);
+
+            return {
+                ...c,
+                credit_balance: creditBalance,
+                status_name: c.status.ststus,
+                invoice: undefined // Remove invoice details from response
+            };
+        });
 
         res.status(200).json({
             success: true,

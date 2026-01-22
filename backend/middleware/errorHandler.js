@@ -89,7 +89,7 @@ const globalErrorHandler = (err, req, res, next) => {
         });
     }
 
-    if (process.env.NODE_ENV === 'development') {
+    if (process.env.NODE_ENV === 'development' || !process.env.NODE_ENV) {
         res.status(err.statusCode).json({
             success: false,
             status: err.status,
@@ -106,10 +106,13 @@ const globalErrorHandler = (err, req, res, next) => {
                 message: err.message
             });
         } else {
+            // TEMPORARY DEBUG: Return detailed error even in production
             res.status(500).json({
                 success: false,
                 status: 'error',
-                message: 'Something went wrong!'
+                message: err.message,
+                stack: err.stack,
+                error: err
             });
         }
     }

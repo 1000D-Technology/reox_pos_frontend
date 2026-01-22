@@ -20,6 +20,7 @@ const customerRoutes = require('./routes/customerRoutes');
 const userRoutes = require('./routes/userRoutes');
 const roleRoutes = require('./routes/roleRoutes');
 const { scheduleBackup } = require('./schedulers/backupScheduler');
+const { scheduleSessionClosure } = require('./schedulers/sessionClosureScheduler');
 const moneyExchangeRoutes = require('./routes/moneyExchangeRoutes');
 
 require('dotenv').config();
@@ -82,6 +83,14 @@ seedDatabase().then(() => {
             console.log('✅ Backup scheduler started successfully');
         } catch (error) {
             console.error('❌ Failed to start backup scheduler:', error.message);
+        }
+
+        // Initialize session auto-close scheduler
+        try {
+            scheduleSessionClosure();
+            console.log('✅ Session auto-close scheduler started successfully');
+        } catch (error) {
+            console.error('❌ Failed to start session auto-close scheduler:', error.message);
         }
     });
 }).catch(err => {

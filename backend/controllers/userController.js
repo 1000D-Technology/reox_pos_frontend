@@ -9,18 +9,42 @@ const userController = {
     addUser: catchAsync(async (req, res, next) => {
         const { name, email, contact, password, role } = req.body;
 
-        // 1. Check if Email or Contact already exists in the DB
-        const existing = await prisma.user.findFirst({
-            where: {
-                OR: [
-                    { email },
-                    { contact }
-                ]
-            }
-        });
+        // 0. Validate required fields
+        if (!name || !password || !role) {
+            return next(new AppError("Name, password, and role are required.", 400));
+        }
 
-        if (existing) {
-            return next(new AppError("Email or Contact number already exists in the system.", 400));
+        // At least email or contact must be provided
+        const hasEmail = email && typeof email === 'string' && email.trim() !== '';
+        const hasContact = contact && typeof contact === 'string' && contact.trim() !== '';
+        
+        if (!hasEmail && !hasContact) {
+            return next(new AppError("Either email or contact number must be provided.", 400));
+        }
+
+        // 1. Check if Email or Contact already exists in the DB
+        // Build the OR conditions only for non-empty values to avoid matching null/empty fields
+        const orConditions = [];
+        
+        if (email && typeof email === 'string' && email.trim() !== '') {
+            orConditions.push({ email: email.trim() });
+        }
+        
+        if (contact && typeof contact === 'string' && contact.trim() !== '') {
+            orConditions.push({ contact: contact.trim() });
+        }
+
+        // Only check for duplicates if we have at least one condition
+        if (orConditions.length > 0) {
+            const existing = await prisma.user.findFirst({
+                where: {
+                    OR: orConditions
+                }
+            });
+
+            if (existing) {
+                return next(new AppError("Email or Contact number already exists in the system.", 400));
+            }
         }
 
         // 2. Hash Password

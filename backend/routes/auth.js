@@ -105,4 +105,39 @@ router.post('/login', async (req, res) => {
     }
 });
 
+router.get('/users', async (req, res) => {
+    try {
+        const users = await prisma.user.findMany({
+            where: {
+                status_id: 1 // Active users only
+            },
+            select: {
+                id: true,
+                name: true,
+                email: true,
+                contact: true,
+                role: {
+                    select: {
+                        user_role: true
+                    }
+                }
+            },
+            orderBy: {
+                name: 'asc'
+            }
+        });
+
+        res.json({
+            success: true,
+            data: users
+        });
+    } catch (error) {
+        console.error('Error fetching users:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch users'
+        });
+    }
+});
+
 module.exports = router;

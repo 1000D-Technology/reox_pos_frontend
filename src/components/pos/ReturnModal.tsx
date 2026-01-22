@@ -1,6 +1,10 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, RotateCcw, Search, Barcode, FileText, Printer, Minus, Plus } from 'lucide-react';
 import { useState } from 'react';
+import { posService } from '../../services/posService';
+import { printBill } from '../../utils/billPrinter';
+import { authService } from '../../services/authService';
+import toast from 'react-hot-toast';
 
 interface ReturnModalProps {
     isOpen: boolean;
@@ -12,7 +16,8 @@ interface ReturnItem {
     name: string;
     price: number;
     quantity: number;
-    returnQuantity: number;
+    returnedQuantity?: number; // Quantity already returned
+    returnQuantity: number; // Quantity to return NOW
 }
 
 interface Invoice {
@@ -21,6 +26,8 @@ interface Invoice {
     customer: string;
     total: number;
     items: ReturnItem[];
+    payments?: { method: string, amount: number }[];
+    creditBalance?: number;
 }
 
 export const ReturnModal = ({ isOpen, onClose }: ReturnModalProps) => {
@@ -29,30 +36,37 @@ export const ReturnModal = ({ isOpen, onClose }: ReturnModalProps) => {
     const [returnItems, setReturnItems] = useState<ReturnItem[]>([]);
     const [returnSearchTerm, setReturnSearchTerm] = useState('');
 
-    const loadInvoice = () => {
+    const [loading, setLoading] = useState(false);
+
+    const loadInvoice = async () => {
         if (!returnInvoiceNo.trim()) return;
 
-        // Mock invoice data - replace with actual API call
-        const mockInvoice: Invoice = {
-            invoiceNo: returnInvoiceNo,
-            date: new Date().toLocaleDateString(),
-            customer: 'John Doe',
-            total: 5000,
-            items: [
-                { id: 1, name: 'Product A', price: 100, quantity: 5, returnQuantity: 0 },
-                { id: 2, name: 'Product B', price: 200, quantity: 3, returnQuantity: 0 },
-                { id: 3, name: 'Product C', price: 150, quantity: 4, returnQuantity: 0 },
-            ]
-        };
-
-        setOriginalInvoice(mockInvoice);
-        setReturnItems(mockInvoice.items);
+        setLoading(true);
+        try {
+            const response = await posService.getInvoiceByNo(returnInvoiceNo.trim());
+            if (response.data?.success && response.data?.data) {
+                const invoiceData = response.data.data;
+                setOriginalInvoice(invoiceData);
+                setReturnItems(invoiceData.items);
+                toast.success('Invoice loaded successfully');
+            }
+        } catch (error: any) {
+            console.error('Failed to load invoice:', error);
+            const msg = error.response?.data?.message || 'Invoice not found';
+            toast.error(msg);
+            setOriginalInvoice(null);
+            setReturnItems([]);
+        } finally {
+            setLoading(false);
+        }
     };
 
     const updateReturnQuantity = (id: number, delta: number) => {
         setReturnItems(returnItems.map(item => {
             if (item.id === id) {
-                const newQuantity = Math.max(0, Math.min(item.quantity, item.returnQuantity + delta));
+                const alreadyReturned = item.returnedQuantity || 0;
+                const maxReturn = Math.max(0, item.quantity - alreadyReturned);
+                const newQuantity = Math.max(0, Math.min(maxReturn, item.returnQuantity + delta));
                 return { ...item, returnQuantity: newQuantity };
             }
             return item;
@@ -69,22 +83,86 @@ export const ReturnModal = ({ isOpen, onClose }: ReturnModalProps) => {
 
     const returnTotal = returnSubtotal;
 
-    const completeReturn = () => {
+    const completeReturn = async () => {
         const itemsToReturn = returnItems.filter(item => item.returnQuantity > 0);
         if (itemsToReturn.length === 0) return;
 
-        console.log('Processing return:', {
-            invoiceNo: returnInvoiceNo,
-            items: itemsToReturn,
-            total: returnTotal
-        });
+        if (!window.confirm("Are you sure you want to process this return?")) return;
 
-        // Reset and close
-        setReturnInvoiceNo('');
-        setOriginalInvoice(null);
-        setReturnItems([]);
-        setReturnSearchTerm('');
-        onClose();
+        setLoading(true);
+        try {
+            const userId = authService.getUserId() || 1;
+            const payload = {
+                invoiceNo: returnInvoiceNo,
+                user_id: userId,
+                items: itemsToReturn.map(item => ({
+                    id: item.id,
+                    returnQuantity: item.returnQuantity
+                }))
+            };
+
+            const response = await posService.processReturn(payload);
+            if (response.data?.success) {
+                const { refundedCash, newDebt, oldDebt, debtReduction, returnValue } = response.data;
+                
+                // Create detailed success message
+                let message = 'Return processed successfully!\n';
+                if (debtReduction > 0) {
+                    message += `✅ Debt reduced: Rs ${oldDebt.toFixed(2)} → Rs ${newDebt.toFixed(2)}\n`;
+                    if (refundedCash > 0) {
+                        message += `💰 Cash refunded: Rs ${refundedCash.toFixed(2)}`;
+                    } else {
+                        message += `⚠️ No cash refund (used to reduce debt)`;
+                    }
+                } else {
+                    message += `💰 Cash refunded: Rs ${refundedCash.toFixed(2)}`;
+                }
+                
+                toast.success(message, { duration: 5000 });
+                
+                // Print Return Bill with debt information
+                if (originalInvoice) {
+                    // Get Sri Lankan time (UTC+5:30)
+                    const sriLankanTime = new Date(new Date().getTime() + (5.5 * 60 * 60 * 1000));
+                    
+                    printBill({
+                        invoiceId: 0,
+                        invoiceNumber: originalInvoice.invoiceNo,
+                        date: sriLankanTime,
+                        customer: { 
+                            id: 0, 
+                            name: originalInvoice.customer || 'Guest', 
+                            contact: '' 
+                        },
+                        items: itemsToReturn.map(item => ({
+                            id: item.id,
+                            name: item.name,
+                            price: item.price,
+                            quantity: item.returnQuantity,
+                            discount: 0
+                        })),
+                        subtotal: returnSubtotal,
+                        discount: 0,
+                        total: returnValue, // Total value of returned items
+                        paymentAmounts: [],
+                        isReturn: true,
+                        originalPayments: originalInvoice.payments,
+                        refundedCash: refundedCash,
+                        oldDebt: oldDebt,
+                        debtReduction: debtReduction,
+                        newDebt: newDebt
+                    });
+                }
+
+                handleClose();
+            }
+        } catch (error: any) {
+            console.error('Return failed:', error);
+            const msg = error.response?.data?.message || 'Return processing failed';
+            toast.error(msg);
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handleClose = () => {
@@ -113,7 +191,7 @@ export const ReturnModal = ({ isOpen, onClose }: ReturnModalProps) => {
                         className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col"
                     >
                         {/* Header */}
-                        <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-amber-500 to-amber-600">
+                        <div className="p-6 border-b border-gray-200 bg-linear-to-r from-amber-500 to-amber-600">
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-3">
                                     <div className="p-2 bg-white/20 rounded-lg">
@@ -142,17 +220,29 @@ export const ReturnModal = ({ isOpen, onClose }: ReturnModalProps) => {
                                 </label>
                                 <div className="flex gap-2">
                                     <input
+                                        autoFocus
                                         type="text"
                                         value={returnInvoiceNo}
                                         onChange={(e) => setReturnInvoiceNo(e.target.value)}
-                                        placeholder="Enter invoice number (e.g., INV001)"
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') {
+                                                e.preventDefault();
+                                                loadInvoice();
+                                            }
+                                        }}
+                                        placeholder="Scan or enter invoice number..."
                                         className="flex-1 px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-amber-500"
                                     />
                                     <button
                                         onClick={loadInvoice}
-                                        className="px-6 py-2.5 bg-amber-500 text-white rounded-xl font-semibold hover:bg-amber-600 transition-colors"
+                                        disabled={loading}
+                                        className={`px-6 py-2.5 rounded-xl font-semibold transition-all border-2 ${
+                                            loading 
+                                                ? 'bg-white text-amber-500 border-amber-500 cursor-not-allowed' 
+                                                : 'bg-amber-500 text-white border-transparent hover:bg-amber-600'
+                                        }`}
                                     >
-                                        Load
+                                        {loading ? 'Loading...' : 'Load'}
                                     </button>
                                 </div>
                             </div>
@@ -178,6 +268,34 @@ export const ReturnModal = ({ isOpen, onClose }: ReturnModalProps) => {
                                         </div>
                                     </div>
 
+                                    {/* Credit/Debt Warning */}
+                                    {originalInvoice.creditBalance && originalInvoice.creditBalance > 0 ? (
+                                        <div className="p-3 bg-red-50 border border-red-200 rounded-xl flex justify-between items-center">
+                                            <div>
+                                                <h4 className="text-sm font-bold text-red-700">OUTSTANDING DEBT</h4>
+                                                <p className="text-xs text-red-600">This invoice has an unpaid balance.</p>
+                                            </div>
+                                            <div className="text-xl font-black text-red-700">
+                                                Rs {originalInvoice.creditBalance.toFixed(2)}
+                                            </div>
+                                        </div>
+                                    ) : null}
+
+                                    {/* Payment History */}
+                                    {originalInvoice.payments && originalInvoice.payments.length > 0 && (
+                                        <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl">
+                                            <h4 className="text-xs font-semibold text-blue-800 mb-2 uppercase tracking-wide">Payment History</h4>
+                                            <div className="flex flex-wrap gap-4">
+                                                {originalInvoice.payments.map((p, idx) => (
+                                                    <div key={idx} className="flex items-center gap-2 text-sm">
+                                                        <span className="text-blue-600 font-medium">{p.method}:</span>
+                                                        <span className="font-bold text-gray-800">Rs {p.amount.toFixed(2)}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
                                     {/* Search Products to Return */}
                                     <div className="relative">
                                         <Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
@@ -198,9 +316,12 @@ export const ReturnModal = ({ isOpen, onClose }: ReturnModalProps) => {
                                                 <div className="flex items-center justify-between mb-2">
                                                     <div className="flex-1">
                                                         <h4 className="font-semibold text-gray-800">{item.name}</h4>
-                                                        <p className="text-xs text-gray-500">
-                                                            Original Qty: {item.quantity} • Price: Rs {item.price}
-                                                        </p>
+                                                        <div className="flex gap-3 text-xs text-gray-500 mt-1">
+                                                            <span className="font-medium text-blue-600">Orig: {item.quantity}</span>
+                                                            <span className="font-medium text-red-500">Returned: {item.returnedQuantity || 0}</span>
+                                                            <span className="font-medium text-emerald-600">Avail: {item.quantity - (item.returnedQuantity || 0)}</span>
+                                                        </div>
+                                                        <p className="text-xs text-gray-500 mt-0.5">Price: Rs {item.price}</p>
                                                     </div>
                                                     <div className="text-right">
                                                         <p className="font-bold text-amber-600">
@@ -214,6 +335,7 @@ export const ReturnModal = ({ isOpen, onClose }: ReturnModalProps) => {
                                                         <button
                                                             onClick={() => updateReturnQuantity(item.id, -1)}
                                                             className="p-1 bg-gray-100 hover:bg-amber-500 hover:text-white rounded transition-colors"
+                                                            disabled={item.returnQuantity <= 0}
                                                         >
                                                             <Minus className="w-3.5 h-3.5" />
                                                         </button>
@@ -221,6 +343,7 @@ export const ReturnModal = ({ isOpen, onClose }: ReturnModalProps) => {
                                                         <button
                                                             onClick={() => updateReturnQuantity(item.id, 1)}
                                                             className="p-1 bg-gray-100 hover:bg-amber-500 hover:text-white rounded transition-colors"
+                                                            disabled={item.returnQuantity >= (item.quantity - (item.returnedQuantity || 0))}
                                                         >
                                                             <Plus className="w-3.5 h-3.5" />
                                                         </button>
@@ -231,7 +354,7 @@ export const ReturnModal = ({ isOpen, onClose }: ReturnModalProps) => {
                                     </div>
 
                                     {/* Return Summary */}
-                                    <div className="p-4 bg-gradient-to-br from-amber-50 to-amber-100 rounded-xl border-2 border-amber-200">
+                                    <div className="p-4 bg-linear-to-br from-amber-50 to-amber-100 rounded-xl border-2 border-amber-200">
                                         <div className="space-y-2">
                                             <div className="flex justify-between text-sm">
                                                 <span className="text-gray-600">Original Total:</span>
@@ -275,8 +398,8 @@ export const ReturnModal = ({ isOpen, onClose }: ReturnModalProps) => {
                                     </button>
                                     <button
                                         onClick={completeReturn}
-                                        disabled={returnItems.filter(i => i.returnQuantity > 0).length === 0}
-                                        className="flex-1 px-6 py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-xl font-semibold hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                                        disabled={returnItems.filter(i => i.returnQuantity > 0).length === 0 || loading}
+                                        className="flex-1 px-6 py-3 bg-linear-to-r from-amber-500 to-amber-600 text-white rounded-xl font-semibold hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                                     >
                                         <div className="flex items-center justify-center gap-2">
                                             <Printer className="w-5 h-5" />

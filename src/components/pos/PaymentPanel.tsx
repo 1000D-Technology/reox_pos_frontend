@@ -1,4 +1,4 @@
-import { Search, UserPlus, X, Check, CreditCard, Banknote, Wallet } from 'lucide-react';
+import { Search, UserPlus, X, Check, CreditCard, Banknote, Wallet, Landmark } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { customerService } from '../../services/customerService';
 
@@ -36,7 +36,7 @@ interface PaymentPanelProps {
 const paymentMethods: PaymentMethod[] = [
     { id: 'cash', label: 'Cash', icon: Banknote },
     { id: 'card', label: 'Card', icon: CreditCard },
-    { id: 'credit', label: 'Credit', icon: Wallet },
+    { id: 'bank', label: 'Bank Deposit', icon: Landmark },
 ];
 
 export const PaymentPanel = ({
@@ -117,10 +117,13 @@ export const PaymentPanel = ({
             }
 
             // F12 - Complete payment
-            if (e.key === 'F12' && cartItemsCount > 0 && remaining <= 0) {
-                e.preventDefault();
-                onCompletePayment();
-                return;
+            if (e.key === 'F12' && cartItemsCount > 0) {
+                // Allow if fully paid OR (partially paid AND customer selected)
+                if (remaining <= 0 || (remaining > 0 && selectedCustomer)) {
+                    e.preventDefault();
+                    onCompletePayment();
+                    return;
+                }
             }
 
             // Alt+1, Alt+2, Alt+3 - Navigate payment methods
@@ -196,6 +199,7 @@ export const PaymentPanel = ({
 
     const selectCustomer = (customer: Customer) => {
         onCustomerSelect(customer);
+        onCustomerSearchChange(customer.name); // Show customer name in search bar
         setShowCustomerDropdown(false);
         setFilteredCustomers([]);
         setHighlightedCustomerIndex(0);
@@ -247,7 +251,7 @@ export const PaymentPanel = ({
                             >
                                 <p className="text-sm font-semibold text-gray-800">{customer.name}</p>
                                 <p className="text-xs text-gray-500">{customer.contact}</p>
-                                <p className="text-xs text-gray-500">Credit: Rs {customer.credit_balance || 0}</p>
+                                <p className="text-xs text-emerald-600 font-semibold">Credit: Rs {customer.credit_balance?.toFixed(2) || '0.00'}</p>
                             </button>
                         ))}
                     </div>
@@ -277,8 +281,8 @@ export const PaymentPanel = ({
                                     <p className="text-xs text-emerald-600">{localSelectedCustomer.contact}</p>
                                 </div>
                                 <div className="flex items-center pe-4 flex-col">
-                                    <p className="text-xs">Credit Balance</p>
-                                    <p className="text-sm text-red-600 font-semibold">Rs {localSelectedCustomer.credit_balance || 0}.00</p>
+                                    <p className="text-xs text-emerald-700">Credit Balance</p>
+                                    <p className="text-sm text-red-600 font-bold">Rs {localSelectedCustomer.credit_balance?.toFixed(2) || '0.00'}</p>
                                 </div>
                             </div>
                             <button
@@ -302,30 +306,66 @@ export const PaymentPanel = ({
                         const shortcut = `Alt+${index + 1}`;
 
                         return (
-                            <div key={method.id} className="flex items-center gap-2">
-                                <div className="flex-1">
-                                    <div className="flex items-center gap-2 mb-1">
-                                        <method.icon className="w-3.5 h-3.5 text-emerald-600" />
-                                        <span className="text-xs font-medium text-gray-700">{method.label}</span>
-                                        <span className="text-xs text-gray-400">({shortcut})</span>
+                            <div key={method.id} className="space-y-2">
+                                <div className="flex items-center gap-2">
+                                    <div className="flex-1">
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <method.icon className="w-3.5 h-3.5 text-emerald-600" />
+                                            <span className="text-xs font-medium text-gray-700">{method.label}</span>
+                                            <span className="text-xs text-gray-400">({shortcut})</span>
+                                        </div>
+                                        <input
+                                            ref={(el) => { paymentInputRefs.current[method.id] = el; }}
+                                            data-payment-input="true"
+                                            type="number"
+                                            value={amount || ''}
+                                            onChange={(e) => {
+                                                const newAmount = Number(e.target.value);
+                                                onPaymentAmountChange(method.id, newAmount);
+                                            }}
+                                            onFocus={() => setSelectedPaymentMethod(index)}
+                                            placeholder="Enter amount"
+                                            className={`w-full px-2 py-1.5 text-sm bg-gray-50 border-2 rounded-lg focus:outline-none focus:border-emerald-500 ${selectedPaymentMethod === index ? 'border-emerald-400' : 'border-gray-200'
+                                                }`}
+                                            min="0"
+                                            step="0.01"
+                                        />
                                     </div>
-                                    <input
-                                        ref={(el) => { paymentInputRefs.current[method.id] = el; }}
-                                        data-payment-input="true"
-                                        type="number"
-                                        value={amount || ''}
-                                        onChange={(e) => {
-                                            const newAmount = Number(e.target.value);
-                                            onPaymentAmountChange(method.id, newAmount);
-                                        }}
-                                        onFocus={() => setSelectedPaymentMethod(index)}
-                                        placeholder="Enter amount"
-                                        className={`w-full px-2 py-1.5 text-sm bg-gray-50 border-2 rounded-lg focus:outline-none focus:border-emerald-500 ${selectedPaymentMethod === index ? 'border-emerald-400' : 'border-gray-200'
-                                            }`}
-                                        min="0"
-                                        step="0.01"
-                                    />
                                 </div>
+                                
+                                {/* Quick Cash Buttons - Only show for Cash payment */}
+                                {method.id === 'cash' && total > 0 && (
+                                    <div className="grid grid-cols-4 gap-1.5">
+                                        <button
+                                            type="button"
+                                            onClick={() => onPaymentAmountChange('cash', 1000)}
+                                            className="px-2 py-1 text-xs font-medium bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded border border-emerald-200 transition-colors"
+                                        >
+                                            1000
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => onPaymentAmountChange('cash', 2000)}
+                                            className="px-2 py-1 text-xs font-medium bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded border border-emerald-200 transition-colors"
+                                        >
+                                            2000
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => onPaymentAmountChange('cash', 5000)}
+                                            className="px-2 py-1 text-xs font-medium bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded border border-emerald-200 transition-colors"
+                                        >
+                                            5000
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => onPaymentAmountChange('cash', total)}
+                                            className="px-2 py-1 text-xs font-medium bg-blue-50 hover:bg-blue-100 text-blue-700 rounded border border-blue-200 transition-colors"
+                                        >
+                                            Exact
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         );
                     })}
@@ -333,14 +373,14 @@ export const PaymentPanel = ({
             </div>
 
             {/* Total Summary */}
-            <div className="bg-gradient-to-br from-emerald-600 to-emerald-700 rounded-2xl border border-gray-200 p-3 text-white">
+            <div className="bg-linear-to-br from-emerald-600 to-emerald-700 rounded-2xl border border-gray-200 p-3 text-white">
                 <div className="space-y-1.5">
                     <div className="flex justify-between text-xs">
                         <span>Paid Amount:</span>
                         <span className="font-semibold">Rs {totalPaid.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between text-xs">
-                        <span>Balance:</span>
+                        <span>{remaining > 0 ? 'Balance Due:' : remaining < 0 ? 'Change:' : 'Balance:'}</span>
                         <span className={`font-semibold ${remaining > 0 ? 'text-yellow-300' : 'text-emerald-200'}`}>
                             Rs {Math.abs(remaining).toFixed(2)}
                         </span>
@@ -351,8 +391,11 @@ export const PaymentPanel = ({
                         <span>Rs {total.toFixed(2)}</span>
                     </div>
                     {remaining < 0 && (
-                        <div className="text-xs bg-emerald-500/30 p-2 rounded-lg text-center">
-                            Change: Rs {Math.abs(remaining).toFixed(2)}
+                        <div className="mt-2 bg-linear-to-r from-yellow-400 to-orange-400 text-gray-900 p-3 rounded-lg border-2 border-yellow-300 shadow-lg">
+                            <div className="text-center">
+                                <p className="text-xs font-semibold mb-1">💰 CHANGE TO RETURN</p>
+                                <p className="text-2xl font-bold">Rs {Math.abs(remaining).toFixed(2)}</p>
+                            </div>
                         </div>
                     )}
                 </div>
@@ -360,12 +403,12 @@ export const PaymentPanel = ({
 
             <button
                 onClick={onCompletePayment}
-                disabled={cartItemsCount === 0 || remaining > 0}
-                className="w-full py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-xl font-bold text-base hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                disabled={cartItemsCount === 0 || (remaining > 0 && !selectedCustomer)}
+                className="w-full py-3 bg-linear-to-r from-emerald-500 to-emerald-600 text-white rounded-xl font-bold text-base hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
                 <div className="flex items-center justify-center gap-2">
                     <Check className="w-5 h-5" />
-                    Complete Payment (F12)
+                    {remaining > 0 && selectedCustomer ? 'Complete as Credit (F12)' : 'Complete Payment (F12)'}
                 </div>
             </button>
 
