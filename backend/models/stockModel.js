@@ -144,52 +144,46 @@ class Stock {
             });
         }
 
-        // Group by product and aggregate
-        const productMap = new Map();
+        // Map to individual items (no grouping)
+        const result = filteredStocks.map(s => {
+            const pv = s.product_variations;
+            const p = pv.product;
+            const supplier = s.grn_items[0]?.grn?.supplier;
 
-        filteredStocks.forEach(stock => {
-            const product = stock.product_variations.product;
-            const productId = product.id;
+            // Build full product name
+            let fullProductName = p.product_name;
+            if (pv.color) fullProductName += ` - ${pv.color}`;
+            if (pv.size) fullProductName += ` - ${pv.size}`;
+            if (pv.storage_capacity) fullProductName += ` - ${pv.storage_capacity}`;
 
-            if (!productMap.has(productId)) {
-                productMap.set(productId, {
-                    product_id: productId,
-                    product_name: product.product_name,
-                    unit: product.unit_id_product_unit_idTounit_id?.name,
-                    cost_prices: [],
-                    mrps: [],
-                    rsps: [],
-                    suppliers: new Set(),
-                    total_qty: 0
-                });
-            }
-
-            const data = productMap.get(productId);
-            data.cost_prices.push(stock.cost_price);
-            data.mrps.push(stock.mrp);
-            data.rsps.push(stock.rsp);
-            data.total_qty += stock.qty;
-
-            stock.grn_items.forEach(grnItem => {
-                if (grnItem.grn?.supplier?.supplier_name) {
-                    data.suppliers.add(grnItem.grn.supplier.supplier_name);
-                }
-            });
+            return {
+                stock_id: s.id,
+                product_variations_id: s.product_variations_id,
+                batch_id: s.batch_id,
+                qty: s.qty,
+                cost_price: s.cost_price,
+                mrp: s.mrp,
+                selling_price: s.rsp,
+                mfd: s.mfd,
+                exp: s.exp,
+                product_id: p.id,
+                product_name: p.product_name,
+                full_product_name: fullProductName,
+                product_code: p.product_code,
+                barcode: pv.barcode,
+                color: pv.color,
+                size: pv.size,
+                storage_capacity: pv.storage_capacity,
+                unit: p.unit_id_product_unit_idTounit_id?.name,
+                category: p.category?.name,
+                brand: p.brand?.name,
+                batch_name: s.batch?.batch_name,
+                supplier: supplier?.supplier_name,
+                product_status: pv.product_status?.status_name
+            };
         });
 
-        // Calculate averages and format result
-        const result = Array.from(productMap.values()).map(data => ({
-            product_id: data.product_id,
-            product_name: data.product_name,
-            unit: data.unit,
-            cost_price: data.cost_prices.length > 0 ? data.cost_prices.reduce((a, b) => a + b, 0) / data.cost_prices.length : 0,
-            mrp: data.mrps.length > 0 ? data.mrps.reduce((a, b) => a + b, 0) / data.mrps.length : 0,
-            selling_price: data.rsps.length > 0 ? data.rsps.reduce((a, b) => a + b, 0) / data.rsps.length : 0,
-            supplier: Array.from(data.suppliers).join(', '),
-            stock_qty: data.total_qty
-        }));
-
-        return result.sort((a, b) => a.product_name.localeCompare(b.product_name));
+        return result;
     }
 
     static async getDashboardSummary() {
@@ -383,58 +377,46 @@ class Stock {
             });
         }
 
-        // Group by product and aggregate
-        const productMap = new Map();
+        // Map to individual items (no grouping)
+        const result = filteredStocks.map(s => {
+            const pv = s.product_variations;
+            const p = pv.product;
+            const supplier = s.grn_items[0]?.grn?.supplier;
 
-        filteredStocks.forEach(stock => {
-            const product = stock.product_variations.product;
-            const productId = product.id;
+            // Build full product name
+            let fullProductName = p.product_name;
+            if (pv.color) fullProductName += ` - ${pv.color}`;
+            if (pv.size) fullProductName += ` - ${pv.size}`;
+            if (pv.storage_capacity) fullProductName += ` - ${pv.storage_capacity}`;
 
-            if (!productMap.has(productId)) {
-                productMap.set(productId, {
-                    product_id: productId,
-                    product_name: product.product_name,
-                    unit: product.unit_id_product_unit_idTounit_id?.name,
-                    cost_prices: [],
-                    mrps: [],
-                    rsps: [],
-                    suppliers: new Set(),
-                    total_qty: 0,
-                    max_mfd: null
-                });
-            }
-
-            const data = productMap.get(productId);
-            data.cost_prices.push(stock.cost_price);
-            data.mrps.push(stock.mrp);
-            data.rsps.push(stock.rsp);
-            data.total_qty += stock.qty;
-
-            if (stock.mfd && (!data.max_mfd || stock.mfd > data.max_mfd)) {
-                data.max_mfd = stock.mfd;
-            }
-
-            stock.grn_items.forEach(grnItem => {
-                if (grnItem.grn?.supplier?.supplier_name) {
-                    data.suppliers.add(grnItem.grn.supplier.supplier_name);
-                }
-            });
+            return {
+                stock_id: s.id,
+                product_variations_id: s.product_variations_id,
+                batch_id: s.batch_id,
+                qty: s.qty,
+                cost_price: s.cost_price,
+                mrp: s.mrp,
+                selling_price: s.rsp,
+                mfd: s.mfd,
+                exp: s.exp,
+                product_id: p.id,
+                product_name: p.product_name,
+                full_product_name: fullProductName,
+                product_code: p.product_code,
+                barcode: pv.barcode,
+                color: pv.color,
+                size: pv.size,
+                storage_capacity: pv.storage_capacity,
+                unit: p.unit_id_product_unit_idTounit_id?.name,
+                category: p.category?.name,
+                brand: p.brand?.name,
+                batch_name: s.batch?.batch_name,
+                supplier: supplier?.supplier_name,
+                product_status: pv.product_status?.status_name
+            };
         });
 
-        // Calculate averages and format result
-        const result = Array.from(productMap.values()).map(data => ({
-            product_id: data.product_id,
-            product_name: data.product_name,
-            unit: data.unit,
-            cost_price: data.cost_prices.length > 0 ? data.cost_prices.reduce((a, b) => a + b, 0) / data.cost_prices.length : 0,
-            mrp: data.mrps.length > 0 ? data.mrps.reduce((a, b) => a + b, 0) / data.mrps.length : 0,
-            selling_price: data.rsps.length > 0 ? data.rsps.reduce((a, b) => a + b, 0) / data.rsps.length : 0,
-            supplier: Array.from(data.suppliers).join(', '),
-            stock_qty: data.total_qty,
-            manufacture_date: data.max_mfd
-        }));
-
-        return result.sort((a, b) => a.product_name.localeCompare(b.product_name));
+        return result;
     }
 
     static async getStockByProductVariation(productId) {

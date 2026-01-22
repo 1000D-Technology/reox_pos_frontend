@@ -5,13 +5,33 @@ const catchAsync = require('../utils/catchAsync');
  * @desc    Fetch ALL stock records with individual variations (every row)
  * @route   GET /api/stock/all-variations
  */
+/**
+ * @desc    Fetch ALL stock records with individual variations (every row)
+ * @route   GET /api/stock/all-variations
+ */
 exports.getAllStockWithVariations = catchAsync(async (req, res, next) => {
     const stockData = await Stock.getAllStockWithVariations();
 
+    // Transform data to match StockList.tsx expectations
+    const transformedData = stockData.map(item => ({
+        productID: item.product_code || item.product_id.toString(),
+        productName: item.full_product_name,
+        barcode: item.barcode || 'N/A',
+        unit: item.unit,
+        costPrice: parseFloat(item.cost_price).toFixed(2),
+        MRP: parseFloat(item.mrp).toFixed(2),
+        Price: parseFloat(item.selling_price).toFixed(2),
+        supplier: item.supplier || 'N/A',
+        stockQty: item.qty.toString(),
+        batch: item.batch_name,
+        mfd: item.mfd,
+        exp: item.exp
+    }));
+
     res.status(200).json({
         success: true,
-        count: stockData.length,
-        data: stockData
+        count: transformedData.length,
+        data: transformedData
     });
 });
 
@@ -24,16 +44,15 @@ exports.getStockList = catchAsync(async (req, res, next) => {
 
     // Transform data to match frontend expectations
     const transformedData = stockData.map(item => ({
-        productID: item.product_id.toString(),
-        productName: item.product_name,
+        productID: item.product_code || item.product_id.toString(),
+        productName: item.full_product_name, // Updated to use full name with variants
         barcode: item.barcode || 'N/A',
         unit: item.unit,
-        discountAmount: '0.00', // Default since we removed discount from query
-        costPrice: parseFloat(item.cost_price).toFixed(2),
-        MRP: parseFloat(item.mrp).toFixed(2),
-        Price: parseFloat(item.selling_price).toFixed(2),
+        costPrice: typeof item.cost_price === 'number' ? item.cost_price.toFixed(2) : parseFloat(item.cost_price).toFixed(2),
+        MRP: typeof item.mrp === 'number' ? item.mrp.toFixed(2) : parseFloat(item.mrp).toFixed(2),
+        Price: typeof item.selling_price === 'number' ? item.selling_price.toFixed(2) : parseFloat(item.selling_price).toFixed(2),
         supplier: item.supplier || 'N/A',
-        stockQty: item.stock_qty.toString()
+        stockQty: item.stock_qty ? item.stock_qty.toString() : item.qty.toString()
     }));
 
     res.status(200).json({
@@ -44,32 +63,47 @@ exports.getStockList = catchAsync(async (req, res, next) => {
 });
 
 exports.getSearchStock = catchAsync(async (req, res, next) => {
-    const filters = {
-        category: req.query.category,
-        unit: req.query.unit,
-        supplier: req.query.supplier,
-        searchQuery: req.query.q
-    };
+    try {
+        const filters = {
+            category: req.query.category,
+            unit: req.query.unit,
+            supplier: req.query.supplier,
+            searchQuery: req.query.q
+        };
 
-    const stockData = await Stock.searchStock(filters);
+        console.log('Searching stock with filters:', filters);
 
-    const transformedData = stockData.map(item => ({
-        productID: item.variation_id.toString(), 
-        productName: item.full_product_name,
-        barcode: item.barcode || 'N/A',
-        unit: item.unit,
-        costPrice: parseFloat(item.cost_price).toFixed(2),
-        MRP: parseFloat(item.mrp).toFixed(2),
-        Price: parseFloat(item.selling_price).toFixed(2),
-        supplier: item.supplier || 'N/A',
-        stockQty: item.stock_qty.toString()
-    }));
+        const stockData = await Stock.searchStock(filters);
+        console.log('Stock search result count:', stockData.length);
+        if (stockData.length > 0) {
+           console.log('First raw stock item from searchStock:', JSON.stringify(stockData[0], null, 2));
+        }
 
-    res.status(200).json({
-        success: true,
-        count: transformedData.length,
-        data: transformedData
-    });
+        const transformedData = stockData.map(item => ({
+            productID: item.product_code || item.product_id.toString(),
+            productName: item.full_product_name,
+            barcode: item.barcode || 'N/A',
+            unit: item.unit,
+            costPrice: typeof item.cost_price === 'number' ? item.cost_price.toFixed(2) : parseFloat(item.cost_price).toFixed(2),
+            MRP: typeof item.mrp === 'number' ? item.mrp.toFixed(2) : parseFloat(item.mrp).toFixed(2),
+            Price: typeof item.selling_price === 'number' ? item.selling_price.toFixed(2) : parseFloat(item.selling_price).toFixed(2),
+            supplier: item.supplier || 'N/A',
+            stockQty: item.stock_qty ? item.stock_qty.toString() : item.qty.toString()
+        }));
+        
+        if (transformedData.length > 0) {
+           console.log('First transformed item:', JSON.stringify(transformedData[0], null, 2));
+        }
+
+        res.status(200).json({
+            success: true,
+            count: transformedData.length,
+            data: transformedData
+        });
+    } catch (error) {
+        console.error('Error in getSearchStock:', error);
+        throw error;
+    }
 });
 
 exports.getSummaryCards = catchAsync(async (req, res, next) => {

@@ -31,8 +31,6 @@ function StockList() {
         totalSuppliers: { value: '0', trend: '+0%' },
         totalCategories: { value: '0', trend: '+0%' }
     });
-    const [isLoadingSummary, setIsLoadingSummary] = useState(false);
-
     const summaryCards = [
         {
             icon: Package,
@@ -82,6 +80,8 @@ function StockList() {
     ];
 
     // Stock data state
+
+    // Stock data state
     const [stockData, setStockData] = useState<any[]>([]);
     const [isLoadingStock, setIsLoadingStock] = useState(false);
 
@@ -125,7 +125,6 @@ function StockList() {
 
     // Load summary cards data
     const loadSummaryData = async () => {
-        setIsLoadingSummary(true);
         try {
             const response = await stockService.getSummaryCards();
             if (response.data?.success) {
@@ -136,8 +135,6 @@ function StockList() {
         } catch (error) {
             console.error('Error loading summary data:', error);
             toast.error('Failed to load summary data');
-        } finally {
-            setIsLoadingSummary(false);
         }
     };
 
@@ -399,15 +396,27 @@ function StockList() {
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            // Prevent keyboard shortcuts when typing in input fields
             const target = e.target as HTMLElement;
-            if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+            const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA';
+
+            // F2 to focus search input
+            if (e.key === 'F2') {
+                e.preventDefault();
+                const searchInput = document.getElementById('product');
+                if (searchInput) {
+                    searchInput.focus();
+                }
                 return;
             }
 
+            // Arrow keys for navigation (allow even if in input, unless it interferes with input navigation? QuotationList allows it to navigate table row)
             if (e.key === "ArrowDown") {
                 e.preventDefault();
-                setSelectedIndex((prev) => (prev < currentStockData.length - 1 ? prev + 1 : prev));
+                setSelectedIndex((prev) => {
+                    const nextIndex = prev < currentStockData.length - 1 ? prev + 1 : prev;
+                   // Scroll into view logic could be added here if needed
+                    return nextIndex;
+                });
             } else if (e.key === "ArrowUp") {
                 e.preventDefault();
                 setSelectedIndex((prev) => (prev > 0 ? prev - 1 : prev));
@@ -422,26 +431,44 @@ function StockList() {
                     goToPreviousPage();
                 }
             } else if (e.key === "Home") {
-                e.preventDefault();
-                setSelectedIndex(0);
+                if (!isInput) {
+                    e.preventDefault();
+                    setSelectedIndex(0);
+                }
             } else if (e.key === "End") {
-                e.preventDefault();
-                setSelectedIndex(currentStockData.length - 1);
-            } else if (e.key === "Enter" && currentStockData.length > 0) {
-                e.preventDefault();
-                const selectedItem = currentStockData[selectedIndex];
-                if (selectedItem) {
-                    toast.success(`Selected: ${selectedItem.product_name} (Stock ID: ${selectedItem.stock_id})`);
+                 if (!isInput) {
+                    e.preventDefault();
+                    setSelectedIndex(currentStockData.length - 1);
+                }
+            } else if (e.key === "Enter") {
+                if (isInput) {
+                     // If in input, Enter triggers search (handled by onKeyDown on input itself, but we can double ensure or leave it)
+                     // Actually, if we want global Enter to select the row ONLY if not in input?
+                     // QuotationList: "Enter key triggers search instead of viewing details" if in input.
+                     // Here: we have onKeyDown on input calling handleSearch.
+                     // So avoiding e.preventDefault() here if isInput allows the input's own handler to fire?
+                     // or we can explicitly check.
+                     return; 
+                }
+                
+                if (currentStockData.length > 0) {
+                    e.preventDefault();
+                    const selectedItem = currentStockData[selectedIndex];
+                    if (selectedItem) {
+                        toast.success(`Selected: ${selectedItem.productName} (Stock ID: ${selectedItem.productID})`);
+                        // Logic to open detail view if needed
+                    }
                 }
             } else if (e.key === "Escape") {
                 e.preventDefault();
                 setSelectedIndex(0);
+                // Maybe clear search if desired?
             }
         };
 
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [currentStockData.length, selectedIndex, currentStockData, currentPage, totalPages]);
+    }, [currentStockData, selectedIndex, currentPage, totalPages]);
 
     const goToPage = (page: number) => {
         if (page >= 1 && page <= totalPages) {
@@ -497,15 +524,33 @@ function StockList() {
         <>
             <div className={'flex flex-col gap-4 h-full'}>
                 {/* Header */}
-                <div>
-                    <div className="text-sm text-gray-400 flex items-center">
-                        <span>Stock</span>
-                        <span className="mx-2">›</span>
-                        <span className="text-gray-700 font-medium">Stock List</span>
+                <div className="flex items-center justify-between">
+                    <div>
+                        <div className="text-sm text-gray-400 flex items-center">
+                            <span>Stock</span>
+                            <span className="mx-2">›</span>
+                            <span className="text-gray-700 font-medium">Stock List</span>
+                        </div>
+                        <h1 className="text-3xl font-semibold bg-linear-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
+                            Stock List
+                        </h1>
                     </div>
-                    <h1 className="text-3xl font-semibold bg-linear-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
-                        Stock List
-                    </h1>
+
+                    {/* Shortcuts Hint */}
+                    <div className="hidden lg:flex items-center gap-3 bg-white px-4 py-2 rounded-xl border border-gray-100 shadow-sm border-b-2">
+                         <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg border border-gray-200">
+                            <span className="text-[10px] font-black text-gray-500 bg-white px-1.5 py-0.5 rounded shadow-sm border border-gray-200">↑↓</span>
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Navigate</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg border border-gray-200">
+                            <span className="text-[10px] font-black text-gray-500 bg-white px-1.5 py-0.5 rounded shadow-sm border border-gray-200">Enter</span>
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Select</span>
+                        </div>
+                         <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg border border-gray-200">
+                            <span className="text-[10px] font-black text-gray-500 bg-white px-1.5 py-0.5 rounded shadow-sm border border-gray-200">F2</span>
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Search</span>
+                        </div>
+                    </div>
                 </div>
 
                 {/* Stats Cards */}
@@ -618,7 +663,7 @@ function StockList() {
                 >
                     <div className="overflow-y-auto max-h-md md:h-[320px] lg:h-[500px] rounded-lg scrollbar-thin scrollbar-thumb-emerald-300 scrollbar-track-gray-100">
                         <table className="min-w-full divide-y divide-gray-200">
-                            <thead className="bg-gradient-to-r from-emerald-500 to-emerald-600 sticky top-0 z-10">
+                            <thead className="bg-linear-to-r from-emerald-500 to-emerald-600 sticky top-0 z-10">
                                 <tr>
                                     {[
                                         'Product ID',
@@ -687,12 +732,12 @@ function StockList() {
                                                 {sale.supplier}
                                             </td>
                                             <td className="px-6 py-2 whitespace-nowrap">
-                                                <span className={`px-3 py-1 text-xs font-semibold rounded-full ${parseInt(sale.stockQty) < 30
-                                                    ? 'bg-gradient-to-r from-red-100 to-red-200 text-red-800'
-                                                    : 'bg-gradient-to-r from-emerald-100 to-emerald-200 text-emerald-800'
-                                                    }`}>
-                                                    {sale.stockQty}
-                                                </span>
+                                        <span className={`px-3 py-1 text-xs font-semibold rounded-full ${parseInt(sale.stockQty) < 30
+                                            ? 'bg-linear-to-r from-red-100 to-red-200 text-red-800'
+                                            : 'bg-linear-to-r from-emerald-100 to-emerald-200 text-emerald-800'
+                                            }`}>
+                                            {sale.stockQty}
+                                        </span>
                                             </td>
                                             <td className="px-6 py-2 whitespace-nowrap text-center">
                                                 <button
@@ -744,7 +789,7 @@ function StockList() {
                                         key={index}
                                         onClick={() => goToPage(page)}
                                         className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${currentPage === page
-                                            ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-md'
+                                            ? 'bg-linear-to-r from-emerald-500 to-emerald-600 text-white shadow-md'
                                             : 'text-gray-600 hover:bg-emerald-50 hover:text-emerald-600'
                                             }`}
                                     >
