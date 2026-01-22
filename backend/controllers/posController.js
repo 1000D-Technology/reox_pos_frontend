@@ -206,10 +206,11 @@ exports.processReturn = catchAsync(async (req, res, next) => {
 
 // Get all invoices with filters and pagination
 exports.getAllInvoices = catchAsync(async (req, res, next) => {
-    const { invoiceNumber, fromDate, toDate, page = 1, limit = 10 } = req.query;
+    const { invoiceNumber, cashierName, fromDate, toDate, page = 1, limit = 10 } = req.query;
 
     const filters = {
         invoiceNumber,
+        cashierName,
         fromDate,
         toDate
     };
@@ -234,9 +235,9 @@ exports.getAllInvoices = catchAsync(async (req, res, next) => {
 
 // Get invoice statistics
 exports.getInvoiceStats = catchAsync(async (req, res, next) => {
-    const { fromDate, toDate } = req.query;
+    const { fromDate, toDate, cashierName } = req.query;
 
-    const stats = await POS.getInvoiceStats({ fromDate, toDate });
+    const stats = await POS.getInvoiceStats({ fromDate, toDate, cashierName });
 
     res.status(200).json({
         success: true,

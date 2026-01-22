@@ -35,7 +35,7 @@ export default function TypeableSelect({
 
     // Sync with external value changes
     useEffect(() => {
-        if (value == null) {
+        if (value == null || value === '') {
             setSelected(null);
             setQuery('');
             return;
@@ -168,7 +168,7 @@ export default function TypeableSelect({
                         type="button"
                         title="Clear selection"
                         onClick={handleClear}
-                        className="flex-shrink-0 hover:bg-red-50 rounded-full p-1 transition-colors"
+                        className="shrink-0 hover:bg-red-50 rounded-full p-1 transition-colors"
                     >
                         <X size={16} className="text-red-500"/>
                     </button>

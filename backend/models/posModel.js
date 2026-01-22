@@ -389,6 +389,14 @@ class POS {
         // So we likely have one or zero.
         const creditBalance = invoice.creadit_book?.reduce((sum, cb) => sum + cb.balance, 0) || 0;
 
+        // Calculate Profit for this specific invoice
+        const profit = invoice.invoice_items.reduce((sum, item) => {
+            const cost = item.stock.cost_price || 0;
+            const price = item.current_price || 0;
+            const qty = item.qty || 0;
+            return sum + ((price - cost) * qty);
+        }, 0) - (invoice.discount || 0);
+
         return {
             id: invoice.id,
             invoiceNo: invoice.invoice_number,
@@ -399,14 +407,17 @@ class POS {
             total: invoice.total,
             subTotal: invoice.sub_total,
             discount: invoice.discount,
-            creditBalance: creditBalance, // Add this field
+            grossAmount: invoice.total + (invoice.discount || 0),
+            profit: profit,
+            creditBalance: creditBalance,
             items: invoice.invoice_items.map(item => ({
                 id: item.stock_id,
                 name: item.stock.product_variations.product.product_name,
                 price: item.current_price,
+                costPrice: item.stock.cost_price, // Added for detail view
                 quantity: item.qty,
-                returnedQuantity: item.returned_qty || 0, // Send previously returned qty
-                returnQuantity: 0 // Default to 0 for return UI
+                returnedQuantity: item.returned_qty || 0,
+                returnQuantity: 0
             })),
             payments: invoice.invoice_payments.map(p => ({
                 method: p.payment_types.payment_types,
@@ -591,7 +602,7 @@ class POS {
 
     // Get all invoices with filters and pagination
     static async getAllInvoices(filters, limit, offset) {
-        const { invoiceNumber, fromDate, toDate } = filters;
+        const { invoiceNumber, cashierName, fromDate, toDate } = filters;
         
         // Build where clause
         const where = {};
@@ -599,6 +610,16 @@ class POS {
         if (invoiceNumber) {
             where.invoice_number = {
                 contains: invoiceNumber
+            };
+        }
+
+        if (cashierName) {
+            where.cash_sessions = {
+                user: {
+                    name: {
+                        contains: cashierName
+                    }
+                }
             };
         }
         
@@ -630,7 +651,11 @@ class POS {
                         payment_types: true
                     }
                 },
-                invoice_items: true
+                invoice_items: {
+                    include: {
+                        stock: true
+                    }
+                }
             },
             orderBy: {
                 created_at: 'desc'
@@ -667,12 +692,22 @@ class POS {
             const totalPaid = cashPay + cardPay;
             const balance = Math.max(0, invoice.total - totalPaid);
 
+            // Calculate Profit
+            // Profit = (current_price - cost_price) * qty
+            const profit = invoice.invoice_items.reduce((sum, item) => {
+                const cost = item.stock.cost_price || 0;
+                const price = item.current_price || 0;
+                const qty = item.qty || 0;
+                return sum + ((price - cost) * qty);
+            }, 0) - (invoice.discount || 0);
+
             return {
                 id: invoice.id,
                 invoiceID: invoice.invoice_number,
                 grossAmount: grossAmount.toFixed(2),
                 discount: (invoice.discount || 0).toFixed(2),
                 netAmount: invoice.total.toFixed(2),
+                profit: profit.toFixed(2),
                 cashPay: cashPay.toFixed(2),
                 cardPay: cardPay.toFixed(2),
                 balance: balance.toFixed(2),
@@ -692,10 +727,20 @@ class POS {
 
     // Get invoice statistics
     static async getInvoiceStats(filters) {
-        const { fromDate, toDate } = filters;
+        const { fromDate, toDate, cashierName } = filters;
         
-        // Build where clause for date filtering
+        // Build where clause for filtering
         const where = {};
+
+        if (cashierName) {
+            where.cash_sessions = {
+                user: {
+                    name: {
+                        contains: cashierName
+                    }
+                }
+            };
+        }
         
         if (fromDate && toDate) {
             where.created_at = {
@@ -737,9 +782,32 @@ class POS {
             dateRange = `${diffDays} Day${diffDays !== 1 ? 's' : ''}`;
         }
 
+        // Calculate total profit
+        const invoicesWithItems = await prisma.invoice.findMany({
+            where,
+            include: {
+                invoice_items: {
+                    include: {
+                        stock: true
+                    }
+                }
+            }
+        });
+
+        const totalProfit = invoicesWithItems.reduce((totalSum, invoice) => {
+            const invoiceProfit = invoice.invoice_items.reduce((itemSum, item) => {
+                const cost = item.stock.cost_price || 0;
+                const price = item.current_price || 0;
+                const qty = item.qty || 0;
+                return itemSum + ((price - cost) * qty);
+            }, 0);
+            return totalSum + (invoiceProfit - (invoice.discount || 0));
+        }, 0);
+
         return {
             totalSales: netSales,
             invoiceCount,
+            totalProfit: totalProfit,
             dateRange,
             totalRefunded
         };

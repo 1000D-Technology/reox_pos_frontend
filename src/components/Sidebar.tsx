@@ -175,7 +175,7 @@ export default function Sidebar({ isOpen }: SidebarProps) {
             className={`py-3 ps-2 transition-all duration-500 ease-in-out
         ${isOpen ? "w-76" : "w-20"}`}
         >
-            <div className="h-full flex flex-col transition-all duration-500 rounded-xl bg-white">
+            <div className="h-full flex flex-col transition-all duration-500 rounded-xl bg-white border-gray-100 border-2">
                 {/* Logo */}
                 <div className="flex items-center justify-center h-16">
                     {isOpen ? (

@@ -12,8 +12,10 @@
     ArrowDownRight,
     Loader2,
     X,
+    Keyboard,
+    Command,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import invoiceService from "../../../services/invoiceService";
 import type { Invoice, InvoiceStats } from "../../../services/invoiceService";
 import toast, { Toaster } from 'react-hot-toast';
@@ -184,21 +186,58 @@ function ManageInvoice() {
             
 
 
+    // Refs for focus management
+    const searchRef = useRef<HTMLInputElement>(null);
+
     // Keyboard Navigation
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
+            // Ignore shortcuts if user is typing in an input (except for Escape)
+            const isTyping = e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement;
+
             if (e.key === "ArrowDown") {
+                if (isTyping) return;
                 e.preventDefault();
                 setSelectedIndex((prev) => (prev < invoices.length - 1 ? prev + 1 : prev));
             } else if (e.key === "ArrowUp") {
+                if (isTyping) return;
                 e.preventDefault();
                 setSelectedIndex((prev) => (prev > 0 ? prev - 1 : prev));
+            } else if (e.key === "Enter") {
+                if (isTyping && e.target === searchRef.current) {
+                    handleSearch();
+                    return;
+                }
+                if (!showDetailModal && invoices.length > 0) {
+                    e.preventDefault();
+                    handleViewInvoice(invoices[selectedIndex].invoiceID);
+                }
+            } else if (e.key === "Escape") {
+                e.preventDefault();
+                if (showDetailModal) setShowDetailModal(false);
+                if (isTyping) (e.target as HTMLElement).blur();
+            } else if (e.key.toLowerCase() === "p") {
+                if (isTyping) return;
+                e.preventDefault();
+                if (showDetailModal && selectedInvoiceDetails) {
+                    handlePrintInvoice(selectedInvoiceDetails.invoiceNo);
+                } else if (!showDetailModal && invoices.length > 0) {
+                    handlePrintInvoice(invoices[selectedIndex].invoiceID);
+                }
+            } else if (e.key.toLowerCase() === "r") {
+                if (isTyping) return;
+                e.preventDefault();
+                handleReset();
+            } else if (e.key.toLowerCase() === "f") {
+                if (isTyping) return;
+                e.preventDefault();
+                searchRef.current?.focus();
             }
         };
 
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [invoices.length]);
+    }, [invoices.length, selectedIndex, showDetailModal, selectedInvoiceDetails]);
 
     // Pagination Handlers
     const goToPage = (page: number) => {
@@ -246,15 +285,41 @@ function ManageInvoice() {
             
             <div className={'flex flex-col gap-4 h-full'}>
                 {/* Header */}
-                <div>
-                    <div className="text-sm text-gray-400 flex items-center">
-                        <span>Sales</span>
-                        <span className="mx-2">›</span>
-                        <span className="text-gray-700 font-medium">Manage Invoice</span>
+                <div className="flex items-center justify-between">
+                    <div>
+                        <div className="text-sm text-gray-400 flex items-center">
+                            <span>Sales</span>
+                            <span className="mx-2">›</span>
+                            <span className="text-gray-700 font-medium">Manage Invoice</span>
+                        </div>
+                        <h1 className="text-3xl font-semibold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent leading-tight">
+                            Manage Invoice
+                        </h1>
                     </div>
-                    <h1 className="text-3xl font-semibold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
-                        Manage Invoice
-                    </h1>
+                    
+                    {/* Shortcuts Hint */}
+                    <div className="hidden lg:flex items-center gap-3 bg-white px-4 py-2 rounded-xl border border-gray-100 shadow-sm border-b-2">
+                        <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg border border-gray-200">
+                            <span className="text-[10px] font-black text-gray-500 bg-white px-1.5 py-0.5 rounded shadow-sm border border-gray-200">↑↓</span>
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Navigate</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg border border-gray-200">
+                            <span className="text-[10px] font-black text-gray-500 bg-white px-1.5 py-0.5 rounded shadow-sm border border-gray-200">Enter</span>
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">View</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg border border-gray-200">
+                            <span className="text-[10px] font-black text-gray-500 bg-white px-1.5 py-0.5 rounded shadow-sm border border-gray-200">P</span>
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Print</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg border border-gray-200">
+                            <span className="text-[10px] font-black text-gray-500 bg-white px-1.5 py-0.5 rounded shadow-sm border border-gray-200">F</span>
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Search</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg border border-gray-200">
+                            <span className="text-[10px] font-black text-gray-500 bg-white px-1.5 py-0.5 rounded shadow-sm border border-gray-200">R</span>
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Reset</span>
+                        </div>
+                    </div>
                 </div>
 
                 {/* Summary Cards */}
@@ -293,16 +358,16 @@ function ManageInvoice() {
                     <h2 className="text-xl font-semibold text-gray-700 mb-3">Filter</h2>
                     <div className={'grid md:grid-cols-4 gap-4'}>
                         <div>
-                            <label htmlFor="invoice-number" className="block text-sm font-medium text-gray-700 mb-1">
+                            <label htmlFor="invoice-id" className="block text-sm font-medium text-gray-700 mb-1">
                                 Invoice Number
                             </label>
                             <input
+                                ref={searchRef}
                                 type="text"
-                                id="invoice-number"
-                                placeholder="Enter Invoice Number..."
+                                id="invoice-id"
+                                placeholder="Enter Invoice ID... (F)"
                                 value={invoiceNumber}
                                 onChange={(e) => setInvoiceNumber(e.target.value)}
-                                onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
                                 className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-400 focus:outline-none transition-all"
                             />
                         </div>
@@ -353,7 +418,7 @@ function ManageInvoice() {
 
                 {/* Invoice Table */}
                 <div className={'flex flex-col bg-white border border-gray-200 rounded-xl h-full p-4 justify-between'}>
-                    <div className="overflow-y-auto max-h-md md:h-[320px] lg:h-[500px] rounded-lg scrollbar-thin scrollbar-thumb-emerald-300 scrollbar-track-gray-100">
+                    <div className="overflow-y-auto max-h-md md:h-[320px] lg:h-[360px] rounded-lg scrollbar-thin scrollbar-thumb-emerald-300 scrollbar-track-gray-100">
                         <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-gradient-to-r from-emerald-500 to-emerald-600 sticky top-0 z-10">
                                 <tr>
@@ -363,6 +428,7 @@ function ManageInvoice() {
                                         'Customer',
                                         'Total Amount',
                                         'Date & Time',
+                                        'Balance',
                                         'Cashier',
                                         'Action'
                                     ].map((header, i, arr) => (
@@ -423,6 +489,9 @@ function ManageInvoice() {
                                                     <span className="font-semibold text-gray-800">{invoice.issuedDate.split(' ')[0]}</span>
                                                     <span className="text-[11px] text-gray-400 font-mono">{invoice.issuedDate.split(' ')[1]}</span>
                                                 </div>
+                                            </td>
+                                            <td className="px-6 py-2 whitespace-nowrap text-sm font-bold text-orange-600">
+                                                {formatCurrency(invoice.balance || 0)}
                                             </td>
                                             <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-gray-700">
                                                 {invoice.cashier}
@@ -514,7 +583,7 @@ function ManageInvoice() {
 
                 {/* Invoice Detail Modal */}
                 {showDetailModal && (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="fixed inset-0 bg-gray-900/10 backdrop-blur-xs z-50 flex items-center justify-center p-4">
                         <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
                             {/* Modal Header */}
                             <div className="sticky top-0 bg-gradient-to-r from-emerald-500 to-emerald-600 px-6 py-4 flex items-center justify-between rounded-t-xl">
@@ -539,85 +608,85 @@ function ManageInvoice() {
                                 ) : selectedInvoiceDetails ? (
                                     <div className="space-y-6">
                                         {/* Invoice Info Section */}
-                                        <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
+                                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 p-4 bg-gray-50 rounded-xl">
                                             <div>
-                                                <p className="text-sm text-gray-500">Invoice Number</p>
+                                                <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Invoice Number</p>
                                                 <p className="text-lg font-bold text-gray-800">{selectedInvoiceDetails.invoiceNo}</p>
                                             </div>
                                             <div>
-                                                <p className="text-sm text-gray-500">Date & Time</p>
+                                                <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Date & Time</p>
                                                 <div className="flex items-center gap-2">
                                                     <p className="text-lg font-semibold text-gray-700">{selectedInvoiceDetails.date.split(' ')[0]}</p>
-                                                    <span className="text-sm text-gray-400 font-mono bg-gray-100 px-2 py-0.5 rounded-full">{selectedInvoiceDetails.date.split(' ')[1]}</span>
+                                                    <span className="text-[11px] text-gray-400 font-mono bg-gray-100 px-2 py-0.5 rounded-full">{selectedInvoiceDetails.date.split(' ')[1]}</span>
                                                 </div>
                                             </div>
                                             <div>
-                                                <p className="text-sm text-gray-500">Customer</p>
-                                                <p className="text-lg font-semibold text-gray-700">{selectedInvoiceDetails.customer}</p>
+                                                <p className="text-[10px] text-emerald-600 uppercase font-bold tracking-wider">Net Amount</p>
+                                                <p className="text-lg font-black text-emerald-600">
+                                                    {formatCurrency(selectedInvoiceDetails.total)}
+                                                </p>
                                             </div>
                                             <div>
-                                                <p className="text-sm text-gray-500">Total Amount</p>
-                                                <p className="text-lg font-bold text-emerald-600">
-                                                    {formatCurrency(selectedInvoiceDetails.total)}
+                                                <p className="text-[10px] text-indigo-600 uppercase font-bold tracking-wider">Profit Margin</p>
+                                                <p className="text-lg font-black text-indigo-600">
+                                                    {formatCurrency(selectedInvoiceDetails.profit)}
                                                 </p>
                                             </div>
                                         </div>
 
-                                        {/* Items Table */}
-                                        <div>
-                                            <h3 className="text-lg font-bold text-gray-800 mb-3">Items</h3>
-                                            <div className="overflow-x-auto">
-                                                <table className="min-w-full divide-y divide-gray-200 border border-gray-200 rounded-lg">
-                                                    <thead className="bg-gray-50">
-                                                        <tr>
-                                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Item</th>
-                                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Price</th>
-                                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Quantity</th>
-                                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody className="bg-white divide-y divide-gray-200">
-                                                        {selectedInvoiceDetails.items && selectedInvoiceDetails.items.map((item: any, index: number) => (
-                                                            <tr key={index} className="hover:bg-gray-50">
-                                                                <td className="px-4 py-3 text-sm text-gray-800">{item.name}</td>
-                                                                <td className="px-4 py-3 text-sm text-gray-700">{formatCurrency(item.price)}</td>
-                                                                <td className="px-4 py-3 text-sm text-gray-700">{item.quantity}</td>
-                                                                <td className="px-4 py-3 text-sm font-semibold text-emerald-600">
-                                                                    {formatCurrency(item.price * item.quantity)}
-                                                                </td>
-                                                            </tr>
-                                                        ))}
-                                                    </tbody>
-                                                </table>
+                                        {/* Financial Overview Row */}
+                                        <div className="grid grid-cols-3 gap-4 border-t border-b border-gray-100 py-4">
+                                            <div className="text-center">
+                                                <p className="text-[10px] text-gray-400 uppercase font-bold">Gross Total</p>
+                                                <p className="text-sm font-bold text-gray-700">{formatCurrency(selectedInvoiceDetails.grossAmount)}</p>
+                                            </div>
+                                            <div className="text-center border-l border-r border-gray-100">
+                                                <p className="text-[10px] text-gray-400 uppercase font-bold">Total Discount</p>
+                                                <p className="text-sm font-bold text-red-500">{formatCurrency(selectedInvoiceDetails.discount)}</p>
+                                            </div>
+                                            <div className="text-center">
+                                                <p className="text-[10px] text-gray-400 uppercase font-bold">Credit Balance</p>
+                                                <p className="text-sm font-bold text-orange-600">{formatCurrency(selectedInvoiceDetails.creditBalance)}</p>
                                             </div>
                                         </div>
 
-                                        {/* Payment Details */}
-                                        {selectedInvoiceDetails.payments && selectedInvoiceDetails.payments.length > 0 && (
-                                            <div>
-                                                <h3 className="text-lg font-bold text-gray-800 mb-3">Payment Details</h3>
-                                                <div className="space-y-2">
-                                                    {selectedInvoiceDetails.payments.map((payment: any, index: number) => (
-                                                        <div key={index} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                                                            <span className="text-sm font-medium text-gray-700">{payment.method}</span>
-                                                            <span className="text-sm font-bold text-emerald-600">
-                                                                {formatCurrency(payment.amount)}
-                                                            </span>
-                                                        </div>
+                                        {/* Items Table */}
+                                        <div className="overflow-x-auto">
+                                            <table className="min-w-full divide-y divide-gray-200 border border-gray-100 rounded-xl overflow-hidden">
+                                                <thead className="bg-gray-50">
+                                                    <tr>
+                                                        <th className="px-4 py-2 text-left text-[10px] font-bold text-gray-400 uppercase tracking-widest">Item</th>
+                                                        <th className="px-4 py-2 text-right text-[10px] font-bold text-gray-400 uppercase tracking-widest">Price</th>
+                                                        <th className="px-4 py-2 text-center text-[10px] font-bold text-gray-400 uppercase tracking-widest">Qty</th>
+                                                        <th className="px-4 py-2 text-right text-[10px] font-bold text-emerald-600 uppercase tracking-widest">Total</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="bg-white divide-y divide-gray-100">
+                                                    {selectedInvoiceDetails.items && selectedInvoiceDetails.items.map((item: any, index: number) => (
+                                                        <tr key={index} className="hover:bg-gray-50/50 transition-colors">
+                                                            <td className="px-4 py-2.5 text-sm font-medium text-gray-800">{item.name}</td>
+                                                            <td className="px-4 py-2.5 text-sm text-right text-gray-500 font-mono">{formatCurrency(item.price)}</td>
+                                                            <td className="px-4 py-2.5 text-sm text-center text-gray-700 font-bold">{item.quantity}</td>
+                                                            <td className="px-4 py-2.5 text-sm font-black text-right text-emerald-600">
+                                                                {formatCurrency(item.price * item.quantity)}
+                                                            </td>
+                                                        </tr>
                                                     ))}
-                                                </div>
-                                            </div>
-                                        )}
+                                                </tbody>
+                                            </table>
+                                        </div>
 
-                                        {/* Credit Balance */}
-                                        {selectedInvoiceDetails.creditBalance &&selectedInvoiceDetails.creditBalance > 0 && (
-                                            <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                                                <div className="flex justify-between items-center">
-                                                    <span className="text-sm font-medium text-yellow-800">Outstanding Credit Balance</span>
-                                                    <span className="text-lg font-bold text-yellow-700">
-                                                        {formatCurrency(selectedInvoiceDetails.creditBalance)}
-                                                    </span>
-                                                </div>
+                                        {/* Payments Row */}
+                                        {selectedInvoiceDetails.payments && selectedInvoiceDetails.payments.length > 0 && (
+                                            <div className="flex flex-wrap gap-2">
+                                                {selectedInvoiceDetails.payments.map((payment: any, index: number) => (
+                                                    <div key={index} className="flex-1 min-w-[140px] flex justify-between items-center p-2 bg-gray-50 rounded-lg border border-gray-100">
+                                                        <span className="text-[10px] font-bold text-gray-400 uppercase">{payment.method}</span>
+                                                        <span className="text-xs font-bold text-gray-700">
+                                                            {formatCurrency(payment.amount)}
+                                                        </span>
+                                                    </div>
+                                                ))}
                                             </div>
                                         )}
 

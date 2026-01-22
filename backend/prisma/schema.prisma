@@ -42,6 +42,7 @@ model cash_sessions {
   user                user             @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_cash_sessions_user1")
   money_exchange      money_exchange[]
   return_goods        return_goods[]
+  invoices            invoice[]
 
   @@index([cash_status_id], map: "fk_cash_sessions_cash_status1_idx")
   @@index([cashier_counters_id], map: "fk_cash_sessions_cashier_counters1_idx")
@@ -184,6 +185,7 @@ model invoice {
   creadit_book     creadit_book[]
   customer         customer?       @relation(fields: [customer_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_invoice_customer1")
   invoice_type     invoice_type    @relation(fields: [invoice_type_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_invoice_invoice_type1")
+  cash_sessions    cash_sessions   @relation(fields: [cash_sessions_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_invoice_cash_sessions1")
   invoice_items    invoice_items[]
   return_goods     return_goods[]
   invoice_payments invoice_payments[]
@@ -348,6 +350,7 @@ model status {
   customer     customer[]
   grn          grn[]
   supplier     supplier[]
+  user         user[]
 }
 
 model stock {
@@ -411,6 +414,7 @@ model user {
   status_id     Int
   cash_sessions cash_sessions[]
   role          role            @relation(fields: [role_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_user_role1")
+  status        status          @relation(fields: [status_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_user_status1")
 
   @@index([role_id], map: "fk_user_role1_idx")
   @@index([status_id], map: "fk_user_status1_idx")

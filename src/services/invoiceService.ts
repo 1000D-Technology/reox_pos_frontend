@@ -4,6 +4,7 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 export interface InvoiceFilters {
     invoiceNumber?: string;
+    cashierName?: string;
     fromDate?: string;
     toDate?: string;
     page?: number;
@@ -16,6 +17,7 @@ export interface Invoice {
     grossAmount: string;
     discount: string;
     netAmount: string;
+    profit: string;
     cashPay: string;
     cardPay: string;
     balance: string;
@@ -28,6 +30,7 @@ export interface Invoice {
 
 export interface InvoiceStats {
     totalSales: number;
+    totalProfit: number;
     invoiceCount: number;
     dateRange: string;
     totalRefunded?: number;
@@ -59,11 +62,14 @@ export interface InvoiceDetail {
     total: number;
     subTotal?: number;
     discount?: number;
+    grossAmount?: number;
+    profit?: number;
     creditBalance?: number;
     items: Array<{
         id: number;
         name: string;
         price: number;
+        costPrice?: number;
         quantity: number;
         returnedQuantity: number;
         returnQuantity: number;
@@ -87,6 +93,7 @@ export const invoiceService = {
         const params = new URLSearchParams();
         
         if (filters.invoiceNumber) params.append('invoiceNumber', filters.invoiceNumber);
+        if (filters.cashierName) params.append('cashierName', filters.cashierName);
         if (filters.fromDate) params.append('fromDate', filters.fromDate);
         if (filters.toDate) params.append('toDate', filters.toDate);
         if (filters.page) params.append('page', filters.page.toString());
@@ -99,11 +106,12 @@ export const invoiceService = {
     /**
      * Get invoice statistics
      */
-    getInvoiceStats: async (filters?: { fromDate?: string; toDate?: string }): Promise<InvoiceStatsResponse> => {
+    getInvoiceStats: async (filters?: { fromDate?: string; toDate?: string; cashierName?: string }): Promise<InvoiceStatsResponse> => {
         const params = new URLSearchParams();
         
         if (filters?.fromDate) params.append('fromDate', filters.fromDate);
         if (filters?.toDate) params.append('toDate', filters.toDate);
+        if (filters?.cashierName) params.append('cashierName', filters.cashierName);
 
         const response = await axios.get(`${API_URL}/pos/invoices/stats?${params.toString()}`);
         return response.data;
