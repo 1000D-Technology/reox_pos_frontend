@@ -203,3 +203,43 @@ exports.processReturn = catchAsync(async (req, res, next) => {
         returnValue: result.returnValue
     });
 });
+
+// Get all invoices with filters and pagination
+exports.getAllInvoices = catchAsync(async (req, res, next) => {
+    const { invoiceNumber, fromDate, toDate, page = 1, limit = 10 } = req.query;
+
+    const filters = {
+        invoiceNumber,
+        fromDate,
+        toDate
+    };
+
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const offset = (pageNum - 1) * limitNum;
+
+    const result = await POS.getAllInvoices(filters, limitNum, offset);
+
+    res.status(200).json({
+        success: true,
+        data: result.invoices,
+        pagination: {
+            currentPage: pageNum,
+            totalPages: Math.ceil(result.total / limitNum),
+            totalRecords: result.total,
+            itemsPerPage: limitNum
+        }
+    });
+});
+
+// Get invoice statistics
+exports.getInvoiceStats = catchAsync(async (req, res, next) => {
+    const { fromDate, toDate } = req.query;
+
+    const stats = await POS.getInvoiceStats({ fromDate, toDate });
+
+    res.status(200).json({
+        success: true,
+        data: stats
+    });
+});

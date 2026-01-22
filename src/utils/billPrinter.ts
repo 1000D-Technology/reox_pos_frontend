@@ -48,7 +48,7 @@ interface PaymentAmount {
     amount: number;
 }
 
-interface BillData {
+export interface BillData {
     invoiceId: number;
     invoiceNumber: string;
     date: Date;
