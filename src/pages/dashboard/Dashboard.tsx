@@ -195,7 +195,7 @@ export function SalesChart() {
                     ))}
                 </div>
             </div>
-            <div className="h-[390px] w-[95%] mx-auto overflow-y-hidden">
+            <div className="h-[250px] w-[95%] mx-auto overflow-y-hidden">
                 <Line data={data} options={options} />
             </div>
         </div>

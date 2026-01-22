@@ -390,10 +390,15 @@ class POS {
         const creditBalance = invoice.creadit_book?.reduce((sum, cb) => sum + cb.balance, 0) || 0;
 
         return {
+            id: invoice.id,
             invoiceNo: invoice.invoice_number,
-            date: invoice.created_at.toISOString().split('T')[0],
+            date: invoice.created_at.toISOString().replace('T', ' ').split('.')[0],
             customer: invoice.customer ? invoice.customer.name : 'Guest', 
+            customerId: invoice.customer ? invoice.customer.id : null,
+            customerContact: invoice.customer ? invoice.customer.contact : '',
             total: invoice.total,
+            subTotal: invoice.sub_total,
+            discount: invoice.discount,
             creditBalance: creditBalance, // Add this field
             items: invoice.invoice_items.map(item => ({
                 id: item.stock_id,
@@ -581,7 +586,163 @@ class POS {
                  debtReduction: debtReduction,
                  returnValue: currentReturnValue
              };
-         });
+          });
+     }
+
+    // Get all invoices with filters and pagination
+    static async getAllInvoices(filters, limit, offset) {
+        const { invoiceNumber, fromDate, toDate } = filters;
+        
+        // Build where clause
+        const where = {};
+        
+        if (invoiceNumber) {
+            where.invoice_number = {
+                contains: invoiceNumber
+            };
+        }
+        
+        if (fromDate && toDate) {
+            where.created_at = {
+                gte: new Date(fromDate),
+                lte: new Date(toDate + 'T23:59:59.999Z')
+            };
+        } else if (fromDate) {
+            where.created_at = {
+                gte: new Date(fromDate)
+            };
+        } else if (toDate) {
+            where.created_at = {
+                lte: new Date(toDate + 'T23:59:59.999Z')
+            };
+        }
+
+        // Get total count
+        const total = await prisma.invoice.count({ where });
+
+        // Get invoices with relations
+        const invoices = await prisma.invoice.findMany({
+            where,
+            include: {
+                customer: true,
+                invoice_payments: {
+                    include: {
+                        payment_types: true
+                    }
+                },
+                invoice_items: true
+            },
+            orderBy: {
+                created_at: 'desc'
+            },
+            take: limit,
+            skip: offset
+        });
+
+        // Manually fetch cashier info for each invoice
+        const formattedInvoices = await Promise.all(invoices.map(async (invoice) => {
+            let cashierName = 'Unknown';
+            
+            // Fetch cash session and user info
+            if (invoice.cash_sessions_id) {
+                const cashSession = await prisma.cash_sessions.findUnique({
+                    where: { id: invoice.cash_sessions_id },
+                    include: {
+                        user: true
+                    }
+                });
+                
+                if (cashSession && cashSession.user) {
+                    cashierName = cashSession.user.name;
+                }
+            }
+
+            const grossAmount = invoice.total + (invoice.discount || 0);
+            const cashPay = invoice.invoice_payments
+                .filter(p => p.payment_types.payment_types === 'Cash')
+                .reduce((sum, p) => sum + p.amount, 0);
+            const cardPay = invoice.invoice_payments
+                .filter(p => p.payment_types.payment_types === 'Card')
+                .reduce((sum, p) => sum + p.amount, 0);
+            const totalPaid = cashPay + cardPay;
+            const balance = Math.max(0, invoice.total - totalPaid);
+
+            return {
+                id: invoice.id,
+                invoiceID: invoice.invoice_number,
+                grossAmount: grossAmount.toFixed(2),
+                discount: (invoice.discount || 0).toFixed(2),
+                netAmount: invoice.total.toFixed(2),
+                cashPay: cashPay.toFixed(2),
+                cardPay: cardPay.toFixed(2),
+                balance: balance.toFixed(2),
+                issuedDate: invoice.created_at.toISOString().replace('T', ' ').split('.')[0],
+                cashier: cashierName,
+                customerName: invoice.customer?.name || 'Guest',
+                itemCount: invoice.invoice_items.length,
+                paymentMethods: invoice.invoice_payments.map(p => p.payment_types.payment_types).join(', ')
+            };
+        }));
+
+        return {
+            invoices: formattedInvoices,
+            total
+        };
+    }
+
+    // Get invoice statistics
+    static async getInvoiceStats(filters) {
+        const { fromDate, toDate } = filters;
+        
+        // Build where clause for date filtering
+        const where = {};
+        
+        if (fromDate && toDate) {
+            where.created_at = {
+                gte: new Date(fromDate),
+                lte: new Date(toDate + 'T23:59:59.999Z')
+            };
+        } else if (fromDate) {
+            where.created_at = {
+                gte: new Date(fromDate)
+            };
+        } else if (toDate) {
+            where.created_at = {
+                lte: new Date(toDate + 'T23:59:59.999Z')
+            };
+        }
+
+        // Get aggregated data
+        const invoiceCount = await prisma.invoice.count({ where });
+        
+        const totalsResult = await prisma.invoice.aggregate({
+            where,
+            _sum: {
+                total: true,
+                refunded_amount: true
+            }
+        });
+
+        const totalSales = totalsResult._sum.total || 0;
+        const totalRefunded = totalsResult._sum.refunded_amount || 0;
+        const netSales = totalSales - totalRefunded;
+
+        // Calculate date range
+        let dateRange = '0 Days';
+        if (fromDate && toDate) {
+            const start = new Date(fromDate);
+            const end = new Date(toDate);
+            const diffTime = Math.abs(end.getTime() - start.getTime());
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+            dateRange = `${diffDays} Day${diffDays !== 1 ? 's' : ''}`;
+        }
+
+        return {
+            totalSales: netSales,
+            invoiceCount,
+            dateRange,
+            totalRefunded
+        };
     }
 }
 
