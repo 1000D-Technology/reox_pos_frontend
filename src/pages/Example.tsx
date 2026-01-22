@@ -23,7 +23,6 @@ export default function Example() {
                 value={selected?.value || null}
                 onChange={(opt) => opt ? setSelected({ value: String(opt.value), label: opt.label }) : setSelected(null)}
                 placeholder="Search fruits..."
-                allowCreate={true}
             />
         </div>
     );

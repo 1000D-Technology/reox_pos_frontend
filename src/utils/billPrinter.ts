@@ -1,4 +1,12 @@
 // Types matching your Setting.tsx
+declare global {
+    interface Window {
+        electronAPI?: {
+            printSilent: (content: string) => Promise<boolean>;
+        };
+    }
+}
+
 interface PrintSettings {
     rollSize: string;
     fontSize: string;
@@ -456,9 +464,16 @@ export const generateBillHTML = (data: BillData): string => {
 };
 
 export const printBill = (data: BillData) => {
+    const html = generateBillHTML(data);
+
+    if (window.electronAPI) {
+        window.electronAPI.printSilent(html)
+            .catch(err => console.error("Electron print failed:", err));
+        return;
+    }
+
     const printWindow = window.open('', '_blank');
     if (printWindow) {
-        const html = generateBillHTML(data);
         printWindow.document.write(html);
         printWindow.document.close();
         

@@ -3,9 +3,9 @@ import { ShoppingCart, Wallet, Package, RotateCcw, BanknoteIcon, ArrowUpDown } f
 interface POSHeaderProps {
     billingMode: 'retail' | 'wholesale';
     onBillingModeChange: (mode: 'retail' | 'wholesale') => void;
-    onCashManage: () => void;
-    onBulkLoose: () => void;
-    onReturn: () => void;
+    onCashManage: (isOpen: boolean) => void;
+    onBulkLoose: (isOpen: boolean) => void;
+    onReturn: (isOpen: boolean) => void;
 }
 
 export const POSHeader = ({
