@@ -111,7 +111,7 @@ function ManageCustomer() {
             trend: '+12%',
             color: 'bg-gradient-to-br from-emerald-400 to-emerald-500',
             iconColor: 'text-white',
-            bgGlow: 'shadow-emerald-200'
+            bgGlow: ''
         },
         {
             icon: CheckCircle,
@@ -120,7 +120,7 @@ function ManageCustomer() {
             trend: '+8%',
             color: 'bg-gradient-to-br from-green-400 to-green-500',
             iconColor: 'text-white',
-            bgGlow: 'shadow-green-200'
+            bgGlow: ''
         },
         {
             icon: CreditCard,
@@ -129,7 +129,7 @@ function ManageCustomer() {
             trend: '-5%',
             color: 'bg-gradient-to-br from-red-400 to-red-500',
             iconColor: 'text-white',
-            bgGlow: 'shadow-red-200'
+            bgGlow: ''
         },
     ];
 
@@ -158,7 +158,7 @@ function ManageCustomer() {
             try {
                 setIsLoading(true);
                 const response = await customerService.getCustomers();
-                
+
                 if (response.data.success) {
                     const mappedCustomers: Customer[] = response.data.data.map((customer: any) => ({
                         id: customer.id,
@@ -169,7 +169,7 @@ function ManageCustomer() {
                         totalCreditBalance: customer.credit_balance,
                         isActive: customer.status_name === 'Active'
                     }));
-                    
+
                     setCustomers(mappedCustomers);
                     setFilteredCustomers(mappedCustomers);
                 } else {
@@ -221,7 +221,7 @@ function ManageCustomer() {
         setIsUpdatingPhone(true);
         try {
             const response = await customerService.updatePhone(selectedCustomer.id, newPhone.trim());
-            
+
             if (response.data.success) {
                 // Update local state
                 const updatedCustomers = customers.map(customer =>
@@ -231,7 +231,7 @@ function ManageCustomer() {
                 );
                 setCustomers(updatedCustomers);
                 setFilteredCustomers(updatedCustomers);
-                
+
                 toast.success('Phone number updated successfully!');
                 handleCloseModal();
             } else {
@@ -249,10 +249,10 @@ function ManageCustomer() {
 
     const handleStatusToggle = async (customerId: number, currentStatus: boolean) => {
         const newStatus = !currentStatus;
-        
+
         try {
             const response = await customerService.toggleStatus(customerId, newStatus);
-            
+
             if (response.data.success) {
                 // Update local state
                 const updatedCustomers = customers.map(customer =>
@@ -262,7 +262,7 @@ function ManageCustomer() {
                 );
                 setCustomers(updatedCustomers);
                 setFilteredCustomers(updatedCustomers);
-                
+
                 toast.success(`Customer ${newStatus ? 'activated' : 'deactivated'} successfully!`);
             } else {
                 toast.error(response.data.message || 'Failed to update customer status');
@@ -448,11 +448,11 @@ function ManageCustomer() {
                     {summaryCards.map((stat, i) => (
                         <div
                             key={i}
-                            className={`flex items-center p-4 space-x-3 transition-all bg-white rounded-2xl shadow-lg hover:shadow-xl ${stat.bgGlow} cursor-pointer group relative overflow-hidden`}
+                            className={`flex items-center p-4 space-x-3 transition-all bg-white rounded-2xl border border-gray-200 cursor-pointer group relative overflow-hidden`}
                         >
                             <div className="absolute inset-0 bg-gradient-to-br from-transparent via-gray-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
 
-                            <div className={`p-3 rounded-full ${stat.color} shadow-md relative z-10`}>
+                            <div className={`p-3 rounded-full ${stat.color} relative z-10`}>
                                 <stat.icon className={`w-6 h-6 ${stat.iconColor}`} />
                             </div>
 
@@ -474,7 +474,7 @@ function ManageCustomer() {
 
                 <div
 
-                    className="bg-white rounded-xl p-4 shadow-lg"
+                    className="bg-white rounded-xl p-4 border border-gray-200"
                 >
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
@@ -483,121 +483,118 @@ function ManageCustomer() {
                             value={searchQuery}
                             onChange={(e) => handleSearch(e.target.value)}
                             placeholder="Search customers by name, email, or phone..."
-                            className="w-full pl-10 pr-4 py-2.5 text-sm border-2 border-gray-200 rounded-lg focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all outline-none"
+                            className="w-full pl-10 pr-4 py-2.5 text-sm border-2 border-gray-200 rounded-lg focus:border-emerald-500 transition-all outline-none"
                         />
                     </div>
                 </div>
 
                 <div
 
-                    className={'flex flex-col bg-white rounded-xl p-4 justify-between gap-8 shadow-lg'}
+                    className={'flex flex-col bg-white rounded-xl p-4 justify-between gap-8 border border-gray-200'}
                 >
                     <div className="overflow-y-auto max-h-md md:h-[320px] lg:h-[550px] rounded-lg scrollbar-thin scrollbar-thumb-emerald-300 scrollbar-track-gray-100">
                         <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-gradient-to-r from-emerald-500 to-emerald-600 sticky top-0 z-10">
-                            <tr>
-                                {['#', 'Name', 'Email', 'Phone', 'Credit Balance', 'Status', 'Actions'].map((header, i, arr) => (
-                                    <th
-                                        key={header}
-                                        scope="col"
-                                        className={`px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider
+                                <tr>
+                                    {['#', 'Name', 'Email', 'Phone', 'Credit Balance', 'Status', 'Actions'].map((header, i, arr) => (
+                                        <th
+                                            key={header}
+                                            scope="col"
+                                            className={`px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider
                                                 ${i === 0 ? "rounded-tl-lg" : ""}
                                                 ${i === arr.length - 1 ? "rounded-tr-lg" : ""}`}
-                                    >
-                                        {header}
-                                    </th>
-                                ))}
-                            </tr>
+                                        >
+                                            {header}
+                                        </th>
+                                    ))}
+                                </tr>
                             </thead>
 
                             <tbody className="bg-white divide-y divide-gray-200">
-                            {isLoading ? (
-                                <tr>
-                                    <td colSpan={7} className="px-6 py-8 text-center">
-                                        <div className="flex justify-center items-center">
-                                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500"></div>
-                                            <span className="ml-3 text-gray-600">Loading customers...</span>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ) : customerData.length === 0 ? (
-                                <tr>
-                                    <td colSpan={7} className="px-6 py-8 text-center text-gray-500">
-                                        No customers found
-                                    </td>
-                                </tr>
-                            ) : (
-                                customerData.map((customer, index) => (
-                                    <tr
-                                        key={customer.id}
-                                        onClick={() => setSelectedIndex(index)}
-                                        className={`cursor-pointer transition-all ${
-                                            selectedIndex === index
-                                                ? 'bg-emerald-50 border-l-4 border-l-emerald-500'
-                                                : 'hover:bg-gray-50'
-                                        }`}
-                                    >
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-600">
-                                            {customer.no}
-                                        </td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-gray-800">
-                                            {customer.name}
-                                        </td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-600">
-                                            {customer.email || 'No email'}
-                                        </td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-gray-700">
-                                            {customer.phone}
-                                        </td>
-                                        <td className="px-6 py-2 whitespace-nowrap">
-                                            <span className={`px-3 py-1 text-xs font-semibold rounded-full ${
-                                                customer.totalCreditBalance > 0
-                                                    ? 'bg-gradient-to-r from-red-100 to-red-200 text-red-800'
-                                                    : 'bg-gradient-to-r from-emerald-100 to-emerald-200 text-emerald-800'
-                                            }`}>
-                                                Rs. {customer.totalCreditBalance.toLocaleString()}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-2 whitespace-nowrap">
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleStatusToggle(customer.id, customer.isActive);
-                                                }}
-                                                className={`px-4 py-1.5 text-xs font-semibold rounded-full transition-all transform hover:scale-105 ${
-                                                    customer.isActive
-                                                        ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-200 hover:from-emerald-600 hover:to-emerald-700'
-                                                        : 'bg-gradient-to-r from-gray-400 to-gray-500 text-white shadow-lg shadow-gray-200 hover:from-gray-500 hover:to-gray-600'
-                                                }`}
-                                            >
-                                                {customer.isActive ? 'Active' : 'Inactive'}
-                                            </button>
-                                        </td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
-                                            <div className="flex gap-2">
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleEditClick(customer);
-                                                    }}
-                                                    className="p-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all"
-                                                >
-                                                    <Pencil size={16} />
-                                                </button>
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleViewCustomer(customer);
-                                                    }}
-                                                    className="p-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all"
-                                                >
-                                                    <Eye size={16} />
-                                                </button>
+                                {isLoading ? (
+                                    <tr>
+                                        <td colSpan={7} className="px-6 py-8 text-center">
+                                            <div className="flex justify-center items-center">
+                                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500"></div>
+                                                <span className="ml-3 text-gray-600">Loading customers...</span>
                                             </div>
                                         </td>
                                     </tr>
-                                ))
-                            )}
+                                ) : customerData.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={7} className="px-6 py-8 text-center text-gray-500">
+                                            No customers found
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    customerData.map((customer, index) => (
+                                        <tr
+                                            key={customer.id}
+                                            onClick={() => setSelectedIndex(index)}
+                                            className={`cursor-pointer transition-all ${selectedIndex === index
+                                                    ? 'bg-emerald-50 border-l-4 border-l-emerald-500'
+                                                    : 'hover:bg-gray-50'
+                                                }`}
+                                        >
+                                            <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-600">
+                                                {customer.no}
+                                            </td>
+                                            <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-gray-800">
+                                                {customer.name}
+                                            </td>
+                                            <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-600">
+                                                {customer.email || 'No email'}
+                                            </td>
+                                            <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-gray-700">
+                                                {customer.phone}
+                                            </td>
+                                            <td className="px-6 py-2 whitespace-nowrap">
+                                                <span className={`px-3 py-1 text-xs font-semibold rounded-full ${customer.totalCreditBalance > 0
+                                                        ? 'bg-gradient-to-r from-red-100 to-red-200 text-red-800'
+                                                        : 'bg-gradient-to-r from-emerald-100 to-emerald-200 text-emerald-800'
+                                                    }`}>
+                                                    Rs. {customer.totalCreditBalance.toLocaleString()}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-2 whitespace-nowrap">
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleStatusToggle(customer.id, customer.isActive);
+                                                    }}
+                                                    className={`px-4 py-1.5 text-xs font-semibold rounded-full transition-all transform hover:scale-105 ${customer.isActive
+                                                            ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white hover:from-emerald-600 hover:to-emerald-700'
+                                                            : 'bg-gradient-to-r from-gray-400 to-gray-500 text-white hover:from-gray-500 hover:to-gray-600'
+                                                        }`}
+                                                >
+                                                    {customer.isActive ? 'Active' : 'Inactive'}
+                                                </button>
+                                            </td>
+                                            <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
+                                                <div className="flex gap-2">
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleEditClick(customer);
+                                                        }}
+                                                        className="p-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg transition-all"
+                                                    >
+                                                        <Pencil size={16} />
+                                                    </button>
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleViewCustomer(customer);
+                                                        }}
+                                                        className="p-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white rounded-lg transition-all"
+                                                    >
+                                                        <Eye size={16} />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
                             </tbody>
                         </table>
                     </div>
@@ -611,11 +608,10 @@ function ManageCustomer() {
                             <button
                                 onClick={() => goToPage(currentPage - 1)}
                                 disabled={currentPage === 1}
-                                className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${
-                                    currentPage === 1
+                                className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${currentPage === 1
                                         ? 'text-gray-400 cursor-not-allowed'
                                         : 'text-gray-600 hover:bg-emerald-50 hover:text-emerald-600'
-                                }`}
+                                    }`}
                             >
                                 <ChevronLeft className="mr-2 h-5 w-5" /> Previous
                             </button>
@@ -626,11 +622,10 @@ function ManageCustomer() {
                                     <button
                                         key={page}
                                         onClick={() => goToPage(page as number)}
-                                        className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
-                                            currentPage === page
-                                                ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-200'
+                                        className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${currentPage === page
+                                                ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white'
                                                 : 'text-gray-600 hover:bg-emerald-50 hover:text-emerald-600'
-                                        }`}
+                                            }`}
                                     >
                                         {page}
                                     </button>
@@ -639,11 +634,10 @@ function ManageCustomer() {
                             <button
                                 onClick={() => goToPage(currentPage + 1)}
                                 disabled={currentPage === totalPages}
-                                className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${
-                                    currentPage === totalPages
+                                className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${currentPage === totalPages
                                         ? 'text-gray-400 cursor-not-allowed'
                                         : 'text-gray-600 hover:bg-emerald-50 hover:text-emerald-600'
-                                }`}
+                                    }`}
                             >
                                 Next <ChevronRight className="ml-2 h-5 w-5" />
                             </button>
@@ -656,7 +650,7 @@ function ManageCustomer() {
             {isModalOpen && selectedCustomer && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
                     <div
-                        className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md relative"
+                        className="bg-white rounded-2xl border border-gray-200 p-8 w-full max-w-md relative"
                     >
                         <button
                             onClick={handleCloseModal}
@@ -688,7 +682,7 @@ function ManageCustomer() {
                                     value={newPhone}
                                     onChange={(e) => setNewPhone(e.target.value)}
                                     placeholder="Enter Phone Number"
-                                    className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all outline-none"
+                                    className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-500 transition-all outline-none"
                                 />
                             </div>
                         </div>
@@ -703,9 +697,8 @@ function ManageCustomer() {
                             <button
                                 onClick={handleUpdatePhone}
                                 disabled={isUpdatingPhone}
-                                className={`px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-semibold rounded-lg shadow-lg transition-all ${
-                                    isUpdatingPhone ? 'opacity-50 cursor-not-allowed' : ''
-                                }`}
+                                className={`px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-semibold rounded-lg transition-all ${isUpdatingPhone ? 'opacity-50 cursor-not-allowed' : ''
+                                    }`}
                             >
                                 {isUpdatingPhone ? 'Updating...' : 'Update Phone'}
                             </button>
@@ -718,7 +711,7 @@ function ManageCustomer() {
             {showInvoices && selectedCustomer && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
                     <div
-                        className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden"
+                        className="bg-white rounded-2xl border border-gray-200 w-full max-w-4xl max-h-[90vh] overflow-hidden"
                     >
                         <div className="bg-gradient-to-r from-emerald-500 to-emerald-600 px-6 py-4 flex justify-between items-center">
                             <div>
@@ -739,7 +732,7 @@ function ManageCustomer() {
                                     {customerInvoices[selectedCustomer.id].map((invoice) => (
                                         <div
                                             key={invoice.id}
-                                            className="border-2 border-gray-200 rounded-xl p-4 hover:shadow-lg transition-shadow cursor-pointer"
+                                            className="border-2 border-gray-200 rounded-xl p-4 transition-shadow cursor-pointer"
                                             onClick={() => handleViewInvoice(invoice)}
                                         >
                                             <div className="flex justify-between items-start mb-3">
@@ -750,7 +743,7 @@ function ManageCustomer() {
                                                     </h3>
                                                     <p className="text-sm text-gray-500">Date: {invoice.date}</p>
                                                 </div>
-                                                <span className={`px-3 py-1 text-xs font-semibold rounded-full ${getStatusBadge(invoice.status)} shadow-md`}>
+                                                <span className={`px-3 py-1 text-xs font-semibold rounded-full ${getStatusBadge(invoice.status)}`}>
                                                     {invoice.status.toUpperCase()}
                                                 </span>
                                             </div>
@@ -787,7 +780,7 @@ function ManageCustomer() {
             {showInvoiceDetail && selectedInvoice && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
                     <div
-                        className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden"
+                        className="bg-white rounded-2xl border border-gray-200 w-full max-w-4xl max-h-[90vh] overflow-hidden"
                     >
                         <div className="bg-gradient-to-r from-emerald-500 to-emerald-600 px-6 py-4 flex justify-between items-center">
                             <h2 className="text-2xl font-bold text-white">Invoice Details</h2>
@@ -822,7 +815,7 @@ function ManageCustomer() {
                                 </div>
                                 <div>
                                     <p className="text-sm text-gray-500 mb-1">Status</p>
-                                    <span className={`px-3 py-1 text-xs font-semibold rounded-full ${getStatusBadge(selectedInvoice.status)} shadow-md inline-block`}>
+                                    <span className={`px-3 py-1 text-xs font-semibold rounded-full ${getStatusBadge(selectedInvoice.status)} inline-block`}>
                                         {selectedInvoice.status.toUpperCase()}
                                     </span>
                                 </div>
@@ -834,27 +827,27 @@ function ManageCustomer() {
                             <div className="border-2 border-gray-200 rounded-lg overflow-hidden mb-6">
                                 <table className="w-full">
                                     <thead className="bg-gray-50">
-                                    <tr>
-                                        <th className="px-4 py-3 text-left text-sm font-bold text-gray-700">Item</th>
-                                        <th className="px-4 py-3 text-right text-sm font-bold text-gray-700">Quantity</th>
-                                        <th className="px-4 py-3 text-right text-sm font-bold text-gray-700">Price</th>
-                                        <th className="px-4 py-3 text-right text-sm font-bold text-gray-700">Total</th>
-                                    </tr>
+                                        <tr>
+                                            <th className="px-4 py-3 text-left text-sm font-bold text-gray-700">Item</th>
+                                            <th className="px-4 py-3 text-right text-sm font-bold text-gray-700">Quantity</th>
+                                            <th className="px-4 py-3 text-right text-sm font-bold text-gray-700">Price</th>
+                                            <th className="px-4 py-3 text-right text-sm font-bold text-gray-700">Total</th>
+                                        </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-200">
-                                    {selectedInvoice.items.map((item, index) => (
-                                        <tr key={index} className="hover:bg-gray-50">
-                                            <td className="px-4 py-3 text-sm text-gray-800">{item.name}</td>
-                                            <td className="px-4 py-3 text-sm text-gray-600 text-right">{item.quantity}</td>
-                                            <td className="px-4 py-3 text-sm text-gray-600 text-right">Rs. {item.price.toLocaleString()}</td>
-                                            <td className="px-4 py-3 text-sm font-semibold text-gray-900 text-right">Rs. {item.total.toLocaleString()}</td>
-                                        </tr>
-                                    ))}
+                                        {selectedInvoice.items.map((item, index) => (
+                                            <tr key={index} className="hover:bg-gray-50">
+                                                <td className="px-4 py-3 text-sm text-gray-800">{item.name}</td>
+                                                <td className="px-4 py-3 text-sm text-gray-600 text-right">{item.quantity}</td>
+                                                <td className="px-4 py-3 text-sm text-gray-600 text-right">Rs. {item.price.toLocaleString()}</td>
+                                                <td className="px-4 py-3 text-sm font-semibold text-gray-900 text-right">Rs. {item.total.toLocaleString()}</td>
+                                            </tr>
+                                        ))}
                                     </tbody>
                                 </table>
                             </div>
 
-                            <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg p-6 space-y-3 shadow-inner">
+                            <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg p-6 space-y-3">
                                 <div className="flex justify-between text-sm">
                                     <span className="text-gray-600 font-medium">Subtotal:</span>
                                     <span className="text-gray-900 font-semibold">Rs. {selectedInvoice.subtotal.toLocaleString()}</span>
@@ -904,7 +897,7 @@ function ManageCustomer() {
                                                 min="0"
                                                 max={selectedInvoice.balance}
                                                 step="0.01"
-                                                className="w-full text-lg font-semibold rounded-lg py-3 px-4 border-2 border-gray-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all outline-none"
+                                                className="w-full text-lg font-semibold rounded-lg py-3 px-4 border-2 border-gray-300 focus:border-emerald-500 transition-all outline-none"
                                             />
                                             <p className="text-xs text-gray-500 mt-1">
                                                 Maximum payable: Rs. {selectedInvoice.balance.toLocaleString()}
@@ -913,9 +906,8 @@ function ManageCustomer() {
                                         <button
                                             onClick={handlePayment}
                                             disabled={isProcessingPayment || !paymentAmount}
-                                            className={`px-8 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-bold rounded-lg shadow-lg transition-all transform hover:scale-105 ${
-                                                isProcessingPayment || !paymentAmount ? 'opacity-50 cursor-not-allowed' : ''
-                                            }`}
+                                            className={`px-8 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-bold rounded-lg transition-all transform hover:scale-105 ${isProcessingPayment || !paymentAmount ? 'opacity-50 cursor-not-allowed' : ''
+                                                }`}
                                         >
                                             {isProcessingPayment ? (
                                                 <span className="flex items-center gap-2">

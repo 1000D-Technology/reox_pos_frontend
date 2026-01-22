@@ -114,7 +114,7 @@ function ManageUser() {
             trend: '+12%',
             color: 'bg-gradient-to-br from-emerald-400 to-emerald-500',
             iconColor: 'text-white',
-            bgGlow: 'shadow-emerald-200'
+            bgGlow: ''
         },
         {
             icon: CheckCircle,
@@ -123,7 +123,7 @@ function ManageUser() {
             trend: '+8%',
             color: 'bg-gradient-to-br from-green-400 to-green-500',
             iconColor: 'text-white',
-            bgGlow: 'shadow-green-200'
+            bgGlow: ''
         },
         {
             icon: Shield,
@@ -132,7 +132,7 @@ function ManageUser() {
             trend: '+5%',
             color: 'bg-gradient-to-br from-purple-400 to-purple-500',
             iconColor: 'text-white',
-            bgGlow: 'shadow-purple-200'
+            bgGlow: ''
         },
     ];
 
@@ -215,16 +215,47 @@ function ManageUser() {
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === "ArrowDown") {
-                setSelectedIndex((prev) => (prev < userData.length - 1 ? prev + 1 : prev));
-            } else if (e.key === "ArrowUp") {
-                setSelectedIndex((prev) => (prev > 0 ? prev - 1 : prev));
+            // Global shortcuts
+            if (e.key === "Escape") {
+                if (isAddModalOpen) handleCloseAddModal();
+                if (isEditModalOpen) handleCloseEditModal();
+                return;
+            }
+
+            // Shortcuts when modals are NOT open
+            if (!isAddModalOpen && !isEditModalOpen) {
+                if (e.key === "ArrowDown") {
+                    e.preventDefault();
+                    setSelectedIndex((prev) => {
+                        const next = prev < userData.length - 1 ? prev + 1 : prev;
+                        // Optional: Scroll logic could be added here if you had a ref to the list container
+                        return next;
+                    });
+                } else if (e.key === "ArrowUp") {
+                    e.preventDefault();
+                    setSelectedIndex((prev) => (prev > 0 ? prev - 1 : prev));
+                } else if (e.key === "Insert") {
+                    e.preventDefault();
+                    handleAddUser();
+                } else if (e.key === "Enter") {
+                    e.preventDefault();
+                    if (userData[selectedIndex]) {
+                        handleEditClick(userData[selectedIndex]);
+                    }
+                } else if (e.key === "Delete") {
+                    const user = userData[selectedIndex];
+                    if (user) {
+                        // Optional: confirmation dialog before toggle? 
+                        // For now, direct action as per request implies quick access.
+                        handleStatusToggle(user.id, user.isActive);
+                    }
+                }
             }
         };
 
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [userData.length]);
+    }, [userData, selectedIndex, isAddModalOpen, isEditModalOpen, userRoles]); // Added dependencies for clarity and correctness
 
     const handleAddUser = () => {
         setAddForm({
@@ -489,22 +520,32 @@ function ManageUser() {
                     <button
 
                         onClick={handleAddUser}
-                        className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-semibold rounded-xl shadow-lg shadow-emerald-200 transition-all"
+                        className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-semibold rounded-xl transition-all"
                     >
                         <Plus size={20} />
                         Add User
                     </button>
                 </div>
 
+                {/* Keyboard Shortcuts Legend */}
+                <div className="bg-white rounded-xl p-4 shadow-lg flex flex-wrap gap-4 text-xs text-gray-500">
+                    <span className="font-semibold text-gray-700">Keyboard Shortcuts:</span>
+                    <span className="flex items-center gap-1"><kbd className="px-2 py-0.5 bg-gray-100 border border-gray-300 rounded font-mono text-gray-600">Insert</kbd> Add User</span>
+                    <span className="flex items-center gap-1"><kbd className="px-2 py-0.5 bg-gray-100 border border-gray-300 rounded font-mono text-gray-600">Enter</kbd> Edit Selection</span>
+                    <span className="flex items-center gap-1"><kbd className="px-2 py-0.5 bg-gray-100 border border-gray-300 rounded font-mono text-gray-600">Delete</kbd> Toggle Status</span>
+                    <span className="flex items-center gap-1"><kbd className="px-2 py-0.5 bg-gray-100 border border-gray-300 rounded font-mono text-gray-600">Esc</kbd> Close Modal</span>
+                    <span className="flex items-center gap-1"><kbd className="px-2 py-0.5 bg-gray-100 border border-gray-300 rounded font-mono text-gray-600">↑</kbd> <kbd className="px-2 py-0.5 bg-gray-100 border border-gray-300 rounded font-mono text-gray-600">↓</kbd> Navigate</span>
+                </div>
+
                 <div className={'grid md:grid-cols-3 grid-cols-1 gap-4'}>
                     {summaryCards.map((stat, i) => (
                         <div
                             key={i}
-                            className={`flex items-center p-4 space-x-3 transition-all bg-white rounded-2xl shadow-lg hover:shadow-xl ${stat.bgGlow} cursor-pointer group relative overflow-hidden`}
+                            className={`flex items-center p-4 space-x-3 transition-all bg-white rounded-2xl border border-gray-200 cursor-pointer group relative overflow-hidden`}
                         >
                             <div className="absolute inset-0 bg-gradient-to-br from-transparent via-gray-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
 
-                            <div className={`p-3 rounded-full ${stat.color} shadow-md relative z-10`}>
+                            <div className={`p-3 rounded-full ${stat.color} relative z-10`}>
                                 <stat.icon className={`w-6 h-6 ${stat.iconColor}`} />
                             </div>
 
@@ -525,7 +566,7 @@ function ManageUser() {
                 </div>
 
                 <div
-                    className="bg-white rounded-xl p-4 shadow-lg"
+                    className="bg-white rounded-xl p-4 border border-gray-200"
                 >
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
@@ -534,14 +575,14 @@ function ManageUser() {
                             value={searchQuery}
                             onChange={(e) => handleSearch(e.target.value)}
                             placeholder="Search users by name, email, contact, or role..."
-                            className="w-full pl-10 pr-4 py-2.5 text-sm border-2 border-gray-200 rounded-lg focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all outline-none"
+                            className="w-full pl-10 pr-4 py-2.5 text-sm border-2 border-gray-200 rounded-lg focus:border-emerald-500 transition-all outline-none"
                         />
                     </div>
                 </div>
 
                 <div
 
-                    className={'flex flex-col bg-white rounded-xl p-4 justify-between gap-8 shadow-lg'}
+                    className={'flex flex-col bg-white rounded-xl p-4 justify-between gap-8 border border-gray-200'}
                 >
                     <div className="overflow-y-auto max-h-md md:h-[320px] lg:h-[550px] rounded-lg scrollbar-thin scrollbar-thumb-emerald-300 scrollbar-track-gray-100">
                         <table className="min-w-full divide-y divide-gray-200">
@@ -600,7 +641,7 @@ function ManageUser() {
                                                 {user.contactNumber}
                                             </td>
                                             <td className="px-6 py-2 whitespace-nowrap">
-                                                <span className={`px-3 py-1 text-xs font-semibold rounded-full ${getRoleBadge(user.role)} shadow-md`}>
+                                                <span className={`px-3 py-1 text-xs font-semibold rounded-full ${getRoleBadge(user.role)}`}>
                                                     {user.role}
                                                 </span>
                                             </td>
@@ -611,8 +652,8 @@ function ManageUser() {
                                                         handleStatusToggle(user.id, user.isActive);
                                                     }}
                                                     className={`px-4 py-1.5 text-xs font-semibold rounded-full transition-all transform hover:scale-105 ${user.isActive
-                                                        ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-200 hover:from-emerald-600 hover:to-emerald-700'
-                                                        : 'bg-gradient-to-r from-gray-400 to-gray-500 text-white shadow-lg shadow-gray-200 hover:from-gray-500 hover:to-gray-600'
+                                                        ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white hover:from-emerald-600 hover:to-emerald-700'
+                                                        : 'bg-gradient-to-r from-gray-400 to-gray-500 text-white hover:from-gray-500 hover:to-gray-600'
                                                         }`}
                                                 >
                                                     {user.isActive ? 'Active' : 'Inactive'}
@@ -624,7 +665,7 @@ function ManageUser() {
                                                         e.stopPropagation();
                                                         handleEditClick(user);
                                                     }}
-                                                    className="p-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all"
+                                                    className="p-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg transition-all"
                                                 >
                                                     <Pencil size={16} />
                                                 </button>
@@ -660,7 +701,7 @@ function ManageUser() {
                                         key={page}
                                         onClick={() => goToPage(page as number)}
                                         className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${currentPage === page
-                                            ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-200'
+                                            ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white'
                                             : 'text-gray-600 hover:bg-emerald-50 hover:text-emerald-600'
                                             }`}
                                     >
@@ -681,6 +722,8 @@ function ManageUser() {
                         </div>
                     </nav>
                 </div>
+
+
             </div>
 
             {/* Add User Modal */}
@@ -688,7 +731,7 @@ function ManageUser() {
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
                     <div
 
-                        className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden"
+                        className="bg-white rounded-2xl border border-gray-200 w-full max-w-2xl max-h-[90vh] overflow-hidden"
                     >
                         <div className="bg-gradient-to-r from-emerald-500 to-emerald-600 px-6 py-4 flex justify-between items-center">
                             <div className="flex items-center gap-3">
@@ -719,7 +762,7 @@ function ManageUser() {
                                         value={addForm.name}
                                         onChange={(e) => setAddForm({ ...addForm, name: e.target.value })}
                                         placeholder="Enter full name"
-                                        className="w-full px-4 py-2.5 text-sm border-2 border-gray-200 rounded-lg focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all outline-none"
+                                        className="w-full px-4 py-2.5 text-sm border-2 border-gray-200 rounded-lg focus:border-emerald-500 transition-all outline-none"
                                     />
                                 </div>
 
@@ -735,7 +778,7 @@ function ManageUser() {
                                         value={addForm.email}
                                         onChange={(e) => setAddForm({ ...addForm, email: e.target.value })}
                                         placeholder="Enter email address"
-                                        className="w-full px-4 py-2.5 text-sm border-2 border-gray-200 rounded-lg focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all outline-none"
+                                        className="w-full px-4 py-2.5 text-sm border-2 border-gray-200 rounded-lg focus:border-emerald-500 transition-all outline-none"
                                     />
                                 </div>
 
@@ -752,7 +795,7 @@ function ManageUser() {
                                         onChange={(e) => setAddForm({ ...addForm, contactNumber: e.target.value })}
                                         placeholder="0771234567"
                                         maxLength={10}
-                                        className="w-full px-4 py-2.5 text-sm border-2 border-gray-200 rounded-lg focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all outline-none"
+                                        className="w-full px-4 py-2.5 text-sm border-2 border-gray-200 rounded-lg focus:border-emerald-500 transition-all outline-none"
                                     />
                                 </div>
 
@@ -767,7 +810,7 @@ function ManageUser() {
                                         value={addForm.role}
                                         onChange={(e) => setAddForm({ ...addForm, role: e.target.value })}
                                         disabled={isLoadingRoles}
-                                        className="w-full px-4 py-2.5 text-sm border-2 border-gray-200 rounded-lg focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
+                                        className="w-full px-4 py-2.5 text-sm border-2 border-gray-200 rounded-lg focus:border-emerald-500 transition-all outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
                                     >
                                         {isLoadingRoles ? (
                                             <option value="">Loading roles...</option>
@@ -791,7 +834,7 @@ function ManageUser() {
                                         value={addForm.password}
                                         onChange={(e) => setAddForm({ ...addForm, password: e.target.value })}
                                         placeholder="Min 6 characters"
-                                        className="w-full px-4 py-2.5 text-sm border-2 border-gray-200 rounded-lg focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all outline-none"
+                                        className="w-full px-4 py-2.5 text-sm border-2 border-gray-200 rounded-lg focus:border-emerald-500 transition-all outline-none"
                                     />
                                 </div>
 
@@ -807,7 +850,7 @@ function ManageUser() {
                                         value={addForm.confirmPassword}
                                         onChange={(e) => setAddForm({ ...addForm, confirmPassword: e.target.value })}
                                         placeholder="Re-enter password"
-                                        className="w-full px-4 py-2.5 text-sm border-2 border-gray-200 rounded-lg focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all outline-none"
+                                        className="w-full px-4 py-2.5 text-sm border-2 border-gray-200 rounded-lg focus:border-emerald-500 transition-all outline-none"
                                     />
                                 </div>
                             </div>
@@ -822,7 +865,7 @@ function ManageUser() {
                                 <button
                                     onClick={handleSubmitAdd}
                                     disabled={isProcessing}
-                                    className={`px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-semibold rounded-lg shadow-lg transition-all ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''
+                                    className={`px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-semibold rounded-lg transition-all ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''
                                         }`}
                                 >
                                     {isProcessing ? 'Adding User...' : 'Add User'}
@@ -837,7 +880,7 @@ function ManageUser() {
             {isEditModalOpen && selectedUser && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
                     <div
-                        className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden"
+                        className="bg-white rounded-2xl border border-gray-200 w-full max-w-2xl max-h-[90vh] overflow-hidden"
                     >
                         <div className="bg-gradient-to-r from-emerald-500 to-emerald-600 px-6 py-4 flex justify-between items-center">
                             <div>
@@ -872,7 +915,7 @@ function ManageUser() {
                                         onChange={(e) => setEditForm({ ...editForm, contactNumber: e.target.value })}
                                         placeholder="0771234567"
                                         maxLength={10}
-                                        className="w-full px-4 py-2.5 text-sm border-2 border-gray-200 rounded-lg focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all outline-none"
+                                        className="w-full px-4 py-2.5 text-sm border-2 border-gray-200 rounded-lg focus:border-emerald-500 transition-all outline-none"
                                     />
                                 </div>
 
@@ -886,7 +929,7 @@ function ManageUser() {
                                     <select
                                         value={editForm.role}
                                         onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}
-                                        className="w-full px-4 py-2.5 text-sm border-2 border-gray-200 rounded-lg focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all outline-none"
+                                        className="w-full px-4 py-2.5 text-sm border-2 border-gray-200 rounded-lg focus:border-emerald-500 transition-all outline-none"
                                     >
                                         {userRoles.map(role => (
                                             <option key={role.id} value={role.id}>{role.user_role}</option>
@@ -906,7 +949,7 @@ function ManageUser() {
                                         value={editForm.password}
                                         onChange={(e) => setEditForm({ ...editForm, password: e.target.value })}
                                         placeholder="Leave blank to keep current"
-                                        className="w-full px-4 py-2.5 text-sm border-2 border-gray-200 rounded-lg focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all outline-none"
+                                        className="w-full px-4 py-2.5 text-sm border-2 border-gray-200 rounded-lg focus:border-emerald-500 transition-all outline-none"
                                     />
                                 </div>
 
@@ -922,7 +965,7 @@ function ManageUser() {
                                         value={editForm.confirmPassword}
                                         onChange={(e) => setEditForm({ ...editForm, confirmPassword: e.target.value })}
                                         placeholder="Re-enter new password"
-                                        className="w-full px-4 py-2.5 text-sm border-2 border-gray-200 rounded-lg focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all outline-none"
+                                        className="w-full px-4 py-2.5 text-sm border-2 border-gray-200 rounded-lg focus:border-emerald-500 transition-all outline-none"
                                     />
                                 </div>
                             </div>
@@ -937,7 +980,7 @@ function ManageUser() {
                                 <button
                                     onClick={handleSubmitEdit}
                                     disabled={isProcessing}
-                                    className={`px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-semibold rounded-lg shadow-lg transition-all ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''
+                                    className={`px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-semibold rounded-lg transition-all ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''
                                         }`}
                                 >
                                     {isProcessing ? 'Updating...' : 'Update User'}

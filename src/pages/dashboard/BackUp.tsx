@@ -218,11 +218,11 @@ const BackUp = () => {
                         {statsCards.map((stat, i) => (
                             <div
                                 key={i}
-                                className="flex items-center p-4 space-x-3 bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all cursor-pointer group relative overflow-hidden"
+                                className="flex items-center p-4 space-x-3 bg-white rounded-2xl border border-gray-200 cursor-pointer group relative overflow-hidden"
                             >
-                                <div className="absolute inset-0 bg-linear-to-br from-emerald-50/50 via-transparent to-green-50/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                                <div className="absolute inset-0 bg-linear-to-br from-emerald-50/50 via-transparent to-green-50/50 opacity-0 group-hover:opacity-100 duration-300"></div>
 
-                                <div className={`p-3 rounded-full ${stat.color} shadow-md relative z-10`}>
+                                <div className={`p-3 rounded-full ${stat.color} relative z-10`}>
                                     <stat.icon className={`w-6 h-6 ${stat.iconColor}`} />
                                 </div>
 
@@ -241,14 +241,15 @@ const BackUp = () => {
                         {/* Left: Create Backup + Schedule */}
                         <div className="space-y-6">
                             {/* Create Backup Card */}
+                            {/* Create Backup Card */}
                             <div
-                                className="bg-white rounded-3xl shadow-2xl p-8 relative overflow-hidden"
+                                className="bg-white rounded-3xl border border-gray-200 p-8 relative overflow-hidden"
                             >
-                                <div className="absolute -top-24 -right-24 w-64 h-64 bg-linear-to-br from-emerald-400/20 to-green-400/20 rounded-full blur-3xl"></div>
+                                {/* Removed glow sphere */}
 
                                 <div className="relative z-10">
                                     <div className="flex items-center justify-center mb-6">
-                                        <div className="p-4 bg-linear-to-br from-emerald-500 to-green-500 rounded-2xl shadow-xl">
+                                        <div className="p-4 bg-linear-to-br from-emerald-500 to-green-500 rounded-2xl">
                                             <CloudUpload className="w-12 h-12 text-white" />
                                         </div>
                                     </div>
@@ -271,7 +272,7 @@ const BackUp = () => {
                                         <button
                                             onClick={handleBackup}
                                             disabled={isBackingUp}
-                                            className="w-full bg-linear-to-r from-emerald-500 to-green-500 hover:from-emerald-600 hover:to-green-600 text-white font-semibold py-4 px-6 rounded-xl shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+                                            className="w-full bg-linear-to-r from-emerald-500 to-green-500 hover:from-emerald-600 hover:to-green-600 text-white font-semibold py-4 px-6 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
                                         >
                                             {isBackingUp ? (
                                                 <RefreshCw className="w-5 h-5 animate-spin" />
@@ -283,7 +284,7 @@ const BackUp = () => {
 
                                         <button
                                             onClick={fetchBackupList}
-                                            className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-3 px-6 rounded-xl transition-all flex items-center justify-center space-x-2"
+                                            className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-3 px-6 rounded-xl flex items-center justify-center space-x-2"
                                         >
                                             <RefreshCw className="w-4 h-4" />
                                             <span>Refresh List</span>
@@ -294,7 +295,7 @@ const BackUp = () => {
 
                             {/* Schedule Card */}
                             <div
-                                className="bg-white rounded-3xl shadow-2xl p-8"
+                                className="bg-white rounded-3xl border border-gray-200 p-8"
                             >
                                 <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
                                     <Clock className="w-6 h-6 text-emerald-600" />
@@ -330,7 +331,7 @@ const BackUp = () => {
 
                         {/* Right: Available Backups */}
                         <div
-                            className="bg-white rounded-3xl shadow-2xl p-8 h-fit"
+                            className="bg-white rounded-3xl border border-gray-200 p-8 h-fit"
                         >
                             <div className="flex items-center justify-between mb-6">
                                 <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
@@ -355,10 +356,10 @@ const BackUp = () => {
                                     backupFiles.map((file, i) => (
                                         <div
                                             key={i}
-                                            className="flex items-center justify-between p-4 bg-linear-to-r from-emerald-50 to-green-50 rounded-xl border border-emerald-100 hover:shadow-lg transition-all group"
+                                            className="flex items-center justify-between p-4 bg-linear-to-r from-emerald-50 to-green-50 rounded-xl border border-emerald-100 group"
                                         >
                                             <div className="flex items-center space-x-3 flex-1 min-w-0">
-                                                <div className="p-2.5 bg-linear-to-br from-emerald-500 to-green-500 rounded-lg shadow-md shrink-0">
+                                                <div className="p-2.5 bg-linear-to-br from-emerald-500 to-green-500 rounded-lg shrink-0">
                                                     <Database className="w-5 h-5 text-white" />
                                                 </div>
                                                 <div className="flex-1 min-w-0">
@@ -373,7 +374,7 @@ const BackUp = () => {
 
                                             <button
                                                 onClick={() => handleDownload(file.filename)}
-                                                className="ml-3 p-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg transition-all hover:scale-110 shadow-md shrink-0"
+                                                className="ml-3 p-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg shrink-0"
                                                 title="Download backup"
                                             >
                                                 <Download className="w-5 h-5" />

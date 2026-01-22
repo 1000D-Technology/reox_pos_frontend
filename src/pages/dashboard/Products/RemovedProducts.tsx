@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import toast, { Toaster } from 'react-hot-toast';
 import TypeableSelect from "../../../components/TypeableSelect.tsx";
 import { productService } from "../../../services/productService";
+import { productTypeService } from "../../../services/productTypeService";
 
 interface Product {
     productID: number;
@@ -52,7 +53,7 @@ function RemovedProducts() {
 
     const fetchProductTypes = async () => {
         try {
-            const response = await commonService.getProductTypes();
+            const response = await productTypeService.getProductTypes();
             if (response.data.success) {
                 const types = response.data.data.map((type: any) => ({
                     value: type.id.toString(),
@@ -233,7 +234,7 @@ function RemovedProducts() {
                 </div>
 
                 <div
-                    className="bg-white rounded-xl p-6 shadow-lg"
+                    className="bg-white rounded-xl p-6 border border-gray-200"
                 >
                     <div className="grid md:grid-cols-4 gap-4">
                         <div>
@@ -245,7 +246,6 @@ function RemovedProducts() {
                                 value={selectedProductType?.value || null}
                                 onChange={(opt) => opt ? setSelectedProductType({ value: String(opt.value), label: opt.label }) : setSelectedProductType(null)}
                                 placeholder="Search Product Types.."
-                                allowCreate={false}
                             />
                         </div>
                         <div>
@@ -296,118 +296,118 @@ function RemovedProducts() {
                 </div>
 
                 <div
-                    className="flex flex-col bg-white rounded-xl p-6 justify-between gap-6 shadow-lg"
+                    className="flex flex-col bg-white rounded-xl p-6 justify-between gap-6 border border-gray-200"
                 >
                     <div className="overflow-y-auto max-h-md md:h-[320px] lg:h-[600px] rounded-lg scrollbar-thin scrollbar-thumb-red-300 scrollbar-track-gray-100">
                         <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-gradient-to-r from-red-600 to-red-700 sticky top-0 z-10">
-                            <tr>
-                                {[
-                                    "Product ID",
-                                    "Product Name",
-                                    "Product Code",
-                                    "Barcode",
-                                    "Category",
-                                    "Brand",
-                                    "Unit",
-                                    "Product Type",
-                                    "Color",
-                                    "Size",
-                                    "Storage/Capacity",
-                                    "Created On",
-                                    "Actions",
-                                ].map((header, i, arr) => (
-                                    <th
-                                        key={header}
-                                        scope="col"
-                                        className={`px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider ${i === 0 ? "rounded-tl-lg" : ""} ${i === arr.length - 1 ? "rounded-tr-lg" : ""}`}
-                                    >
-                                        {header}
-                                    </th>
-                                ))}
-                            </tr>
+                                <tr>
+                                    {[
+                                        "Product ID",
+                                        "Product Name",
+                                        "Product Code",
+                                        "Barcode",
+                                        "Category",
+                                        "Brand",
+                                        "Unit",
+                                        "Product Type",
+                                        "Color",
+                                        "Size",
+                                        "Storage/Capacity",
+                                        "Created On",
+                                        "Actions",
+                                    ].map((header, i, arr) => (
+                                        <th
+                                            key={header}
+                                            scope="col"
+                                            className={`px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider ${i === 0 ? "rounded-tl-lg" : ""} ${i === arr.length - 1 ? "rounded-tr-lg" : ""}`}
+                                        >
+                                            {header}
+                                        </th>
+                                    ))}
+                                </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
-                            {loading ? (
-                                <tr>
-                                    <td colSpan={13} className="px-6 py-8 text-center">
-                                        <div className="flex items-center justify-center">
-                                            <Loader2 className="animate-spin mr-2" size={20} />
-                                            <span>Loading removed products...</span>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ) : paginatedProducts.length === 0 ? (
-                                <tr>
-                                    <td colSpan={13} className="px-6 py-8 text-center text-gray-500">
-                                        No removed products found
-                                    </td>
-                                </tr>
-                            ) : (
-                                paginatedProducts.map((product, index) => (
-                                    <tr
-                                        key={product.productID}
-                                        onClick={() => setSelectedIndex(index)}
-                                        className={`cursor-pointer transition-colors ${index === selectedIndex
-                                            ? "bg-red-50 border-l-4 border-red-600"
-                                            : "hover:bg-red-50"
-                                        }`}
-                                    >
-                                        <td className="px-6 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
-                                            {product.productID}
-                                        </td>
-                                        <td className="px-6 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
-                                            {product.productName}
-                                        </td>
-                                        <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-700">
-                                            {product.productCode}
-                                        </td>
-                                        <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-700">
-                                            {product.barcode}
-                                        </td>
-                                        <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-700">
-                                            {product.category}
-                                        </td>
-                                        <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-700">
-                                            {product.brand}
-                                        </td>
-                                        <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-700">
-                                            {product.unit}
-                                        </td>
-                                        <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-700">
-                                            {product.productType}
-                                        </td>
-                                        <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-700">
-                                            {product.color || '-'}
-                                        </td>
-                                        <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-700">
-                                            {product.size || '-'}
-                                        </td>
-                                        <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-700">
-                                            {product.storage || '-'}
-                                        </td>
-                                        <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-700">
-                                            {new Date(product.createdOn).toLocaleDateString()}
-                                        </td>
-                                        <td className="px-6 py-3 whitespace-nowrap text-sm">
-                                            <div className="relative group inline-block">
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleRecoverProduct(product);
-                                                    }}
-                                                    className="p-2 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg text-white hover:from-blue-600 hover:to-blue-700 transition-all shadow-md hover:shadow-lg"
-                                                >
-                                                    <RefreshCw size={16} />
-                                                </button>
-                                                <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max px-2 py-1 text-xs text-white bg-gray-900 rounded-md invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-opacity">
-                                                        Recover Product
-                                                    </span>
+                                {loading ? (
+                                    <tr>
+                                        <td colSpan={13} className="px-6 py-8 text-center">
+                                            <div className="flex items-center justify-center">
+                                                <Loader2 className="animate-spin mr-2" size={20} />
+                                                <span>Loading removed products...</span>
                                             </div>
                                         </td>
                                     </tr>
-                                ))
-                            )}
+                                ) : paginatedProducts.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={13} className="px-6 py-8 text-center text-gray-500">
+                                            No removed products found
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    paginatedProducts.map((product, index) => (
+                                        <tr
+                                            key={product.productID}
+                                            onClick={() => setSelectedIndex(index)}
+                                            className={`cursor-pointer transition-colors ${index === selectedIndex
+                                                ? "bg-red-50 border-l-4 border-red-600"
+                                                : "hover:bg-red-50"
+                                                }`}
+                                        >
+                                            <td className="px-6 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
+                                                {product.productID}
+                                            </td>
+                                            <td className="px-6 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
+                                                {product.productName}
+                                            </td>
+                                            <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-700">
+                                                {product.productCode}
+                                            </td>
+                                            <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-700">
+                                                {product.barcode}
+                                            </td>
+                                            <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-700">
+                                                {product.category}
+                                            </td>
+                                            <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-700">
+                                                {product.brand}
+                                            </td>
+                                            <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-700">
+                                                {product.unit}
+                                            </td>
+                                            <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-700">
+                                                {product.productType}
+                                            </td>
+                                            <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-700">
+                                                {product.color || '-'}
+                                            </td>
+                                            <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-700">
+                                                {product.size || '-'}
+                                            </td>
+                                            <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-700">
+                                                {product.storage || '-'}
+                                            </td>
+                                            <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-700">
+                                                {new Date(product.createdOn).toLocaleDateString()}
+                                            </td>
+                                            <td className="px-6 py-3 whitespace-nowrap text-sm">
+                                                <div className="relative group inline-block">
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleRecoverProduct(product);
+                                                        }}
+                                                        className="p-2 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg text-white hover:from-blue-600 hover:to-blue-700 transition-all shadow-md hover:shadow-lg"
+                                                    >
+                                                        <RefreshCw size={16} />
+                                                    </button>
+                                                    <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max px-2 py-1 text-xs text-white bg-gray-900 rounded-md invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        Recover Product
+                                                    </span>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
                             </tbody>
                         </table>
                     </div>
@@ -420,11 +420,10 @@ function RemovedProducts() {
                             <button
                                 onClick={() => goToPage(currentPage - 1)}
                                 disabled={currentPage === 1}
-                                className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${
-                                    currentPage === 1
-                                        ? 'text-gray-400 cursor-not-allowed'
-                                        : 'text-gray-700 hover:bg-red-50'
-                                }`}
+                                className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${currentPage === 1
+                                    ? 'text-gray-400 cursor-not-allowed'
+                                    : 'text-gray-700 hover:bg-red-50'
+                                    }`}
                             >
                                 <ChevronLeft className="mr-1 h-4 w-4" /> Previous
                             </button>
@@ -434,11 +433,10 @@ function RemovedProducts() {
                                     <button
                                         key={idx}
                                         onClick={() => goToPage(page)}
-                                        className={`px-3 py-2 text-sm font-medium rounded-lg transition-all ${
-                                            currentPage === page
-                                                ? 'bg-gradient-to-r from-red-500 to-red-600 text-white shadow-lg shadow-red-200'
-                                                : 'text-gray-700 hover:bg-red-50'
-                                        }`}
+                                        className={`px-3 py-2 text-sm font-medium rounded-lg transition-all ${currentPage === page
+                                            ? 'bg-gradient-to-r from-red-500 to-red-600 text-white shadow-lg shadow-red-200'
+                                            : 'text-gray-700 hover:bg-red-50'
+                                            }`}
                                     >
                                         {page}
                                     </button>
@@ -450,11 +448,10 @@ function RemovedProducts() {
                             <button
                                 onClick={() => goToPage(currentPage + 1)}
                                 disabled={currentPage === totalPages || totalPages === 0}
-                                className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${
-                                    currentPage === totalPages || totalPages === 0
-                                        ? 'text-gray-400 cursor-not-allowed'
-                                        : 'text-gray-700 hover:bg-red-50'
-                                }`}
+                                className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${currentPage === totalPages || totalPages === 0
+                                    ? 'text-gray-400 cursor-not-allowed'
+                                    : 'text-gray-700 hover:bg-red-50'
+                                    }`}
                             >
                                 Next <ChevronRight className="ml-1 h-4 w-4" />
                             </button>

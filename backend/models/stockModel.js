@@ -81,116 +81,61 @@ class Stock {
      * @desc Get all current stock with product and supplier details (grouped by product)
      */
     static async getAllStock() {
-        // Get all stock with relations using pure Prisma
-        const stocks = await prisma.stock.findMany({
-            where: {
-                qty: { gt: 0 }
-            },
-            include: {
-                product_variations: {
-                    include: {
-                        product: {
-                            include: {
-                                unit_id_product_unit_idTounit_id: true
-                            }
-                        }
-                    }
-                },
-                grn_items: {
-                    include: {
-                        grn: {
-                            include: {
-                                supplier: true
-                            }
-                        }
-                    }
-                }
-            }
-        });
-
-        // Group by product and aggregate in JavaScript
-        const productMap = new Map();
-
-        stocks.forEach(stock => {
-            const product = stock.product_variations.product;
-            const productId = product.id;
-
-            if (!productMap.has(productId)) {
-                productMap.set(productId, {
-                    product_id: productId,
-                    product_name: product.product_name,
-                    unit: product.unit_id_product_unit_idTounit_id?.name,
-                    cost_prices: [],
-                    mrps: [],
-                    rsps: [],
-                    suppliers: new Set(),
-                    total_qty: 0
-                });
-            }
-
-            const data = productMap.get(productId);
-            data.cost_prices.push(stock.cost_price);
-            data.mrps.push(stock.mrp);
-            data.rsps.push(stock.rsp);
-            data.total_qty += stock.qty;
-
-            // Add suppliers from grn_items
-            stock.grn_items.forEach(grnItem => {
-                if (grnItem.grn?.supplier?.supplier_name) {
-                    data.suppliers.add(grnItem.grn.supplier.supplier_name);
-                }
-            });
-        });
-
-        // Calculate averages and format result
-        const result = Array.from(productMap.values()).map(data => ({
-            product_id: data.product_id,
-            product_name: data.product_name,
-            unit: data.unit,
-            cost_price: data.cost_prices.reduce((a, b) => a + b, 0) / data.cost_prices.length,
-            mrp: data.mrps.reduce((a, b) => a + b, 0) / data.mrps.length,
-            selling_price: data.rsps.reduce((a, b) => a + b, 0) / data.rsps.length,
-            supplier: Array.from(data.suppliers).join(', '),
-            stock_qty: data.total_qty
-        }));
-
-        // Sort by product name
-        return result.sort((a, b) => a.product_name.localeCompare(b.product_name));
+        const query = `
+            SELECT 
+                p.id AS product_id,
+                CONCAT(p.product_name, 
+                       IF(pv.color IS NOT NULL AND pv.color != '', CONCAT(' - ', pv.color), ''), 
+                       IF(pv.size IS NOT NULL AND pv.size != '', CONCAT(' - ', pv.size), '')
+                ) AS product_name,
+                s.barcode,
+                u.name AS unit,
+                s.cost_price,
+                s.mrp,
+                s.rsp AS selling_price,
+                sup.supplier_name AS supplier,
+                SUM(s.qty) AS stock_qty
+            FROM stock s
+            INNER JOIN product_variations pv ON s.product_variations_id = pv.id
+            INNER JOIN product p ON pv.product_id = p.id
+            INNER JOIN unit_id u ON p.unit_id = u.idunit_id
+            LEFT JOIN grn_items gi ON s.id = gi.stock_id
+            LEFT JOIN grn g ON gi.grn_id = g.id
+            LEFT JOIN supplier sup ON g.supplier_id = sup.id
+            WHERE s.qty > 0
+            GROUP BY p.id, p.product_name, pv.color, pv.size, s.barcode, u.name, s.cost_price, s.mrp, s.rsp, sup.supplier_name
+            ORDER BY p.product_name ASC
+        `;
+        const [rows] = await db.execute(query);
+        return rows;
     }
 
     static async searchStock(filters) {
-        // Build Prisma where clause
-        const whereClause = {
-            qty: { gt: 0 }
-        };
+        let query = `
+        SELECT 
+            pv.id AS variation_id,
+            CONCAT(p.product_name, 
+                   IF(pv.color IS NOT NULL AND pv.color != '', CONCAT(' - ', pv.color), ''), 
+                   IF(pv.size IS NOT NULL AND pv.size != '', CONCAT(' - ', pv.size), '')
+            ) AS full_product_name,
+            s.barcode,
+            u.name AS unit,
+            s.cost_price,
+            s.mrp,
+            s.rsp AS selling_price,
+            sup.supplier_name AS supplier,
+            SUM(s.qty) AS stock_qty
+        FROM stock s
+        INNER JOIN product_variations pv ON s.product_variations_id = pv.id
+        INNER JOIN product p ON pv.product_id = p.id
+        INNER JOIN unit_id u ON p.unit_id = u.idunit_id
+        LEFT JOIN grn_items gi ON s.id = gi.stock_id
+        LEFT JOIN grn g ON gi.grn_id = g.id
+        LEFT JOIN supplier sup ON g.supplier_id = sup.id
+        WHERE s.qty > 0
+    `;
 
-        // Get all stock with filters using pure Prisma
-        const stocks = await prisma.stock.findMany({
-            where: whereClause,
-            include: {
-                product_variations: {
-                    include: {
-                        product: {
-                            include: {
-                                unit_id_product_unit_idTounit_id: true
-                            }
-                        }
-                    }
-                },
-                grn_items: {
-                    include: {
-                        grn: {
-                            include: {
-                                supplier: true
-                            }
-                        }
-                    }
-                }
-            }
-        });
-
-        // Filter in JavaScript based on criteria
-        let filteredStocks = stocks;
+        const queryParams = [];
 
         if (filters.category) {
             filteredStocks = filteredStocks.filter(s => 
@@ -265,6 +210,17 @@ class Stock {
         }));
 
         return result.sort((a, b) => a.product_name.localeCompare(b.product_name));
+            query += ` AND (p.product_name LIKE ? OR pv.id = ? OR s.barcode LIKE ?)`;
+            queryParams.push(`%${filters.searchQuery}%`, filters.searchQuery, `%${filters.searchQuery}%`);
+        }
+
+        query += ` GROUP BY 
+                pv.id, p.product_name, pv.color, pv.size, s.barcode, u.name, 
+                s.cost_price, s.mrp, s.rsp, sup.supplier_name
+               ORDER BY p.product_name ASC`;
+
+        const [rows] = await db.execute(query, queryParams);
+        return rows;
     }
 
     static async getDashboardSummary() {

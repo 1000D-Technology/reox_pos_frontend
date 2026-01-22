@@ -61,6 +61,12 @@ class ProductType {
         return !!productType;
     }
 
+    static async getIdByName(name) {
+        const query = "SELECT idproduct_type FROM product_type WHERE name = ?";
+        const [rows] = await db.execute(query, [name.trim()]);
+        return rows.length > 0 ? rows[0].idproduct_type : null;
+    }
+
     /**
      * @desc Update product type name
      */

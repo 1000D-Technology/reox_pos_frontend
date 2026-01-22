@@ -5,7 +5,8 @@ class Supplier {
         const company = await prisma.company.findFirst({
             where: {
                 company_name: {
-                    equals: companyName.trim()
+                    equals: companyName.trim(),
+                    mode: 'insensitive'
                 }
             }
         });
@@ -17,6 +18,18 @@ class Supplier {
             where: { id: companyId }
         });
         return !!company;
+    }
+
+    static async getCompanyIdByName(companyName) {
+        const query = "SELECT id FROM company WHERE company_name = ? LIMIT 1";
+        const [rows] = await db.execute(query, [companyName.trim()]);
+        return rows.length > 0 ? rows[0].id : null;
+    }
+  
+    static async getBankIdByName(bankName) {
+        const query = "SELECT id FROM bank WHERE bank_name = ? LIMIT 1";
+        const [rows] = await db.execute(query, [bankName.trim()]);
+        return rows.length > 0 ? rows[0].id : null;
     }
 
     static async checkBankExistsById(bankId) {

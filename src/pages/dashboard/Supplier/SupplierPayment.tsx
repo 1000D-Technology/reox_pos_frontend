@@ -407,7 +407,7 @@ function SupplierPayment() {
                 </div>
 
                 <div
-                    className={'bg-white rounded-xl p-4 flex flex-col shadow-lg'}
+                    className={'bg-white rounded-xl p-4 flex flex-col border border-gray-200'}
                 >
                     <h2 className="text-xl font-semibold text-gray-700 mb-3">Payment Processing</h2>
                     <div className={'grid md:grid-cols-6 gap-4'}>
@@ -521,7 +521,7 @@ function SupplierPayment() {
                             <button
                                 onClick={handlePayment}
                                 disabled={isProcessingPayment || !selectedBill || !paymentAmount || !selectedPaymentType}
-                                className={'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 py-2 rounded-lg flex items-center justify-center shadow-lg shadow-emerald-200 hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed'}
+                                className={'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 py-2 rounded-lg flex items-center justify-center transition-all disabled:opacity-50 disabled:cursor-not-allowed'}
                             >
                                 {isProcessingPayment ? (
                                     <RefreshCw className="animate-spin mr-2" size={14} />
@@ -533,7 +533,7 @@ function SupplierPayment() {
                             <button
                                 onClick={handleClear}
                                 disabled={isProcessingPayment}
-                                className={'bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 py-2 rounded-lg flex items-center justify-center shadow-lg shadow-gray-200 hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed'}
+                                className={'bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 py-2 rounded-lg flex items-center justify-center transition-all disabled:opacity-50 disabled:cursor-not-allowed'}
                             >
                                 <RefreshCw className="mr-2" size={14} />Clear
                             </button>
@@ -542,7 +542,7 @@ function SupplierPayment() {
                 </div>
 
                 <div
-                    className={'flex flex-col bg-white rounded-xl h-full p-4 justify-between shadow-lg'}
+                    className={'flex flex-col bg-white rounded-xl h-full p-4 justify-between border border-gray-200'}
                 >
                     <div className="overflow-y-auto max-h-md md:h-[320px] lg:h-[500px] rounded-lg scrollbar-thin scrollbar-thumb-emerald-300 scrollbar-track-gray-100">
                         <table className="min-w-full divide-y divide-gray-200">
@@ -632,7 +632,7 @@ function SupplierPayment() {
                                                             fetchGrnDetails(grn.id, false);
                                                         }}
                                                         disabled={isLoadingDetails}
-                                                        className="p-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all disabled:opacity-50"
+                                                        className="p-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg transition-all disabled:opacity-50"
                                                     >
                                                         <Eye size={16} />
                                                     </button>
@@ -642,7 +642,7 @@ function SupplierPayment() {
                                                             fetchGrnDetails(grn.id, true);
                                                         }}
                                                         disabled={isLoadingDetails}
-                                                        className="p-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all disabled:opacity-50"
+                                                        className="p-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white rounded-lg transition-all disabled:opacity-50"
                                                     >
                                                         <Printer size={16} />
                                                     </button>
@@ -652,7 +652,7 @@ function SupplierPayment() {
                                                             navigator.clipboard.writeText(grn.billNumber);
                                                             toast.success('Bill number copied to clipboard');
                                                         }}
-                                                        className="p-2 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all"
+                                                        className="p-2 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white rounded-lg transition-all"
                                                     >
                                                         <Copy size={16} />
                                                     </button>
@@ -689,7 +689,7 @@ function SupplierPayment() {
                                         key={index}
                                         onClick={() => goToPage(page)}
                                         className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${currentPage === page
-                                            ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-md'
+                                            ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white'
                                             : 'text-gray-600 hover:bg-emerald-50 hover:text-emerald-600'
                                             }`}
                                     >

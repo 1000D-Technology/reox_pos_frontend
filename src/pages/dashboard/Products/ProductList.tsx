@@ -738,7 +738,7 @@ function ProductList() {
                 </div>
 
                 <div
-                    className="bg-white rounded-xl p-6 shadow-lg"
+                    className="bg-white rounded-xl p-6 border border-gray-200"
                 >
                     <div className="grid md:grid-cols-5 gap-4">
                         <div>
@@ -788,7 +788,7 @@ function ProductList() {
                 </div>
 
                 <div
-                    className="flex flex-col bg-white rounded-xl p-6 justify-between gap-6 shadow-lg"
+                    className="flex flex-col bg-white rounded-xl p-6 justify-between gap-6 border border-gray-200"
                 >
                     <div className="overflow-y-auto max-h-md md:h-[320px] lg:h-[520px] rounded-lg scrollbar-thin scrollbar-thumb-emerald-300 scrollbar-track-gray-100">
                         <table className="min-w-full divide-y divide-gray-200">
