@@ -439,18 +439,18 @@ function ManageUserSales() {
                 </div>
 
                 {/* Sales Table */}
-                <div className="bg-white rounded-xl border border-gray-200 p-4 flex flex-col justify-between h-full">
+                <div className="bg-white rounded-xl border border-gray-200 p-4 flex flex-col justify-between h-full shadow-sm">
                     <div className="overflow-y-auto max-h-md md:h-[300px] lg:h-[300px] rounded-lg scrollbar-thin scrollbar-thumb-emerald-300 scrollbar-track-gray-100">
-                        <table className="min-w-full divide-y divide-gray-200">
-                            <thead className="bg-gray-50">
+                        <table className="min-w-full divide-y divide-gray-200 relative">
+                            <thead className="sticky top-0 z-10 bg-emerald-500 text-white shadow-sm">
                                 <tr>
                                     {[
                                         'ID', 'Customer', 'Gross', 'Discount', 'Net Total', 'Profit', 'Cash', 'Card', 'Balance', 'Cashier', 'Date & Time', 'Action'
                                     ].map((head, i) => (
-                                        <th key={i} className="px-4 py-3 text-left text-[10px] font-bold text-gray-400 uppercase tracking-widest bg-gray-50/50">
+                                        <th key={i} className="px-4 py-3 text-left text-[10px] font-bold text-white uppercase tracking-widest">
                                             <div className="flex items-center gap-1">
                                                 {head}
-                                                {head === 'Cashier' && <RefreshCw size={10} className="text-emerald-500 animate-pulse" />}
+                                                {head === 'Cashier' && <RefreshCw size={10} className="text-emerald-200 animate-pulse" />}
                                             </div>
                                         </th>
                                     ))}

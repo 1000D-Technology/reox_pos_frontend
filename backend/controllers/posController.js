@@ -89,6 +89,53 @@ exports.searchProductByBarcode = catchAsync(async (req, res, next) => {
     });
 });
 
+exports.searchProducts = catchAsync(async (req, res, next) => {
+    const { query } = req.query;
+
+    if (!query || query.trim() === '') {
+        return res.status(400).json({
+            success: false,
+            message: 'Search query is required'
+        });
+    }
+
+    const products = await POS.searchProducts(query.trim());
+
+    // Format matches
+    const formattedData = products.map(item => {
+        let variations = [];
+        if (item.color) variations.push(item.color);
+        if (item.size) variations.push(item.size);
+        if (item.storage_capacity) variations.push(item.storage_capacity);
+
+        let fullDisplayName = item.productName;
+
+        if (variations.length > 0) {
+            fullDisplayName += ` - ${variations.join(' - ')}`;
+        }
+
+        return {
+            stockID: item.stockID,
+            displayName: fullDisplayName,
+            barcode: item.barcode,
+            unit: item.unit,
+            price: item.price,
+            wholesalePrice: item.wholesalePrice,
+            productCode: item.productCode,
+            stock: item.currentStock,
+            batch: item.batchName,
+            isBulk: item.unit && (item.unit.toLowerCase().includes('kg') || item.unit.toLowerCase().includes('bag')),
+            expiry: item.expiry
+        };
+    });
+
+    res.status(200).json({
+        success: true,
+        data: formattedData
+    });
+});
+
+
 exports.createInvoice = catchAsync(async (req, res, next) => {
     // Expecting: items, customer_id, payment_details, discount, etc.
     // Also need user_id (from auth - req.user.id) and cash_session_id (need to fetch strictly)

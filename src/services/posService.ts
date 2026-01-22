@@ -9,6 +9,10 @@ export const posService = {
     searchByBarcode : (barcode: string)=> 
         axiosInstance.get(`/api/pos/products/barcode/${barcode}`),
 
+    // search products
+    searchProducts: (query: string) =>
+        axiosInstance.get('/api/pos/products/search', { params: { query } }),
+
     //create invoice
     createInvoice: (data: any) =>
         axiosInstance.post('/api/pos/invoice', data),

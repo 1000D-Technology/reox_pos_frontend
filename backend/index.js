@@ -28,6 +28,7 @@ const swaggerJsDoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
 const seedDatabase = require('./config/dbInit');
 const cashSessionRoutes = require('./routes/cashSessionRoutes');
+const quotationRoutes = require('./routes/quotationRoutes');
 
 
 // Middleware
@@ -62,6 +63,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/roles', roleRoutes);
 
 app.use('/api/money-exchange', moneyExchangeRoutes);
+app.use('/api/quotations', quotationRoutes);
 
 // Handle undefined routes
 app.use((req, res, next) => {

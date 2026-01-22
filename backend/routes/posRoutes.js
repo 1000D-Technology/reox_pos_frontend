@@ -7,6 +7,8 @@ const posConteroller = require('../controllers/posController');
 router.get('/products/available', posConteroller.getPOSProductsList);
 // Route to search product by barcode
 router.get('/products/barcode/:barcode', posConteroller.searchProductByBarcode);
+// Route to search product by name/code/barcode
+router.get('/products/search', posConteroller.searchProducts);
 
 // Invoice routes
 router.post('/invoice', posConteroller.createInvoice);

@@ -13,6 +13,8 @@ interface TypeableSelectProps {
     placeholder?: string;
     className?: string;
     disabled?: boolean;
+    id?: string;
+    onSearch?: (query: string) => void;
 }
 
 export default function TypeableSelect({
@@ -21,7 +23,9 @@ export default function TypeableSelect({
                                            onChange = () => {},
                                            placeholder = 'Select or type...',
                                            className = "",
-                                           disabled = false
+                                           disabled = false,
+                                           id,
+                                           onSearch
                                        }: TypeableSelectProps) {
     const [open, setOpen] = useState(false);
     const [query, setQuery] = useState('');
@@ -68,6 +72,12 @@ export default function TypeableSelect({
         if (selected && query.toLowerCase() === selected.label.toLowerCase()) {
             return true;
         }
+        // If onSearch is provided, we assume options are already filtered by the parent or we want to show all provided options
+        // However, to be safe and allow hybrid, we can keep filtering. 
+        // But if results are 'fuzzy' from backend, exact substring match might hide valid results.
+        // If onSearch is provided, we should probably trust 'options' as the results.
+        if (onSearch) return true; 
+        
         return o && o.label && o.label.toLowerCase().includes(query.trim().toLowerCase());
     });
 
@@ -84,6 +94,7 @@ export default function TypeableSelect({
         setQuery('');
         onChange(null);
         inputRef.current?.focus();
+        if (onSearch) onSearch('');
     }
 
     function onKeyDown(e: React.KeyboardEvent) {
@@ -127,6 +138,7 @@ export default function TypeableSelect({
         setQuery(newQuery);
         setOpen(true);
         setHighlight(0);
+        if (onSearch) onSearch(newQuery);
     }
 
     function onInputFocus() {
@@ -147,6 +159,7 @@ export default function TypeableSelect({
         <div ref={wrapperRef} className={`relative w-full ${className}`}>
             <div className="flex items-center gap-2">
                 <input
+                    id={id}
                     ref={inputRef}
                     type="text"
                     className={`w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-400 focus:outline-none transition-all ${

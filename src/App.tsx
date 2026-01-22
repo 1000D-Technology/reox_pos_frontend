@@ -16,7 +16,7 @@ import ManageCustomer from "./pages/dashboard/Customer/ManageCustomer.tsx";
 import Accounts from "./pages/dashboard/Accounts";
 import Reports from "./pages/dashboard/Reports";
 import Setting from "./pages/dashboard/Setting";
-import QuatationList from "./pages/dashboard/Quotation/QuatationList.tsx";
+import QuotationList from "./pages/dashboard/Quotation/QuotationList.tsx";
 import OutOfStock from "./pages/dashboard/Stock/OutOfStock.tsx";
 import DamagedStock from "./pages/dashboard/Stock/DamagedStock.tsx";
 import LowStock from "./pages/dashboard/Stock/LowStock.tsx";
@@ -105,7 +105,7 @@ export default function App() {
                     }/>
                     <Route path="/quotation/quotation-list" element={
                         <ProtectedRoute allowedRoles={['Admin', 'Cashier', 'Storekeeper']}>
-                            <QuatationList/>
+                            <QuotationList/>
                         </ProtectedRoute>
                     }/>
 

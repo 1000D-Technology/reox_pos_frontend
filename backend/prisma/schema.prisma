@@ -99,6 +99,7 @@ model customer {
   created_at     DateTime  @default(now()) @db.DateTime(0)
   status         status    @relation(fields: [status_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_customer_status1")
   invoice        invoice[]
+  quotations     quotation[]
 
   @@index([status_id], map: "fk_customer_status1_idx1")
 }
@@ -371,6 +372,7 @@ model stock {
   invoice_items         invoice_items[]
   batch                 batch              @relation(fields: [batch_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_stock_batch1")
   product_variations    product_variations @relation(fields: [product_variations_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_stock_product_variations1")
+  quotation_items       quotation_items[]
 
   @@index([batch_id], map: "fk_stock_batch1_idx")
   @@index([product_variations_id], map: "fk_stock_product_variations1_idx")
@@ -415,7 +417,41 @@ model user {
   cash_sessions cash_sessions[]
   role          role            @relation(fields: [role_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_user_role1")
   status        status          @relation(fields: [status_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_user_status1")
+  quotations    quotation[]
 
   @@index([role_id], map: "fk_user_role1_idx")
   @@index([status_id], map: "fk_user_status1_idx")
+}
+
+model quotation {
+  id               Int               @id @default(autoincrement())
+  quotation_number String            @db.VarChar(45)
+  customer_id      Int?
+  sub_total        Float
+  discount         Float
+  total            Float
+  created_at       DateTime          @db.DateTime(0)
+  valid_until      DateTime          @db.Date
+  user_id          Int
+  quotation_items  quotation_items[]
+  customer         customer?         @relation(fields: [customer_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user             user              @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([customer_id])
+  @@index([user_id])
+}
+
+model quotation_items {
+  id              Int       @id @default(autoincrement())
+  quotation_id    Int
+  stock_id        Int
+  price           Float
+  discount_amount Float
+  qty             Float
+  total           Float
+  quotation       quotation @relation(fields: [quotation_id], references: [id], onDelete: Cascade)
+  stock           stock     @relation(fields: [stock_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([quotation_id])
+  @@index([stock_id])
 }
