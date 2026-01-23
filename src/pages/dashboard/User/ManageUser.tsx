@@ -16,7 +16,7 @@ import {
     UserCog
 } from 'lucide-react';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import toast, { Toaster } from 'react-hot-toast';
 import { userRoleService } from '../../../services/userRoleService.ts';
 import { userService } from '../../../services/userService';
@@ -98,6 +98,7 @@ function ManageUser() {
 
     const [userRoles, setUserRoles] = useState<UserRole[]>([]);
     const [isLoadingRoles, setIsLoadingRoles] = useState(false);
+    const searchRef = useRef<HTMLInputElement>(null);
 
     // Stats calculation
     const stats = {
@@ -215,6 +216,13 @@ function ManageUser() {
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
+            // Focus search input on '/'
+            if (e.key === '/' && document.activeElement !== searchRef.current && document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA') {
+                e.preventDefault();
+                searchRef.current?.focus();
+                return;
+            }
+
             // Global shortcuts
             if (e.key === "Escape") {
                 if (isAddModalOpen) handleCloseAddModal();
@@ -222,15 +230,16 @@ function ManageUser() {
                 return;
             }
 
+            // Don't process other shortcuts if an input is focused (except search focus already handled)
+            if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA') {
+                if (document.activeElement !== searchRef.current) return;
+            }
+
             // Shortcuts when modals are NOT open
             if (!isAddModalOpen && !isEditModalOpen) {
                 if (e.key === "ArrowDown") {
                     e.preventDefault();
-                    setSelectedIndex((prev) => {
-                        const next = prev < userData.length - 1 ? prev + 1 : prev;
-                        // Optional: Scroll logic could be added here if you had a ref to the list container
-                        return next;
-                    });
+                    setSelectedIndex((prev) => (prev < userData.length - 1 ? prev + 1 : prev));
                 } else if (e.key === "ArrowUp") {
                     e.preventDefault();
                     setSelectedIndex((prev) => (prev > 0 ? prev - 1 : prev));
@@ -245,8 +254,6 @@ function ManageUser() {
                 } else if (e.key === "Delete") {
                     const user = userData[selectedIndex];
                     if (user) {
-                        // Optional: confirmation dialog before toggle? 
-                        // For now, direct action as per request implies quick access.
                         handleStatusToggle(user.id, user.isActive);
                     }
                 }
@@ -517,25 +524,43 @@ function ManageUser() {
                             Manage User
                         </h1>
                     </div>
-                    <button
 
-                        onClick={handleAddUser}
-                        className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-semibold rounded-xl transition-all"
-                    >
-                        <Plus size={20} />
-                        Add User
-                    </button>
+                    <div className="flex items-center gap-4">
+                        {/* Shortcuts Hint */}
+                        <div className="hidden lg:flex items-center gap-3 bg-white px-4 py-2 rounded-xl border border-gray-100 shadow-sm border-b-2">
+                            <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg border border-gray-200">
+                                <span className="text-[10px] font-black text-gray-500 bg-white px-1.5 py-0.5 rounded shadow-sm border border-gray-200">↑↓</span>
+                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Navigate</span>
+                            </div>
+                            <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg border border-gray-200">
+                                <span className="text-[10px] font-black text-gray-500 bg-white px-1.5 py-0.5 rounded shadow-sm border border-gray-200">Ins</span>
+                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Add</span>
+                            </div>
+                            <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg border border-gray-200">
+                                <span className="text-[10px] font-black text-gray-500 bg-white px-1.5 py-0.5 rounded shadow-sm border border-gray-200">↵</span>
+                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Edit</span>
+                            </div>
+                            <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg border border-gray-200">
+                                <span className="text-[10px] font-black text-gray-500 bg-white px-1.5 py-0.5 rounded shadow-sm border border-gray-200">Del</span>
+                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Status</span>
+                            </div>
+                            <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg border border-gray-200">
+                                <span className="text-[10px] font-black text-gray-500 bg-white px-1.5 py-0.5 rounded shadow-sm border border-gray-200">/</span>
+                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Search</span>
+                            </div>
+                        </div>
+
+                        <button
+                            onClick={handleAddUser}
+                            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-semibold rounded-xl transition-all h-full"
+                        >
+                            <Plus size={20} />
+                            Add User
+                        </button>
+                    </div>
                 </div>
 
-                {/* Keyboard Shortcuts Legend */}
-                <div className="bg-white rounded-xl p-4 shadow-lg flex flex-wrap gap-4 text-xs text-gray-500">
-                    <span className="font-semibold text-gray-700">Keyboard Shortcuts:</span>
-                    <span className="flex items-center gap-1"><kbd className="px-2 py-0.5 bg-gray-100 border border-gray-300 rounded font-mono text-gray-600">Insert</kbd> Add User</span>
-                    <span className="flex items-center gap-1"><kbd className="px-2 py-0.5 bg-gray-100 border border-gray-300 rounded font-mono text-gray-600">Enter</kbd> Edit Selection</span>
-                    <span className="flex items-center gap-1"><kbd className="px-2 py-0.5 bg-gray-100 border border-gray-300 rounded font-mono text-gray-600">Delete</kbd> Toggle Status</span>
-                    <span className="flex items-center gap-1"><kbd className="px-2 py-0.5 bg-gray-100 border border-gray-300 rounded font-mono text-gray-600">Esc</kbd> Close Modal</span>
-                    <span className="flex items-center gap-1"><kbd className="px-2 py-0.5 bg-gray-100 border border-gray-300 rounded font-mono text-gray-600">↑</kbd> <kbd className="px-2 py-0.5 bg-gray-100 border border-gray-300 rounded font-mono text-gray-600">↓</kbd> Navigate</span>
-                </div>
+
 
                 <div className={'grid md:grid-cols-3 grid-cols-1 gap-4'}>
                     {summaryCards.map((stat, i) => (
@@ -571,6 +596,7 @@ function ManageUser() {
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
                         <input
+                            ref={searchRef}
                             type="text"
                             value={searchQuery}
                             onChange={(e) => handleSearch(e.target.value)}

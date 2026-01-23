@@ -101,21 +101,21 @@ function CreateQuotation() {
     const loadProducts = async () => {
         try {
             const response = await posService.getPOSProductsList();
-            if (response.data?.success) {
-                setProducts(response.data.data.map((p: any) => ({
-                    value: p.stockID,
-                    label: `${p.displayName} (${p.productCode}) - LKR ${p.price}`,
-                    original: {
-                        stockID: p.stockID,
-                        productName: p.displayName, 
-                        productCode: p.productCode,
-                        price: parseFloat(p.price),
-                        wholesalePrice: parseFloat(p.wholesalePrice || '0'),
-                        currentStock: parseInt(p.stock),
-                        unit: p.unit
-                    }
-                })));
-            }
+                if (response.data?.success) {
+                    setProducts(response.data.data.map((p: any) => ({
+                        value: p.stockID || p.stock_id || p.id,
+                        label: `${p.productName || p.displayName} (${p.productID || p.product_code}) - LKR ${p.Price || p.price}`,
+                        original: {
+                            stockID: p.stockID || p.stock_id || p.id,
+                            productName: p.productName || p.displayName, 
+                            productCode: p.productID || p.product_code || p.productCode,
+                            price: parseFloat(p.Price || p.price || 0),
+                            wholesalePrice: parseFloat(p.wholesalePrice || p.wsp || '0'),
+                            currentStock: parseInt(p.stockQty || p.stock || p.qty || 0),
+                            unit: p.unit
+                        }
+                    })));
+                }
         } catch (error) {
             console.error('Failed to load products', error);
             toast.error('Failed to load products');
@@ -135,15 +135,15 @@ function CreateQuotation() {
                 const response = await posService.searchProducts(query);
                 if (response.data?.success) {
                     setProducts(response.data.data.map((p: any) => ({
-                        value: p.stockID,
-                        label: `${p.displayName} (${p.productCode}) - LKR ${p.price}`,
+                        value: p.stockID || p.stock_id || p.id,
+                        label: `${p.productName || p.displayName} (${p.productID || p.product_code}) - LKR ${p.Price || p.price}`,
                         original: {
-                            stockID: p.stockID,
-                            productName: p.displayName,
-                            productCode: p.productCode,
-                            price: parseFloat(p.price),
-                            wholesalePrice: parseFloat(p.wholesalePrice || '0'),
-                            currentStock: parseInt(p.stock),
+                            stockID: p.stockID || p.stock_id || p.id,
+                            productName: p.productName || p.displayName,
+                            productCode: p.productID || p.product_code || p.productCode,
+                            price: parseFloat(p.Price || p.price || 0),
+                            wholesalePrice: parseFloat(p.wholesalePrice || p.wsp || '0'),
+                            currentStock: parseInt(p.stockQty || p.stock || p.qty || 0),
                             unit: p.unit
                         }
                     })));

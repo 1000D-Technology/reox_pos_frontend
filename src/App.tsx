@@ -26,8 +26,6 @@ import ManageCategory from "./pages/dashboard/Products/ManageCategory.tsx";
 import RemovedProducts from "./pages/dashboard/Products/RemovedProducts.tsx";
 import CreateSupplier from "./pages/dashboard/Supplier/CreateSupplier.tsx";
 import SupplierGRN from "./pages/dashboard/Supplier/SupplierGRN.tsx";
-
-import CustomerCreaditBook from "./pages/dashboard/Customer/CustomerCreaditBook.tsx";
 import ManageEmployee from "./pages/dashboard/Employee/ManageEmployee.tsx";
 import AttendanceMark from "./pages/dashboard/Employee/AttendanceMark.tsx";
 import AttendanceReport from "./pages/dashboard/Employee/Attendance Report.tsx";
@@ -231,11 +229,6 @@ export default function App() {
                     <Route path="/customer/manage-customer" element={
                         <ProtectedRoute allowedRoles={['Admin', 'Cashier']}>
                             <ManageCustomer/>
-                        </ProtectedRoute>
-                    }/>
-                    <Route path="/customer/customer-sales" element={
-                        <ProtectedRoute allowedRoles={['Admin', 'Cashier']}>
-                            <CustomerCreaditBook/>
                         </ProtectedRoute>
                     }/>
 

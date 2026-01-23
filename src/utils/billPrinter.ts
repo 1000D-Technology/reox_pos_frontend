@@ -396,19 +396,28 @@ export const generateBillHTML = (data: BillData): string => {
             </div>
 
             <div class="footer">
-                ${printSettings.showBarcode ? `
-                <div style="display: flex; justify-content: center; margin-bottom: 5px;">
-                    <svg id="barcode"></svg>
-                </div>
-                ` : ''}
-
                 ${printSettings.showQR ? `
                 <div style="display: flex; justify-content: center; margin-bottom: 10px;">
                     <div id="qrcode"></div>
                 </div>
                 ` : ''}
+
+                <div style="margin-bottom: 10px;">
+                    ${printSettings.footerText}
+                </div>
                 
-                ${printSettings.footerText}
+                <div style="margin-top: 15px; padding-top: 10px; border-top: 1px dashed #000; text-align: center;">
+                    <div style="font-size: 10px; font-weight: 800; margin-bottom: 2px; text-transform: uppercase; color: #333;">
+                        ${isReturn ? 'Return' : 'Sale'} Transaction
+                    </div>
+                    <div style="font-size: 14px; font-weight: 900; margin-bottom: 5px;">
+                        #${invoiceNumber}
+                    </div>
+                    <div style="display: flex; justify-content: center; margin-bottom: 5px;">
+                        <svg id="barcode-bottom"></svg>
+                    </div>
+                </div>
+
                 <div class="software-credit">
                     REOX POS System by <strong>1000D Technology (Pvt) Ltd.</strong>
                     <br/>
@@ -417,20 +426,38 @@ export const generateBillHTML = (data: BillData): string => {
             </div>
 
             <script>
-                // Barcode
-                ${printSettings.showBarcode ? `
+                // Barcode Bottom (Always shown)
                 try {
-                    JsBarcode("#barcode", "${invoiceNumber}", {
+                    JsBarcode("#barcode-bottom", "${invoiceNumber}", {
                         format: "CODE128",
                         width: 1.5,
-                        height: 40,
-                        displayValue: true,
+                        height: 45,
+                        displayValue: false, // We show it above manually for better styling
                         margin: 0,
                         fontSize: 12,
                         textMargin: 0
                     });
                 } catch (e) {
-                    console.error("Barcode generation failed", e);
+                    console.error("Bottom Barcode generation failed", e);
+                }
+
+                // Header Barcode (Optional based on settings)
+                ${printSettings.showBarcode ? `
+                try {
+                    // Logic for old barcode element if it exists
+                    if(document.getElementById("barcode")) {
+                         JsBarcode("#barcode", "${invoiceNumber}", {
+                            format: "CODE128",
+                            width: 1.5,
+                            height: 40,
+                            displayValue: true,
+                            margin: 0,
+                            fontSize: 12,
+                            textMargin: 0
+                        });
+                    }
+                } catch (e) {
+                    console.error("Header Barcode generation failed", e);
                 }
                 ` : ''}
 

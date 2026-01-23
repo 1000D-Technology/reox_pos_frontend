@@ -1,41 +1,7 @@
 const POS = require('../models/posModel');
 const catchAsync = require('../utils/catchAsync');
 
-exports.getPOSProductsList = catchAsync(async (req, res, next) => {
-    const products = await POS.getPOSProducts();
-
-    const formattedData = products.map(item => {
-        let variations = [];
-        if (item.color) variations.push(item.color);
-        if (item.size) variations.push(item.size);
-        if (item.storage_capacity) variations.push(item.storage_capacity);
-
-        let fullDisplayName = item.productName;
-
-        if (variations.length > 0) {
-            fullDisplayName += ` - ${variations.join(' - ')}`;
-        }
-
-        return {
-            stockID: item.stockID,
-            displayName: fullDisplayName,
-            barcode: item.barcode,
-            unit: item.unit,
-            price: item.price,
-            wholesalePrice: item.wholesalePrice,
-            productCode: item.productCode,
-            stock: item.currentStock,
-            batch: item.batchName,
-            isBulk: item.unit.toLowerCase().includes('kg') || item.unit.toLowerCase().includes('bag'),
-            expiry: item.expiry
-        };
-    });
-
-    res.status(200).json({
-        success: true,
-        data: formattedData
-    });
-});
+// Redundant POS product list methods removed. Use stock/product routes instead.
 exports.searchProductByBarcode = catchAsync(async (req, res, next) => {
     const { barcode } = req.params;
 
@@ -89,51 +55,8 @@ exports.searchProductByBarcode = catchAsync(async (req, res, next) => {
     });
 });
 
-exports.searchProducts = catchAsync(async (req, res, next) => {
-    const { query } = req.query;
+// Redundant searchProducts method removed.
 
-    if (!query || query.trim() === '') {
-        return res.status(400).json({
-            success: false,
-            message: 'Search query is required'
-        });
-    }
-
-    const products = await POS.searchProducts(query.trim());
-
-    // Format matches
-    const formattedData = products.map(item => {
-        let variations = [];
-        if (item.color) variations.push(item.color);
-        if (item.size) variations.push(item.size);
-        if (item.storage_capacity) variations.push(item.storage_capacity);
-
-        let fullDisplayName = item.productName;
-
-        if (variations.length > 0) {
-            fullDisplayName += ` - ${variations.join(' - ')}`;
-        }
-
-        return {
-            stockID: item.stockID,
-            displayName: fullDisplayName,
-            barcode: item.barcode,
-            unit: item.unit,
-            price: item.price,
-            wholesalePrice: item.wholesalePrice,
-            productCode: item.productCode,
-            stock: item.currentStock,
-            batch: item.batchName,
-            isBulk: item.unit && (item.unit.toLowerCase().includes('kg') || item.unit.toLowerCase().includes('bag')),
-            expiry: item.expiry
-        };
-    });
-
-    res.status(200).json({
-        success: true,
-        data: formattedData
-    });
-});
 
 
 exports.createInvoice = catchAsync(async (req, res, next) => {
@@ -195,18 +118,25 @@ exports.createInvoice = catchAsync(async (req, res, next) => {
 });
 
 exports.convertBulkToLoose = catchAsync(async (req, res, next) => {
-    const { bulkStockId, looseStockId, deductQty, addQty } = req.body;
+    const { bulkStockId, looseVariationId, deductQty, addQty } = req.body;
 
-    if (!bulkStockId || !looseStockId || !deductQty || !addQty) {
+    if (bulkStockId === undefined || looseVariationId === undefined || deductQty === undefined || addQty === undefined) {
         return res.status(400).json({
             success: false,
-            message: 'All fields (bulkStockId, looseStockId, deductQty, addQty) are required'
+            message: 'Missing required fields: bulkStockId, looseVariationId, deductQty, addQty'
+        });
+    }
+
+    if (deductQty <= 0 || addQty <= 0) {
+        return res.status(400).json({
+            success: false,
+            message: 'Quantities must be greater than zero'
         });
     }
 
     const result = await POS.convertBulkToLoose({
         bulkStockId,
-        looseStockId,
+        looseVariationId,
         deductQty,
         addQty
     });
@@ -289,5 +219,30 @@ exports.getInvoiceStats = catchAsync(async (req, res, next) => {
     res.status(200).json({
         success: true,
         data: stats
+    });
+});
+// Process payment for customer invoice
+exports.processInvoicePayment = catchAsync(async (req, res, next) => {
+    const { invoice_id, payment_amount, payment_type_id } = req.body;
+    const user_id = req.body.user_id || (req.user ? req.user.id : 1);
+
+    if (!invoice_id || !payment_amount || !payment_type_id) {
+        return res.status(400).json({
+            success: false,
+            message: "Invoice number, payment amount and payment type are required."
+        });
+    }
+
+    const result = await POS.processInvoicePayment({
+        invoice_number: invoice_id,
+        payment_amount: parseFloat(payment_amount),
+        payment_type_id: parseInt(payment_type_id),
+        user_id: user_id
+    });
+
+    res.status(200).json({
+        success: true,
+        message: "Payment processed successfully",
+        data: result
     });
 });

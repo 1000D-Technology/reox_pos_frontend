@@ -40,9 +40,9 @@ model cash_sessions {
   cash_status         cash_status      @relation(fields: [cash_status_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_cash_sessions_cash_status1")
   cashier_counters    cashier_counters @relation(fields: [cashier_counters_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_cash_sessions_cashier_counters1")
   user                user             @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_cash_sessions_user1")
+  invoices            invoice[]
   money_exchange      money_exchange[]
   return_goods        return_goods[]
-  invoices            invoice[]
 
   @@index([cash_status_id], map: "fk_cash_sessions_cash_status1_idx")
   @@index([cashier_counters_id], map: "fk_cash_sessions_cashier_counters1_idx")
@@ -91,15 +91,15 @@ model creadit_book {
 }
 
 model customer {
-  id             Int       @id @default(autoincrement())
-  name           String    @db.VarChar(100)
-  contact        String    @db.VarChar(10)
-  email          String?   @db.VarChar(45)
-  status_id      Int
-  created_at     DateTime  @default(now()) @db.DateTime(0)
-  status         status    @relation(fields: [status_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_customer_status1")
-  invoice        invoice[]
-  quotations     quotation[]
+  id         Int         @id @default(autoincrement())
+  name       String      @db.VarChar(100)
+  contact    String      @db.VarChar(10)
+  email      String?     @db.VarChar(45)
+  status_id  Int
+  created_at DateTime    @default(now()) @db.DateTime(0)
+  status     status      @relation(fields: [status_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_customer_status1")
+  invoice    invoice[]
+  quotations quotation[]
 
   @@index([status_id], map: "fk_customer_status1_idx1")
 }
@@ -172,24 +172,24 @@ model grn_payments {
 }
 
 model invoice {
-  id               Int             @id @default(autoincrement())
-  invoice_number   String          @db.VarChar(45)
+  id               Int                @id @default(autoincrement())
+  invoice_number   String             @db.VarChar(45)
   customer_id      Int?
   sub_total        Float
   discount         Float
   extra_discount   Float
   total            Float
-  refunded_amount  Float           @default(0)
-  created_at       DateTime        @db.DateTime(0)
+  refunded_amount  Float              @default(0)
+  created_at       DateTime           @db.DateTime(0)
   cash_sessions_id Int
   invoice_type_id  Int
   creadit_book     creadit_book[]
-  customer         customer?       @relation(fields: [customer_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_invoice_customer1")
-  invoice_type     invoice_type    @relation(fields: [invoice_type_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_invoice_invoice_type1")
-  cash_sessions    cash_sessions   @relation(fields: [cash_sessions_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_invoice_cash_sessions1")
+  cash_sessions    cash_sessions      @relation(fields: [cash_sessions_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_invoice_cash_sessions1")
+  customer         customer?          @relation(fields: [customer_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_invoice_customer1")
+  invoice_type     invoice_type       @relation(fields: [invoice_type_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_invoice_invoice_type1")
   invoice_items    invoice_items[]
-  return_goods     return_goods[]
   invoice_payments invoice_payments[]
+  return_goods     return_goods[]
 
   @@index([cash_sessions_id], map: "fk_invoice_cash_sessions1_idx")
   @@index([customer_id], map: "fk_invoice_customer1_idx")
@@ -370,9 +370,9 @@ model stock {
   damaged               damaged[]
   grn_items             grn_items[]
   invoice_items         invoice_items[]
+  quotation_items       quotation_items[]
   batch                 batch              @relation(fields: [batch_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_stock_batch1")
   product_variations    product_variations @relation(fields: [product_variations_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_stock_product_variations1")
-  quotation_items       quotation_items[]
 
   @@index([batch_id], map: "fk_stock_batch1_idx")
   @@index([product_variations_id], map: "fk_stock_product_variations1_idx")
@@ -415,9 +415,9 @@ model user {
   created_at    DateTime        @db.Date
   status_id     Int
   cash_sessions cash_sessions[]
+  quotations    quotation[]
   role          role            @relation(fields: [role_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_user_role1")
   status        status          @relation(fields: [status_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_user_status1")
-  quotations    quotation[]
 
   @@index([role_id], map: "fk_user_role1_idx")
   @@index([status_id], map: "fk_user_status1_idx")
@@ -433,9 +433,9 @@ model quotation {
   created_at       DateTime          @db.DateTime(0)
   valid_until      DateTime          @db.Date
   user_id          Int
-  quotation_items  quotation_items[]
   customer         customer?         @relation(fields: [customer_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   user             user              @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  quotation_items  quotation_items[]
 
   @@index([customer_id])
   @@index([user_id])

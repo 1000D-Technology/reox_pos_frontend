@@ -7,120 +7,11 @@ const getSriLankanTime = () => {
 };
 
 class POS {
-    // Get POS products with stock greater than 0
-    static async getPOSProducts() {
-        const stocks = await prisma.stock.findMany({
-            where: {
-                qty: { gt: 0 },
-                product_variations: {
-                    product_status_id: 1
-                }
-            },
-            include: {
-                product_variations: {
-                    include: {
-                        product: {
-                            include: {
-                                unit_id_product_unit_idTounit_id: true
-                            }
-                        }
-                    }
-                },
-                batch: true
-            },
-            orderBy: [
-                { product_variations: { product: { product_name: 'asc' } } },
-                { mfd: 'asc' }
-            ]
-        });
+    // Redundant getAllVariations removed. handled by product/stock models.
 
-        return stocks.map(s => {
-            const pv = s.product_variations;
-            const p = pv.product;
-            
-            return {
-                stockID: s.id,
-                productName: p.product_name,
-                barcode: s.barcode,
-                pvBarcode: pv.barcode,
-                unit: p.unit_id_product_unit_idTounit_id?.name,
-                price: s.rsp,
-                wholesalePrice: s.wsp || '',
-                currentStock: s.qty,
-                batchName: s.batch.batch_name,
-                productCode: p.product_code,
-                color: pv.color,
-                size: pv.size,
-                storage_capacity: pv.storage_capacity,
-                expiry: s.exp ? s.exp.toISOString().split('T')[0] : null
-            };
-        });
-    }
 
-    // Search products by name, code, or barcode
-    static async searchProducts(query) {
-        const stocks = await prisma.stock.findMany({
-            where: {
-                qty: { gt: 0 },
-                product_variations: {
-                    product_status_id: 1
-                },
-                OR: [
-                    { barcode: { contains: query } },
-                    { product_variations: { barcode: { contains: query } } },
-                    { 
-                        product_variations: { 
-                            product: { 
-                                OR: [
-                                    { product_name: { contains: query } },
-                                    { product_code: { contains: query } }
-                                ]
-                            } 
-                        } 
-                    }
-                ]
-            },
-            include: {
-                product_variations: {
-                    include: {
-                        product: {
-                            include: {
-                                unit_id_product_unit_idTounit_id: true
-                            }
-                        }
-                    }
-                },
-                batch: true
-            },
-            orderBy: [
-                { product_variations: { product: { product_name: 'asc' } } },
-                { mfd: 'asc' }
-            ],
-            take: 50 // Limit results
-        });
+    // Redundant getPOSProducts and searchProducts removed.
 
-        return stocks.map(s => {
-            const pv = s.product_variations;
-            const p = pv.product;
-            
-            return {
-                stockID: s.id,
-                productName: p.product_name,
-                barcode: s.barcode,
-                pvBarcode: pv.barcode,
-                unit: p.unit_id_product_unit_idTounit_id?.name,
-                price: s.rsp,
-                wholesalePrice: s.wsp || '',
-                currentStock: s.qty,
-                batchName: s.batch.batch_name,
-                productCode: p.product_code,
-                color: pv.color,
-                size: pv.size,
-                storage_capacity: pv.storage_capacity,
-                expiry: s.exp ? s.exp.toISOString().split('T')[0] : null
-            };
-        });
-    }
 
     // Search product by barcode (checks both stock and product_variations barcodes)
     static async searchByBarcode(barcode) {
@@ -369,7 +260,7 @@ class POS {
 
     // Convert Bulk Stock to Loose Stock
     static async convertBulkToLoose(data) {
-        const { bulkStockId, looseStockId, deductQty, addQty } = data;
+        const { bulkStockId, looseVariationId, deductQty, addQty } = data;
 
         return await prisma.$transaction(async (tx) => {
             // 1. Verify Bulk Stock
@@ -385,24 +276,56 @@ class POS {
                 throw new Error(`Insufficient bulk stock. Available: ${bulkStock.qty}, Requested: ${deductQty}`);
             }
 
-            // 2. Verify Loose Stock exists
-            const looseStock = await tx.stock.findUnique({
-                where: { id: parseInt(looseStockId) }
+            // 2. Find or Create Destination (Loose) Stock
+            // We look for a record with the same variation AND the same batch as the source
+            let looseStock = await tx.stock.findFirst({
+                where: {
+                    product_variations_id: parseInt(looseVariationId),
+                    batch_id: bulkStock.batch_id
+                }
             });
 
             if (!looseStock) {
-                throw new Error('Loose stock item not found (destination)');
+                // If not found for this batch, get latest prices from ANY existing stock for this variation
+                const latestLooseStock = await tx.stock.findFirst({
+                    where: { product_variations_id: parseInt(looseVariationId) },
+                    orderBy: { id: 'desc' }
+                });
+
+                if (!latestLooseStock) {
+                    throw new Error('Destination item has no price history. Please add at least one stock record (GRN) for this product first.');
+                }
+
+                const variation = await tx.product_variations.findUnique({
+                    where: { id: parseInt(looseVariationId) }
+                });
+
+                // Create new stock entry inheriting batch/exp from source but prices from destination history
+                looseStock = await tx.stock.create({
+                    data: {
+                        product_variations_id: parseInt(looseVariationId),
+                        barcode: variation.barcode || `L-${Date.now()}`,
+                        batch_id: bulkStock.batch_id,
+                        mfd: bulkStock.mfd,
+                        exp: bulkStock.exp,
+                        cost_price: latestLooseStock.cost_price,
+                        mrp: latestLooseStock.mrp,
+                        rsp: latestLooseStock.rsp,
+                        wsp: latestLooseStock.wsp,
+                        qty: 0
+                    }
+                });
             }
 
             // 3. Perform Updates
             const updatedBulk = await tx.stock.update({
                 where: { id: parseInt(bulkStockId) },
-                data: { qty: { decrement: parseInt(deductQty) } }
+                data: { qty: { decrement: parseFloat(deductQty) } }
             });
 
             const updatedLoose = await tx.stock.update({
-                where: { id: parseInt(looseStockId) },
-                data: { qty: { increment: parseInt(addQty) } }
+                where: { id: looseStock.id },
+                data: { qty: { increment: parseFloat(addQty) } }
             });
 
             return {
@@ -876,6 +799,100 @@ class POS {
             dateRange,
             totalRefunded
         };
+    }
+    // Process payment for customer invoice (settle credit balance)
+    static async processInvoicePayment(data) {
+        const { invoice_number, payment_amount, payment_type_id, user_id } = data;
+
+        return await prisma.$transaction(async (tx) => {
+            // 1. Get the invoice
+            const invoice = await tx.invoice.findFirst({
+                where: { invoice_number: invoice_number },
+                include: {
+                    creadit_book: true
+                }
+            });
+
+            if (!invoice) {
+                throw new Error("Invoice not found.");
+            }
+
+            // 2. Get active credit book entry
+            // Find entries with balance > 0
+            const activeCredit = invoice.creadit_book.find(cb => cb.balance > 0);
+            
+            if (!activeCredit) {
+                throw new Error("This invoice does not have an outstanding credit balance.");
+            }
+
+            if (payment_amount > activeCredit.balance) {
+                throw new Error(`Payment amount (LKR ${payment_amount}) exceeds the outstanding balance (LKR ${activeCredit.balance}).`);
+            }
+
+            // 3. Create Invoice Payment record
+            const paymentRecord = await tx.invoice_payments.create({
+                data: {
+                    invoice_id: invoice.id,
+                    payment_types_id: parseInt(payment_type_id),
+                    amount: parseFloat(payment_amount),
+                    payment_date: getSriLankanTime()
+                }
+            });
+
+            // 4. Update Credit Book Balance
+            const newBalance = activeCredit.balance - payment_amount;
+            
+            await tx.creadit_book.update({
+                where: { id: activeCredit.id },
+                data: {
+                    balance: newBalance,
+                    // If balance is 0, we could change status, but let's keep it simple as balance=0 is enough
+                }
+            });
+
+            // 5. Update Cash Session if user_id is provided and there's an active session
+            if (user_id) {
+                const activeSession = await tx.cash_sessions.findFirst({
+                    where: {
+                        user_id: parseInt(user_id),
+                        cash_status_id: 1 // Active
+                    },
+                    orderBy: { id: 'desc' }
+                });
+
+                if (activeSession) {
+                    // Get payment type name to know which total to update
+                    const paymentType = await tx.payment_types.findUnique({
+                        where: { id: parseInt(payment_type_id) }
+                    });
+
+                    let updateData = {};
+                    if (paymentType) {
+                        const typeName = paymentType.payment_types.toLowerCase();
+                        if (typeName === 'cash') {
+                            updateData = { cash_total: { increment: parseFloat(payment_amount) } };
+                        } else if (typeName === 'card') {
+                            updateData = { card_total: { increment: parseFloat(payment_amount) } };
+                        } else if (typeName.includes('bank')) {
+                            updateData = { bank_total: { increment: parseFloat(payment_amount) } };
+                        }
+
+                        if (Object.keys(updateData).length > 0) {
+                            await tx.cash_sessions.update({
+                                where: { id: activeSession.id },
+                                data: updateData
+                            });
+                        }
+                    }
+                }
+            }
+
+            return {
+                success: true,
+                payment: paymentRecord,
+                remainingBalance: newBalance
+            };
+        });
     }
 }
 

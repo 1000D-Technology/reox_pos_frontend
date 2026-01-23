@@ -12,6 +12,13 @@ interface GrnItem {
     expiryDate?: string;
 }
 
+interface GrnPayment {
+    id: number;
+    amount: number;
+    date: string;
+    type: string;
+}
+
 interface GrnDetails {
     id: number;
     supplierName: string;
@@ -22,6 +29,7 @@ interface GrnDetails {
     grnDate: string;
     statusName: string;
     items: GrnItem[];
+    payments?: GrnPayment[];
 }
 
 interface GrnViewPopupProps {
@@ -189,6 +197,49 @@ const GrnViewPopup = ({ isOpen, onClose, grnData, autoPrint = false }: GrnViewPo
                                         </table>
                                     </div>
                                 </div>
+                                
+                                {/* Payment History */}
+                                {grnData.payments && grnData.payments.length > 0 && (
+                                    <div className="mb-6">
+                                        <h3 className="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                                            <Calendar className="w-5 h-5 text-blue-600" />
+                                            Payment History
+                                        </h3>
+                                        <div className="overflow-x-auto rounded-lg border border-gray-200">
+                                            <table className="min-w-full divide-y divide-gray-200">
+                                                <thead className="bg-gray-50">
+                                                    <tr>
+                                                        {['Date', 'Amount', 'Payment Mode'].map((header, i) => (
+                                                            <th
+                                                                key={i}
+                                                                className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider"
+                                                            >
+                                                                {header}
+                                                            </th>
+                                                        ))}
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="bg-white divide-y divide-gray-200">
+                                                    {grnData.payments.map((payment) => (
+                                                        <tr key={payment.id} className="hover:bg-gray-50 transition-colors">
+                                                            <td className="px-4 py-3 text-sm text-gray-900 font-medium">
+                                                                {payment.date}
+                                                            </td>
+                                                            <td className="px-4 py-3 text-sm font-bold text-emerald-600">
+                                                                LKR {payment.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                            </td>
+                                                            <td className="px-4 py-3 text-sm text-gray-900">
+                                                                <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-[10px] font-bold">
+                                                                    {payment.type}
+                                                                </span>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                )}
 
                                 {/* Payment Summary */}
                                 <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-6 border border-gray-200">

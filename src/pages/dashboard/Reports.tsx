@@ -1,14 +1,42 @@
-import { useState } from 'react';
-import { Calendar, Download, Filter, TrendingUp, DollarSign, ShoppingCart, Users, Package, BarChart3, PieChart, LineChart, FileText, Eye } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { 
+    Calendar, 
+    Download, 
+    Filter, 
+    TrendingUp, 
+    DollarSign, 
+    Package, 
+    Loader2,
+    PieChart as PieChartIcon,
+    ChevronRight
+} from 'lucide-react';
+import { reportService } from '../../services/reportService';
+import toast, { Toaster } from 'react-hot-toast';
+import * as XLSX from 'xlsx';
+import {
+    Chart as ChartJS,
+    CategoryScale,
+    LinearScale,
+    PointElement,
+    LineElement,
+    BarElement,
+    ArcElement,
+    Title,
+    Tooltip,
+    Legend,
+    Filler
+} from 'chart.js';
+import { Bar, Doughnut } from 'react-chartjs-2';
+
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, ArcElement, Title, Tooltip, Legend, Filler);
 
 interface ReportData {
     id: string;
     date: string;
     totalSales: number;
     totalOrders: number;
-    totalCustomers: number;
-    totalProducts: number;
     profit: number;
+    totalProducts: number;
     tax: number;
     discount: number;
 }
@@ -17,447 +45,247 @@ interface ReportFilter {
     dateFrom: string;
     dateTo: string;
     reportType: string;
-    category: string;
-    status: string;
-}
-
-interface ChartData {
-    label: string;
-    value: number;
-    color: string;
 }
 
 function Reports() {
-    const [selectedReport, setSelectedReport] = useState<string>('daily');
-    const [filter, setFilter] = useState<ReportFilter>({
-        dateFrom: new Date().toISOString().split('T')[0],
-        dateTo: new Date().toISOString().split('T')[0],
-        reportType: 'daily',
-        category: 'all',
-        status: 'all'
-    });
-    const [showFilter, setShowFilter] = useState<boolean>(true);
+    const [dashboardData, setDashboardData] = useState<any>(null);
+    const [filteredData, setFilteredData] = useState<ReportData[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isFiltering, setIsFiltering] = useState(false);
+    const [selectedReportId, setSelectedReportId] = useState<string>('daily');
     const [viewMode, setViewMode] = useState<'table' | 'chart'>('table');
+    const [filter, setFilter] = useState<ReportFilter>({
+        dateFrom: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0],
+        dateTo: new Date().toISOString().split('T')[0],
+        reportType: 'daily'
+    });
 
-    const reportTypes = [
-        { id: 'daily', name: 'Daily Sales Report', icon: Calendar, color: 'bg-green-500', desc: 'Daily sales analysis' },
-        { id: 'weekly', name: 'Weekly Sales Report', icon: TrendingUp, color: 'bg-green-600', desc: 'Weekly performance' },
-        { id: 'monthly', name: 'Monthly Sales Report', icon: DollarSign, color: 'bg-green-700', desc: 'Monthly overview' },
-        { id: 'products', name: 'Product Sales Report', icon: Package, color: 'bg-emerald-500', desc: 'Product performance' },
-        { id: 'customers', name: 'Customer Report', icon: Users, color: 'bg-emerald-600', desc: 'Customer insights' },
-        { id: 'orders', name: 'Order History Report', icon: ShoppingCart, color: 'bg-emerald-700', desc: 'Order analytics' },
-        { id: 'profit', name: 'Profit & Loss Report', icon: TrendingUp, color: 'bg-green-500', desc: 'P&L statement' },
-        { id: 'tax', name: 'Tax Report', icon: FileText, color: 'bg-green-600', desc: 'Tax calculations' },
-        { id: 'inventory', name: 'Inventory Report', icon: Package, color: 'bg-green-700', desc: 'Stock analysis' }
+    const reportHub = [
+        { id: 'daily', name: 'Daily Sales', icon: Calendar, color: 'text-emerald-600', bg: 'bg-emerald-50', desc: 'Daily efficiency metrics' },
+        { id: 'monthly', name: 'Monthly Summary', icon: DollarSign, color: 'text-blue-600', bg: 'bg-blue-50', desc: 'Month-over-month yield' },
+        { id: 'financial', name: 'Profit Matrix', icon: TrendingUp, color: 'text-indigo-600', bg: 'bg-indigo-50', desc: 'Net margin analysis' },
+        { id: 'top_products', name: 'Elite Inventory', icon: Package, color: 'text-purple-600', bg: 'bg-purple-50', desc: 'High volume inventory' }
     ];
 
-    const mockReportData: ReportData[] = [
-        { id: '1', date: '2024-01-15', totalSales: 5420.50, totalOrders: 45, totalCustomers: 38, totalProducts: 120, profit: 1250.30, tax: 542.05, discount: 120.00 },
-        { id: '2', date: '2024-01-14', totalSales: 4890.25, totalOrders: 39, totalCustomers: 35, totalProducts: 98, profit: 1100.50, tax: 489.03, discount: 95.50 },
-        { id: '3', date: '2024-01-13', totalSales: 6150.75, totalOrders: 52, totalCustomers: 42, totalProducts: 145, profit: 1580.20, tax: 615.08, discount: 150.00 },
-        { id: '4', date: '2024-01-12', totalSales: 3890.00, totalOrders: 31, totalCustomers: 28, totalProducts: 85, profit: 920.40, tax: 389.00, discount: 75.00 },
-        { id: '5', date: '2024-01-11', totalSales: 5680.90, totalOrders: 48, totalCustomers: 40, totalProducts: 132, profit: 1340.60, tax: 568.09, discount: 110.00 }
-    ];
+    const fetchData = async () => {
+        try {
+            setIsLoading(true);
+            const [dash, filtered] = await Promise.all([
+                reportService.getDashboardData(),
+                reportService.getFilteredReport(filter)
+            ]);
+            if (dash.success) setDashboardData(dash.data);
+            if (filtered.success) setFilteredData(filtered.data);
+        } catch (error) {
+            console.error('Error fetching analytics:', error);
+            // toast.error('Failed to sync report data');
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
-    const chartData: ChartData[] = [
-        { label: 'Sales', value: 26032.40, color: 'bg-green-500' },
-        { label: 'Profit', value: 6191.00, color: 'bg-emerald-500' },
-        { label: 'Tax', value: 2603.25, color: 'bg-lime-500' },
-        { label: 'Discount', value: 550.50, color: 'bg-teal-500' }
-    ];
-
-    const topProducts = [
-        { name: 'Product A', sales: 1250, revenue: 15000, percentage: 28 },
-        { name: 'Product B', sales: 980, revenue: 12500, percentage: 23 },
-        { name: 'Product C', sales: 750, revenue: 9800, percentage: 18 },
-        { name: 'Product D', sales: 620, revenue: 7500, percentage: 14 },
-        { name: 'Product E', sales: 450, revenue: 5200, percentage: 10 }
-    ];
+    useEffect(() => {
+        fetchData();
+    }, []);
 
     const handleFilterChange = (field: keyof ReportFilter, value: string) => {
         setFilter(prev => ({ ...prev, [field]: value }));
     };
 
-    const generateReport = () => {
-        console.log('Generating report with filter:', filter);
+    const handleFilterApply = async () => {
+        try {
+            setIsFiltering(true);
+            const response = await reportService.getFilteredReport(filter);
+            if (response.success) setFilteredData(response.data);
+        } finally {
+            setIsFiltering(false);
+        }
     };
 
-    const exportReport = (format: 'pdf' | 'excel' | 'csv') => {
-        console.log(`Exporting report as ${format}`);
+    const handleDownload = async (reportId: string) => {
+        try {
+            toast.loading(`Preparing ${reportId.replace('_', ' ')} export...`);
+            let dataToExport = [];
+            const fileName = `${reportId}_report_${new Date().toISOString().split('T')[0]}`;
+
+            if (reportId === 'financial') {
+                const stats = dashboardData?.summary || {};
+                dataToExport = [{ Metric: 'Gross Revenue', Value: stats.totalSales }, { Metric: 'Net Profit', Value: stats.totalProfit }, { Metric: 'Volume', Value: stats.totalOrders }];
+            } else if (reportId === 'top_products') {
+                dataToExport = dashboardData.topProducts.map((p: any) => ({ 'Product': p.name, 'Revenue': p.revenue, 'Quantity': p.sales }));
+            } else {
+                const res = await reportService.getFilteredReport({ ...filter, reportType: reportId });
+                if (res.success) dataToExport = res.data.map((r: any) => ({ 'Date/Period': r.date, 'Sales': r.totalSales, 'Profit': r.profit, 'Invoices': r.totalOrders }));
+            }
+
+            if (dataToExport.length === 0) { toast.dismiss(); toast.error('No records to export'); return; }
+
+            const ws = XLSX.utils.json_to_sheet(dataToExport);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+            XLSX.writeFile(wb, `${fileName}.xlsx`);
+            toast.dismiss();
+            toast.success('Ready for download');
+        } catch (error) { toast.dismiss(); toast.error('Export interrupted'); }
     };
 
-    const totalSales = mockReportData.reduce((sum, item) => sum + item.totalSales, 0);
-    const totalProfit = mockReportData.reduce((sum, item) => sum + item.profit, 0);
-    const totalOrders = mockReportData.reduce((sum, item) => sum + item.totalOrders, 0);
-    const avgOrderValue = totalSales / totalOrders;
+    if (isLoading) return <div className="flex h-[80vh] items-center justify-center"><Loader2 className="h-10 w-10 animate-spin text-emerald-500" /></div>;
 
     return (
-        <div className="p-6 bg-gray-50 min-h-screen">
-            {/* Header */}
-            <div className="mb-6">
-                <h1 className="text-3xl font-bold text-gray-800 mb-2">Advanced Reports & Analytics</h1>
-                <p className="text-gray-600">Comprehensive business intelligence and reporting system</p>
+        <div className="p-1 space-y-6">
+            <Toaster position="top-right" />
+            
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <h1 className="text-2xl font-bold text-gray-800 tracking-tight">Financial Intelligence</h1>
+                    <p className="text-sm text-gray-500">Analyze business dynamics and export granular records</p>
+                </div>
+                <div className="flex gap-2">
+                    <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl border border-gray-100 shadow-sm text-xs font-bold text-gray-500">
+                        <TrendingUp size={14} className="text-emerald-500" />
+                        Live Status
+                    </div>
+                </div>
             </div>
 
-            {/* Summary Cards - Accounts Style */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-                {[
-                    {
-                        icon: DollarSign,
-                        label: 'Total Sales',
-                        value: `Rs. ${totalSales.toFixed(2)}`,
-                        trend: '+12.5%',
-                        color: 'bg-gradient-to-br from-green-500 to-green-600',
-                        iconColor: 'text-white',
-                        bgGlow: ''
-                    },
-                    {
-                        icon: TrendingUp,
-                        label: 'Total Profit',
-                        value: `Rs. ${totalProfit.toFixed(2)}`,
-                        trend: '+8.3%',
-                        color: 'bg-gradient-to-br from-emerald-500 to-emerald-600',
-                        iconColor: 'text-white',
-                        bgGlow: ''
-                    },
-                    {
-                        icon: ShoppingCart,
-                        label: 'Total Orders',
-                        value: totalOrders.toString(),
-                        trend: '+15.7%',
-                        color: 'bg-gradient-to-br from-green-500 to-green-600',
-                        iconColor: 'text-white',
-                        bgGlow: ''
-                    },
-                    {
-                        icon: BarChart3,
-                        label: 'Avg Order Value',
-                        value: `Rs. ${avgOrderValue.toFixed(2)}`,
-                        trend: '+5.2%',
-                        color: 'bg-gradient-to-br from-emerald-500 to-emerald-600',
-                        iconColor: 'text-white',
-                        bgGlow: ''
-                    }
-                ].map((stat, i) => (
-                    <div
-                        key={i}
-                        className={`flex items-center p-4 space-x-3 bg-white rounded-2xl border border-gray-200 cursor-pointer group relative overflow-hidden`}
+            {/* Quick Export Hub - Redesigned */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {reportHub.map((r) => (
+                    <div 
+                        key={r.id}
+                        className={`bg-white p-5 rounded-xl border transition-all group relative overflow-hidden ${selectedReportId === r.id ? 'border-emerald-500 ring-4 ring-emerald-50' : 'border-gray-100 hover:border-emerald-200'}`}
                     >
-                        <div className="absolute inset-0 bg-gradient-to-br from-transparent via-gray-50/50 to-transparent opacity-0 group-hover:opacity-100 duration-300"></div>
-
-                        <div className={`p-3 rounded-full ${stat.color} relative z-10`}>
-                            <stat.icon className={`w-6 h-6 ${stat.iconColor}`} />
-                        </div>
-
-                        <div className="w-px h-10 bg-gray-200"></div>
-
-                        <div className="relative z-10 flex-1">
-                            <div className="flex items-center justify-between">
-                                <p className="text-xs text-gray-500">{stat.label}</p>
-                                <span className="text-xs font-semibold text-green-600 flex items-center">
-                                    {stat.trend}
-                                </span>
+                        <div className="flex justify-between items-start mb-4">
+                            <div className={`${r.bg} ${r.color} p-2.5 rounded-xl transition-transform group-hover:scale-110`}>
+                                <r.icon size={20} />
                             </div>
-                            <p className="text-sm font-bold text-gray-700">{stat.value}</p>
+                            <button 
+                                onClick={() => handleDownload(r.id)}
+                                className="p-2 text-gray-300 hover:text-emerald-500 transition-colors"
+                                title="Download Excel"
+                            >
+                                <Download size={16} />
+                            </button>
                         </div>
+                        <div>
+                             <h4 className="text-sm font-bold text-gray-800 mb-1">{r.name}</h4>
+                             <p className="text-[10px] font-medium text-gray-400">{r.desc}</p>
+                        </div>
+                        <button 
+                            onClick={() => setSelectedReportId(r.id)}
+                            className="absolute bottom-4 right-4 text-emerald-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                            <ChevronRight size={18} />
+                        </button>
                     </div>
                 ))}
             </div>
 
-            {/* Filter Section */}
-            <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
-                <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
-                        <Filter className="w-5 h-5 text-green-600" />
-                        Advanced Filters
-                    </h2>
-                    <button
-                        onClick={() => setShowFilter(!showFilter)}
-                        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-                    >
-                        {showFilter ? 'Hide Filters' : 'Show Filters'}
-                    </button>
-                </div>
-
-                {showFilter && (
-                    <div className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">From Date</label>
-                                <input
-                                    type="date"
-                                    value={filter.dateFrom}
-                                    onChange={(e) => handleFilterChange('dateFrom', e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <div className="lg:col-span-8 space-y-6">
+                    {/* Charts Section */}
+                    <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+                         <div className="flex items-center justify-between mb-8">
+                             <h3 className="font-bold text-gray-800 flex items-center gap-2">
+                                <TrendingUp size={18} className="text-emerald-500" />
+                                Interactive Yield Analytics
+                             </h3>
+                             <div className="flex gap-2 bg-gray-50 p-1 rounded-lg border border-gray-100">
+                                <button onClick={() => setViewMode('chart')} className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all ${viewMode === 'chart' ? 'bg-white text-emerald-600 shadow-sm border border-gray-100' : 'text-gray-400'}`}>Visualize</button>
+                                <button onClick={() => setViewMode('table')} className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all ${viewMode === 'table' ? 'bg-white text-emerald-600 shadow-sm border border-gray-100' : 'text-gray-400'}`}>Records</button>
+                             </div>
+                         </div>
+                         <div className="min-h-[350px]">
+                            {viewMode === 'chart' ? (
+                                <Bar 
+                                    data={{
+                                        labels: filteredData.map(d => d.date.split('-').slice(1).join('/')),
+                                        datasets: [{ label: 'Sales Yield', data: filteredData.map(d => d.totalSales), backgroundColor: '#10b981', borderRadius: 8, barThickness: 15 }]
+                                    }}
+                                    options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { display: false }, x: { grid: { display: false }, ticks: { font: { size: 9, weight: 'bold' } } } } } as any}
                                 />
+                            ) : (
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-left">
+                                        <thead className="bg-gray-50 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                                            <tr>
+                                                <th className="px-4 py-3">Date</th>
+                                                <th className="px-4 py-3 text-right">Yield</th>
+                                                <th className="px-4 py-3 text-right">Margin</th>
+                                                <th className="px-4 py-3 text-center">Volume</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-50">
+                                            {filteredData.map((r, i) => (
+                                                <tr key={i} className="hover:bg-gray-50/50 transition-colors">
+                                                    <td className="px-4 py-4 text-xs font-mono font-bold text-gray-400">{r.date}</td>
+                                                    <td className="px-4 py-4 text-sm font-bold text-right text-gray-900">Rs. {r.totalSales.toLocaleString()}</td>
+                                                    <td className="px-4 py-4 text-sm font-bold text-right text-emerald-600">Rs. {r.profit.toLocaleString()}</td>
+                                                    <td className="px-4 py-4 text-center">
+                                                        <span className="text-[10px] font-bold text-blue-500 bg-blue-50 px-2 py-0.5 rounded-full">{r.totalOrders} INV</span>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                         </div>
+                    </div>
+                </div>
+
+                <div className="lg:col-span-4 space-y-6">
+                    {/* Filters Section */}
+                    <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+                        <h3 className="text-sm font-bold text-gray-800 mb-6 flex items-center gap-2">
+                            <Filter size={16} className="text-emerald-500" />
+                            Configuration
+                        </h3>
+                        <div className="space-y-4">
+                            <div>
+                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 block">Start Date</label>
+                                <input type="date" value={filter.dateFrom} onChange={(e) => handleFilterChange('dateFrom', e.target.value)} className="w-full text-xs font-bold bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-emerald-500/10" />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">To Date</label>
-                                <input
-                                    type="date"
-                                    value={filter.dateTo}
-                                    onChange={(e) => handleFilterChange('dateTo', e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 block">End Date</label>
+                                <input type="date" value={filter.dateTo} onChange={(e) => handleFilterChange('dateTo', e.target.value)} className="w-full text-xs font-bold bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-emerald-500/10" />
+                            </div>
+                            <div>
+                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 block">Aggregation</label>
+                                <select value={filter.reportType} onChange={(e) => handleFilterChange('reportType', e.target.value)} className="w-full text-xs font-bold bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-emerald-500/10">
+                                    <option value="daily">Daily Periodic</option>
+                                    <option value="weekly">Weekly Summary</option>
+                                    <option value="monthly">Monthly Overview</option>
+                                </select>
+                            </div>
+                            <button onClick={handleFilterApply} className="w-full py-3 bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-emerald-100 hover:bg-emerald-600 transition-all">
+                                {isFiltering ? <Loader2 className="animate-spin mx-auto" size={16} /> : "Update Analytics"}
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Doughnut Distribution */}
+                    <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+                         <h3 className="text-sm font-bold text-gray-800 mb-6 flex items-center gap-2">
+                             <PieChartIcon size={16} className="text-purple-500" />
+                             Elite Composition
+                         </h3>
+                         <div className="h-[200px] flex items-center justify-center">
+                            {dashboardData?.topProducts?.length > 0 ? (
+                                <Doughnut 
+                                    data={{
+                                        labels: dashboardData.topProducts.map((p: any) => p.name),
+                                        datasets: [{ data: dashboardData.topProducts.map((p: any) => p.revenue), backgroundColor: ['#10b981', '#3b82f6', '#6366f1', '#a855f7', '#f59e0b'], borderWidth: 0 }]
+                                    }}
+                                    options={{ responsive: true, cutout: '75%', plugins: { legend: { display: false } } }}
                                 />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Report Type</label>
-                                <select
-                                    value={filter.reportType}
-                                    onChange={(e) => handleFilterChange('reportType', e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                                >
-                                    <option value="daily">Daily</option>
-                                    <option value="weekly">Weekly</option>
-                                    <option value="monthly">Monthly</option>
-                                    <option value="quarterly">Quarterly</option>
-                                    <option value="yearly">Yearly</option>
-                                    <option value="custom">Custom Range</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
-                                <select
-                                    value={filter.category}
-                                    onChange={(e) => handleFilterChange('category', e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                                >
-                                    <option value="all">All Categories</option>
-                                    <option value="electronics">Electronics</option>
-                                    <option value="clothing">Clothing</option>
-                                    <option value="food">Food & Beverage</option>
-                                    <option value="accessories">Accessories</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
-                                <select
-                                    value={filter.status}
-                                    onChange={(e) => handleFilterChange('status', e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                                >
-                                    <option value="all">All Status</option>
-                                    <option value="completed">Completed</option>
-                                    <option value="pending">Pending</option>
-                                    <option value="cancelled">Cancelled</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div className="flex gap-3">
-                            <button
-                                onClick={generateReport}
-                                className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium"
-                            >
-                                Generate Report
-                            </button>
-                            <button
-                                onClick={() => exportReport('pdf')}
-                                className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium"
-                            >
-                                Export PDF
-                            </button>
-                            <button
-                                onClick={() => exportReport('excel')}
-                                className="px-6 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-medium"
-                            >
-                                Export Excel
-                            </button>
-                            <button
-                                onClick={() => exportReport('csv')}
-                                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
-                            >
-                                Export CSV
-                            </button>
-                        </div>
-                    </div>
-                )}
-            </div>
-
-            {/* Report Type Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-                {reportTypes.map((report) => (
-                    <div
-                        key={report.id}
-                        onClick={() => setSelectedReport(report.id)}
-                        className={`bg-white rounded-lg border border-gray-200 p-6 cursor-pointer hover:bg-gray-50 ${selectedReport === report.id ? 'ring-2 ring-green-500' : ''
-                            }`}
-                    >
-                        <div className="flex items-center justify-between mb-4">
-                            <div className={`${report.color} p-3 rounded-lg`}>
-                                <report.icon className="w-6 h-6 text-white" />
-                            </div>
-                            <div className="flex gap-2">
-                                <Eye className="w-5 h-5 text-gray-400 hover:text-green-600 cursor-pointer" />
-                                <Download className="w-5 h-5 text-gray-400 hover:text-green-600 cursor-pointer" />
-                            </div>
-                        </div>
-                        <h3 className="text-lg font-semibold text-gray-800 mb-1">{report.name}</h3>
-                        <p className="text-sm text-gray-600">{report.desc}</p>
-                        {selectedReport === report.id && (
-                            <div className="mt-3 text-xs text-green-600 font-medium">
-                                ✓ Currently Selected
-                            </div>
-                        )}
-                    </div>
-                ))}
-            </div>
-
-            {/* Chart and Top Products Section */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                {/* Visual Analytics Chart */}
-                <div className="bg-white rounded-lg border border-gray-200 p-6">
-                    <div className="flex items-center justify-between mb-6">
-                        <h3 className="text-xl font-semibold text-gray-800">Financial Overview</h3>
-                        <PieChart className="w-6 h-6 text-green-600" />
-                    </div>
-                    <div className="space-y-4">
-                        {chartData.map((item, index) => (
-                            <div key={index}>
-                                <div className="flex items-center justify-between mb-2">
-                                    <span className="text-sm font-medium text-gray-700">{item.label}</span>
-                                    <span className="text-sm font-bold text-gray-900">Rs. {item.value.toFixed(2)}</span>
-                                </div>
-                                <div className="w-full bg-gray-200 rounded-full h-3">
-                                    <div
-                                        className={`${item.color} h-3 rounded-full`}
-                                        style={{ width: `${(item.value / chartData[0].value) * 100}%` }}
-                                    />
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                {/* Top Products */}
-                <div className="bg-white rounded-lg border border-gray-200 p-6">
-                    <div className="flex items-center justify-between mb-6">
-                        <h3 className="text-xl font-semibold text-gray-800">Top Selling Products</h3>
-                        <Package className="w-6 h-6 text-green-600" />
-                    </div>
-                    <div className="space-y-4">
-                        {topProducts.map((product, index) => (
-                            <div key={index} className="flex items-center gap-4">
-                                <div className="flex-shrink-0 w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                                    <span className="text-green-600 font-bold text-sm">{index + 1}</span>
-                                </div>
-                                <div className="flex-1">
-                                    <div className="flex items-center justify-between mb-1">
-                                        <span className="text-sm font-medium text-gray-800">{product.name}</span>
-                                        <span className="text-sm font-bold text-green-600">Rs. {product.revenue.toFixed(0)}</span>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <div className="flex-1 bg-gray-200 rounded-full h-2">
-                                            <div
-                                                className="bg-green-500 h-2 rounded-full"
-                                                style={{ width: `${product.percentage}%` }}
-                                            />
-                                        </div>
-                                        <span className="text-xs text-gray-500">{product.percentage}%</span>
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
+                            ) : (
+                                <p className="text-xs text-gray-300 italic">Composition data loading...</p>
+                            )}
+                         </div>
                     </div>
                 </div>
             </div>
-
-            {/* View Mode Toggle */}
-            <div className="bg-white rounded-lg border border-gray-200 p-4 mb-6">
-                <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold text-gray-800">Report Data View</h3>
-                    <div className="flex gap-2">
-                        <button
-                            onClick={() => setViewMode('table')}
-                            className={`px-4 py-2 rounded-lg ${viewMode === 'table' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                }`}
-                        >
-                            <FileText className="w-5 h-5 inline mr-2" />
-                            Table View
-                        </button>
-                        <button
-                            onClick={() => setViewMode('chart')}
-                            className={`px-4 py-2 rounded-lg ${viewMode === 'chart' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                }`}
-                        >
-                            <LineChart className="w-5 h-5 inline mr-2" />
-                            Chart View
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            {/* Report Data Table */}
-            {viewMode === 'table' && (
-                <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-                    <div className="p-4 bg-gradient-to-r from-green-600 to-emerald-600 text-white">
-                        <h3 className="text-xl font-semibold">Detailed Report - {reportTypes.find(r => r.id === selectedReport)?.name}</h3>
-                        <p className="text-sm text-green-100 mt-1">Showing {mockReportData.length} entries</p>
-                    </div>
-                    <div className="overflow-x-auto">
-                        <table className="w-full">
-                            <thead className="bg-gray-50 border-b-2 border-green-600">
-                                <tr>
-                                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Date</th>
-                                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Total Sales</th>
-                                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Profit</th>
-                                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Orders</th>
-                                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Customers</th>
-                                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Products</th>
-                                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Tax</th>
-                                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Discount</th>
-                                </tr>
-                            </thead>
-                            <tbody className="bg-white divide-y divide-gray-200">
-                                {mockReportData.map((data) => (
-                                    <tr key={data.id} className="hover:bg-green-50">
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{data.date}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-green-600">Rs. {data.totalSales.toFixed(2)}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-emerald-600">Rs. {data.profit.toFixed(2)}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{data.totalOrders}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{data.totalCustomers}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{data.totalProducts}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">Rs. {data.tax.toFixed(2)}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-red-600">-Rs. {data.discount.toFixed(2)}</td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                            <tfoot className="bg-green-50 border-t-2 border-green-600">
-                                <tr>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">TOTALS</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-green-600">Rs. {totalSales.toFixed(2)}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-emerald-600">Rs. {totalProfit.toFixed(2)}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">{totalOrders}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900" colSpan={4}></td>
-                                </tr>
-                            </tfoot>
-                        </table>
-                    </div>
-                </div>
-            )}
-
-            {/* Chart View */}
-            {viewMode === 'chart' && (
-                <div className="bg-white rounded-lg border border-gray-200 p-6">
-                    <h3 className="text-xl font-semibold text-gray-800 mb-6">Sales Trend Analysis</h3>
-                    <div className="h-96 flex items-end justify-between gap-4">
-                        {mockReportData.map((data) => {
-                            const maxSales = Math.max(...mockReportData.map(d => d.totalSales));
-                            const height = (data.totalSales / maxSales) * 100;
-                            return (
-                                <div key={data.id} className="flex-1 flex flex-col items-center">
-                                    <div className="w-full bg-gradient-to-t from-green-500 to-green-400 rounded-t-lg hover:from-green-600 hover:to-green-500 cursor-pointer relative group" style={{ height: `${height}%` }}>
-                                        <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-2 py-1 rounded text-xs opacity-0 group-hover:opacity-100 whitespace-nowrap">
-                                            Rs. {data.totalSales.toFixed(2)}
-                                        </div>
-                                    </div>
-                                    <div className="mt-2 text-xs text-gray-600 font-medium">{data.date.slice(5)}</div>
-                                    <div className="text-xs text-gray-500">{data.totalOrders} orders</div>
-                                </div>
-                            );
-                        })}
-                    </div>
-                </div>
-            )}
         </div>
     );
 }

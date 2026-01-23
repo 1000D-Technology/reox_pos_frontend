@@ -2,7 +2,10 @@ import {
     ChevronLeft,
     ChevronRight,
     Copy,
+    DollarSign,
+    Download,
     Eye,
+    FileSpreadsheet,
     HandCoins,
     Printer,
     RefreshCw,
@@ -64,7 +67,6 @@ function SupplierPayment() {
     const [selectedSupplier, setSelectedSupplier] = useState<SupplierOption | null>(null);
 
     // Payment processing state
-    const [selectedBillNumber, setSelectedBillNumber] = useState<string | null>(null);
     const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
     const [billNumberOptions, setBillNumberOptions] = useState<{ id: number, bill_number: string, total: number, balance: number }[]>([]);
     const [isLoadingBills, setIsLoadingBills] = useState(false);
@@ -74,6 +76,8 @@ function SupplierPayment() {
     const [paymentAmount, setPaymentAmount] = useState<string>('');
     const [isProcessingPayment, setIsProcessingPayment] = useState(false);
     const [selectedBill, setSelectedBill] = useState<any>(null);
+    const [selectedBillDetails, setSelectedBillDetails] = useState<any>(null);
+    const [isLoadingBillDetails, setIsLoadingBillDetails] = useState(false);
 
     // Popup State
     const [selectedGrn, setSelectedGrn] = useState<any>(null);
@@ -141,6 +145,37 @@ function SupplierPayment() {
 
         return pages;
     };
+
+    const summaryCards = [
+        {
+            icon: FileSpreadsheet,
+            label: 'Total Bills',
+            value: isLoadingStats ? '...' : stats.totalGrn.toString(),
+            color: 'bg-gradient-to-br from-emerald-400 to-emerald-500',
+            iconColor: 'text-white'
+        },
+        {
+            icon: DollarSign,
+            label: 'Total Amount',
+            value: isLoadingStats ? '...' : `LKR ${stats.totalAmount.toLocaleString()}`,
+            color: 'bg-gradient-to-br from-purple-400 to-purple-500',
+            iconColor: 'text-white'
+        },
+        {
+            icon: Download,
+            label: 'Total Paid',
+            value: isLoadingStats ? '...' : `LKR ${stats.totalPaid.toLocaleString()}`,
+            color: 'bg-gradient-to-br from-blue-400 to-blue-500',
+            iconColor: 'text-white'
+        },
+        {
+            icon: DollarSign,
+            label: 'Total Balance',
+            value: isLoadingStats ? '...' : `LKR ${stats.totalBalance.toLocaleString()}`,
+            color: 'bg-gradient-to-br from-red-400 to-red-500',
+            iconColor: 'text-white'
+        }
+    ];
 
 
     useEffect(() => {
@@ -250,7 +285,6 @@ function SupplierPayment() {
         const fetchBills = async () => {
             if (!selectedSupplier?.value) {
                 setBillNumberOptions([]);
-                setSelectedBillNumber(null);
                 return;
             }
 
@@ -269,6 +303,44 @@ function SupplierPayment() {
 
         fetchBills();
     }, [selectedSupplier]);
+
+    // Handle bill selection change
+    const handleBillChange = async (opt: any) => {
+        if (!opt) {
+            setSelectedBill(null);
+            setSelectedInvoice(null);
+            setSelectedBillDetails(null);
+            return;
+        }
+
+        const billNumber = opt.label;
+
+
+        // Map billNumberOptions to find the ID
+        const selectedBillData = billNumberOptions.find(bill => bill.bill_number === billNumber);
+        
+        if (selectedBillData) {
+            setSelectedBill(selectedBillData);
+            setSelectedInvoice({
+                amount: selectedBillData.total.toFixed(2),
+                balance: selectedBillData.balance.toFixed(2)
+            });
+
+            // Fetch full details
+            try {
+                setIsLoadingBillDetails(true);
+                const response = await grnService.getGRNDetails(selectedBillData.id);
+                if (response.data.success) {
+                    setSelectedBillDetails(response.data.data);
+                }
+            } catch (error) {
+                console.error('Error fetching GRN details:', error);
+                toast.error('Failed to load bill details');
+            } finally {
+                setIsLoadingBillDetails(false);
+            }
+        }
+    };
 
     // Fetch payment types on component mount
     useEffect(() => {
@@ -328,12 +400,8 @@ function SupplierPayment() {
             if (response.data.success) {
                 toast.success('Payment processed successfully!');
 
-                // Clear form
-                setPaymentAmount('');
-                setSelectedPaymentType(null);
-                setSelectedBillNumber(null);
-                setSelectedBill(null);
-                setSelectedInvoice(null);
+                // Reset all filters and fields
+                handleClear();
 
                 // Refresh data
                 const grnResponse = await grnService.getGRNList();
@@ -341,12 +409,6 @@ function SupplierPayment() {
 
                 const statsResponse = await grnService.getStats();
                 setStats(statsResponse.data.data);
-
-                // Refresh bills for the same supplier
-                if (selectedSupplier?.value) {
-                    const billsResponse = await grnService.getBillsBySupplier(selectedSupplier.value);
-                    setBillNumberOptions(billsResponse.data.data || []);
-                }
             }
         } catch (error: any) {
             console.error('Payment processing error:', error);
@@ -360,9 +422,9 @@ function SupplierPayment() {
     // Handle form clear
     const handleClear = () => {
         setSelectedSupplier(null);
-        setSelectedBillNumber(null);
         setSelectedBill(null);
         setSelectedInvoice(null);
+        setSelectedBillDetails(null);
         setPaymentAmount('');
         setSelectedPaymentType(null);
         setBillNumberOptions([]);
@@ -406,6 +468,31 @@ function SupplierPayment() {
                     </h1>
                 </div>
 
+                {/* Summary Stats */}
+                <div className={'grid md:grid-cols-4 grid-cols-1 gap-4'}>
+                    {summaryCards.map((stat, i) => (
+                        <div
+                            key={i}
+                            className={`flex items-center p-4 space-x-3 transition-all bg-white rounded-2xl border border-gray-200 cursor-pointer group relative overflow-hidden`}
+                        >
+                            <div className="absolute inset-0 bg-gradient-to-br from-transparent via-gray-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+
+                            <div className={`p-3 rounded-full ${stat.color} relative z-10`}>
+                                <stat.icon className={`w-6 h-6 ${stat.iconColor}`} />
+                            </div>
+
+                            <div className="w-px h-10 bg-gray-200"></div>
+
+                            <div className="relative z-10 flex-1">
+                                <div className="flex items-center justify-between">
+                                    <p className="text-sm text-gray-500">{stat.label}</p>
+                                </div>
+                                <p className="text-sm font-bold text-gray-700">{stat.value}</p>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
                 <div
                     className={'bg-white rounded-xl p-4 flex flex-col border border-gray-200'}
                 >
@@ -420,7 +507,6 @@ function SupplierPayment() {
                                 value={selectedSupplier?.value || null}
                                 onChange={(opt) => {
                                     setSelectedSupplier(opt);
-                                    setSelectedBillNumber(null); // Reset bill number when supplier changes
                                 }}
                                 placeholder={isLoadingSuppliers ? "Loading suppliers..." : "Type to search supplier"}
                                 disabled={isLoadingSuppliers}
@@ -430,40 +516,14 @@ function SupplierPayment() {
                             <label htmlFor="bill-number" className="block text-sm font-medium text-gray-700 mb-1">
                                 Bill Number
                             </label>
-                            <select
+                            <TypeableSelect
                                 id="bill-number"
-                                value={selectedBillNumber || ''}
-                                onChange={(e) => {
-                                    const billNumber = e.target.value || null;
-                                    setSelectedBillNumber(billNumber);
-
-                                    // Find the selected bill object and set invoice details
-                                    if (billNumber) {
-                                        const selectedBillData = billNumberOptions.find(bill => bill.bill_number === billNumber);
-                                        if (selectedBillData) {
-                                            setSelectedBill(selectedBillData);
-                                            setSelectedInvoice({
-                                                amount: selectedBillData.total.toFixed(2),
-                                                balance: selectedBillData.balance.toFixed(2)
-                                            });
-                                        }
-                                    } else {
-                                        setSelectedBill(null);
-                                        setSelectedInvoice(null);
-                                    }
-                                }}
+                                options={billNumberOptions.map(bill => ({ value: bill.id, label: bill.bill_number }))}
+                                value={selectedBill?.id || null}
+                                onChange={handleBillChange}
+                                placeholder={isLoadingBills ? "Loading bills..." : !selectedSupplier ? "Select supplier first" : "Search bill number..."}
                                 disabled={!selectedSupplier || isLoadingBills}
-                                className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-400 focus:outline-none transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
-                            >
-                                <option value="">
-                                    {isLoadingBills ? 'Loading bills...' : !selectedSupplier ? 'Select supplier first' : 'Select Bill Number...'}
-                                </option>
-                                {billNumberOptions.map((bill) => (
-                                    <option key={bill.id} value={bill.bill_number}>
-                                        {bill.bill_number}
-                                    </option>
-                                ))}
-                            </select>
+                            />
                         </div>
                         <div className="flex flex-col justify-end">
                             <label className="block text-xs font-medium text-gray-500 mb-1">
@@ -541,6 +601,102 @@ function SupplierPayment() {
                     </div>
                 </div>
 
+                {/* Bill Details Section */}
+                {(selectedBillDetails || isLoadingBillDetails) && (
+                    <div className="bg-white rounded-xl p-5 border border-gray-200 animate-in fade-in slide-in-from-top-2 duration-300">
+                        <div className="flex items-center justify-between mb-4 pb-2 border-b border-gray-100">
+                            <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                                <Copy className="w-5 h-5 text-emerald-500" />
+                                Bill Information: {selectedBillDetails?.billNumber}
+                            </h3>
+                            {isLoadingBillDetails && (
+                                <div className="flex items-center gap-2 text-sm text-gray-400">
+                                    <RefreshCw className="w-4 h-4 animate-spin" />
+                                    Updating details...
+                                </div>
+                            )}
+                        </div>
+
+                        {selectedBillDetails ? (
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                {/* Left Column: Summary Info */}
+                                <div className="space-y-4">
+                                    <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                                        <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">General Details</h4>
+                                        <div className="space-y-3">
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-sm text-gray-500">Bill Date</span>
+                                                <span className="text-sm font-semibold text-gray-700">{selectedBillDetails.grnDate}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-sm text-gray-500">Supplier</span>
+                                                <span className="text-sm font-semibold text-gray-700">{selectedBillDetails.supplierName}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-sm text-gray-500">Status</span>
+                                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                                    selectedBillDetails.statusName === 'Active' ? 'bg-yellow-100 text-yellow-700' : 'bg-emerald-100 text-emerald-700'
+                                                }`}>
+                                                    {selectedBillDetails.statusName === 'Active' ? 'PENDING' : 'PAID'}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-emerald-50/50 rounded-xl p-4 border border-emerald-100">
+                                        <h4 className="text-xs font-bold text-emerald-600 uppercase tracking-wider mb-3">Financials</h4>
+                                        <div className="space-y-3">
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-sm text-gray-600">Grand Total</span>
+                                                <span className="text-sm font-bold text-gray-800 uppercase">LKR {selectedBillDetails.totalAmount.toLocaleString()}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-sm text-gray-600">Total Paid</span>
+                                                <span className="text-sm font-bold text-blue-600 uppercase">LKR {selectedBillDetails.paidAmount.toLocaleString()}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center pt-2 border-t border-emerald-100">
+                                                <span className="text-sm font-bold text-gray-700">Remaining</span>
+                                                <span className="text-lg font-black text-red-600 uppercase">LKR {selectedBillDetails.balanceAmount.toLocaleString()}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Right Column: Item Table (Span 2) */}
+                                <div className="lg:col-span-2 overflow-hidden rounded-xl border border-gray-100">
+                                    <table className="min-w-full divide-y divide-gray-200">
+                                        <thead className="bg-gray-50">
+                                            <tr>
+                                                <th className="px-4 py-2 text-left text-[10px] font-bold text-gray-500 uppercase tracking-wider">Item Name</th>
+                                                <th className="px-4 py-2 text-right text-[10px] font-bold text-gray-500 uppercase tracking-wider">Qty</th>
+                                                <th className="px-4 py-2 text-right text-[10px] font-bold text-gray-500 uppercase tracking-wider">Unit Cost</th>
+                                                <th className="px-4 py-2 text-right text-[10px] font-bold text-gray-500 uppercase tracking-wider">Subtotal</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="bg-white divide-y divide-gray-100">
+                                            {selectedBillDetails.items.map((item: any) => (
+                                                <tr key={item.id} className="hover:bg-gray-50/50 transition-colors">
+                                                    <td className="px-4 py-2 text-xs font-medium text-gray-700">{item.itemName}</td>
+                                                    <td className="px-4 py-2 text-xs text-right text-gray-600 font-semibold">{item.quantity}</td>
+                                                    <td className="px-4 py-2 text-xs text-right text-gray-600">LKR {item.unitPrice.toLocaleString()}</td>
+                                                    <td className="px-4 py-2 text-xs text-right text-emerald-600 font-bold">LKR {item.totalPrice.toLocaleString()}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="flex flex-col items-center justify-center py-10 text-gray-400">
+                                <div className="mb-4 p-4 bg-gray-50 rounded-full">
+                                    <RefreshCw className="w-8 h-8 animate-spin text-emerald-400" />
+                                </div>
+                                <p className="text-sm">Fetching detailed item information...</p>
+                            </div>
+                        )}
+                    </div>
+                )}
+
                 <div
                     className={'flex flex-col bg-white rounded-xl h-full p-4 justify-between border border-gray-200'}
                 >
@@ -588,7 +744,7 @@ function SupplierPayment() {
                                         </td>
                                     </tr>
                                 ) : (
-                                    grnData.map((grn, index) => (
+                                    currentGRNData.map((grn, index) => (
                                         <tr
                                             key={grn.id}
                                             onClick={() => setSelectedIndex(index)}

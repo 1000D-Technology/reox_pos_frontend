@@ -184,7 +184,7 @@ class GRN {
     static async getActiveBillNumbersBySupplier(supplierId) {
         const grns = await prisma.grn.findMany({
             where: {
-                supplier_id: supplierId,
+                supplier_id: parseInt(supplierId),
                 grn_status_id: 1
             },
             select: {
@@ -232,6 +232,18 @@ class GRN {
                             }
                         }
                     }
+                },
+                grn_payments: {
+                    include: {
+                        payment_types: {
+                            select: {
+                                payment_types: true
+                            }
+                        }
+                    },
+                    orderBy: {
+                        created_at: 'desc'
+                    }
                 }
             }
         });
@@ -255,53 +267,14 @@ class GRN {
                 unitPrice: item.stock.cost_price,
                 totalPrice: item.qty * item.stock.cost_price,
                 expiryDate: item.stock.exp ? item.stock.exp.toISOString().split('T')[0] : null
+            })),
+            payments: grn.grn_payments.map(payment => ({
+                id: payment.id,
+                amount: payment.paid_amount,
+                date: this.formatDateTime(payment.created_at),
+                type: payment.payment_types.payment_types
             }))
         };
-    }
-
-    static async getGRNDetailsById(id) {
-        // Fetch GRN Header
-        const grnQuery = `
-            SELECT 
-                g.id AS id,
-                s.supplier_name AS supplierName,
-                s.id AS supplierId,
-                g.bill_number AS billNumber,
-                g.total AS totalAmount,
-                g.paid_amount AS paidAmount,
-                g.balance AS balanceAmount,
-                DATE_FORMAT(g.create_at, '%Y-%m-%d %h:%i %p') AS grnDate,
-                st.ststus AS statusName
-            FROM grn g
-            JOIN supplier s ON g.supplier_id = s.id
-            JOIN status st ON g.grn_status_id = st.id
-            WHERE g.id = ?
-        `;
-        const [grnRows] = await db.execute(grnQuery, [id]);
-
-        if (grnRows.length === 0) return null;
-
-        const grn = grnRows[0];
-
-        // Fetch GRN Items
-        const itemsQuery = `
-            SELECT 
-                gi.id AS id,
-                p.product_name AS itemName,
-                gi.qty AS quantity,
-                s.cost_price AS unitPrice,
-                (gi.qty * s.cost_price) AS totalPrice,
-                DATE_FORMAT(s.exp, '%Y-%m-%d') AS expiryDate
-            FROM grn_items gi
-            JOIN stock s ON gi.stock_id = s.id
-            JOIN product_variations pv ON s.product_variations_id = pv.id
-            JOIN product p ON pv.product_id = p.id
-            WHERE gi.grn_id = ?
-        `;
-        const [itemRows] = await db.execute(itemsQuery, [id]);
-
-        grn.items = itemRows;
-        return grn;
     }
 
     static async updatePayment(data) {

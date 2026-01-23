@@ -5,8 +5,13 @@ class Damaged {
         try {
             return await prisma.$transaction(async (tx) => {
                 // 1. Check current stock level and lock the row for update
+                const stockId = parseInt(data.stock_id);
+                const damagedQty = parseFloat(data.qty);
+                const reasonId = parseInt(data.reason_id);
+                const statusId = parseInt(data.status_id);
+
                 const stock = await tx.stock.findUnique({
-                    where: { id: data.stock_id },
+                    where: { id: stockId },
                     select: { qty: true }
                 });
 
@@ -17,28 +22,28 @@ class Damaged {
                 const currentQty = stock.qty;
 
                 // 2. Validate if the damaged quantity is more than available stock
-                if (currentQty < data.qty) {
+                if (currentQty < damagedQty) {
                     throw new Error(`Insufficient stock. Available quantity is only ${currentQty}`);
                 }
 
                 // 3. Insert record into the damaged table
                 await tx.damaged.create({
                     data: {
-                        stock_id: data.stock_id,
-                        qty: data.qty,
-                        reason_id: data.reason_id,
+                        stock_id: stockId,
+                        qty: damagedQty,
+                        reason_id: reasonId,
                         description: data.description,
                         date: new Date(),
-                        return_status_id: data.status_id
+                        return_status_id: statusId
                     }
                 });
 
                 // 4. Update (deduct) the quantity in the stock table
                 await tx.stock.update({
-                    where: { id: data.stock_id },
+                    where: { id: stockId },
                     data: {
                         qty: {
-                            decrement: data.qty
+                            decrement: damagedQty
                         }
                     }
                 });
@@ -93,7 +98,7 @@ class Damaged {
 
             return {
                 damaged_id: d.id,
-                product_id_code: product.product_code,
+                product_id_code: product.id,
                 product_name: product.product_name,
                 unit: product.unit_id_product_unit_idTounit_id?.name,
                 damaged_qty: d.qty,
@@ -103,7 +108,9 @@ class Damaged {
                 supplier: supplier?.supplier_name,
                 stock_label: stock.batch?.batch_name,
                 damage_reason: d.reason.reason,
-                status: d.return_status.return_status
+                status: d.return_status.return_status,
+                description: d.description,
+                date: d.date
             };
         });
     }
@@ -174,6 +181,7 @@ class Damaged {
         if (filters.fromDate && filters.toDate) {
             const fromDate = new Date(filters.fromDate);
             const toDate = new Date(filters.toDate);
+            toDate.setHours(23, 59, 59, 999);
             filteredRecords = filteredRecords.filter(d => {
                 const damageDate = new Date(d.date);
                 return damageDate >= fromDate && damageDate <= toDate;
@@ -187,7 +195,7 @@ class Damaged {
 
             return {
                 damaged_id: d.id,
-                product_id_code: product.product_code,
+                product_id_code: product.id,
                 product_name: product.product_name,
                 unit: product.unit_id_product_unit_idTounit_id?.name,
                 damaged_qty: d.qty,
@@ -198,6 +206,7 @@ class Damaged {
                 stock_label: stock.batch?.batch_name,
                 damage_reason: d.reason.reason,
                 status: d.return_status.return_status,
+                description: d.description,
                 date: d.date
             };
         });
@@ -232,7 +241,8 @@ class Damaged {
         const uniqueProducts = new Set();
         const uniqueSuppliers = new Set();
         let totalLossValue = 0;
-        let thisMonthCount = 0;
+        let totalDamagedQty = 0;
+        let thisMonthQty = 0;
 
         const currentDate = new Date();
         const currentMonth = currentDate.getMonth();
@@ -241,11 +251,12 @@ class Damaged {
         damagedRecords.forEach(d => {
             uniqueProducts.add(d.stock.product_variations.product_id);
             totalLossValue += d.qty * d.stock.cost_price;
+            totalDamagedQty += d.qty;
 
             // Check if damage is from current month
             const damageDate = new Date(d.date);
             if (damageDate.getMonth() === currentMonth && damageDate.getFullYear() === currentYear) {
-                thisMonthCount++;
+                thisMonthQty += d.qty;
             }
 
             // Collect unique suppliers
@@ -257,12 +268,26 @@ class Damaged {
         });
 
         return {
-            damaged_items_count: damagedRecords.length,
+            damaged_items_count: totalDamagedQty,
             total_products_affected: uniqueProducts.size,
             total_loss_value: totalLossValue,
-            this_month_count: thisMonthCount,
+            this_month_count: thisMonthQty,
             affected_suppliers_count: uniqueSuppliers.size
         };
+    }
+
+    static async updateStatus(id, statusId) {
+        try {
+            await prisma.damaged.update({
+                where: { id: parseInt(id) },
+                data: {
+                    return_status_id: parseInt(statusId)
+                }
+            });
+            return { success: true };
+        } catch (error) {
+            throw error;
+        }
     }
 }
 

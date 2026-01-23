@@ -6,10 +6,6 @@ import {
     X,
     Building2,
     Users,
-    Phone,
-    Mail,
-    CreditCard,
-    Briefcase,
     Upload,
     Download,
     Loader2
@@ -28,7 +24,9 @@ interface Category {
     email: string;
     contact: string;
     company: string;
+    companyId: number;
     bank: string;
+    bankId: number | null;
     account: string;
 }
 
@@ -45,12 +43,10 @@ function CreateSupplier() {
     // State for company selection
     const [companies, setCompanies] = useState<{ value: string | number, label: string }[]>([]);
     const [selectedCompany, setSelectedCompany] = useState<{ value: string | number, label: string } | null>(null);
-    const [isLoadingCompanies, setIsLoadingCompanies] = useState(false);
 
     // State for bank selection
     const [banks, setBanks] = useState<{ value: string | number, label: string }[]>([]);
     const [selectedBank, setSelectedBank] = useState<{ value: string | number, label: string } | null>(null);
-    const [isLoadingBanks, setIsLoadingBanks] = useState(false);
 
     // State for supplier form
     const [supplierData, setSupplierData] = useState({
@@ -69,12 +65,14 @@ function CreateSupplier() {
     const [isLoadingSuppliers, setIsLoadingSuppliers] = useState(false);
 
     // State for controlling the update modal visibility
+    const [selectedUpdateCompany, setSelectedUpdateCompany] = useState<{ value: string | number, label: string } | null>(null);
+    const [selectedUpdateBank, setSelectedUpdateBank] = useState<{ value: string | number, label: string } | null>(null);
+    const [newAccountNumber, setNewAccountNumber] = useState('');
+    const [newContactNumber, setNewContactNumber] = useState('');
+    const [isUpdatingSupplier, setIsUpdatingSupplier] = useState(false);
+    const [isUpdatingContact, setIsUpdatingContact] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
-    const [newContactNumber, setNewContactNumber] = useState('');
-    const [isUpdatingContact, setIsUpdatingContact] = useState(false);
-
-    // Selected row state
     const [selectedIndex, setSelectedIndex] = useState(0);
 
     // Calculate pagination values
@@ -86,21 +84,84 @@ function CreateSupplier() {
     // Handle Up / Down arrow keys
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
+            // Escape to close modals
+            if (e.key === "Escape") {
+                setIsModalOpen(false);
+                setIsCompanyModalOpen(false);
+            }
+
+            // Arrow navigation for list
             if (e.key === "ArrowDown") {
-                setSelectedIndex((prev) => (prev < currentPageData.length - 1 ? prev + 1 : prev));
+                const target = e.target as HTMLElement;
+                if (target.tagName !== 'INPUT' && target.tagName !== 'TEXTAREA') {
+                    e.preventDefault();
+                    setSelectedIndex((prev) => (prev < currentPageData.length - 1 ? prev + 1 : prev));
+                }
             } else if (e.key === "ArrowUp") {
-                setSelectedIndex((prev) => (prev > 0 ? prev - 1 : prev));
-            } else if (e.key === "Enter" && e.shiftKey) {
+                const target = e.target as HTMLElement;
+                if (target.tagName !== 'INPUT' && target.tagName !== 'TEXTAREA') {
+                    e.preventDefault();
+                    setSelectedIndex((prev) => (prev > 0 ? prev - 1 : prev));
+                }
+            } else if (e.key === "PageDown") {
+                const target = e.target as HTMLElement;
+                if (target.tagName !== 'INPUT' && target.tagName !== 'TEXTAREA') {
+                    e.preventDefault();
+                    goToNextPage();
+                }
+            } else if (e.key === "PageUp") {
+                const target = e.target as HTMLElement;
+                if (target.tagName !== 'INPUT' && target.tagName !== 'TEXTAREA') {
+                    e.preventDefault();
+                    goToPreviousPage();
+                }
+            }
+
+            // Enter key behaviors
+            if (e.key === "Enter" && !e.shiftKey) {
+                const target = e.target as HTMLElement;
+                // Double click simulation on enter
+                if (target.tagName !== 'INPUT' && target.tagName !== 'TEXTAREA' && currentPageData[selectedIndex] && !isModalOpen && !isCompanyModalOpen) {
+                    handleEditClick(currentPageData[selectedIndex]);
+                }
+            }
+
+            // Shift + Enter to save
+            if (e.key === "Enter" && e.shiftKey) {
                 e.preventDefault();
-                if (!isSubmittingSupplier) {
+                if (isModalOpen) {
+                    handleUpdateContact();
+                } else if (isCompanyModalOpen) {
+                    handleSubmitCompany();
+                } else if (!isSubmittingSupplier) {
                     handleSubmitSupplier();
+                }
+            }
+
+            // Alt Key Combinations
+            if (e.altKey) {
+                switch (e.key.toLowerCase()) {
+                    case 'e': // Edit
+                        e.preventDefault();
+                        if (currentPageData[selectedIndex]) {
+                            handleEditClick(currentPageData[selectedIndex]);
+                        }
+                        break;
+                    case 'n': // New Company
+                        e.preventDefault();
+                        setIsCompanyModalOpen(true);
+                        break;
+                    case 'f': // Focus Name
+                        e.preventDefault();
+                        document.getElementById('supplier-name-input')?.focus();
+                        break;
                 }
             }
         };
 
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [currentPageData.length, isSubmittingSupplier, supplierData, selectedCompany, selectedBank]);
+    }, [currentPageData, isSubmittingSupplier, isModalOpen, isCompanyModalOpen, selectedIndex]);
 
     const [isImporting, setIsImporting] = useState(false);
 
@@ -176,8 +237,6 @@ function CreateSupplier() {
 
     // Function to search companies and banks
     const searchCompaniesAndBanks = async () => {
-        setIsLoadingCompanies(true);
-        setIsLoadingBanks(true);
         try {
             const [companiesResponse, banksResponse] = await supplierService.getCompaniesAndBanks();
             if (companiesResponse.data.success) {
@@ -199,8 +258,7 @@ function CreateSupplier() {
             console.error('Error fetching data:', error);
             toast.error('Failed to load data');
         } finally {
-            setIsLoadingCompanies(false);
-            setIsLoadingBanks(false);
+            // Loading flags were unused
         }
     };
 
@@ -304,10 +362,6 @@ function CreateSupplier() {
             return;
         }
 
-        if (!supplierData.email.trim()) {
-            toast.error('Email is required');
-            return;
-        }
 
         if (!supplierData.contactNumber.trim()) {
             toast.error('Contact number is required');
@@ -384,6 +438,27 @@ function CreateSupplier() {
         if (!companyData.name.trim()) {
             toast.error('Company name is required');
             return;
+        }
+
+        if (!companyData.contact.trim()) {
+            toast.error('Contact number is required');
+            return;
+        }
+
+        // Sri Lankan mobile number validation for contact
+        const sriLankanMobileRegex = /^(\+94|0)?7[0-9]{8}$/;
+        if (!sriLankanMobileRegex.test(companyData.contact.replace(/\s/g, ''))) {
+            toast.error('Invalid contact number format. Please use a valid Sri Lankan mobile number.');
+            return;
+        }
+
+        // Email format check - only if provided
+        if (companyData.email && companyData.email.trim() !== '') {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(companyData.email)) {
+                toast.error('Invalid email format');
+                return;
+            }
         }
 
         setIsSubmitting(true);
@@ -507,149 +582,181 @@ function CreateSupplier() {
                 }}
             />
             <div className={"flex flex-col gap-4 h-full"}>
-                <div className="flex justify-between items-center">
+                <div className="flex justify-between items-center mb-1">
                     <div>
                         <div className="text-sm text-gray-400 flex items-center">
                             <span>Suppliers</span>
                             <span className="mx-2">›</span>
                             <span className="text-gray-700 font-medium">Create Supplier</span>
                         </div>
-                        <h1 className="text-3xl font-semibold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
+                        <h1 className="text-3xl font-semibold bg-linear-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
                             Create New Supplier
                         </h1>
                     </div>
-                    <div className="flex gap-2">
-                        <button
-                            onClick={handleDownloadTemplate}
-                            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 hover:text-emerald-600 font-medium rounded-lg transition-all"
-                            title="Download CSV Template"
-                        >
-                            <Download size={18} />
-                            <span>Template</span>
-                        </button>
-                        <input
-                            type="file"
-                            accept=".xlsx, .xls, .csv"
-                            onChange={handleFileChange}
-                            className="hidden"
-                            id="supplier-import"
-                        />
-                        <label
-                            htmlFor="supplier-import"
-                            className={`flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 hover:text-emerald-600 font-medium rounded-lg transition-all cursor-pointer ${isImporting ? 'opacity-50 cursor-not-allowed' : ''}`}
-                        >
-                            {isImporting ? <Loader2 size={18} className="animate-spin text-emerald-600" /> : <Upload size={18} />}
-                            <span>{isImporting ? 'Importing...' : 'Import Suppliers'}</span>
-                        </label>
+
+                    <div className="flex gap-4 items-center">
+                        
+
+                        <div className="flex gap-2">
+                            <button
+                                onClick={handleDownloadTemplate}
+                                className="flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 hover:text-emerald-600 text-xs font-semibold rounded-lg transition-all shadow-sm"
+                                title="Download CSV Template"
+                            >
+                                <Download size={14} />
+                                <span>Template</span>
+                            </button>
+                            <input
+                                type="file"
+                                accept=".xlsx, .xls, .csv"
+                                onChange={handleFileChange}
+                                className="hidden"
+                                id="supplier-import"
+                            />
+                            <label
+                                htmlFor="supplier-import"
+                                className={`flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 hover:text-emerald-600 text-xs font-semibold rounded-lg transition-all shadow-sm cursor-pointer ${isImporting ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            >
+                                {isImporting ? <Loader2 size={14} className="animate-spin text-emerald-600" /> : <Upload size={14} />}
+                                <span>{isImporting ? 'Importing...' : 'Import'}</span>
+                            </label>
+                        </div>
+                        {/* Shortcuts Hint Style */}
+                        <div className="hidden lg:flex items-center gap-2 bg-white px-4 py-2 rounded-xl border border-gray-100 shadow-sm border-b-2">
+                            <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg border border-gray-100">
+                                <span className="text-[10px] font-black text-gray-500 bg-white px-1.5 py-0.5 rounded shadow-sm border border-gray-200">↑↓</span>
+                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Navigate</span>
+                            </div>
+                            <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg border border-gray-100">
+                                <span className="text-[10px] font-black text-gray-500 bg-white px-1.5 py-0.5 rounded shadow-sm border border-gray-200">ALT+F</span>
+                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Focus</span>
+                            </div>
+                            <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg border border-gray-100">
+                                <span className="text-[10px] font-black text-gray-500 bg-white px-1.5 py-0.5 rounded shadow-sm border border-gray-200">ALT+N</span>
+                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Company</span>
+                            </div>
+                            <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg border border-gray-100">
+                                <span className="text-[10px] font-black text-gray-500 bg-white px-1.5 py-0.5 rounded shadow-sm border border-gray-200">ALT+E</span>
+                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Edit</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
                 <div
-                    className={"bg-white rounded-xl p-6 flex flex-col border border-gray-200"}
+                    className={"bg-white rounded-xl p-4 flex flex-col border border-gray-200 shadow-sm"}
                 >
-                    <div className="flex items-center gap-2 mb-4">
-                        <Users className="text-emerald-600" size={24} />
-                        <h2 className="text-xl font-semibold text-gray-700">Supplier Information</h2>
+                    <div className="flex items-center gap-2 mb-3">
+                        <Users className="text-emerald-600" size={20} />
+                        <h2 className="text-lg font-semibold text-gray-700">Supplier Information</h2>
                     </div>
 
-                    <div className={"grid md:grid-cols-5 gap-4"}>
+                    <div className={"grid md:grid-cols-5 gap-3"}>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                            <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">
                                 Supplier Name
                             </label>
                             <input
                                 type="text"
+                                id="supplier-name-input"
                                 value={supplierData.supplierName}
                                 onChange={(e) => setSupplierData({ ...supplierData, supplierName: e.target.value })}
-                                placeholder="Enter Supplier Name"
-                                className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-500 transition-all outline-none"
+                                placeholder="Supplier Name"
+                                className="w-full text-sm rounded-lg py-1.5 px-3 border-2 border-gray-100 focus:border-emerald-500 transition-all outline-none"
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Email
+                            <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">
+                                Email (Optional)
                             </label>
                             <input
                                 type="email"
                                 value={supplierData.email}
                                 onChange={(e) => setSupplierData({ ...supplierData, email: e.target.value })}
                                 placeholder="Enter Email"
-                                className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-500 transition-all outline-none"
+                                className="w-full text-sm rounded-lg py-1.5 px-3 border-2 border-gray-100 focus:border-emerald-500 transition-all outline-none"
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                            <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">
                                 Contact Number
                             </label>
                             <input
                                 type="text"
                                 value={supplierData.contactNumber}
                                 onChange={(e) => setSupplierData({ ...supplierData, contactNumber: e.target.value })}
-                                placeholder="Enter Contact Number"
-                                className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-500 transition-all outline-none"
+                                placeholder="Contact Number"
+                                className="w-full text-sm rounded-lg py-1.5 px-3 border-2 border-gray-100 focus:border-emerald-500 transition-all outline-none"
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Company
-                            </label>
+                            <div className="flex justify-between items-center mb-1">
+                                <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider">
+                                    Company
+                                </label>
+                                <button 
+                                    onClick={() => setIsCompanyModalOpen(true)}
+                                    className="text-[9px] text-blue-600 hover:text-blue-700 font-bold flex items-center gap-1 bg-blue-50 px-1.5 py-0.5 rounded-full transition-colors"
+                                >
+                                    <CirclePlus size={8} /> New
+                                </button>
+                            </div>
                             <TypeableSelect
                                 options={companies}
                                 value={selectedCompany?.value || null}
                                 onChange={(option) => setSelectedCompany(option)}
-                                placeholder="Select company..."
+                                placeholder="Company..."
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                            <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">
                                 Bank
                             </label>
                             <TypeableSelect
                                 options={banks}
                                 value={selectedBank?.value || null}
                                 onChange={(option) => setSelectedBank(option)}
-                                placeholder="Select bank..."
+                                placeholder="Bank..."
                             />
                         </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <div className="flex flex-col">
+                            <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">
                                 Account Number
                             </label>
-                            <input
-                                type="text"
-                                value={supplierData.accountNumber}
-                                onChange={(e) => setSupplierData({ ...supplierData, accountNumber: e.target.value })}
-                                placeholder="Enter Account Number"
-                                className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-500 transition-all outline-none"
-                            />
+                            <div className="flex gap-2">
+                                <input
+                                    type="text"
+                                    value={supplierData.accountNumber}
+                                    onChange={(e) => setSupplierData({ ...supplierData, accountNumber: e.target.value })}
+                                    placeholder="Account"
+                                    className="flex-1 text-sm rounded-lg py-1.5 px-3 border-2 border-gray-100 focus:border-emerald-500 transition-all outline-none"
+                                />
+                                
+                            </div>
                         </div>
-                    </div>
-
-                    <div className="flex justify-between items-center mt-6">
-                        <button
-                            onClick={() => setIsCompanyModalOpen(true)}
-                            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-medium rounded-lg transition-all"
-                        >
-                            <CirclePlus size={16} />
-                            Add Company
-                        </button>
-                        <button
-                            onClick={handleSubmitSupplier}
-                            disabled={isSubmittingSupplier}
-                            className={`flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-medium rounded-lg transition-all ${isSubmittingSupplier ? 'opacity-50 cursor-not-allowed' : ''
-                                }`}
-                        >
-                            {isSubmittingSupplier ? 'Creating...' : 'Create Supplier'}
-                            <span className="text-xs text-emerald-100">(Shift + Enter)</span>
-                        </button>
+                        <div className="flex flex-col justify-end">
+                           
+                              <button
+                                    onClick={handleSubmitSupplier}
+                                    disabled={isSubmittingSupplier}
+                                    className={`px-4 py-1.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white text-sm font-bold rounded-lg transition-all shadow-md shadow-emerald-100 ${isSubmittingSupplier ? 'opacity-50 cursor-not-allowed' : ''
+                                        }`}
+                                >
+                                    {isSubmittingSupplier ? '...' : 'Add'}
+                                </button>
+                        </div>
+                      
                     </div>
                 </div>
 
                 <div
-                    className={"flex flex-col bg-white rounded-xl h-full p-6 justify-between border border-gray-200"}
+                    className={"flex flex-col bg-white rounded-xl h-full p-4 justify-between border border-gray-200 shadow-sm"}
                 >
-                    <span className="text-lg font-semibold text-gray-800 block mb-4">Supplier List</span>
-                    <div className="overflow-y-auto max-h-md md:h-[320px] lg:h-[420px] rounded-lg scrollbar-thin scrollbar-thumb-emerald-300 scrollbar-track-gray-100">
+                    <div className="flex items-center gap-2 mb-3">
+                        <Users className="text-blue-600" size={20} />
+                        <h2 className="text-lg font-semibold text-gray-700">Existing Suppliers</h2>
+                    </div>
+                    <div className="overflow-y-auto max-h-md md:h-[320px] lg:h-[300px] rounded-lg scrollbar-thin scrollbar-thumb-emerald-300 scrollbar-track-gray-100">
                         <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-gradient-to-r from-emerald-600 to-emerald-700 sticky top-0 z-10">
                                 <tr>
@@ -682,6 +789,7 @@ function CreateSupplier() {
                                         <tr
                                             key={supplier.id}
                                             onClick={() => setSelectedIndex(index)}
+                                            onDoubleClick={() => handleEditClick(supplier)}
                                             className={`cursor-pointer transition-colors ${selectedIndex === index
                                                 ? "bg-emerald-50 border-l-4 border-emerald-600"
                                                 : "hover:bg-emerald-50/50"

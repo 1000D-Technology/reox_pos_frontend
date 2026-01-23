@@ -123,6 +123,18 @@ export const invoiceService = {
     getInvoiceDetails: async (invoiceNo: string): Promise<InvoiceDetailResponse> => {
         const response = await axios.get(`${API_URL}/pos/invoice/${invoiceNo}`);
         return response.data;
+    },
+
+    /**
+     * Process payment for customer invoice
+     */
+    processInvoicePayment: async (paymentData: {
+        invoice_id: string;
+        payment_amount: number;
+        payment_type_id: number;
+    }) => {
+        const response = await axios.post(`${API_URL}/pos/invoice/payment`, paymentData);
+        return response.data;
     }
 };
 

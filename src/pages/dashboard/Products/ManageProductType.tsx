@@ -26,7 +26,6 @@ const ManageProductType = () => {
     const [productTypes, setProductTypes] = useState<ProductType[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
-    const [isSearching, setIsSearching] = useState(false);
     const [updateTypeName, setUpdateTypeName] = useState('');
     const [isUpdating, setIsUpdating] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
@@ -74,7 +73,6 @@ const ManageProductType = () => {
             toast.error('Error loading product types. Please try again.');
         } finally {
             setIsLoading(false);
-            setIsSearching(false);
         }
     };
 
@@ -99,16 +97,86 @@ const ManageProductType = () => {
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
+            // Escape to close modals
+            if (e.key === "Escape") {
+                setIsModalOpen(false);
+                setTypeToDelete(null);
+            }
+
+            // Arrow navigation for list
             if (e.key === "ArrowDown") {
-                setSelectedIndex((prev) => (prev < salesData.length - 1 ? prev + 1 : prev));
+                const target = e.target as HTMLElement;
+                if (target.tagName !== 'INPUT' && target.tagName !== 'TEXTAREA') {
+                    e.preventDefault();
+                    setSelectedIndex((prev) => (prev < salesData.length - 1 ? prev + 1 : prev));
+                }
             } else if (e.key === "ArrowUp") {
-                setSelectedIndex((prev) => (prev > 0 ? prev - 1 : prev));
+                const target = e.target as HTMLElement;
+                if (target.tagName !== 'INPUT' && target.tagName !== 'TEXTAREA') {
+                    e.preventDefault();
+                    setSelectedIndex((prev) => (prev > 0 ? prev - 1 : prev));
+                }
+            } else if (e.key === "PageDown") {
+                const target = e.target as HTMLElement;
+                if (target.tagName !== 'INPUT' && target.tagName !== 'TEXTAREA') {
+                    e.preventDefault();
+                    goToPage(currentPage + 1);
+                }
+            } else if (e.key === "PageUp") {
+                const target = e.target as HTMLElement;
+                if (target.tagName !== 'INPUT' && target.tagName !== 'TEXTAREA') {
+                    e.preventDefault();
+                    goToPage(currentPage - 1);
+                }
+            }
+
+            // Enter key behaviors
+            if (e.key === "Enter" && !e.shiftKey) {
+                const target = e.target as HTMLElement;
+                // Double click simulation on enter
+                if (target.tagName !== 'INPUT' && target.tagName !== 'TEXTAREA' && salesData[selectedIndex] && !isModalOpen) {
+                    handleEditClick(salesData[selectedIndex]);
+                }
+            }
+
+            // Shift + Enter to save in Edit Modal
+            if (e.key === "Enter" && e.shiftKey && isModalOpen) {
+                e.preventDefault();
+                if (!isUpdating) {
+                    handleUpdateType();
+                }
+            }
+
+            // Alt Key Combinations
+            if (e.altKey) {
+                switch (e.key.toLowerCase()) {
+                    case 'e': // Edit
+                        e.preventDefault();
+                        if (salesData[selectedIndex]) {
+                            handleEditClick(salesData[selectedIndex]);
+                        }
+                        break;
+                    case 'd': // Delete
+                        e.preventDefault();
+                        if (salesData[selectedIndex]) {
+                            handleDeleteClick(salesData[selectedIndex]);
+                        }
+                        break;
+                    case 's': // Search Focus
+                        e.preventDefault();
+                        document.getElementById('type-search')?.focus();
+                        break;
+                    case 'a': // Add Input Focus
+                        e.preventDefault();
+                        document.getElementById('type-add')?.focus();
+                        break;
+                }
             }
         };
 
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [salesData.length]);
+    }, [salesData, isModalOpen, isUpdating, selectedIndex, currentPage, itemsPerPage]);
 
     const handleEditClick = (type: ProductType) => {
         setSelectedType(type);
@@ -282,15 +350,41 @@ const ManageProductType = () => {
                 }}
             />
             <div className={'flex flex-col gap-4 h-full'}>
-                <div>
-                    <div className="text-sm text-gray-400 flex items-center">
-                        <span>Products</span>
-                        <span className="mx-2">›</span>
-                        <span className="text-gray-700 font-medium">Manage Product Type</span>
+                <div className="flex justify-between items-center mb-4">
+                    <div>
+                        <div className="text-sm text-gray-400 flex items-center">
+                            <span>Products</span>
+                            <span className="mx-2">›</span>
+                            <span className="text-gray-700 font-medium">Manage Product Type</span>
+                        </div>
+                        <h1 className="text-3xl font-semibold bg-linear-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
+                            Manage Product Type
+                        </h1>
                     </div>
-                    <h1 className="text-3xl font-semibold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
-                        Manage Product Type
-                    </h1>
+
+                    {/* Shortcuts Hint Style */}
+                    <div className="hidden lg:flex items-center gap-2 bg-white px-4 py-2 rounded-xl border border-gray-100 shadow-sm border-b-2">
+                        <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg border border-gray-100">
+                            <span className="text-[10px] font-black text-gray-500 bg-white px-1.5 py-0.5 rounded shadow-sm border border-gray-200">↑↓</span>
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Navigate</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg border border-gray-100">
+                            <span className="text-[10px] font-black text-gray-500 bg-white px-1.5 py-0.5 rounded shadow-sm border border-gray-200">ALT+A</span>
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Add</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg border border-gray-100">
+                            <span className="text-[10px] font-black text-gray-500 bg-white px-1.5 py-0.5 rounded shadow-sm border border-gray-200">ALT+E</span>
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Edit</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg border border-gray-100">
+                            <span className="text-[10px] font-black text-gray-500 bg-white px-1.5 py-0.5 rounded shadow-sm border border-gray-200">ALT+D</span>
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Delete</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg border border-gray-100">
+                            <span className="text-[10px] font-black text-gray-500 bg-white px-1.5 py-0.5 rounded shadow-sm border border-gray-200">ALT+S</span>
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Search</span>
+                        </div>
+                    </div>
                 </div>
 
                 <div
@@ -301,6 +395,7 @@ const ManageProductType = () => {
                             <label className="block text-sm font-medium text-gray-700 mb-1">Search</label>
                             <input
                                 type="text"
+                                id="type-search"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 placeholder="Search product types..."
@@ -313,6 +408,7 @@ const ManageProductType = () => {
                             <label className="block text-sm font-medium text-gray-700 mb-1">Product Type Name</label>
                             <input
                                 type="text"
+                                id="type-add"
                                 value={newTypeName}
                                 onChange={(e) => setNewTypeName(e.target.value)}
                                 onKeyPress={handleKeyPress}
@@ -332,7 +428,7 @@ const ManageProductType = () => {
                         </div>
                     </div>
 
-                    <div className="overflow-y-auto max-h-md md:h-[320px] lg:h-[630px] rounded-lg scrollbar-thin scrollbar-thumb-emerald-300 scrollbar-track-gray-100">
+                    <div className="overflow-y-auto max-h-md md:h-[320px] lg:h-[400px] rounded-lg scrollbar-thin scrollbar-thumb-emerald-300 scrollbar-track-gray-100">
                         <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-gradient-to-r from-emerald-500 to-emerald-600 sticky top-0 z-10">
                                 <tr>
@@ -365,6 +461,7 @@ const ManageProductType = () => {
                                         <tr
                                             key={type.id}
                                             onClick={() => setSelectedIndex(index)}
+                                            onDoubleClick={() => handleEditClick(type)}
                                             className={`cursor-pointer transition-all ${selectedIndex === index
                                                     ? 'bg-emerald-50 border-l-4 border-emerald-500'
                                                     : 'hover:bg-gray-50'

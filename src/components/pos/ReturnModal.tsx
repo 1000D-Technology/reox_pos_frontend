@@ -5,6 +5,7 @@ import { posService } from '../../services/posService';
 import { printBill } from '../../utils/billPrinter';
 import { authService } from '../../services/authService';
 import toast from 'react-hot-toast';
+import CustomConfirmModal from '../common/CustomConfirmModal';
 
 interface ReturnModalProps {
     isOpen: boolean;
@@ -83,12 +84,18 @@ export const ReturnModal = ({ isOpen, onClose }: ReturnModalProps) => {
 
     const returnTotal = returnSubtotal;
 
+    const [showConfirmModal, setShowConfirmModal] = useState(false);
+
     const completeReturn = async () => {
         const itemsToReturn = returnItems.filter(item => item.returnQuantity > 0);
         if (itemsToReturn.length === 0) return;
 
-        if (!window.confirm("Are you sure you want to process this return?")) return;
+        setShowConfirmModal(true);
+    };
 
+    const handleConfirmReturn = async () => {
+        const itemsToReturn = returnItems.filter(item => item.returnQuantity > 0);
+        setShowConfirmModal(false);
         setLoading(true);
         try {
             const userId = authService.getUserId() || 1;
@@ -176,19 +183,19 @@ export const ReturnModal = ({ isOpen, onClose }: ReturnModalProps) => {
     return (
         <AnimatePresence>
             {isOpen && (
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-                    onClick={handleClose}
-                >
+                <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="absolute inset-0 bg-black/50"
+                        onClick={handleClose}
+                    />
                     <motion.div
                         initial={{ scale: 0.9, y: 20 }}
                         animate={{ scale: 1, y: 0 }}
                         exit={{ scale: 0.9, y: 20 }}
-                        onClick={(e) => e.stopPropagation()}
-                        className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col"
+                        className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col relative z-10"
                     >
                         {/* Header */}
                         <div className="p-6 border-b border-gray-200 bg-linear-to-r from-amber-500 to-amber-600">
@@ -410,8 +417,19 @@ export const ReturnModal = ({ isOpen, onClose }: ReturnModalProps) => {
                             </div>
                         )}
                     </motion.div>
-                </motion.div>
+                </div>
             )}
+
+            <CustomConfirmModal
+                isOpen={showConfirmModal}
+                onClose={() => setShowConfirmModal(false)}
+                onConfirm={handleConfirmReturn}
+                title="Confirm Return"
+                message={`Are you sure you want to process this return for Rs ${returnTotal.toFixed(2)}?`}
+                confirmText="Process Return"
+                variant="warning"
+                isLoading={loading}
+            />
         </AnimatePresence>
     );
 };

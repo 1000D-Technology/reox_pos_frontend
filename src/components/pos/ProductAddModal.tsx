@@ -232,43 +232,44 @@ export const ProductAddModal = ({
                                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                                     Quantity (Max: {product.stock})
                                 </label>
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-3">
                                     <button
                                         onClick={decrementQty}
                                         disabled={Number(quantity) <= 0}
-                                        className="w-12 h-12 bg-red-100 hover:bg-red-500 hover:text-white disabled:bg-gray-200 disabled:text-gray-400 text-red-600 rounded-lg flex items-center justify-center transition-colors touch-manipulation"
+                                        className="w-12 h-12 bg-red-50 text-red-600 border-2 border-red-100 rounded-xl flex items-center justify-center transition-all hover:bg-red-500 hover:text-white active:scale-90 disabled:bg-gray-50 disabled:text-gray-300 disabled:border-gray-100"
                                     >
-                                        <Minus className="w-5 h-5" />
+                                        <Minus className="w-5 h-5" strokeWidth={3} />
                                     </button>
-                                    <input
-                                        type="number"
-                                        value={quantity}
-                                        onChange={(e) => {
-                                            const val = e.target.value;
-                                            if (val === '') {
-                                                setQuantity('');
-                                                return;
-                                            }
-                                            const numVal = Number(val);
-                                            if (numVal > product.stock) {
-                                                // toast.error(`Cannot exceed available stock: ${product.stock}`);
-                                                setQuantity(product.stock);
-                                            } else {
-                                                setQuantity(numVal);
-                                            }
-                                        }}
-                                        step="any"
-                                        className="flex-1 text-center text-2xl font-bold py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-emerald-500"
-                                        min={0}
-                                        max={product.stock}
-                                    />
+                                    <div className="relative flex-1 group">
+                                        <input
+                                            type="number"
+                                            value={quantity}
+                                            onChange={(e) => {
+                                                const val = e.target.value;
+                                                if (val === '') {
+                                                    setQuantity('');
+                                                    return;
+                                                }
+                                                const numVal = Number(val);
+                                                if (numVal > product.stock) {
+                                                    setQuantity(product.stock);
+                                                } else {
+                                                    setQuantity(numVal);
+                                                }
+                                            }}
+                                            step="any"
+                                            className="w-full text-center text-2xl font-black py-2.5 bg-gray-50 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-emerald-500 focus:bg-white transition-all shadow-inner tabular-nums"
+                                            min={0}
+                                            max={product.stock}
+                                        />
+                                        <div className="absolute -top-2 left-4 px-1.5 bg-white text-[9px] font-black text-gray-400 uppercase tracking-tighter opacity-0 group-focus-within:opacity-100 transition-opacity">Quantity</div>
+                                    </div>
                                     <button
                                         onClick={incrementQty}
                                         disabled={Number(quantity) >= product.stock}
-
-                                        className="w-12 h-12 bg-emerald-100 hover:bg-emerald-500 hover:text-white disabled:bg-gray-200 disabled:text-gray-400 text-emerald-600 rounded-lg flex items-center justify-center transition-colors touch-manipulation"
+                                        className="w-12 h-12 bg-emerald-50 text-emerald-600 border-2 border-emerald-100 rounded-xl flex items-center justify-center transition-all hover:bg-emerald-500 hover:text-white active:scale-90 disabled:bg-gray-50 disabled:text-gray-300 disabled:border-gray-100"
                                     >
-                                        <Plus className="w-5 h-5" />
+                                        <Plus className="w-5 h-5" strokeWidth={3} />
                                     </button>
                                 </div>
                             </div>

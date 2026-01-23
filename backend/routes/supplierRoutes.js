@@ -12,6 +12,7 @@ router.post('/import', upload.single('file'), supplierController.importSuppliers
 router.post('/add', validateSupplier, supplierController.addSupplier);
 router.get('/list', supplierController.getSuppliers);
 router.get('/dropdown-list', supplierController.getSupplierDropdownList);
+router.put('/update/:id', supplierController.updateSupplier);
 router.patch('/update-contact/:id', supplierController.updateSupplierContact);
 router.patch('/update-status/:id', supplierController.updateSupplierStatus);
 

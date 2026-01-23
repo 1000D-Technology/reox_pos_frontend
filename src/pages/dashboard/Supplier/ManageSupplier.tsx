@@ -4,12 +4,14 @@ import {
     Pencil,
     X,
     Users,
-    Building2,
     CheckCircle,
     Search,
     ArrowUpRight,
     ArrowDownRight,
+    Building2,
+    Loader2
 } from 'lucide-react';
+import TypeableSelect from '../../../components/TypeableSelect';
 
 import { useEffect, useState } from 'react';
 import toast, { Toaster } from 'react-hot-toast';
@@ -22,7 +24,9 @@ interface Category {
     email: string;
     contact: string;
     company: string;
+    companyId: number;
     bank: string;
+    bankId: number | null;
     account: string;
     status: string;
     statusId: number;
@@ -48,7 +52,12 @@ function ManageSupplier() {
     }));
 
     const [newContactNumber, setNewContactNumber] = useState('');
-    const [isUpdatingContact, setIsUpdatingContact] = useState(false);
+    const [companies, setCompanies] = useState<{ value: string | number, label: string }[]>([]);
+    const [selectedCompany, setSelectedCompany] = useState<{ value: string | number, label: string } | null>(null);
+    const [banks, setBanks] = useState<{ value: string | number, label: string }[]>([]);
+    const [selectedBank, setSelectedBank] = useState<{ value: string | number, label: string } | null>(null);
+    const [newAccountNumber, setNewAccountNumber] = useState('');
+    const [isUpdatingSupplier, setIsUpdatingSupplier] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
     const [selectedIndex, setSelectedIndex] = useState(0);
@@ -124,7 +133,9 @@ function ManageSupplier() {
                     email: supplier.email || '',
                     contact: supplier.contactNumber || '',
                     company: supplier.companyName || '',
+                    companyId: supplier.companyId,
                     bank: supplier.bankName || '',
+                    bankId: supplier.bankId,
                     account: supplier.accountNumber || '',
                     status: supplier.status || 'Active',
                     statusId: supplier.status_id || 1
@@ -142,8 +153,33 @@ function ManageSupplier() {
         }
     };
 
+    const searchCompaniesAndBanks = async () => {
+        try {
+            const [companiesResponse, banksResponse] = await supplierService.getCompaniesAndBanks();
+            if (companiesResponse.data.success) {
+                const companyOptions = companiesResponse.data.data.map((company: any) => ({
+                    value: company.id.toString(),
+                    label: company.company_name
+                }));
+                setCompanies(companyOptions);
+            }
+
+            if (banksResponse.data.success) {
+                const bankOptions = banksResponse.data.data.map((bank: any) => ({
+                    value: bank.id.toString(),
+                    label: bank.bank_name
+                }));
+                setBanks(bankOptions);
+            }
+        } catch (error) {
+            console.error('Error fetching data:', error);
+            toast.error('Failed to load company/bank data');
+        }
+    };
+
     useEffect(() => {
         fetchSuppliers();
+        searchCompaniesAndBanks();
     }, []);
 
     useEffect(() => {
@@ -162,6 +198,9 @@ function ManageSupplier() {
     const handleEditClick = (category: Category) => {
         setSelectedCategory(category);
         setNewContactNumber(category.contact);
+        setSelectedCompany({ value: category.companyId, label: category.company });
+        setSelectedBank(category.bankId ? { value: category.bankId, label: category.bank } : null);
+        setNewAccountNumber(category.account);
         setIsModalOpen(true);
     };
 
@@ -169,10 +208,13 @@ function ManageSupplier() {
         setIsModalOpen(false);
         setSelectedCategory(null);
         setNewContactNumber('');
-        setIsUpdatingContact(false);
+        setSelectedCompany(null);
+        setSelectedBank(null);
+        setNewAccountNumber('');
+        setIsUpdatingSupplier(false);
     };
 
-    const handleUpdateContact = async () => {
+    const handleUpdateSupplier = async () => {
         if (!selectedCategory || !newContactNumber.trim()) {
             toast.error('Please enter a valid contact number');
             return;
@@ -183,26 +225,36 @@ function ManageSupplier() {
             return;
         }
 
-        setIsUpdatingContact(true);
-        const updateContactPromise = supplierService.updateSupplierContact(
+        if (!selectedCompany) {
+            toast.error('Please select a company');
+            return;
+        }
+
+        setIsUpdatingSupplier(true);
+        const updatePromise = supplierService.updateSupplier(
             parseInt(selectedCategory.id),
-            newContactNumber.trim()
+            {
+                contactNumber: newContactNumber.trim(),
+                companyId: typeof selectedCompany.value === 'number' ? selectedCompany.value : parseInt(selectedCompany.value),
+                bankId: selectedBank ? (typeof selectedBank.value === 'number' ? selectedBank.value : parseInt(selectedBank.value)) : undefined,
+                accountNumber: newAccountNumber.trim()
+            }
         );
 
         try {
-            await toast.promise(updateContactPromise, {
-                loading: 'Updating contact number...',
+            await toast.promise(updatePromise, {
+                loading: 'Updating supplier...',
                 success: (res) => {
                     handleCloseModal();
                     fetchSuppliers();
-                    return res.data.message || 'Contact number updated successfully!';
+                    return res.data.message || 'Supplier updated successfully!';
                 },
-                error: (err) => err.response?.data?.message || 'Failed to update contact number'
+                error: (err) => err.response?.data?.message || 'Failed to update supplier'
             });
         } catch (error: any) {
-            console.error('Error updating contact:', error);
+            console.error('Error updating supplier:', error);
         } finally {
-            setIsUpdatingContact(false);
+            setIsUpdatingSupplier(false);
         }
     };
 
@@ -303,10 +355,6 @@ function ManageSupplier() {
                     {summaryCards.map((stat, i) => (
                         <div
                             key={i}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: i * 0.1 }}
-                            whileHover={{ scale: 1.05, y: -2 }}
                             className={`flex items-center p-4 space-x-3 transition-all bg-white rounded-2xl border border-gray-200 cursor-pointer group relative overflow-hidden`}
                         >
                             <div className="absolute inset-0 bg-gradient-to-br from-transparent via-gray-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
@@ -332,9 +380,6 @@ function ManageSupplier() {
                 </div>
 
                 <div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.4 }}
                     className="bg-white rounded-xl p-4 border border-gray-200"
                 >
                     <div className="relative">
@@ -350,13 +395,10 @@ function ManageSupplier() {
                 </div>
 
                 <div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.5 }}
                     className={'flex flex-col bg-white rounded-xl p-4 justify-between gap-8 border border-gray-200'}
                 >
                     <div
-                        className="overflow-y-auto max-h-md md:h-[320px] lg:h-[550px] rounded-lg scrollbar-thin scrollbar-thumb-emerald-300 scrollbar-track-gray-100">
+                        className="overflow-y-auto max-h-md md:h-[320px] lg:h-[400px] rounded-lg scrollbar-thin scrollbar-thumb-emerald-300 scrollbar-track-gray-100">
                         <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-gradient-to-r from-emerald-500 to-emerald-600 sticky top-0 z-10">
                                 <tr>
@@ -508,8 +550,6 @@ function ManageSupplier() {
             {isModalOpen && selectedCategory && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
                     <div
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
                         className="bg-white rounded-2xl border border-gray-200 p-8 w-full max-w-md relative"
                     >
                         <button
@@ -529,12 +569,9 @@ function ManageSupplier() {
                         </div>
 
                         <div className="space-y-4">
-                            <p className="text-sm text-gray-600">
-                                Current Contact: <span className="font-semibold text-emerald-600">{selectedCategory.contact}</span>
-                            </p>
                             <div>
                                 <label htmlFor="update-contact-number" className="block text-sm font-bold text-gray-700 mb-1">
-                                    New Contact Number
+                                    Contact Number
                                 </label>
                                 <input
                                     type="tel"
@@ -544,6 +581,44 @@ function ManageSupplier() {
                                     placeholder="Enter Contact Number"
                                     className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-500 transition-all outline-none"
                                     maxLength={10}
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-1">
+                                    Company
+                                </label>
+                                <TypeableSelect
+                                    options={companies}
+                                    value={selectedCompany?.value || null}
+                                    onChange={(option) => setSelectedCompany(option)}
+                                    placeholder="Select Company"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-1">
+                                    Bank
+                                </label>
+                                <TypeableSelect
+                                    options={banks}
+                                    value={selectedBank?.value || null}
+                                    onChange={(option) => setSelectedBank(option)}
+                                    placeholder="Select Bank"
+                                />
+                            </div>
+
+                            <div>
+                                <label htmlFor="update-account-number" className="block text-sm font-bold text-gray-700 mb-1">
+                                    Account Number
+                                </label>
+                                <input
+                                    type="text"
+                                    id="update-account-number"
+                                    value={newAccountNumber}
+                                    onChange={(e) => setNewAccountNumber(e.target.value)}
+                                    placeholder="Enter Account Number"
+                                    className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-500 transition-all outline-none"
                                 />
                             </div>
                         </div>
@@ -556,12 +631,17 @@ function ManageSupplier() {
                                 Cancel
                             </button>
                             <button
-                                onClick={handleUpdateContact}
-                                disabled={isUpdatingContact}
-                                className={`px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-semibold rounded-lg transition-all ${isUpdatingContact ? 'opacity-50 cursor-not-allowed' : ''
+                                onClick={handleUpdateSupplier}
+                                disabled={isUpdatingSupplier}
+                                className={`px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-semibold rounded-lg transition-all flex items-center justify-center gap-2 ${isUpdatingSupplier ? 'opacity-50 cursor-not-allowed' : ''
                                     }`}
                             >
-                                {isUpdatingContact ? 'Updating...' : 'Update Contact'}
+                                {isUpdatingSupplier ? (
+                                    <>
+                                        <Loader2 size={18} className="animate-spin" />
+                                        Updating...
+                                    </>
+                                ) : 'Update Supplier'}
                             </button>
                         </div>
                     </div>

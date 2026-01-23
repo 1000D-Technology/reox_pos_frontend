@@ -33,6 +33,14 @@ export const supplierService = {
     // Get suppliers dropdown list (only id and name)
     getSupplierDropdownList: () => axiosInstance.get('/api/suppliers/dropdown-list'),
 
+    // Update supplier
+    updateSupplier: (id: number, supplierData: {
+        contactNumber: string;
+        companyId: number;
+        bankId?: number;
+        accountNumber?: string;
+    }) => axiosInstance.put(`/api/suppliers/update/${id}`, supplierData),
+
     // Update supplier contact number
     updateSupplierContact: (id: number, contactNumber: string) =>
         axiosInstance.patch(`/api/suppliers/update-contact/${id}`, { contactNumber }),

@@ -21,6 +21,7 @@ import toast, { Toaster } from 'react-hot-toast';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { X } from "lucide-react";
 
 function LowStock() {
     // State for summary data
@@ -101,6 +102,10 @@ function LowStock() {
     const [selectedUnit, setSelectedUnit] = useState<string | null>(null);
     const [selectedSupplier, setSelectedSupplier] = useState<string | null>(null);
     const [selectedProduct, setSelectedProduct] = useState<string | null>(null);
+
+    // Detail modal state
+    const [isDetailModalOpen, setIsDetailModalOpen] = useState<boolean>(false);
+    const [selectedDetailRecord, setSelectedDetailRecord] = useState<any>(null);
 
     const [selectedIndex, setSelectedIndex] = useState(0);
     const [currentPage, setCurrentPage] = useState(1);
@@ -392,23 +397,67 @@ function LowStock() {
         loadDropdownData();
         loadProductData();
         loadSummaryData();
-        loadSummaryData();
     }, []);
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
+            const target = e.target as HTMLElement;
+            const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA';
+
+            if (e.key === 'F2') {
+                e.preventDefault();
+                const searchInput = document.getElementById('filter-category');
+                if (searchInput) {
+                    searchInput.focus();
+                }
+                return;
+            }
+
             if (e.key === "ArrowDown") {
                 e.preventDefault();
                 setSelectedIndex((prev) => (prev < currentSalesData.length - 1 ? prev + 1 : prev));
             } else if (e.key === "ArrowUp") {
                 e.preventDefault();
                 setSelectedIndex((prev) => (prev > 0 ? prev - 1 : prev));
+            } else if (e.key === "PageDown") {
+                e.preventDefault();
+                if (currentPage < totalPages) {
+                    goToNextPage();
+                }
+            } else if (e.key === "PageUp") {
+                e.preventDefault();
+                if (currentPage > 1) {
+                    goToPreviousPage();
+                }
+            } else if (e.key === "Home") {
+                if (!isInput) {
+                    e.preventDefault();
+                    setSelectedIndex(0);
+                }
+            } else if (e.key === "End") {
+                if (!isInput) {
+                    e.preventDefault();
+                    setSelectedIndex(currentSalesData.length - 1);
+                }
+            } else if (e.key === "Enter") {
+                if (!isInput && currentSalesData.length > 0) {
+                    e.preventDefault();
+                    const selectedItem = currentSalesData[selectedIndex];
+                    if (selectedItem) {
+                        handleRowDoubleClick(selectedItem);
+                    }
+                }
+            } else if (e.key === "Escape") {
+                if (!isInput) {
+                    e.preventDefault();
+                    setSelectedIndex(0);
+                }
             }
         };
 
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [currentSalesData.length]);
+    }, [currentSalesData.length, selectedIndex, currentSalesData, currentPage, totalPages]);
 
     const goToPage = (page: number) => {
         if (page >= 1 && page <= totalPages) {
@@ -429,6 +478,11 @@ function LowStock() {
             setCurrentPage(currentPage + 1);
             setSelectedIndex(0);
         }
+    };
+
+    const handleRowDoubleClick = (record: any) => {
+        setSelectedDetailRecord(record);
+        setIsDetailModalOpen(true);
     };
 
     const getPageNumbers = () => {
@@ -474,15 +528,33 @@ function LowStock() {
     return (
         <div className={'flex flex-col gap-4 h-full'}>
             {/* Header */}
-            <div>
-                <div className="text-sm text-gray-400 flex items-center">
-                    <span>Stock</span>
-                    <span className="mx-2">›</span>
-                    <span className="text-gray-700 font-medium">Low Stock</span>
+            <div className="flex items-center justify-between">
+                <div>
+                    <div className="text-sm text-gray-400 flex items-center">
+                        <span>Stock</span>
+                        <span className="mx-2">›</span>
+                        <span className="text-gray-700 font-medium">Low Stock</span>
+                    </div>
+                    <h1 className="text-3xl font-semibold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
+                        Low Stock
+                    </h1>
                 </div>
-                <h1 className="text-3xl font-semibold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
-                    Low Stock
-                </h1>
+
+                {/* Shortcuts Hint */}
+                <div className="hidden lg:flex items-center gap-3 bg-white px-4 py-2 rounded-xl border border-gray-100 shadow-sm border-b-2">
+                    <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg border border-gray-200">
+                        <span className="text-[10px] font-black text-gray-500 bg-white px-1.5 py-0.5 rounded shadow-sm border border-gray-200">↑↓</span>
+                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Navigate</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg border border-gray-200">
+                        <span className="text-[10px] font-black text-gray-500 bg-white px-1.5 py-0.5 rounded shadow-sm border border-gray-200">Enter</span>
+                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Show Details</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg border border-gray-200">
+                        <span className="text-[10px] font-black text-gray-500 bg-white px-1.5 py-0.5 rounded shadow-sm border border-gray-200">F2</span>
+                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Filters</span>
+                    </div>
+                </div>
             </div>
 
             {/* Stats Cards */}
@@ -525,6 +597,7 @@ function LowStock() {
                             Category
                         </label>
                         <TypeableSelect
+                            id="filter-category"
                             options={categories}
                             value={selectedCategory}
                             onChange={(opt) => setSelectedCategory(opt?.value as string || null)}
@@ -627,6 +700,7 @@ function LowStock() {
                                     <tr
                                         key={index}
                                         onClick={() => setSelectedIndex(index)}
+                                        onDoubleClick={() => handleRowDoubleClick(sale)}
                                         className={`cursor-pointer transition-all ${selectedIndex === index
                                                 ? 'bg-gradient-to-r from-orange-50 to-orange-100 border-l-4 border-orange-500'
                                                 : 'hover:bg-gray-50'
@@ -655,13 +729,15 @@ function LowStock() {
                                         </td>
                                         <td className="px-6 py-2 whitespace-nowrap">
                                             <div className="flex items-center gap-2">
-                                                <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border ${sale.stockStatus?.includes('Critical') ? 'bg-red-100 text-red-700 border-red-200' :
-                                                        sale.stockStatus?.includes('Low') ? 'bg-orange-100 text-orange-700 border-orange-200' :
-                                                            'bg-yellow-100 text-yellow-700 border-yellow-200'
-                                                    }`}>
-                                                    <AlertCircle className="w-3 h-3 mr-1" />
-                                                    {sale.stockStatus}
-                                                </span>
+                                                {(() => {
+                                                    const status = getStockStatus(sale.stockStatus?.split(' ')[1] || '0');
+                                                    return (
+                                                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border ${status.color}`}>
+                                                            <AlertCircle className="w-3 h-3 mr-1" />
+                                                            {sale.stockStatus}
+                                                        </span>
+                                                    );
+                                                })()}
                                             </div>
                                         </td>
                                     </tr>
@@ -742,6 +818,122 @@ function LowStock() {
                     <FileText size={15} />PDF
                 </button>
             </div>
+
+            {/* Detail Modal */}
+            {isDetailModalOpen && selectedDetailRecord && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+                        {/* Modal Header */}
+                        <div className="bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-4 flex items-center justify-between">
+                            <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                                <Package className="w-6 h-6" />
+                                Product Stock Details
+                            </h3>
+                            <button
+                                onClick={() => setIsDetailModalOpen(false)}
+                                className="p-1.5 hover:bg-white/20 rounded-full transition-colors text-white"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        {/* Modal Content */}
+                        <div className="p-6 max-h-[80vh] overflow-y-auto scrollbar-thin scrollbar-thumb-orange-300">
+                            <div className="grid grid-cols-2 gap-6">
+                                {/* Product Section */}
+                                <div className="space-y-4">
+                                    <div>
+                                        <h4 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">Basic Information</h4>
+                                        <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 space-y-3">
+                                            <div>
+                                                <p className="text-[10px] text-gray-500 uppercase font-bold">Product ID</p>
+                                                <p className="text-sm font-semibold text-gray-800">{selectedDetailRecord.productID}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-[10px] text-gray-500 uppercase font-bold">Product Name</p>
+                                                <p className="text-sm font-semibold text-gray-800">{selectedDetailRecord.productName}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-[10px] text-gray-500 uppercase font-bold">Unit</p>
+                                                <p className="text-sm font-semibold text-gray-800">{selectedDetailRecord.unit}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <h4 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">Supplier Information</h4>
+                                        <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 space-y-3">
+                                            <div>
+                                                <p className="text-[10px] text-gray-500 uppercase font-bold">Main Supplier</p>
+                                                <p className="text-sm font-semibold text-gray-800">{selectedDetailRecord.supplier}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Stock Section */}
+                                <div className="space-y-4">
+                                    <div>
+                                        <h4 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">Stock Level</h4>
+                                        <div className={`rounded-xl p-4 border space-y-3 ${
+                                            selectedDetailRecord.stockStatus?.includes('Critical') ? 'bg-red-50 border-red-100' :
+                                            selectedDetailRecord.stockStatus?.includes('Low') ? 'bg-orange-50 border-orange-100' : 'bg-yellow-50 border-yellow-100'
+                                        }`}>
+                                            <div>
+                                                <p className={`text-[10px] uppercase font-bold ${
+                                                    selectedDetailRecord.stockStatus?.includes('Critical') ? 'text-red-500' :
+                                                    selectedDetailRecord.stockStatus?.includes('Low') ? 'text-orange-500' : 'text-yellow-600'
+                                                }`}>Current Status</p>
+                                                <div className="flex items-center gap-2 mt-1">
+                                                    <AlertCircle className={`w-5 h-5 ${
+                                                        selectedDetailRecord.stockStatus?.includes('Critical') ? 'text-red-500' :
+                                                        selectedDetailRecord.stockStatus?.includes('Low') ? 'text-orange-500' : 'text-yellow-600'
+                                                    }`} />
+                                                    <p className={`text-lg font-bold ${
+                                                        selectedDetailRecord.stockStatus?.includes('Critical') ? 'text-red-600' :
+                                                        selectedDetailRecord.stockStatus?.includes('Low') ? 'text-orange-600' : 'text-yellow-700'
+                                                    }`}>{selectedDetailRecord.stockStatus}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <h4 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">Pricing Information</h4>
+                                        <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 space-y-4">
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div>
+                                                    <p className="text-[10px] text-gray-500 uppercase font-bold">Cost Price</p>
+                                                    <p className="text-sm font-semibold text-blue-600">LKR {selectedDetailRecord.costPrice}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-[10px] text-gray-500 uppercase font-bold">MRP</p>
+                                                    <p className="text-sm font-semibold text-gray-700">LKR {selectedDetailRecord.mrp}</p>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <p className="text-[10px] text-gray-500 uppercase font-bold">Selling Price</p>
+                                                <p className="text-lg font-bold text-emerald-600">LKR {selectedDetailRecord.price}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Modal Footer */}
+                        <div className="bg-gray-50 px-6 py-4 flex justify-end gap-3">
+                            <button
+                                onClick={() => setIsDetailModalOpen(false)}
+                                className="px-6 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold rounded-xl transition-all active:scale-95"
+                            >
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <Toaster
                 position="top-right"
                 toastOptions={{

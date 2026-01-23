@@ -154,6 +154,31 @@ exports.getSupplierDropdownList = catchAsync(async (req, res, next) => {
     res.status(200).json({ success: true, data: suppliers });
 });
 
+exports.updateSupplier = catchAsync(async (req, res, next) => {
+    const { id } = req.params;
+    const { contactNumber, companyId, bankId, accountNumber } = req.body;
+
+    if (!contactNumber || !companyId) {
+        return next(new AppError("Contact number and company are required.", 400));
+    }
+
+    const result = await Supplier.updateSupplier(id, {
+        contactNumber,
+        companyId,
+        bankId,
+        accountNumber
+    });
+
+    if (result.affectedRows === 0) {
+        return next(new AppError("Supplier not found.", 404));
+    }
+
+    res.status(200).json({
+        success: true,
+        message: "Supplier updated successfully!"
+    });
+});
+
 exports.updateSupplierContact = catchAsync(async (req, res, next) => {
     const { id } = req.params;
     let { contactNumber } = req.body;

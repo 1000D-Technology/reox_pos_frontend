@@ -145,6 +145,10 @@ export const stockService = {
         return axiosInstance.get(`/api/damaged/search?${params.toString()}`);
     },
 
+    // Update damaged stock status
+    updateDamagedStatus: (id: string, statusId: string) => 
+        axiosInstance.put('/api/damaged/update-status', { id, status_id: statusId }),
+
     // Individual methods for specific dropdown needs
     getCategories: () => categoryService.getCategories(),
     getUnits: () => unitService.getUnits(),

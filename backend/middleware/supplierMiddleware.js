@@ -9,16 +9,21 @@ exports.validateCompany = (req, res, next) => {
     if (!name || name.trim() === "") return next(new AppError("Company name is required", 400));
     if (!contact || contact.trim() === "") return next(new AppError("Company contact is required", 400));
 
-    // Email format check
+    // Sri Lankan mobile number validation for contact
+    const sriLankanMobileRegex = /^(\+94|0)?7[0-9]{8}$/;
+    if (!sriLankanMobileRegex.test(contact.replace(/\s/g, ''))) {
+        return next(new AppError("Invalid contact number format. Please use a valid Sri Lankan mobile number.", 400));
+    }
+
+    // Email format check - only if provided
     if (email && email.trim() !== "") {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(email)) return next(new AppError("Invalid email format", 400));
     }
 
-    // Contact can be any format (office phone, mobile, international, etc.)
-    // Just ensure it's not too long for the database field
+    // Ensure contact is not too long for DB
     if (contact.length > 45) {
-        return next(new AppError("Contact number is too long (max 45 characters).", 400));
+        return next(new AppError("Contact number is too long.", 400));
     }
 
     next();

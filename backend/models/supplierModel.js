@@ -4,10 +4,7 @@ class Supplier {
     static async checkCompanyExists(companyName) {
         const company = await prisma.company.findFirst({
             where: {
-                company_name: {
-                    equals: companyName.trim(),
-                    mode: 'insensitive'
-                }
+                company_name: companyName.trim()
             }
         });
         return !!company;
@@ -21,15 +18,19 @@ class Supplier {
     }
 
     static async getCompanyIdByName(companyName) {
-        const query = "SELECT id FROM company WHERE company_name = ? LIMIT 1";
-        const [rows] = await db.execute(query, [companyName.trim()]);
-        return rows.length > 0 ? rows[0].id : null;
+        const company = await prisma.company.findFirst({
+            where: { company_name: companyName.trim() },
+            select: { id: true }
+        });
+        return company ? company.id : null;
     }
   
     static async getBankIdByName(bankName) {
-        const query = "SELECT id FROM bank WHERE bank_name = ? LIMIT 1";
-        const [rows] = await db.execute(query, [bankName.trim()]);
-        return rows.length > 0 ? rows[0].id : null;
+        const bank = await prisma.bank.findFirst({
+            where: { bank_name: bankName.trim() },
+            select: { id: true }
+        });
+        return bank ? bank.id : null;
     }
 
     static async checkBankExistsById(bankId) {
@@ -127,7 +128,9 @@ class Supplier {
             email: s.email,
             contactNumber: s.contact_number,
             companyName: s.company?.company_name,
+            companyId: s.company_id,
             bankName: s.bank?.bank_name,
+            bankId: s.bank_id,
             accountNumber: s.account_number,
             status: s.status.ststus,
             status_id: s.status_id,
@@ -153,6 +156,26 @@ class Supplier {
             id: s.id,
             supplierName: s.supplier_name
         }));
+    }
+
+    static async updateSupplier(id, data) {
+        try {
+            await prisma.supplier.update({
+                where: { id: parseInt(id) },
+                data: {
+                    contact_number: data.contactNumber,
+                    company_id: parseInt(data.companyId),
+                    bank_id: data.bankId ? parseInt(data.bankId) : null,
+                    account_number: data.accountNumber || null
+                }
+            });
+            return { affectedRows: 1 };
+        } catch (error) {
+            if (error.code === 'P2025') {
+                return { affectedRows: 0 };
+            }
+            throw error;
+        }
     }
 
     static async updateContact(supplierId, newContact) {

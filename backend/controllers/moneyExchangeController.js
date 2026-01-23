@@ -68,8 +68,24 @@ class MoneyExchangeController {
                 });
             }
 
-            // Map transaction type to ID (1: Cash In, 2: Cash Out)
-            const exchangeTypeId = transactionType === 'cash-in' ? 1 : 2;
+            // Ensure exchange types exist and get their IDs
+            let typeIn = await prisma.exchange_type.findFirst({ where: { exchange_type: 'Cash In' } });
+            let typeOut = await prisma.exchange_type.findFirst({ where: { exchange_type: 'Cash Out' } });
+
+            if (!typeIn || !typeOut) {
+                // Initial seeding if missing
+                await prisma.exchange_type.createMany({
+                    data: [
+                        { exchange_type: 'Cash In' },
+                        { exchange_type: 'Cash Out' }
+                    ],
+                    skipDuplicates: true
+                });
+                typeIn = await prisma.exchange_type.findFirst({ where: { exchange_type: 'Cash In' } });
+                typeOut = await prisma.exchange_type.findFirst({ where: { exchange_type: 'Cash Out' } });
+            }
+
+            const exchangeTypeId = transactionType === 'cash-in' ? typeIn.id : typeOut.id;
             const now = new Date();
 
             // Insert transaction
@@ -161,24 +177,22 @@ class MoneyExchangeController {
 
     // Helper method to get balance data
     async _getBalanceData(userId) {
-        const today = new Date().toISOString().split('T')[0];
+        // Find the most recent ACTIVE session for this user
+        const session = await prisma.cash_sessions.findFirst({
+            where: {
+                user_id: parseInt(userId),
+                cash_status_id: 1 // ACTIVE
+            },
+            orderBy: {
+                opening_date_time: 'desc'
+            }
+        });
 
-        // Maintain existing logic using raw query for DATE check
-        const sessions = await prisma.$queryRaw`
-            SELECT id, opening_balance, cash_total
-            FROM cash_sessions
-            WHERE user_id = ${userId} 
-            AND DATE(opening_date_time) = ${today} 
-            AND cash_status_id = 1
-            ORDER BY opening_date_time DESC LIMIT 1
-        `;
-
-        if (sessions.length === 0) {
+        if (!session) {
             throw new Error('No active session found');
         }
 
-        const session = sessions[0];
-        let currentBalance = parseFloat(session.opening_balance) + parseFloat(session.cash_total);
+        let currentBalance = parseFloat(session.opening_balance || 0) + parseFloat(session.cash_total || 0);
 
         // Get money exchange transactions aggregation
         const aggregations = await prisma.money_exchange.groupBy({
@@ -187,12 +201,16 @@ class MoneyExchangeController {
              _sum: { amount: true }
         });
 
+        // Get IDs for accurate calculation
+        const typeIn = await prisma.exchange_type.findFirst({ where: { exchange_type: 'Cash In' } });
+        const typeOut = await prisma.exchange_type.findFirst({ where: { exchange_type: 'Cash Out' } });
+
         let exchangeTotal = 0;
         aggregations.forEach(agg => {
-            const amt = agg._sum.amount || 0;
-            if (agg.exchange_type_id1 === 1) {
+            const amt = parseFloat(agg._sum.amount || 0);
+            if (typeIn && agg.exchange_type_id1 === typeIn.id) {
                 exchangeTotal += amt;
-            } else {
+            } else if (typeOut && agg.exchange_type_id1 === typeOut.id) {
                 exchangeTotal -= amt;
             }
         });
@@ -201,8 +219,8 @@ class MoneyExchangeController {
 
         return {
             sessionId: session.id,
-            openingBalance: session.opening_balance,
-            cashAmount: session.cash_total,
+            openingBalance: parseFloat(session.opening_balance || 0),
+            cashAmount: parseFloat(session.cash_total || 0),
             exchangeTotal: exchangeTotal,
             currentBalance: currentBalance
         };

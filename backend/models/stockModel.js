@@ -4,8 +4,15 @@ class Stock {
     /**
      * @desc Get ALL stock data with individual variation rows (not grouped)
      */
-    static async getAllStockWithVariations() {
+    static async getAllStockWithVariations(filters = {}) {
+        const whereClause = {};
+        
+        if (filters.hasStock) {
+            whereClause.qty = { gt: 0 };
+        }
+
         const stocks = await prisma.stock.findMany({
+            where: whereClause,
             include: {
                 product_variations: {
                     include: {

@@ -386,6 +386,15 @@ function OutOfStock() {
                 return;
             }
 
+            if (e.key === 'F2') {
+                e.preventDefault();
+                const searchInput = document.getElementById('filter-product');
+                if (searchInput) {
+                    searchInput.focus();
+                }
+                return;
+            }
+
             if (e.key === "ArrowDown") {
                 e.preventDefault();
                 setSelectedIndex((prev) => (prev < currentStockData.length - 1 ? prev + 1 : prev));
@@ -478,15 +487,28 @@ function OutOfStock() {
         <>
             <div className={'flex flex-col gap-4 h-full'}>
                 {/* Header */}
-                <div>
-                    <div className="text-sm text-gray-400 flex items-center">
-                        <span>Stock</span>
-                        <span className="mx-2">›</span>
-                        <span className="text-gray-700 font-medium">Out of Stock</span>
+                <div className="flex items-center justify-between">
+                    <div>
+                        <div className="text-sm text-gray-400 flex items-center">
+                            <span>Stock</span>
+                            <span className="mx-2">›</span>
+                            <span className="text-gray-700 font-medium">Out of Stock</span>
+                        </div>
+                        <h1 className="text-3xl font-semibold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
+                            Out of Stock
+                        </h1>
                     </div>
-                    <h1 className="text-3xl font-semibold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
-                        Out of Stock
-                    </h1>
+
+                    <div className="hidden lg:flex items-center gap-3 bg-white px-4 py-2 rounded-xl border border-gray-100 shadow-sm border-b-2">
+                        <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg border border-gray-200">
+                            <span className="text-[10px] font-black text-gray-500 bg-white px-1.5 py-0.5 rounded shadow-sm border border-gray-200">↑↓</span>
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Navigate</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg border border-gray-200">
+                            <span className="text-[10px] font-black text-gray-500 bg-white px-1.5 py-0.5 rounded shadow-sm border border-gray-200">F2</span>
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Filters</span>
+                        </div>
+                    </div>
                 </div>
 
                 {/* Stats Cards */}
@@ -529,6 +551,7 @@ function OutOfStock() {
                                 Product
                             </label>
                             <TypeableSelect
+                                id="filter-product"
                                 options={products}
                                 value={selectedProduct}
                                 onChange={(opt) => setSelectedProduct(opt?.value as string || null)}

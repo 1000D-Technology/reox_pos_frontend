@@ -44,8 +44,6 @@ function CreateGrn() {
     const [suppliers, setSuppliers] = useState<SelectOption[]>([]);
     const [productVariants, setProductVariants] = useState<SelectOption[]>([]);
     const [paymentTypes, setPaymentTypes] = useState<SelectOption[]>([]);
-    const [isLoadingProducts, setIsLoadingProducts] = useState(false);
-    const [isLoadingSuppliers, setIsLoadingSuppliers] = useState(false);
     const [isLoadingVariants, setIsLoadingVariants] = useState(false);
     const [isLoadingPaymentTypes, setIsLoadingPaymentTypes] = useState(false);
 
@@ -199,8 +197,6 @@ function CreateGrn() {
 
     // Fetch all initial data using Promise.all
     const fetchInitialData = async () => {
-        setIsLoadingProducts(true);
-        setIsLoadingSuppliers(true);
         setIsLoadingPaymentTypes(true);
 
         try {
@@ -253,8 +249,6 @@ function CreateGrn() {
             console.error('Error fetching initial data:', error);
             toast.error('Failed to load initial data');
         } finally {
-            setIsLoadingProducts(false);
-            setIsLoadingSuppliers(false);
             setIsLoadingPaymentTypes(false);
         }
     };
@@ -403,10 +397,13 @@ function CreateGrn() {
                 );
             } else if (e.key === "ArrowUp") {
                 setSelectedIndex((prev) => (prev > 0 ? prev - 1 : prev));
-            } else if (e.key === "Enter") {
+            } else if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
                 addToGrn();
             } else if (e.key === "Enter" && e.shiftKey) {
+                e.preventDefault();
+                createGrn();
+            } else if (e.key.toLowerCase() === "s" && !["INPUT", "TEXTAREA"].includes((e.target as HTMLElement).tagName)) {
                 e.preventDefault();
                 createGrn();
             }
@@ -455,15 +452,33 @@ function CreateGrn() {
             />
 
             <div className={'flex flex-col gap-4 h-full'}>
-                <div>
-                    <div className="text-sm text-gray-400 flex items-center">
-                        <span>GRN</span>
-                        <span className="mx-2">›</span>
-                        <span className="text-gray-700 font-medium">Create GRN</span>
+                <div className="flex items-center justify-between">
+                    <div>
+                        <div className="text-sm text-gray-400 flex items-center">
+                            <span>GRN</span>
+                            <span className="mx-2">›</span>
+                            <span className="text-gray-700 font-medium">Create GRN</span>
+                        </div>
+                        <h1 className="text-3xl font-semibold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
+                            Create Goods Received Note
+                        </h1>
                     </div>
-                    <h1 className="text-3xl font-semibold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
-                        Create Goods Received Note
-                    </h1>
+
+                    {/* Shortcuts Hint */}
+                    <div className="hidden lg:flex items-center gap-3 bg-white px-4 py-2 rounded-xl border border-gray-100 shadow-sm border-b-2">
+                        <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg border border-gray-200">
+                            <span className="text-[10px] font-black text-gray-500 bg-white px-1.5 py-0.5 rounded shadow-sm border border-gray-200">ENT</span>
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Add Item</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg border border-gray-200">
+                            <span className="text-[10px] font-black text-gray-500 bg-white px-1.5 py-0.5 rounded shadow-sm border border-gray-200">S</span>
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Save</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg border border-gray-200">
+                            <span className="text-[10px] font-black text-gray-500 bg-white px-1.5 py-0.5 rounded shadow-sm border border-gray-200">↑↓</span>
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Navigate</span>
+                        </div>
+                    </div>
                 </div>
 
                 {/* Basic Bill Information */}

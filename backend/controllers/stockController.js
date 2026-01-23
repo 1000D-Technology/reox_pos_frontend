@@ -10,23 +10,37 @@ const catchAsync = require('../utils/catchAsync');
  * @route   GET /api/stock/all-variations
  */
 exports.getAllStockWithVariations = catchAsync(async (req, res, next) => {
-    const stockData = await Stock.getAllStockWithVariations();
+    const { hasStock } = req.query;
+    const stockData = await Stock.getAllStockWithVariations({ hasStock: hasStock === 'true' });
 
-    // Transform data to match StockList.tsx expectations
-    const transformedData = stockData.map(item => ({
-        productID: item.product_code || item.product_id.toString(),
-        productName: item.full_product_name,
-        barcode: item.barcode || 'N/A',
-        unit: item.unit,
-        costPrice: parseFloat(item.cost_price).toFixed(2),
-        MRP: parseFloat(item.mrp).toFixed(2),
-        Price: parseFloat(item.selling_price).toFixed(2),
-        supplier: item.supplier || 'N/A',
-        stockQty: item.qty.toString(),
-        batch: item.batch_name,
-        mfd: item.mfd,
-        exp: item.exp
-    }));
+    // Transform data for variation list (e.g. POS, Stock List)
+    const transformedData = stockData.map(item => {
+        const unitLabel = (item.unit || '').toLowerCase();
+        const isBulk = unitLabel.includes('kg') || 
+                      unitLabel.includes('bag') || 
+                      unitLabel.includes('bundle') || 
+                      unitLabel.includes('box') || 
+                      unitLabel.includes('carton') || 
+                      unitLabel.includes('pk');
+
+        return {
+            stockID: item.stock_id,
+            variationID: item.product_variations_id,
+            productID: item.product_code || item.product_id.toString(),
+            productName: item.full_product_name,
+            barcode: item.barcode || 'N/A',
+            unit: item.unit,
+            isBulk: isBulk,
+            costPrice: parseFloat(item.cost_price || 0).toFixed(2),
+            MRP: parseFloat(item.mrp || 0).toFixed(2),
+            Price: parseFloat(item.selling_price || 0).toFixed(2),
+            supplier: item.supplier || 'N/A',
+            stockQty: (item.qty || 0).toString(),
+            batch: item.batch_name,
+            mfd: item.mfd,
+            exp: item.exp
+        };
+    });
 
     res.status(200).json({
         success: true,
@@ -44,6 +58,8 @@ exports.getStockList = catchAsync(async (req, res, next) => {
 
     // Transform data to match frontend expectations
     const transformedData = stockData.map(item => ({
+        stockID: item.stock_id,
+        variationID: item.product_variations_id,
         productID: item.product_code || item.product_id.toString(),
         productName: item.full_product_name, // Updated to use full name with variants
         barcode: item.barcode || 'N/A',
@@ -79,17 +95,30 @@ exports.getSearchStock = catchAsync(async (req, res, next) => {
            console.log('First raw stock item from searchStock:', JSON.stringify(stockData[0], null, 2));
         }
 
-        const transformedData = stockData.map(item => ({
-            productID: item.product_code || item.product_id.toString(),
-            productName: item.full_product_name,
-            barcode: item.barcode || 'N/A',
-            unit: item.unit,
-            costPrice: typeof item.cost_price === 'number' ? item.cost_price.toFixed(2) : parseFloat(item.cost_price).toFixed(2),
-            MRP: typeof item.mrp === 'number' ? item.mrp.toFixed(2) : parseFloat(item.mrp).toFixed(2),
-            Price: typeof item.selling_price === 'number' ? item.selling_price.toFixed(2) : parseFloat(item.selling_price).toFixed(2),
-            supplier: item.supplier || 'N/A',
-            stockQty: item.stock_qty ? item.stock_qty.toString() : item.qty.toString()
-        }));
+        const transformedData = stockData.map(item => {
+            const unitLabel = (item.unit || '').toLowerCase();
+            const isBulk = unitLabel.includes('kg') || 
+                          unitLabel.includes('bag') || 
+                          unitLabel.includes('bundle') || 
+                          unitLabel.includes('box') || 
+                          unitLabel.includes('carton') || 
+                          unitLabel.includes('pk');
+
+            return {
+                stockID: item.stock_id,
+                variationID: item.product_variations_id,
+                productID: item.product_code || item.product_id.toString(),
+                productName: item.full_product_name,
+                barcode: item.barcode || 'N/A',
+                unit: item.unit,
+                isBulk: isBulk,
+                costPrice: typeof item.cost_price === 'number' ? item.cost_price.toFixed(2) : parseFloat(item.cost_price || 0).toFixed(2),
+                MRP: typeof item.mrp === 'number' ? item.mrp.toFixed(2) : parseFloat(item.mrp || 0).toFixed(2),
+                Price: typeof item.selling_price === 'number' ? item.selling_price.toFixed(2) : parseFloat(item.selling_price || 0).toFixed(2),
+                supplier: item.supplier || 'N/A',
+                stockQty: item.stock_qty ? item.stock_qty.toString() : (item.qty || 0).toString()
+            };
+        });
         
         if (transformedData.length > 0) {
            console.log('First transformed item:', JSON.stringify(transformedData[0], null, 2));
@@ -140,14 +169,14 @@ exports.getOutOfStockList = catchAsync(async (req, res, next) => {
     const stockData = await Stock.getOutOfStock();
 
     const transformedData = stockData.map(item => ({
-        productID: item.product_id.toString(),
+        productID: item.product_code || (item.product_id ? item.product_id.toString() : 'N/A'),
         productName: item.product_name,
         unit: item.unit,
-        costPrice: `LKR ${parseFloat(item.cost_price).toFixed(2)}`,
-        MRP: `LKR ${parseFloat(item.mrp).toFixed(2)}`,
-        Price: `LKR ${parseFloat(item.selling_price).toFixed(2)}`,
+        costPrice: `LKR ${parseFloat(item.cost_price || 0).toFixed(2)}`,
+        MRP: `LKR ${parseFloat(item.mrp || 0).toFixed(2)}`,
+        Price: `LKR ${parseFloat(item.selling_price || 0).toFixed(2)}`,
         supplier: item.supplier || 'N/A',
-        stockQty: item.stock_qty.toString()
+        stockQty: (item.stock_qty ?? item.qty ?? 0).toString()
     }));
 
     res.status(200).json({
@@ -169,14 +198,14 @@ exports.getSearchOutOfStock = catchAsync(async (req, res, next) => {
     const stockData = await Stock.searchOutOfStock(filters);
 
     const transformedData = stockData.map(item => ({
-        productID: item.product_id.toString(),
+        productID: item.product_code || (item.product_id ? item.product_id.toString() : 'N/A'),
         productName: item.product_name,
         unit: item.unit,
-        costPrice: `LKR ${parseFloat(item.cost_price).toFixed(2)}`,
-        MRP: `LKR ${parseFloat(item.mrp).toFixed(2)}`,
-        Price: `LKR ${parseFloat(item.selling_price).toFixed(2)}`,
+        costPrice: `LKR ${parseFloat(item.cost_price || 0).toFixed(2)}`,
+        MRP: `LKR ${parseFloat(item.mrp || 0).toFixed(2)}`,
+        Price: `LKR ${parseFloat(item.selling_price || 0).toFixed(2)}`,
         supplier: item.supplier || 'N/A',
-        stockQty: item.stock_qty.toString()
+        stockQty: (item.stock_qty ?? item.qty ?? 0).toString()
     }));
 
     res.status(200).json({

@@ -51,7 +51,10 @@ exports.getDamagedTableData = catchAsync(async (req, res, next) => {
         stockStatus: record.stock_label, // Shown as Batch #001 in UI
         damagedQty: record.damaged_qty,
         reason: record.damage_reason,
-        status: record.status
+        status: record.status,
+        id: record.damaged_id,
+        description: record.description,
+        date: record.date
     }));
 
     res.status(200).json({
@@ -73,10 +76,27 @@ exports.searchDamaged = catchAsync(async (req, res, next) => {
         toDate
     });
 
+    const transformedResults = results.map(record => ({
+        productID: record.product_id_code,
+        productName: record.product_name,
+        unit: record.unit,
+        costPrice: record.cost_price,
+        mrp: record.mrp,
+        price: record.price,
+        supplier: record.supplier,
+        stockStatus: record.stock_label,
+        damagedQty: record.damaged_qty,
+        reason: record.damage_reason,
+        status: record.status,
+        id: record.damaged_id,
+        description: record.description,
+        date: record.date
+    }));
+
     res.status(200).json({
         success: true,
         count: results.length,
-        data: results
+        data: transformedResults
     });
 });
 
@@ -94,5 +114,23 @@ exports.getDamagedDashboardSummary = catchAsync(async (req, res, next) => {
             thisMonth: summary.this_month_count || 0,
             affectedSuppliers: summary.affected_suppliers_count || 0
         }
+    });
+});
+
+exports.updateDamagedStatus = catchAsync(async (req, res, next) => {
+    const { id, status_id } = req.body;
+
+    if (!id || !status_id) {
+        return res.status(400).json({
+            success: false,
+            message: "Damage ID and Status ID are required."
+        });
+    }
+
+    await Damaged.updateStatus(id, status_id);
+
+    res.status(200).json({
+        success: true,
+        message: "Damaged status updated successfully."
     });
 });

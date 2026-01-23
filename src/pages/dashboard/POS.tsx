@@ -32,17 +32,17 @@ const mapAPIProductToProduct = (apiData: any): Product => {
     const item = Array.isArray(apiData) ? apiData[0] : apiData;
 
     return {
-        id: item.stockID || item.id,
+        id: item.stockID || item.stock_id || item.productID || item.id,
         name: item.displayName || item.productName || item.name,
         barcode: item.barcode || '',
-        price: parseFloat(item.price) || 0,
-        wholesalePrice: parseFloat(item.wholesalePrice) || 0,
-        stock: parseInt(item.currentStock || item.stock) || 0,
+        price: parseFloat(item.price || item.Price || item.selling_price) || 0,
+        wholesalePrice: parseFloat(item.wholesalePrice || item.wsp) || 0,
+        stock: parseInt(item.currentStock || item.stockQty || item.stock || item.qty) || 0,
         category: item.unit || item.category || 'Pcs',
-        productCode: item.productCode || '',
-        isBulk: Boolean(item.isBulk) || String(item.unit || '').toLowerCase().includes('kg'),
-        batch: item.batchName || item.batch || '',
-        expiry: item.expiry || null
+        productCode: item.productCode || item.product_id_code || '',
+        isBulk: Boolean(item.isBulk) || String(item.unit || '').toLowerCase().includes('kg') || String(item.unit || '').toLowerCase().includes('bag'),
+        batch: item.batchName || item.batch || item.batch_name || '',
+        expiry: item.expiry || item.exp || null
     };
 };
 
@@ -76,6 +76,7 @@ const POSInterface = () => {
     const [sessionChecked, setSessionChecked] = useState(false);
     const [showProductAddModal, setShowProductAddModal] = useState(false);
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+    const [currentSession, setCurrentSession] = useState<any>(null);
 
     useEffect(() => {
         const loadProducts = async () => {
@@ -116,8 +117,10 @@ const POSInterface = () => {
                     return;
                 }
 
-                const { hasActiveSession } = await cashSessionService.checkActiveCashSession(userId, counterCode);
-                if (!hasActiveSession) {
+                const response = await cashSessionService.checkActiveCashSession(userId, counterCode);
+                if (response.hasActiveSession) {
+                    setCurrentSession(response.session);
+                } else {
                     localStorage.removeItem('current_counter');
                     localStorage.removeItem('session_date');
                 }
@@ -474,11 +477,12 @@ const POSInterface = () => {
     
     const submitInvoice = async () => {
          try {
-            const userId = authService.getUserId() || 1;
-            // We need a real session ID.
-            // I will try to fetch it or use a default.
-            // NOTE: Ideally we modify cashSessionService to store session object.
-             const sessionId = 1; // Default for now
+            if (!currentSession) {
+                toast.error('No active cash session found. Please restart the POS.');
+                return;
+            }
+            const sessionId = currentSession.id;
+            const userId = currentSession.user_id || authService.getUserId() || 1;
              
             const items = cartItems.map(item => ({
                 stock_id: item.id,
@@ -628,7 +632,7 @@ const POSInterface = () => {
                 isOpen={showRegistrationModal}
                 onClose={() => setShowRegistrationModal(false)}
                 onRegister={registerCustomer}
-            /><BulkLooseModal isOpen={showBulkLooseModal} onClose={() => setShowBulkLooseModal(false)} products={products} />
+            /><BulkLooseModal isOpen={showBulkLooseModal} onClose={() => setShowBulkLooseModal(false)} />
             <CashManagementModal isOpen={showCashModal} onClose={() => setShowCashModal(false)} />
 
             <Toaster position="top-right" />

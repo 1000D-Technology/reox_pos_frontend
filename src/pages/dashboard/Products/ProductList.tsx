@@ -378,21 +378,88 @@ function ProductList() {
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
+            // Escape to close modals
+            if (e.key === "Escape") {
+                setIsEditModalOpen(false);
+                setIsConfirmModalOpen(false);
+            }
+
+            // Arrow navigation for list
             if (e.key === "ArrowDown") {
-                setSelectedIndex((prev) => (prev < currentPageData.length - 1 ? prev + 1 : prev));
+                // Only navigate if not in an input/textarea
+                const target = e.target as HTMLElement;
+                if (target.tagName !== 'INPUT' && target.tagName !== 'TEXTAREA') {
+                    e.preventDefault();
+                    setSelectedIndex((prev) => (prev < currentPageData.length - 1 ? prev + 1 : prev));
+                }
             } else if (e.key === "ArrowUp") {
-                setSelectedIndex((prev) => (prev > 0 ? prev - 1 : prev));
-            } else if (e.key === "Enter" && e.shiftKey && isEditModalOpen) {
+                const target = e.target as HTMLElement;
+                if (target.tagName !== 'INPUT' && target.tagName !== 'TEXTAREA') {
+                    e.preventDefault();
+                    setSelectedIndex((prev) => (prev > 0 ? prev - 1 : prev));
+                }
+            } else if (e.key === "PageDown") {
+                const target = e.target as HTMLElement;
+                if (target.tagName !== 'INPUT' && target.tagName !== 'TEXTAREA') {
+                    e.preventDefault();
+                    goToNextPage();
+                }
+            } else if (e.key === "PageUp") {
+                const target = e.target as HTMLElement;
+                if (target.tagName !== 'INPUT' && target.tagName !== 'TEXTAREA') {
+                    e.preventDefault();
+                    goToPreviousPage();
+                }
+            }
+
+            // Enter key behaviors
+            if (e.key === "Enter" && !e.shiftKey) {
+                const target = e.target as HTMLElement;
+                // If in search input, trigger search
+                if (target.tagName === 'INPUT' && searchTerm) {
+                    handleSearch();
+                }
+            }
+
+            // Shift + Enter to save in Edit Modal
+            if (e.key === "Enter" && e.shiftKey && isEditModalOpen) {
                 e.preventDefault();
                 if (!isUpdating) {
                     handleUpdateProduct();
+                }
+            }
+
+            // Alt Key Combinations
+            if (e.altKey) {
+                switch (e.key.toLowerCase()) {
+                    case 'e': // Edit
+                        e.preventDefault();
+                        if (currentPageData[selectedIndex]) {
+                            setSelectedProduct(currentPageData[selectedIndex]);
+                            setIsEditModalOpen(true);
+                        }
+                        break;
+                    case 'd': // Deactivate
+                        e.preventDefault();
+                        if (currentPageData[selectedIndex]) {
+                            handleDeactivateProduct(currentPageData[selectedIndex], { stopPropagation: () => {} } as any);
+                        }
+                        break;
+                    case 's': // Search
+                        e.preventDefault();
+                        handleSearch();
+                        break;
+                    case 'c': // Clear
+                        e.preventDefault();
+                        handleClear();
+                        break;
                 }
             }
         };
 
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [currentPageData.length, isEditModalOpen, isUpdating]);
+    }, [currentPageData, isEditModalOpen, isUpdating, selectedIndex, searchTerm]);
 
     const formatDataForExport = (data: Product[]) => {
         return data.map(item => ({
@@ -726,15 +793,41 @@ function ProductList() {
                     isDanger={true}
                 />
 
-                <div>
-                    <div className="text-sm text-gray-400 flex items-center">
-                        <span>Products</span>
-                        <span className="mx-2">›</span>
-                        <span className="text-gray-700 font-medium">Product List</span>
+                <div className="flex justify-between items-center mb-4">
+                    <div>
+                        <div className="text-sm text-gray-400 flex items-center">
+                            <span>Products</span>
+                            <span className="mx-2">›</span>
+                            <span className="text-gray-700 font-medium">Product List</span>
+                        </div>
+                        <h1 className="text-3xl font-semibold bg-linear-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
+                            Product List
+                        </h1>
                     </div>
-                    <h1 className="text-3xl font-semibold bg-linear-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
-                        Product List
-                    </h1>
+
+                    {/* Shortcuts Hint Style from Quotation */}
+                    <div className="hidden lg:flex items-center gap-2 bg-white px-4 py-2 rounded-xl border border-gray-100 shadow-sm border-b-2">
+                        <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg border border-gray-100">
+                            <span className="text-[10px] font-black text-gray-500 bg-white px-1.5 py-0.5 rounded shadow-sm border border-gray-200">↑↓</span>
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Navigate</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg border border-gray-100">
+                            <span className="text-[10px] font-black text-gray-500 bg-white px-1.5 py-0.5 rounded shadow-sm border border-gray-200">ALT+E</span>
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Edit</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg border border-gray-100">
+                            <span className="text-[10px] font-black text-gray-500 bg-white px-1.5 py-0.5 rounded shadow-sm border border-gray-200">ALT+D</span>
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Deactivate</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg border border-gray-100">
+                            <span className="text-[10px] font-black text-gray-500 bg-white px-1.5 py-0.5 rounded shadow-sm border border-gray-200">ALT+S</span>
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Search</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg border border-gray-100">
+                            <span className="text-[10px] font-black text-gray-500 bg-white px-1.5 py-0.5 rounded shadow-sm border border-gray-200">ESC</span>
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Close</span>
+                        </div>
+                    </div>
                 </div>
 
                 <div
@@ -834,10 +927,14 @@ function ProductList() {
                                             No products found
                                         </td>
                                     </tr>
-                                ) : currentPageData.map((sale, index) => (
+                                ) : currentPageData.map((sale: Product, index: number) => (
                                     <tr
                                         key={index}
                                         onClick={() => setSelectedIndex(index)}
+                                        onDoubleClick={() => {
+                                            setSelectedProduct(sale);
+                                            setIsEditModalOpen(true);
+                                        }}
                                         className={`cursor-pointer transition-colors ${index === selectedIndex
                                             ? "bg-emerald-50 border-l-4 border-emerald-600"
                                             : "hover:bg-emerald-50/50"

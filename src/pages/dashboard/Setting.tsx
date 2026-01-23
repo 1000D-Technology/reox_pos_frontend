@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Printer, Upload, Settings as SettingsIcon, Save, RefreshCw, Image, FileText, Ruler, DollarSign, ShoppingCart, Package, Bell, Lock, Globe, CreditCard, BarChart3 } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
+import CustomConfirmModal from '../../components/common/CustomConfirmModal';
 import type { PrintSettings, POSSettings, SystemSettings, PaymentSettings } from '../../types/settingConfig';
 import { RollSize, FontSize, Language, Timezone, DateFormat, TimeFormat, Theme, BackupFrequency, SettingsTab } from '../../enum/settings';
 
@@ -8,6 +9,7 @@ function Setting() {
     const [activeTab, setActiveTab] = useState<string>(SettingsTab.PRINT);
     const [logoPreview, setLogoPreview] = useState<string>('');
     const [logoFile, setLogoFile] = useState<File | null>(null);
+    const [showResetConfirm, setShowResetConfirm] = useState(false);
 
     const [printSettings, setPrintSettings] = useState<PrintSettings>({
         rollSize: RollSize.SIZE_80MM,
@@ -148,7 +150,7 @@ function Setting() {
         }
     };
 
-    const resetSettings = () => {
+    const handleConfirmReset = () => {
         const tabNames: { [key: string]: string } = {
             [SettingsTab.PRINT]: 'Print Settings',
             [SettingsTab.POS]: 'POS Settings',
@@ -156,94 +158,97 @@ function Setting() {
             [SettingsTab.PAYMENT]: 'Payment Settings'
         };
 
-        if (confirm(`Are you sure you want to reset ${tabNames[activeTab]} to default?`)) {
-            switch (activeTab) {
-                case SettingsTab.PRINT:
-                    // Reset print settings and logo
-                    localStorage.removeItem('printSettings');
-                    localStorage.removeItem('logoPath');
+        switch (activeTab) {
+            case SettingsTab.PRINT:
+                // Reset print settings and logo
+                localStorage.removeItem('printSettings');
+                localStorage.removeItem('logoPath');
 
-                    setPrintSettings({
-                        rollSize: RollSize.SIZE_80MM,
-                        fontSize: FontSize.MEDIUM,
-                        headerText: 'WELCOME TO OUR STORE',
-                        footerText: 'Thank you for your purchase!',
-                        showLogo: true,
-                        showBarcode: true,
-                        showQR: false,
-                        paperWidth: '80',
-                        copies: 1,
-                        autocut: true,
-                        printDate: true,
-                        printTime: true
-                    });
+                setPrintSettings({
+                    rollSize: RollSize.SIZE_80MM,
+                    fontSize: FontSize.MEDIUM,
+                    headerText: 'WELCOME TO OUR STORE',
+                    footerText: 'Thank you for your purchase!',
+                    showLogo: true,
+                    showBarcode: true,
+                    showQR: false,
+                    paperWidth: '80',
+                    copies: 1,
+                    autocut: true,
+                    printDate: true,
+                    printTime: true
+                });
 
-                    setLogoPreview('');
-                    setLogoFile(null);
+                setLogoPreview('');
+                setLogoFile(null);
 
-                    toast.success('Print settings reset to default successfully!');
-                    break;
+                toast.success('Print settings reset to default successfully!');
+                break;
 
-                case SettingsTab.POS:
-                    // Reset POS settings only
-                    localStorage.removeItem('posSettings');
+            case SettingsTab.POS:
+                // Reset POS settings only
+                localStorage.removeItem('posSettings');
 
-                    setPOSSettings({
-                        storeName: 'My POS Store',
-                        storeAddress: '123 Main Street, City',
-                        storePhone: '+1 234 567 8900',
-                        storeEmail: 'store@example.com',
-                        taxRate: 10,
-                        currency: 'Rs.',
-                        defaultDiscount: 0,
-                        lowStockAlert: 10,
-                        enableSound: true,
-                        enableVibration: false,
-                        quickSaleMode: false,
-                        showCustomerDisplay: true
-                    });
+                setPOSSettings({
+                    storeName: 'My POS Store',
+                    storeAddress: '123 Main Street, City',
+                    storePhone: '+1 234 567 8900',
+                    storeEmail: 'store@example.com',
+                    taxRate: 10,
+                    currency: 'Rs.',
+                    defaultDiscount: 0,
+                    lowStockAlert: 10,
+                    enableSound: true,
+                    enableVibration: false,
+                    quickSaleMode: false,
+                    showCustomerDisplay: true
+                });
 
-                    toast.success('POS settings reset to default successfully!');
-                    break;
+                toast.success('POS settings reset to default successfully!');
+                break;
 
-                case SettingsTab.SYSTEM:
-                    // Reset system settings only
-                    localStorage.removeItem('systemSettings');
+            case SettingsTab.SYSTEM:
+                // Reset system settings only
+                localStorage.removeItem('systemSettings');
 
-                    setSystemSettings({
-                        language: Language.ENGLISH,
-                        timezone: Timezone.UTC,
-                        dateFormat: DateFormat.DD_MM_YYYY,
-                        timeFormat: TimeFormat.TWENTY_FOUR_HOUR,
-                        theme: Theme.LIGHT,
-                        notifications: true,
-                        autoBackup: true,
-                        backupFrequency: BackupFrequency.DAILY
-                    });
+                setSystemSettings({
+                    language: Language.ENGLISH,
+                    timezone: Timezone.UTC,
+                    dateFormat: DateFormat.DD_MM_YYYY,
+                    timeFormat: TimeFormat.TWENTY_FOUR_HOUR,
+                    theme: Theme.LIGHT,
+                    notifications: true,
+                    autoBackup: true,
+                    backupFrequency: BackupFrequency.DAILY
+                });
 
-                    toast.success('System settings reset to default successfully!');
-                    break;
+                toast.success('System settings reset to default successfully!');
+                break;
 
-                case SettingsTab.PAYMENT:
-                    // Reset payment settings to default
-                    localStorage.removeItem('paymentSettings');
+            case SettingsTab.PAYMENT:
+                // Reset payment settings to default
+                localStorage.removeItem('paymentSettings');
 
-                    setPaymentSettings({
-                        cash: true,
-                        card: true,
-                        digitalWallet: false,
-                        bankTransfer: false
-                    });
+                setPaymentSettings({
+                    cash: true,
+                    card: true,
+                    digitalWallet: false,
+                    bankTransfer: false
+                });
 
-                    toast.success('Payment settings reset to default successfully!');
-                    break;
+                toast.success('Payment settings reset to default successfully!');
+                break;
 
-                default:
-                    toast.error('Unknown settings tab');
-            }
-
-            console.log(`${tabNames[activeTab]} reset to default`);
+            default:
+                toast.error('Unknown settings tab');
         }
+
+        console.log(`${tabNames[activeTab]} reset to default`);
+        setShowResetConfirm(false);
+    };
+
+    const resetSettings = () => {
+        setShowResetConfirm(true);
     };
 
     const tabs = [
@@ -925,6 +930,16 @@ function Setting() {
                     </div>
                 </div>
             )}
+
+            <CustomConfirmModal
+                isOpen={showResetConfirm}
+                onClose={() => setShowResetConfirm(false)}
+                onConfirm={handleConfirmReset}
+                title="Reset Settings"
+                message="Are you sure you want to reset the current settings to their default values? This action cannot be undone."
+                confirmText="Reset to Default"
+                variant="danger"
+            />
         </div>
     );
 }

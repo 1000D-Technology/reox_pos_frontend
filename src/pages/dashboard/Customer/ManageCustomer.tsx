@@ -11,12 +11,15 @@ import {
     ArrowDownRight,
     Eye,
     Receipt,
-    DollarSign
+    DollarSign,
+    Loader2
 } from 'lucide-react';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import toast, { Toaster } from 'react-hot-toast';
 import { customerService } from '../../../services/customerService';
+import invoiceService from '../../../services/invoiceService';
+import { paymentTypeService } from '../../../services/paymentTypeService';
 
 
 interface Customer {
@@ -73,15 +76,8 @@ function ManageCustomer() {
         no: (startIndex + index + 1).toString()
     }));
 
-    const [customerInvoices, setCustomerInvoices] = useState<{ [key: number]: Invoice[] }>({
-        1: [
-            { id: 1, invoiceNumber: 'INV-001', date: '2024-01-15', totalAmount: 2750, paidAmount: 2750, balance: 0, status: 'paid' },
-            { id: 2, invoiceNumber: 'INV-002', date: '2024-01-20', totalAmount: 3500, paidAmount: 2000, balance: 1500, status: 'open' }
-        ],
-        2: [
-            { id: 3, invoiceNumber: 'INV-003', date: '2024-01-18', totalAmount: 4200, paidAmount: 1500, balance: 2700, status: 'open' }
-        ]
-    });
+    const [customerInvoices, setCustomerInvoices] = useState<Invoice[]>([]);
+    const [isLoadingInvoices, setIsLoadingInvoices] = useState(false);
 
     const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
     const [selectedInvoice, setSelectedInvoice] = useState<InvoiceDetail | null>(null);
@@ -89,12 +85,20 @@ function ManageCustomer() {
     const [showInvoiceDetail, setShowInvoiceDetail] = useState(false);
     const [selectedIndex, setSelectedIndex] = useState(0);
 
+    // Invoice filters
+    const [invoiceFromDate, setInvoiceFromDate] = useState('');
+    const [invoiceToDate, setInvoiceToDate] = useState('');
+    const [isLoadingInvoiceDetail, setIsLoadingInvoiceDetail] = useState(false);
+
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [newPhone, setNewPhone] = useState('');
     const [isUpdatingPhone, setIsUpdatingPhone] = useState(false);
 
     const [paymentAmount, setPaymentAmount] = useState('');
+    const [paymentMethod, setPaymentMethod] = useState('');
+    const [paymentMethods, setPaymentMethods] = useState<Array<{ id: number; name: string }>>([]);
     const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+    const searchRef = useRef<HTMLInputElement>(null);
 
     // Stats calculation
     const stats = {
@@ -153,51 +157,106 @@ function ManageCustomer() {
     };
 
     // Load customers from API
-    useEffect(() => {
-        const loadCustomers = async () => {
-            try {
-                setIsLoading(true);
-                const response = await customerService.getCustomers();
+    const loadCustomers = async () => {
+        try {
+            setIsLoading(true);
+            const response = await customerService.getCustomers();
 
-                if (response.data.success) {
-                    const mappedCustomers: Customer[] = response.data.data.map((customer: any) => ({
-                        id: customer.id,
-                        no: '',
-                        name: customer.name,
-                        email: customer.email,
-                        phone: customer.contact,
-                        totalCreditBalance: customer.credit_balance,
-                        isActive: customer.status_name === 'Active'
-                    }));
+            if (response.data.success) {
+                const mappedCustomers: Customer[] = response.data.data.map((customer: any) => ({
+                    id: customer.id,
+                    no: '',
+                    name: customer.name,
+                    email: customer.email,
+                    phone: customer.contact,
+                    totalCreditBalance: customer.credit_balance,
+                    isActive: customer.status_name === 'Active'
+                }));
 
-                    setCustomers(mappedCustomers);
-                    setFilteredCustomers(mappedCustomers);
-                } else {
-                    toast.error('Failed to load customers');
-                }
-            } catch (error: any) {
-                console.error('Error loading customers:', error);
-                toast.error('Failed to load customers. Please try again.');
-            } finally {
-                setIsLoading(false);
+                setCustomers(mappedCustomers);
+                setFilteredCustomers(mappedCustomers);
+            } else {
+                toast.error('Failed to load customers');
             }
-        };
+        } catch (error: any) {
+            console.error('Error loading customers:', error);
+            toast.error('Failed to load customers. Please try again.');
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
+    useEffect(() => {
         loadCustomers();
+        loadPaymentMethods();
     }, []);
+
+    // Load Payment Methods
+    const loadPaymentMethods = async () => {
+        try {
+            const response = await paymentTypeService.getPaymentType();
+            if (response.data?.success) {
+                const methods = response.data.data.map((method: any) => ({
+                    id: method.id,
+                    name: method.payment_types
+                }));
+                setPaymentMethods(methods);
+                // Set default to first method (usually Cash)
+                if (methods.length > 0) {
+                    setPaymentMethod(methods[0].id.toString());
+                }
+            }
+        } catch (error) {
+            console.error('Error loading payment methods:', error);
+            toast.error('Failed to load payment methods');
+        }
+    };
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
+            // Focus search input on '/'
+            if (e.key === '/' && document.activeElement !== searchRef.current && document.activeElement?.tagName !== 'INPUT') {
+                e.preventDefault();
+                searchRef.current?.focus();
+                return;
+            }
+
+            // Global escape to close modals
+            if (e.key === "Escape") {
+                if (showInvoiceDetail) {
+                    setShowInvoiceDetail(false);
+                } else if (showInvoices) {
+                    setShowInvoices(false);
+                    loadCustomers();
+                } else if (isModalOpen) {
+                    handleCloseModal();
+                }
+                return;
+            }
+
+            // Don't process shortcuts if an input is focused (except search focus already handled)
+            if (document.activeElement?.tagName === 'INPUT' && document.activeElement !== searchRef.current) return;
+
             if (e.key === "ArrowDown") {
+                e.preventDefault();
                 setSelectedIndex((prev) => (prev < customerData.length - 1 ? prev + 1 : prev));
             } else if (e.key === "ArrowUp") {
+                e.preventDefault();
                 setSelectedIndex((prev) => (prev > 0 ? prev - 1 : prev));
+            } else if (e.key === "Enter") {
+                if (!showInvoices && !isModalOpen && customerData[selectedIndex]) {
+                    if (e.shiftKey) {
+                        handleEditClick(customerData[selectedIndex]);
+                    } else {
+                        handleViewCustomer(customerData[selectedIndex]);
+                    }
+                }
             }
         };
 
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [customerData.length]);
+    }, [customerData, selectedIndex, showInvoices, showInvoiceDetail, isModalOpen]);
 
     const handleEditClick = (customer: Customer) => {
         setSelectedCustomer(customer);
@@ -274,42 +333,105 @@ function ManageCustomer() {
         }
     };
 
-    const handleViewCustomer = (customer: Customer) => {
+    const handleViewCustomer = async (customer: Customer) => {
         setSelectedCustomer(customer);
         setShowInvoices(true);
+        setInvoiceFromDate('');
+        setInvoiceToDate('');
+        await loadCustomerInvoices(customer.id);
     };
 
-    const handleViewInvoice = (invoice: Invoice) => {
-        const allItems = [
-            { name: 'Product A', quantity: 2, price: 500, total: 1000 },
-            { name: 'Product B', quantity: 1, price: 1500, total: 1500 },
-            { name: 'Product C', quantity: 3, price: 250, total: 750 },
-        ];
+    const loadCustomerInvoices = async (_customerId: number, fromDate?: string, toDate?: string) => {
+        try {
+            setIsLoadingInvoices(true);
+            const response = await invoiceService.getAllInvoices({
+                fromDate: fromDate || undefined,
+                toDate: toDate || undefined,
+            });
 
-        const subtotal = allItems.reduce((sum, item) => sum + item.total, 0);
-        const tax = subtotal * 0.1;
+            if (response.success) {
+                // Filter invoices for the selected customer by customer ID or name
+                // Note: Adjust this based on your actual API response structure
+                const filtered = response.data.filter((inv: any) => {
+                    // Try matching by customer name since we may not have customerId in invoice
+                    const matchesCustomer = inv.customerName === selectedCustomer?.name || 
+                                           inv.customer === selectedCustomer?.name;
+                    return matchesCustomer;
+                });
+                
+                // Map to Invoice interface
+                const mappedInvoices: Invoice[] = filtered.map((inv: any) => ({
+                    id: inv.id,
+                    invoiceNumber: inv.invoiceID,
+                    date: inv.issuedDate || inv.date,
+                    totalAmount: parseFloat(inv.netAmount || inv.total),
+                    paidAmount: parseFloat(inv.netAmount || inv.total) - parseFloat(inv.balance || 0),
+                    balance: parseFloat(inv.balance || 0),
+                    status: parseFloat(inv.balance || 0) === 0 ? 'paid' : 'open'
+                }));
+                
+                setCustomerInvoices(mappedInvoices);
+            }
+        } catch (error) {
+            console.error('Error loading customer invoices:', error);
+            toast.error('Failed to load customer invoices');
+            setCustomerInvoices([]);
+        } finally {
+            setIsLoadingInvoices(false);
+        }
+    };
 
-        const detail: InvoiceDetail = {
-            id: invoice.id,
-            invoiceNumber: invoice.invoiceNumber,
-            customerName: selectedCustomer?.name || '',
-            date: invoice.date,
-            dueDate: '2024-02-15',
-            items: allItems,
-            subtotal: subtotal,
-            tax: tax,
-            totalAmount: invoice.totalAmount,
-            paidAmount: invoice.paidAmount,
-            balance: invoice.balance,
-            status: invoice.status
-        };
-        setSelectedInvoice(detail);
-        setShowInvoiceDetail(true);
+    const handleInvoiceDateFilter = () => {
+        if (selectedCustomer) {
+            loadCustomerInvoices(selectedCustomer.id, invoiceFromDate, invoiceToDate);
+        }
+    };
+
+    const handleViewInvoice = async (invoice: Invoice) => {
+        try {
+            setIsLoadingInvoiceDetail(true);
+            setShowInvoiceDetail(true);
+            
+            const response = await invoiceService.getInvoiceDetails(invoice.invoiceNumber);
+            
+            if (response.success) {
+                const invoiceData = response.data;
+                
+                const detail: InvoiceDetail = {
+                    id: invoice.id,
+                    invoiceNumber: invoiceData.invoiceNo,
+                    customerName: invoiceData.customer,
+                    date: invoiceData.date,
+                    dueDate: invoiceData.date, // Use same date if no due date
+                    items: invoiceData.items.map((item: any) => ({
+                        name: item.name,
+                        quantity: item.quantity,
+                        price: item.price,
+                        total: item.price  * item.quantity
+                    })),
+                    subtotal: invoiceData.subTotal || invoiceData.grossAmount || invoiceData.total,
+                    tax: invoiceData.discount || 0,
+                    totalAmount: invoiceData.total,
+                    paidAmount: invoiceData.total - (invoiceData.creditBalance || 0),
+                    balance: invoiceData.creditBalance || 0,
+                    status: (invoiceData.creditBalance || 0) === 0 ? 'paid' : 'open'
+                };
+                
+                setSelectedInvoice(detail);
+            } else {
+                toast.error('Failed to load invoice details');
+            }
+        } catch (error) {
+            console.error('Error loading invoice details:', error);
+            toast.error('Failed to load invoice details');
+        } finally {
+            setIsLoadingInvoiceDetail(false);
+        }
     };
 
     const handlePayment = async () => {
-        if (!selectedInvoice || !paymentAmount.trim()) {
-            toast.error('Please enter a valid payment amount');
+        if (!selectedInvoice || !paymentAmount.trim() || !paymentMethod) {
+            toast.error('Please enter payment amount and select payment method');
             return;
         }
 
@@ -325,40 +447,62 @@ function ManageCustomer() {
             return;
         }
 
-        setIsProcessingPayment(true);
+        try {
+            setIsProcessingPayment(true);
+            
+            const paymentData = {
+                invoice_id: selectedInvoice.invoiceNumber,
+                payment_amount: amount,
+                payment_type_id: parseInt(paymentMethod)
+            };
 
-        setTimeout(() => {
-            const newPaidAmount = selectedInvoice.paidAmount + amount;
-            const newBalance = selectedInvoice.balance - amount;
-            const newStatus: 'paid' | 'open' = newBalance === 0 ? 'paid' : 'open';
+            const response = await invoiceService.processInvoicePayment(paymentData);
 
-            toast.success(`Payment of Rs. ${amount.toLocaleString()} processed successfully!`);
+            if (response.success) {
+                const selectedMethodName = paymentMethods.find(m => m.id.toString() === paymentMethod)?.name || 'Unknown';
+                toast.success(`Payment of Rs. ${amount.toLocaleString()} via ${selectedMethodName} processed successfully!`);
 
-            setSelectedInvoice({
-                ...selectedInvoice,
-                paidAmount: newPaidAmount,
-                balance: newBalance,
-                status: newStatus
-            });
+                // Update the selected invoice details
+                const newPaidAmount = selectedInvoice.paidAmount + amount;
+                const newBalance = selectedInvoice.balance - amount;
+                const newStatus: 'paid' | 'open' = newBalance === 0 ? 'paid' : 'open';
 
-            if (selectedCustomer) {
-                setCustomerInvoices(prev => ({
-                    ...prev,
-                    [selectedCustomer.id]: prev[selectedCustomer.id].map(inv =>
+                setSelectedInvoice({
+                    ...selectedInvoice,
+                    paidAmount: newPaidAmount,
+                    balance: newBalance,
+                    status: newStatus
+                });
+
+                // Update invoice list
+                if (selectedCustomer) {
+                    setCustomerInvoices(prev => prev.map(inv =>
                         inv.id === selectedInvoice.id
                             ? { ...inv, paidAmount: newPaidAmount, balance: newBalance, status: newStatus }
                             : inv
-                    )
-                }));
-            }
+                    ));
+                }
 
-            setPaymentAmount('');
+                // Reset payment form
+                setPaymentAmount('');
+                if (paymentMethods.length > 0) {
+                    setPaymentMethod(paymentMethods[0].id.toString());
+                }
+
+                // Show fully paid message
+                if (newBalance === 0) {
+                    toast.success('Invoice fully paid!');
+                }
+            } else {
+                toast.error(response.message || 'Failed to process payment');
+            }
+        } catch (error: any) {
+            console.error('Payment processing error:', error);
+            const errorMessage = error.response?.data?.message || 'Failed to process payment. Please try again.';
+            toast.error(errorMessage);
+        } finally {
             setIsProcessingPayment(false);
-
-            if (newBalance === 0) {
-                toast.success('Invoice fully paid!');
-            }
-        }, 1500);
+        }
     };
 
     const goToPage = (page: number) => {
@@ -433,15 +577,41 @@ function ManageCustomer() {
                 }}
             />
             <div className={'flex flex-col gap-4 h-full'}>
-                <div>
-                    <div className="text-sm text-gray-400 flex items-center">
-                        <span>Customers</span>
-                        <span className="mx-2">›</span>
-                        <span className="text-gray-700 font-medium">Manage Customer</span>
+                <div className="flex items-center justify-between">
+                    <div>
+                        <div className="text-sm text-gray-400 flex items-center">
+                            <span>Customers</span>
+                            <span className="mx-2">›</span>
+                            <span className="text-gray-700 font-medium">Manage Customer</span>
+                        </div>
+                        <h1 className="text-3xl font-semibold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
+                            Manage Customer
+                        </h1>
                     </div>
-                    <h1 className="text-3xl font-semibold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
-                        Manage Customer
-                    </h1>
+
+                    {/* Shortcuts Hint */}
+                    <div className="hidden lg:flex items-center gap-3 bg-white px-4 py-2 rounded-xl border border-gray-100 shadow-sm border-b-2">
+                        <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg border border-gray-200">
+                            <span className="text-[10px] font-black text-gray-500 bg-white px-1.5 py-0.5 rounded shadow-sm border border-gray-200">↑↓</span>
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Navigate</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg border border-gray-200">
+                            <span className="text-[10px] font-black text-gray-500 bg-white px-1.5 py-0.5 rounded shadow-sm border border-gray-200">Enter</span>
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">View</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg border border-gray-200">
+                            <span className="text-[10px] font-black text-gray-500 bg-white px-1.5 py-0.5 rounded shadow-sm border border-gray-200">Shift+↵</span>
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Edit</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg border border-gray-200">
+                            <span className="text-[10px] font-black text-gray-500 bg-white px-1.5 py-0.5 rounded shadow-sm border border-gray-200">/</span>
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Search</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg border border-gray-200">
+                            <span className="text-[10px] font-black text-gray-500 bg-white px-1.5 py-0.5 rounded shadow-sm border border-gray-200">Esc</span>
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Close</span>
+                        </div>
+                    </div>
                 </div>
 
                 <div className={'grid md:grid-cols-3 grid-cols-1 gap-4'}>
@@ -479,6 +649,7 @@ function ManageCustomer() {
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
                         <input
+                            ref={searchRef}
                             type="text"
                             value={searchQuery}
                             onChange={(e) => handleSearch(e.target.value)}
@@ -719,7 +890,10 @@ function ManageCustomer() {
                                 <p className="text-emerald-100 text-sm">{selectedCustomer.name}</p>
                             </div>
                             <button
-                                onClick={() => setShowInvoices(false)}
+                                onClick={() => {
+                                    setShowInvoices(false);
+                                    loadCustomers();
+                                }}
                                 className="p-2 hover:bg-white/20 rounded-lg transition-colors"
                             >
                                 <X size={24} className="text-white" />
@@ -727,12 +901,52 @@ function ManageCustomer() {
                         </div>
 
                         <div className="p-6 overflow-y-auto max-h-[calc(90vh-100px)]">
-                            {customerInvoices[selectedCustomer.id] && customerInvoices[selectedCustomer.id].length > 0 ? (
+                            {/* Date Filter */}
+                            <div className="mb-4 pb-4 border-b border-gray-200">
+                                <div className="flex items-center gap-3">
+                                    <div className="flex-1">
+                                        <label className="block text-xs font-semibold text-gray-600 mb-1">From Date</label>
+                                        <input
+                                            type="date"
+                                            value={invoiceFromDate}
+                                            onChange={(e) => setInvoiceFromDate(e.target.value)}
+                                            className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-500 transition-all outline-none"
+                                        />
+                                    </div>
+                                    <div className="flex-1">
+                                        <label className="block text-xs font-semibold text-gray-600 mb-1">To Date</label>
+                                        <input
+                                            type="date"
+                                            value={invoiceToDate}
+                                            onChange={(e) => setInvoiceToDate(e.target.value)}
+                                            className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-500 transition-all outline-none"
+                                        />
+                                    </div>
+                                    <button
+                                        onClick={handleInvoiceDateFilter}
+                                        disabled={isLoadingInvoices}
+                                        className="mt-5 px-4 py-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-medium rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        {isLoadingInvoices ? (
+                                            <Loader2 className="animate-spin" size={16} />
+                                        ) : (
+                                            <Search size={16} />
+                                        )}
+                                    </button>
+                                </div>
+                            </div>
+
+                            {isLoadingInvoices ? (
+                                <div className="flex items-center justify-center py-12">
+                                    <Loader2 className="animate-spin text-emerald-500 mr-2" size={32} />
+                                    <span className="text-gray-600">Loading invoices...</span>
+                                </div>
+                            ) : customerInvoices.length > 0 ? (
                                 <div className="space-y-4">
-                                    {customerInvoices[selectedCustomer.id].map((invoice) => (
+                                    {customerInvoices.map((invoice) => (
                                         <div
                                             key={invoice.id}
-                                            className="border-2 border-gray-200 rounded-xl p-4 transition-shadow cursor-pointer"
+                                            className="border-2 border-gray-200 rounded-xl p-4 hover:border-emerald-300 transition-all cursor-pointer hover:shadow-lg"
                                             onClick={() => handleViewInvoice(invoice)}
                                         >
                                             <div className="flex justify-between items-start mb-3">
@@ -767,8 +981,10 @@ function ManageCustomer() {
                                     ))}
                                 </div>
                             ) : (
-                                <div className="text-center py-8 text-gray-500">
-                                    No invoices found for this customer
+                                <div className="text-center py-12 text-gray-500">
+                                    <Receipt className="w-16 h-16 mx-auto mb-3 opacity-30" />
+                                    <p>No invoices found for this customer</p>
+                                    <p className="text-xs mt-2">Try adjusting the date filters</p>
                                 </div>
                             )}
                         </div>
@@ -788,6 +1004,9 @@ function ManageCustomer() {
                                 onClick={() => {
                                     setShowInvoiceDetail(false);
                                     setPaymentAmount('');
+                                    if (paymentMethods.length > 0) {
+                                        setPaymentMethod(paymentMethods[0].id.toString());
+                                    }
                                 }}
                                 className="p-2 hover:bg-white/20 rounded-lg transition-colors"
                             >
@@ -796,6 +1015,13 @@ function ManageCustomer() {
                         </div>
 
                         <div className="p-6 overflow-y-auto max-h-[calc(90vh-100px)]">
+                            {isLoadingInvoiceDetail ? (
+                                <div className="flex items-center justify-center py-12">
+                                    <Loader2 className="animate-spin text-emerald-500 mr-2" size={32} />
+                                    <span className="text-gray-600">Loading invoice details...</span>
+                                </div>
+                            ) : selectedInvoice ? (
+                            <>
                             <div className="grid grid-cols-2 gap-6 mb-6">
                                 <div>
                                     <p className="text-sm text-gray-500 mb-1">Invoice Number</p>
@@ -883,8 +1109,25 @@ function ManageCustomer() {
                                         <DollarSign className="text-emerald-600" size={24} />
                                         Make Payment
                                     </h3>
-                                    <div className="flex gap-4 items-end">
-                                        <div className="flex-1">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                        <div>
+                                            <label htmlFor="payment-method" className="block text-sm font-bold text-gray-700 mb-2">
+                                                Payment Method
+                                            </label>
+                                            <select
+                                                id="payment-method"
+                                                value={paymentMethod}
+                                                onChange={(e) => setPaymentMethod(e.target.value)}
+                                                className="w-full text-sm font-semibold rounded-lg py-3 px-4 border-2 border-gray-300 focus:border-emerald-500 transition-all outline-none"
+                                            >
+                                                {paymentMethods.map((method) => (
+                                                    <option key={method.id} value={method.id}>
+                                                        {method.name}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div>
                                             <label htmlFor="payment-amount" className="block text-sm font-bold text-gray-700 mb-2">
                                                 Payment Amount
                                             </label>
@@ -903,22 +1146,28 @@ function ManageCustomer() {
                                                 Maximum payable: Rs. {selectedInvoice.balance.toLocaleString()}
                                             </p>
                                         </div>
-                                        <button
-                                            onClick={handlePayment}
-                                            disabled={isProcessingPayment || !paymentAmount}
-                                            className={`px-8 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-bold rounded-lg transition-all transform hover:scale-105 ${isProcessingPayment || !paymentAmount ? 'opacity-50 cursor-not-allowed' : ''
-                                                }`}
-                                        >
-                                            {isProcessingPayment ? (
-                                                <span className="flex items-center gap-2">
-                                                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                                                    Processing...
-                                                </span>
-                                            ) : (
-                                                'Pay Now'
-                                            )}
-                                        </button>
                                     </div>
+                                    <button
+                                        onClick={handlePayment}
+                                        disabled={isProcessingPayment || !paymentAmount || !paymentMethod}
+                                        className={`w-full px-8 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-bold rounded-lg transition-all transform hover:scale-105 ${isProcessingPayment || !paymentAmount || !paymentMethod ? 'opacity-50 cursor-not-allowed' : ''
+                                            }`}
+                                    >
+                                        {isProcessingPayment ? (
+                                            <span className="flex items-center justify-center gap-2">
+                                                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                                                Processing...
+                                            </span>
+                                        ) : (
+                                            'Pay Now'
+                                        )}
+                                    </button>
+                                </div>
+                            )}
+                            </>
+                            ) : (
+                                <div className="text-center py-8 text-gray-500">
+                                    No invoice details available
                                 </div>
                             )}
                         </div>

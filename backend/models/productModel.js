@@ -14,26 +14,56 @@ class Product {
 
   static async create(productData, variations) {
     try {
-      const newProduct = await prisma.product.create({
-        data: {
-          product_name: productData.name,
-          product_code: productData.code,
-          category_id: productData.categoryId,
-          brand_id: productData.brandId,
-          unit_id: productData.unitId,
-          product_type_id: productData.typeId,
-          product_variations: {
-            create: variations.map((variant) => ({
-              barcode: variant.barcode,
-              color: variant.color,
-              size: variant.size,
-              storage_capacity: variant.capacity,
-              product_status_id: variant.statusId,
-            })),
+      return await prisma.$transaction(async (tx) => {
+        let batchId = null;
+
+        // Check if any variation has initial stock
+        const hasInitialStock = variations.some(v => v.initialQty && Number(v.initialQty) > 0);
+
+        if (hasInitialStock) {
+          const batch = await tx.batch.create({
+            data: {
+              batch_name: `Initial Stock - ${new Date().toISOString().split('T')[0]}`,
+            }
+          });
+          batchId = batch.id;
+        }
+
+        const newProduct = await tx.product.create({
+          data: {
+            product_name: productData.name,
+            product_code: productData.code,
+            category_id: productData.categoryId,
+            brand_id: productData.brandId,
+            unit_id: productData.unitId,
+            product_type_id: productData.typeId,
+            product_variations: {
+              create: variations.map((variant) => ({
+                barcode: variant.barcode,
+                color: variant.color,
+                size: variant.size,
+                storage_capacity: variant.capacity,
+                product_status_id: variant.statusId,
+                // Create stock if initial quantity is provided
+                stock: (variant.initialQty && Number(variant.initialQty) > 0) ? {
+                  create: {
+                    qty: Number(variant.initialQty),
+                    cost_price: Number(variant.costPrice || 0),
+                    mrp: Number(variant.mrp || 0),
+                    rsp: Number(variant.rsp || 0),
+                    wsp: Number(variant.wsp || 0),
+                    barcode: variant.barcode,
+                    batch_id: batchId,
+                    mfd: variant.mfgDate ? new Date(variant.mfgDate) : null,
+                    exp: variant.expDate ? new Date(variant.expDate) : null
+                  }
+                } : undefined
+              })),
+            },
           },
-        },
+        });
+        return newProduct.id;
       });
-      return newProduct.id;
     } catch (error) {
       throw error;
     }
@@ -68,9 +98,16 @@ class Product {
       const unitName = p.unit_id_product_unit_idTounit_id ? p.unit_id_product_unit_idTounit_id.name : null;
       const typeName = p.product_type ? p.product_type.name : null;
 
+      // Build full product name with variations
+      let fullProductName = p.product_name;
+      if (pv.color && pv.color !== 'Default') fullProductName += ` - ${pv.color}`;
+      if (pv.size && pv.size !== 'Default') fullProductName += ` - ${pv.size}`;
+      if (pv.storage_capacity && pv.storage_capacity !== 'N/A') fullProductName += ` - ${pv.storage_capacity}`;
+
       return {
         productID: pv.id,
-        productName: p.product_name,
+        productName: fullProductName, // Use the full name here for easier frontend integration
+        baseProductName: p.product_name,
         productCode: p.product_code,
         barcode: pv.barcode,
         category: categoryName,
@@ -276,9 +313,16 @@ class Product {
       const unitName = p.unit_id_product_unit_idTounit_id ? p.unit_id_product_unit_idTounit_id.name : null;
       const typeName = p.product_type ? p.product_type.name : null;
       
+      // Build full product name with variations
+      let fullProductName = p.product_name;
+      if (pv.color && pv.color !== 'Default') fullProductName += ` - ${pv.color}`;
+      if (pv.size && pv.size !== 'Default') fullProductName += ` - ${pv.size}`;
+      if (pv.storage_capacity && pv.storage_capacity !== 'N/A') fullProductName += ` - ${pv.storage_capacity}`;
+
       return {
         productID: pv.id,
-        productName: p.product_name,
+        productName: fullProductName,
+        baseProductName: p.product_name,
         productCode: p.product_code,
         barcode: pv.barcode,
         category: categoryName,

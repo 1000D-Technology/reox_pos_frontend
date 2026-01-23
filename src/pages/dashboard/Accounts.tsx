@@ -634,56 +634,35 @@ function Accounts() {
                             Cashier Accounts & Sessions
                         </h1>
                     </div>
-                    <div className="flex gap-3">
+
+                    <div className="flex items-center gap-4">
+                        {/* Shortcuts Hint */}
+                        <div className="hidden xl:flex items-center gap-3 bg-white px-4 py-2 rounded-xl border border-gray-100 shadow-sm border-b-2">
+                             <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg border border-gray-200">
+                                <span className="text-[10px] font-black text-gray-500 bg-white px-1.5 py-0.5 rounded shadow-sm border border-gray-200">↑↓</span>
+                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Navigate</span>
+                            </div>
+                            <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg border border-gray-200">
+                                <span className="text-[10px] font-black text-gray-500 bg-white px-1.5 py-0.5 rounded shadow-sm border border-gray-200">↵</span>
+                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Details</span>
+                            </div>
+                            <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg border border-gray-200">
+                                <span className="text-[10px] font-black text-gray-500 bg-white px-1.5 py-0.5 rounded shadow-sm border border-gray-200">Ctrl+R</span>
+                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Report</span>
+                            </div>
+                            <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg border border-gray-200">
+                                <span className="text-[10px] font-black text-gray-500 bg-white px-1.5 py-0.5 rounded shadow-sm border border-gray-200">Esc</span>
+                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Close</span>
+                            </div>
+                        </div>
+
                         <button
                             onClick={generateExcelReport}
-                            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-semibold rounded-xl transition-all"
+                            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-semibold rounded-xl transition-all h-full"
                         >
-                            <Download size={18} />
+                            <Download size={20} />
                             Generate Report
                         </button>
-                    </div>
-                </div>
-
-                {/* Keyboard Shortcuts Help */}
-                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-3 border border-blue-200 shadow-sm">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                            <span className="text-sm font-semibold text-blue-700">⌨️ Keyboard Shortcuts:</span>
-                        </div>
-                        <div className="flex flex-wrap gap-4 text-xs">
-                            <div className="flex items-center gap-2">
-                                <kbd className="px-2 py-1 bg-white rounded border border-blue-300 shadow-sm font-mono text-blue-700">Ctrl+R</kbd>
-                                <span className="text-blue-600">Generate Report</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <kbd className="px-2 py-1 bg-white rounded border border-blue-300 shadow-sm font-mono text-blue-700">Ctrl+Shift+R</kbd>
-                                <span className="text-blue-600">Reset Filters</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <kbd className="px-2 py-1 bg-white rounded border border-blue-300 shadow-sm font-mono text-blue-700">↑</kbd>
-                                <kbd className="px-2 py-1 bg-white rounded border border-blue-300 shadow-sm font-mono text-blue-700">↓</kbd>
-                                <span className="text-blue-600">Select Row</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <kbd className="px-2 py-1 bg-white rounded border border-blue-300 shadow-sm font-mono text-blue-700">PgUp</kbd>
-                                <kbd className="px-2 py-1 bg-white rounded border border-blue-300 shadow-sm font-mono text-blue-700">PgDn</kbd>
-                                <span className="text-blue-600">Scroll Table</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <kbd className="px-2 py-1 bg-white rounded border border-blue-300 shadow-sm font-mono text-blue-700">←</kbd>
-                                <kbd className="px-2 py-1 bg-white rounded border border-blue-300 shadow-sm font-mono text-blue-700">→</kbd>
-                                <span className="text-blue-600">Prev/Next Page</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <kbd className="px-2 py-1 bg-white rounded border border-blue-300 shadow-sm font-mono text-blue-700">Enter</kbd>
-                                <span className="text-blue-600">View Details</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <kbd className="px-2 py-1 bg-white rounded border border-blue-300 shadow-sm font-mono text-blue-700">Esc</kbd>
-                                <span className="text-blue-600">Close Modal</span>
-                            </div>
-                        </div>
                     </div>
                 </div>
 
