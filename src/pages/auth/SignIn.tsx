@@ -33,14 +33,12 @@ function SignIn() {
                     return;
                 }
                 navigate('/dashboard', { replace: true });
-            }
-        } catch (err: unknown) {
-            if (err instanceof Error && 'response' in err) {
-                const axiosError = err as { response?: { data?: { message?: string } } };
-                setError(axiosError.response?.data?.message || 'Invalid username or password');
             } else {
-                setError('An unexpected error occurred');
+                setError(response.message || 'Login failed');
             }
+        } catch (err: any) {
+            const message = err.response?.data?.message || err.message || 'An unexpected error occurred';
+            setError(message);
         } finally {
             setLoading(false);
         }

@@ -24,7 +24,8 @@ router.post('/login', async (req, res) => {
             where: {
                 OR: [
                     { contact: username },
-                    { email: username }
+                    { email: username },
+                    { name: username }
                 ]
             },
             include: {

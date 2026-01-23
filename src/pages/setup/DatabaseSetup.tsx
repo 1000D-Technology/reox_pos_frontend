@@ -24,7 +24,7 @@ function DatabaseSetup() {
         DB_USER: '',
         DB_PASSWORD: '',
         DB_NAME: '',
-        PORT: '5000',
+        PORT: '3000',
         DB_PORT: '3306'
     });
     const [isChecking, setIsChecking] = useState(true);
@@ -43,7 +43,7 @@ function DatabaseSetup() {
 
     const checkEnvExists = async () => {
         try {
-            const response = await fetch('http://localhost:5000/api/setup/check-env');
+            const response = await fetch('http://localhost:3000/api/setup/check-env');
             const data = await response.json();
 
             if (data.exists && data.connected) {
@@ -94,7 +94,7 @@ function DatabaseSetup() {
             addLog(`🗄️  Accessing database: ${config.DB_NAME}`);
             await new Promise(resolve => setTimeout(resolve, 500));
 
-            const response = await fetch('http://localhost:5000/api/setup/test-connection', {
+            const response = await fetch('http://localhost:3000/api/setup/test-connection', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(config)
@@ -319,7 +319,7 @@ function DatabaseSetup() {
                                         value={config.PORT}
                                         onChange={handleInputChange}
                                         className="bg-white border-2 border-emerald-200 focus:border-emerald-500 text-sm rounded-xl w-full p-3 focus:ring-4 focus:ring-emerald-100 transition-all"
-                                        placeholder="5000"
+                                        placeholder="3000"
                                     />
                                 </div>
                             </div>

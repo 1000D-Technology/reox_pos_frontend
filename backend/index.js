@@ -41,6 +41,11 @@ app.use(cors({
 const authRoutes = require('./routes/auth');
 app.use(express.json());
 
+// Health check endpoint for Electron
+app.get('/api/health', (req, res) => {
+    res.status(200).json({ status: 'ok', message: 'Backend is running' });
+});
+
 // Routes
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/auth', authRoutes);

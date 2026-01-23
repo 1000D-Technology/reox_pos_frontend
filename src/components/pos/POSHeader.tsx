@@ -1,4 +1,4 @@
-import { ShoppingCart, Wallet, Package, RotateCcw, BanknoteIcon, ArrowUpDown } from 'lucide-react';
+import { ShoppingCart, RotateCcw, BanknoteIcon, ArrowUpDown } from 'lucide-react';
 
 interface POSHeaderProps {
     billingMode: 'retail' | 'wholesale';
@@ -51,7 +51,7 @@ export const POSHeader = ({
 
             <div className="flex items-center gap-2">
                 <button
-                    onClick={() => onCashManage(true)}
+                    onClick={onCashManage}
                     className="px-4 py-2.5 bg-cyan-50 hover:bg-cyan-100 rounded-xl transition-colors flex items-center gap-2 text-cyan-700 font-semibold group"
                 >
                     <BanknoteIcon className="w-4 h-4" />
@@ -59,7 +59,7 @@ export const POSHeader = ({
                     <span className="text-xs bg-cyan-200 px-1.5 py-0.5 rounded">F1</span>
                 </button>
                 <button
-                    onClick={() => onBulkLoose(true)}
+                    onClick={onBulkLoose}
                     className="px-4 py-2.5 bg-purple-50 hover:bg-purple-100 rounded-xl transition-colors flex items-center gap-2 text-purple-700 font-semibold"
                 >
                     <ArrowUpDown className="w-4 h-4" />
@@ -67,7 +67,7 @@ export const POSHeader = ({
                     <span className="text-xs bg-purple-200 px-1.5 py-0.5 rounded">F2</span>
                 </button>
                 <button
-                    onClick={() => onReturn(true)}
+                    onClick={onReturn}
                     className="px-4 py-2.5 bg-amber-50 hover:bg-amber-100 rounded-xl transition-colors flex items-center gap-2 text-amber-700 font-semibold"
                 >
                     <RotateCcw className="w-4 h-4" />
