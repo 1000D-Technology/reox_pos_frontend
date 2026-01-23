@@ -79,11 +79,15 @@ export const generateBillHTML = (data: BillData): string => {
     const printSettings: PrintSettings = savedPrintSettings ? JSON.parse(savedPrintSettings) : {
         headerText: 'WELCOME',
         footerText: 'Thank you!',
-        showLogo: false
+        showLogo: false,
+        showBarcode: true,
+        showQR: false,
+        rollSize: '80mm',
+        fontSize: 'medium'
     };
 
     const posSettings: POSSettings = savedPOSSettings ? JSON.parse(savedPOSSettings) : {
-        storeName: 'POS System',
+        storeName: 'REOX POS',
         storeAddress: '',
         storePhone: '',
         storeEmail: '',
@@ -207,63 +211,62 @@ export const generateBillHTML = (data: BillData): string => {
             <style>
                 body {
                     font-family: 'Arial', 'Helvetica', sans-serif;
-                    font-size: 14px;
-                    line-height: 1.4;
-                    width: 80mm; /* Standard receipt printer width */
+                    font-size: 12px;
+                    line-height: 1.2;
+                    width: 78mm;
                     margin: 0;
-                    padding: 10px;
+                    padding: 4px 15px;
                     background: white;
                     color: black;
                 }
                 .header {
                     text-align: center;
-                    margin-bottom: 12px;
-                    border-bottom: 2px dashed #000;
-                    padding-bottom: 12px;
+                    margin-bottom: 6px;
+                    border-bottom: 1px dashed #000;
+                    padding-bottom: 6px;
                 }
                 .logo {
-                    max-width: 60%;
-                    max-height: 80px;
-                    margin-bottom: 8px;
+                    max-width: 50%;
+                    max-height: 50px;
+                    margin-bottom: 4px;
                     display: block;
                     margin-left: auto;
                     margin-right: auto;
                 }
                 .shop-name {
-                    font-size: 18px;
+                    font-size: 16px;
                     font-weight: 800;
-                    margin-bottom: 6px;
+                    margin-bottom: 2px;
                     text-transform: uppercase;
                 }
                 .header-text {
-                    font-size: 12px;
-                    margin-bottom: 4px;
+                    font-size: 11px;
+                    margin-bottom: 2px;
                     font-weight: 600;
                 }
                 .meta-info {
-                    margin-bottom: 12px;
-                    font-size: 12px;
-                    text-align: center;
+                    margin-bottom: 6px;
+                    font-size: 11px;
                 }
                 .customer-info {
-                    margin-bottom: 12px;
-                    border-bottom: 2px dashed #000;
-                    padding-bottom: 8px;
+                    margin-bottom: 6px;
+                    border-bottom: 1px dashed #000;
+                    padding-bottom: 4px;
                 }
                 table {
                     width: 100%;
                     border-collapse: collapse;
-                    margin-bottom: 12px;
+                    margin-bottom: 6px;
                 }
                 th {
                     text-align: left;
-                    border-bottom: 2px solid #000;
-                    padding: 4px 0;
+                    border-bottom: 1px solid #000;
+                    padding: 2px 0;
                     font-weight: 800;
-                    font-size: 13px;
+                    font-size: 12px;
                 }
                 td {
-                    padding: 6px 0;
+                    padding: 2px 0;
                     vertical-align: top;
                 }
                 .text-right {
@@ -271,42 +274,43 @@ export const generateBillHTML = (data: BillData): string => {
                 }
                 .item-name {
                     width: 45%;
-                    font-weight: 500;
                 }
                 .item-discount {
-                    font-size: 11px;
+                    font-size: 10px;
                     font-style: italic;
                     color: #444;
                 }
                 .totals {
-                    border-top: 2px dashed #000;
-                    padding-top: 8px;
-                    margin-bottom: 12px;
+                    border-top: 1px dashed #000;
+                    padding-top: 4px;
+                    margin-bottom: 6px;
                 }
                 .summary-row {
                     display: flex;
                     justify-content: space-between;
-                    margin-bottom: 4px;
+                    margin-bottom: 2px;
                 }
                 .grand-total {
                     font-weight: 900;
-                    font-size: 18px;
-                    margin-top: 8px;
-                    border-top: 2px solid #000;
-                    padding-top: 8px;
+                    font-size: 15px;
+                    margin-top: 4px;
+                    border-top: 1px solid #000;
+                    padding-top: 4px;
                 }
                 .footer {
                     text-align: center;
-                    margin-top: 20px;
-                    font-size: 12px;
-                    font-weight: 500;
+                    margin-top: 10px;
+                    font-size: 11px;
                 }
                 .software-credit {
-                    margin-top: 10px;
-                    font-size: 10px;
+                    margin-top: 5px;
+                    font-size: 9px;
                     color: #666;
                     border-top: 1px dotted #ccc;
-                    padding-top: 5px;
+                    padding-top: 3px;
+                }
+                svg {
+                    max-width: 100%;
                 }
                 #barcode {
                     width: 100%;
@@ -323,7 +327,7 @@ export const generateBillHTML = (data: BillData): string => {
                     }
                     body {
                         margin: 0;
-                        padding: 5px;
+                        padding: 5px 15px;
                     }
                 }
             </style>
@@ -336,12 +340,12 @@ export const generateBillHTML = (data: BillData): string => {
                 ${printSettings.headerText ? `<div class="header-text">${printSettings.headerText}</div>` : ''}
                 <div>${posSettings.storeAddress}</div>
                 <div>Tel: ${posSettings.storePhone}</div>
-                ${posSettings.storeEmail ? `<div>${posSettings.storeEmail}</div>` : ''}
+                ${posSettings.storeEmail ? `<div>Email: ${posSettings.storeEmail}</div>` : ''}
             </div>
 
             <div class="meta-info">
                 <div class="summary-row">
-                    <span>${isReturn ? 'Ref Invoice' : 'Invoice'} #: ${invoiceNumber}</span>
+                    <span>${isReturn ? 'Ref Invoice' : 'Invoice'}: ${invoiceNumber}</span>
                 </div>
                 <div class="summary-row">
                     <span>Date: ${dateStr}</span>
@@ -411,7 +415,7 @@ export const generateBillHTML = (data: BillData): string => {
                         ${isReturn ? 'Return' : 'Sale'} Transaction
                     </div>
                     <div style="font-size: 14px; font-weight: 900; margin-bottom: 5px;">
-                        #${invoiceNumber}
+                        ${invoiceNumber}
                     </div>
                     <div style="display: flex; justify-content: center; margin-bottom: 5px;">
                         <svg id="barcode-bottom"></svg>
@@ -426,56 +430,38 @@ export const generateBillHTML = (data: BillData): string => {
             </div>
 
             <script>
-                // Barcode Bottom (Always shown)
-                try {
-                    JsBarcode("#barcode-bottom", "${invoiceNumber}", {
-                        format: "CODE128",
-                        width: 1.5,
-                        height: 45,
-                        displayValue: false, // We show it above manually for better styling
-                        margin: 0,
-                        fontSize: 12,
-                        textMargin: 0
-                    });
-                } catch (e) {
-                    console.error("Bottom Barcode generation failed", e);
-                }
-
-                // Header Barcode (Optional based on settings)
-                ${printSettings.showBarcode ? `
-                try {
-                    // Logic for old barcode element if it exists
-                    if(document.getElementById("barcode")) {
-                         JsBarcode("#barcode", "${invoiceNumber}", {
-                            format: "CODE128",
-                            width: 1.5,
-                            height: 40,
-                            displayValue: true,
-                            margin: 0,
-                            fontSize: 12,
-                            textMargin: 0
-                        });
+                function renderElements() {
+                    if (typeof JsBarcode === 'undefined') {
+                        setTimeout(renderElements, 50);
+                        return;
                     }
-                } catch (e) {
-                    console.error("Header Barcode generation failed", e);
-                }
-                ` : ''}
 
-                // QR Code
-                ${printSettings.showQR ? `
-                try {
-                    new QRCode(document.getElementById("qrcode"), {
-                        text: "MECARD:N:Mediland ;ORG:Mediland Healthcare ;TEL:+94777904907;EMAIL:info@mediland@gmail.com;ADR:67/1/1, Samudrasanna Road, Mount lavinia, Srilanka.;;",
-                        width: 80,
-                        height: 80,
-                        colorDark : "#000000",
-                        colorLight : "#ffffff",
-                        correctLevel : QRCode.CorrectLevel.H
-                    });
-                } catch (e) {
-                    console.error("QR Code generation failed", e);
+                    try {
+                        JsBarcode("#barcode-bottom", "${invoiceNumber}", {
+                            format: "CODE128",
+                            width: 2,
+                            height: 35,
+                            displayValue: false,
+                            margin: 0
+                        });
+                    } catch (e) { console.error(e); }
+
+                    ${printSettings.showQR ? `
+                    try {
+                        if (typeof QRCode !== 'undefined') {
+                            new QRCode(document.getElementById("qrcode"), {
+                                text: "REOX-POS-${invoiceNumber}",
+                                width: 70,
+                                height: 70,
+                                colorDark : "#000000",
+                                colorLight : "#ffffff",
+                                correctLevel : QRCode.CorrectLevel.M
+                            });
+                        }
+                    } catch (e) { console.error(e); }
+                    ` : ''}
                 }
-                ` : ''}
+                renderElements();
             </script>
         </body>
         </html>

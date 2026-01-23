@@ -659,9 +659,9 @@ function StockList() {
 
                 {/* Stock Table */}
                 <div
-                    className={'flex flex-col bg-white rounded-xl h-full p-4 justify-between border border-gray-200'}
+                    className="flex flex-col bg-white rounded-xl p-4 justify-between border border-gray-200 flex-1 overflow-hidden"
                 >
-                    <div className="overflow-y-auto max-h-md md:h-[320px] lg:h-[500px] rounded-lg scrollbar-thin scrollbar-thumb-emerald-300 scrollbar-track-gray-100">
+                    <div className="overflow-auto flex-1 rounded-lg scrollbar-thin scrollbar-thumb-emerald-300 scrollbar-track-gray-100">
                         <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-linear-to-r from-emerald-500 to-emerald-600 sticky top-0 z-10">
                                 <tr>

@@ -25,6 +25,7 @@ export interface Invoice {
     cashier: string;
     customerName?: string;
     itemCount?: number;
+    refundedAmount?: string;
     paymentMethods?: string;
 }
 
@@ -65,6 +66,7 @@ export interface InvoiceDetail {
     grossAmount?: number;
     profit?: number;
     creditBalance?: number;
+    refundedAmount?: number;
     items: Array<{
         id: number;
         name: string;

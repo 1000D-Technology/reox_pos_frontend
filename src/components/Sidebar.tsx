@@ -19,6 +19,7 @@ import {
 import type { ReactNode } from "react";
 import { useState, useEffect } from "react";
 import { authService } from "../services/authService";
+import logo from "/logo.png";
 
 interface NavItemChild {
     label: string;
@@ -142,6 +143,7 @@ export default function Sidebar({ isOpen }: SidebarProps) {
             children: [
                 { label: "Create Supplier", path: "/supplier/create-supplier" },
                 { label: "Manage Supplier", path: "/supplier/manage-supplier" },
+                { label: "Manage Company", path: "/supplier/manage-company" },
                 { label: "Supplier GRN History", path: "/supplier/supplier-grn" },
                 { label: "Supplier Payments", path: "/supplier/supplier-payments" },
             ],
@@ -179,9 +181,9 @@ export default function Sidebar({ isOpen }: SidebarProps) {
                 {/* Logo */}
                 <div className="flex items-center justify-center h-16">
                     {isOpen ? (
-                        <img src="/logo.png" alt="" className="h-8" />
+                        <img src={logo} alt="" className="h-8" />
                     ) : (
-                        <img src="/logo.png" alt="" className="h-3" />
+                        <img src={logo} alt="" className="h-3" />
                     )}
                 </div>
 
@@ -197,7 +199,7 @@ export default function Sidebar({ isOpen }: SidebarProps) {
                                             className={`flex items-center justify-between ${isOpen ? "pr-2" : "justify-center"
                                                 } gap-3 px-3 py-2 text-sm transition
                                             ${(location.pathname === item.path || location.pathname.startsWith(item.path + "/"))
-                                                    ? "bg-gradient-to-l from-emerald-200 font-semibold border-e-4 border-emerald-600"
+                                                    ? "bg-linear-to-l from-emerald-200 font-semibold border-e-4 border-emerald-600"
                                                     : "text-gray-700 hover:bg-green-50"}`}
                                             onClick={(e) => toggleDropdown(item.label, e)}
                                         >
@@ -225,7 +227,7 @@ export default function Sidebar({ isOpen }: SidebarProps) {
                                                             to={child.path}
                                                             className={`flex items-center gap-2 px-3 py-1.5 text-xs transition pl-6
             ${location.pathname === child.path
-                                                                    ? "bg-gradient-to-l from-emerald-200 text-black font-medium"
+                                                                    ? "bg-linear-to-l from-emerald-200 text-black font-medium"
                                                                     : "text-gray-600 hover:bg-emerald-50"}`}
                                                         >
                                                             {child.label}
@@ -241,7 +243,7 @@ export default function Sidebar({ isOpen }: SidebarProps) {
                                         className={`flex items-center ${isOpen ? "justify-start" : "justify-center"
                                             } gap-3 px-3 py-2 text-sm transition
                                         ${location.pathname === item.path
-                                                ? "bg-gradient-to-l from-emerald-200 text-black font-semibold"
+                                                ? "bg-linear-to-l from-emerald-200 text-black font-semibold"
                                                 : "text-gray-700 hover:bg-green-50"}`}
                                     >
                                         {item.icon}

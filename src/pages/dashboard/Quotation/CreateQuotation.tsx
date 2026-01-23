@@ -596,18 +596,18 @@ function CreateQuotation() {
                 </div>
 
                 {/* Items Table */}
-                <div className="bg-white rounded-xl p-0 overflow-hidden shadow-md border border-gray-100 flex-1 flex flex-col min-h-0">
-                    <div className="overflow-auto flex-1 h-full">
+                <div className="bg-white rounded-2xl p-0 overflow-hidden shadow-xl shadow-gray-200/50 border border-gray-100 flex-1 flex flex-col min-h-[450px]">
+                    <div className="overflow-auto flex-1 h-full scrollbar-thin scrollbar-thumb-emerald-200">
                         <table className="min-w-full divide-y divide-gray-200 relative">
-                            <thead className="sticky top-0 z-10 bg-emerald-500 shadow-sm text-white">
-                                <tr className="text-white text-xs uppercase tracking-wider font-semibold">
-                                    <th className="px-6 py-4 text-left">Product Code</th>
-                                    <th className="px-6 py-4 text-left">Description</th>
-                                    <th className="px-6 py-4 text-right">Rate</th>
-                                    <th className="px-6 py-4 text-center">Qty</th>
-                                    <th className="px-6 py-4 text-right">Discount</th>
-                                    <th className="px-6 py-4 text-right">Amount</th>
-                                    <th className="px-6 py-4 text-center">Action</th>
+                            <thead className="sticky top-0 z-10 bg-emerald-600 shadow-sm text-white">
+                                <tr className="text-white text-sm uppercase tracking-wider font-bold">
+                                    <th className="px-6 py-5 text-left">Product Code</th>
+                                    <th className="px-6 py-5 text-left">Description</th>
+                                    <th className="px-6 py-5 text-right">Rate</th>
+                                    <th className="px-6 py-5 text-center">Qty</th>
+                                    <th className="px-6 py-5 text-right">Discount</th>
+                                    <th className="px-6 py-5 text-right">Amount</th>
+                                    <th className="px-6 py-5 text-center">Action</th>
                                 </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-100">
@@ -622,23 +622,23 @@ function CreateQuotation() {
                                     </tr>
                                 ) : (
                                     currentPageData.map((item, idx) => (
-                                        <tr key={idx} className="hover:bg-gray-50 transition-colors">
-                                            <td className="px-6 py-3 text-sm font-medium text-gray-600">{item.productId}</td>
-                                            <td className="px-6 py-3 text-sm font-bold text-gray-800">{item.name}</td>
-                                            <td className="px-6 py-3 text-sm text-right font-mono text-gray-600">{item.rate.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                                            <td className="px-6 py-3 text-sm text-center font-bold">{item.qty}</td>
-                                            <td className="px-6 py-3 text-sm text-right text-red-500 font-mono">
+                                        <tr key={idx} className="hover:bg-emerald-50/30 transition-colors group">
+                                            <td className="px-6 py-4 text-sm font-medium text-gray-500">{item.productId}</td>
+                                            <td className="px-6 py-4 text-base font-bold text-gray-800 tracking-tight">{item.name}</td>
+                                            <td className="px-6 py-4 text-base text-right font-mono text-gray-700">{item.rate.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                                            <td className="px-6 py-4 text-base text-center font-black text-gray-900 border-x border-gray-50 bg-gray-50/30">{item.qty}</td>
+                                            <td className="px-6 py-4 text-base text-right text-red-600 font-mono font-bold">
                                                 {item.discount > 0 ? `-${item.discount.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '-'}
                                             </td>
-                                            <td className="px-6 py-3 text-sm text-right font-bold text-emerald-600 font-mono">
+                                            <td className="px-6 py-4 text-lg text-right font-black text-emerald-600 font-mono tracking-tighter bg-emerald-50/20">
                                                 {item.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                                             </td>
-                                            <td className="px-6 py-3 text-center">
+                                            <td className="px-6 py-4 text-center">
                                                 <button
                                                     onClick={() => handleRemoveItem(idx)}
-                                                    className="p-1.5 bg-red-50 text-red-500 rounded-lg hover:bg-red-100 transition-colors"
+                                                    className="p-2 bg-red-50 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all shadow-sm hover:scale-110 active:scale-95"
                                                 >
-                                                    <Trash size={16} />
+                                                    <Trash size={18} />
                                                 </button>
                                             </td>
                                         </tr>

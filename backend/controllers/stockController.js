@@ -34,6 +34,7 @@ exports.getAllStockWithVariations = catchAsync(async (req, res, next) => {
             costPrice: parseFloat(item.cost_price || 0).toFixed(2),
             MRP: parseFloat(item.mrp || 0).toFixed(2),
             Price: parseFloat(item.selling_price || 0).toFixed(2),
+            wholesalePrice: parseFloat(item.wsp || 0).toFixed(2),
             supplier: item.supplier || 'N/A',
             stockQty: (item.qty || 0).toString(),
             batch: item.batch_name,
@@ -115,6 +116,7 @@ exports.getSearchStock = catchAsync(async (req, res, next) => {
                 costPrice: typeof item.cost_price === 'number' ? item.cost_price.toFixed(2) : parseFloat(item.cost_price || 0).toFixed(2),
                 MRP: typeof item.mrp === 'number' ? item.mrp.toFixed(2) : parseFloat(item.mrp || 0).toFixed(2),
                 Price: typeof item.selling_price === 'number' ? item.selling_price.toFixed(2) : parseFloat(item.selling_price || 0).toFixed(2),
+                wholesalePrice: typeof item.wsp === 'number' ? item.wsp.toFixed(2) : parseFloat(item.wsp || 0).toFixed(2),
                 supplier: item.supplier || 'N/A',
                 stockQty: item.stock_qty ? item.stock_qty.toString() : (item.qty || 0).toString()
             };

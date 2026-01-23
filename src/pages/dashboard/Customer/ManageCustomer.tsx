@@ -39,6 +39,7 @@ interface Invoice {
     totalAmount: number;
     paidAmount: number;
     balance: number;
+    refundedAmount: number;
     status: 'paid' | 'open';
 }
 
@@ -54,6 +55,7 @@ interface InvoiceDetail {
     totalAmount: number;
     paidAmount: number;
     balance: number;
+    refundedAmount: number;
     status: 'paid' | 'open';
 }
 
@@ -367,6 +369,7 @@ function ManageCustomer() {
                     totalAmount: parseFloat(inv.netAmount || inv.total),
                     paidAmount: parseFloat(inv.netAmount || inv.total) - parseFloat(inv.balance || 0),
                     balance: parseFloat(inv.balance || 0),
+                    refundedAmount: parseFloat(inv.refundedAmount || 0),
                     status: parseFloat(inv.balance || 0) === 0 ? 'paid' : 'open'
                 }));
                 
@@ -414,6 +417,7 @@ function ManageCustomer() {
                     totalAmount: invoiceData.total,
                     paidAmount: invoiceData.total - (invoiceData.creditBalance || 0),
                     balance: invoiceData.creditBalance || 0,
+                    refundedAmount: invoiceData.refundedAmount || 0,
                     status: (invoiceData.creditBalance || 0) === 0 ? 'paid' : 'open'
                 };
                 
@@ -541,14 +545,17 @@ function ManageCustomer() {
         return pages;
     };
 
-    const getStatusBadge = (status: string) => {
+    const getStatusBadge = (status: string, refundedAmount?: number) => {
+        if (refundedAmount && refundedAmount > 0) {
+            return 'bg-linear-to-r from-red-500 to-red-600 text-white shadow-sm font-black';
+        }
         switch (status) {
             case 'paid':
-                return 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white';
+                return 'bg-linear-to-r from-emerald-500 to-emerald-600 text-white shadow-sm font-black';
             case 'open':
-                return 'bg-gradient-to-r from-yellow-500 to-yellow-600 text-white';
+                return 'bg-linear-to-r from-yellow-500 to-yellow-600 text-white shadow-sm font-black';
             default:
-                return 'bg-gradient-to-r from-gray-400 to-gray-500 text-white';
+                return 'bg-linear-to-r from-gray-400 to-gray-500 text-white shadow-sm font-black';
         }
     };
 
@@ -584,7 +591,7 @@ function ManageCustomer() {
                             <span className="mx-2">›</span>
                             <span className="text-gray-700 font-medium">Manage Customer</span>
                         </div>
-                        <h1 className="text-3xl font-semibold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
+                        <h1 className="text-3xl font-semibold bg-linear-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
                             Manage Customer
                         </h1>
                     </div>
@@ -620,7 +627,7 @@ function ManageCustomer() {
                             key={i}
                             className={`flex items-center p-4 space-x-3 transition-all bg-white rounded-2xl border border-gray-200 cursor-pointer group relative overflow-hidden`}
                         >
-                            <div className="absolute inset-0 bg-gradient-to-br from-transparent via-gray-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                            <div className="absolute inset-0 bg-linear-to-br from-transparent via-gray-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
 
                             <div className={`p-3 rounded-full ${stat.color} relative z-10`}>
                                 <stat.icon className={`w-6 h-6 ${stat.iconColor}`} />
@@ -665,7 +672,7 @@ function ManageCustomer() {
                 >
                     <div className="overflow-y-auto max-h-md md:h-[320px] lg:h-[550px] rounded-lg scrollbar-thin scrollbar-thumb-emerald-300 scrollbar-track-gray-100">
                         <table className="min-w-full divide-y divide-gray-200">
-                            <thead className="bg-gradient-to-r from-emerald-500 to-emerald-600 sticky top-0 z-10">
+                            <thead className="bg-linear-to-r from-emerald-500 to-emerald-600 sticky top-0 z-10">
                                 <tr>
                                     {['#', 'Name', 'Email', 'Phone', 'Credit Balance', 'Status', 'Actions'].map((header, i, arr) => (
                                         <th
@@ -721,8 +728,8 @@ function ManageCustomer() {
                                             </td>
                                             <td className="px-6 py-2 whitespace-nowrap">
                                                 <span className={`px-3 py-1 text-xs font-semibold rounded-full ${customer.totalCreditBalance > 0
-                                                        ? 'bg-gradient-to-r from-red-100 to-red-200 text-red-800'
-                                                        : 'bg-gradient-to-r from-emerald-100 to-emerald-200 text-emerald-800'
+                                                        ? 'bg-linear-to-r from-red-100 to-red-200 text-red-800'
+                                                        : 'bg-linear-to-r from-emerald-100 to-emerald-200 text-emerald-800'
                                                     }`}>
                                                     Rs. {customer.totalCreditBalance.toLocaleString()}
                                                 </span>
@@ -734,8 +741,8 @@ function ManageCustomer() {
                                                         handleStatusToggle(customer.id, customer.isActive);
                                                     }}
                                                     className={`px-4 py-1.5 text-xs font-semibold rounded-full transition-all transform hover:scale-105 ${customer.isActive
-                                                            ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white hover:from-emerald-600 hover:to-emerald-700'
-                                                            : 'bg-gradient-to-r from-gray-400 to-gray-500 text-white hover:from-gray-500 hover:to-gray-600'
+                                                            ? 'bg-linear-to-r from-emerald-500 to-emerald-600 text-white hover:from-emerald-600 hover:to-emerald-700'
+                                                            : 'bg-linear-to-r from-gray-400 to-gray-500 text-white hover:from-gray-500 hover:to-gray-600'
                                                         }`}
                                                 >
                                                     {customer.isActive ? 'Active' : 'Inactive'}
@@ -748,7 +755,7 @@ function ManageCustomer() {
                                                             e.stopPropagation();
                                                             handleEditClick(customer);
                                                         }}
-                                                        className="p-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg transition-all"
+                                                        className="p-2 bg-linear-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg transition-all"
                                                     >
                                                         <Pencil size={16} />
                                                     </button>
@@ -757,7 +764,7 @@ function ManageCustomer() {
                                                             e.stopPropagation();
                                                             handleViewCustomer(customer);
                                                         }}
-                                                        className="p-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white rounded-lg transition-all"
+                                                        className="p-2 bg-linear-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white rounded-lg transition-all"
                                                     >
                                                         <Eye size={16} />
                                                     </button>
@@ -794,7 +801,7 @@ function ManageCustomer() {
                                         key={page}
                                         onClick={() => goToPage(page as number)}
                                         className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${currentPage === page
-                                                ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white'
+                                                ? 'bg-linear-to-r from-emerald-500 to-emerald-600 text-white'
                                                 : 'text-gray-600 hover:bg-emerald-50 hover:text-emerald-600'
                                             }`}
                                     >
@@ -830,7 +837,7 @@ function ManageCustomer() {
                         </button>
 
                         <div className="flex items-center gap-3 mb-6">
-                            <div className="p-3 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl">
+                            <div className="p-3 bg-linear-to-br from-emerald-500 to-emerald-600 rounded-xl">
                                 <Pencil className="w-6 h-6 text-white" />
                             </div>
                             <div>
@@ -868,7 +875,7 @@ function ManageCustomer() {
                             <button
                                 onClick={handleUpdatePhone}
                                 disabled={isUpdatingPhone}
-                                className={`px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-semibold rounded-lg transition-all ${isUpdatingPhone ? 'opacity-50 cursor-not-allowed' : ''
+                                className={`px-6 py-2.5 bg-linear-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-semibold rounded-lg transition-all ${isUpdatingPhone ? 'opacity-50 cursor-not-allowed' : ''
                                     }`}
                             >
                                 {isUpdatingPhone ? 'Updating...' : 'Update Phone'}
@@ -884,7 +891,7 @@ function ManageCustomer() {
                     <div
                         className="bg-white rounded-2xl border border-gray-200 w-full max-w-4xl max-h-[90vh] overflow-hidden"
                     >
-                        <div className="bg-gradient-to-r from-emerald-500 to-emerald-600 px-6 py-4 flex justify-between items-center">
+                        <div className="bg-linear-to-r from-emerald-500 to-emerald-600 px-6 py-4 flex justify-between items-center">
                             <div>
                                 <h2 className="text-2xl font-bold text-white">Customer Invoices</h2>
                                 <p className="text-emerald-100 text-sm">{selectedCustomer.name}</p>
@@ -957,8 +964,8 @@ function ManageCustomer() {
                                                     </h3>
                                                     <p className="text-sm text-gray-500">Date: {invoice.date}</p>
                                                 </div>
-                                                <span className={`px-3 py-1 text-xs font-semibold rounded-full ${getStatusBadge(invoice.status)}`}>
-                                                    {invoice.status.toUpperCase()}
+                                                <span className={`px-3 py-1 text-[10px] font-bold rounded-full border border-white/20 uppercase tracking-widest ${getStatusBadge(invoice.status, invoice.refundedAmount)}`}>
+                                                    {invoice.refundedAmount > 0 ? 'Returned' : invoice.status.toUpperCase()}
                                                 </span>
                                             </div>
                                             <div className="grid grid-cols-3 gap-4 mt-4">
@@ -1041,8 +1048,8 @@ function ManageCustomer() {
                                 </div>
                                 <div>
                                     <p className="text-sm text-gray-500 mb-1">Status</p>
-                                    <span className={`px-3 py-1 text-xs font-semibold rounded-full ${getStatusBadge(selectedInvoice.status)} inline-block`}>
-                                        {selectedInvoice.status.toUpperCase()}
+                                    <span className={`px-3 py-1 text-[10px] font-bold rounded-full border border-white/20 uppercase tracking-widest inline-block ${getStatusBadge(selectedInvoice.status, selectedInvoice.refundedAmount)}`}>
+                                        {selectedInvoice.refundedAmount > 0 ? 'Returned' : selectedInvoice.status.toUpperCase()}
                                     </span>
                                 </div>
                             </div>

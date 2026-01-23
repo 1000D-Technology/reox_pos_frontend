@@ -370,7 +370,7 @@ function GrnList() {
                             <span className="mx-2">›</span>
                             <span className="text-gray-700 font-medium">GRN List</span>
                         </div>
-                        <h1 className="text-3xl font-semibold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
+                        <h1 className="text-3xl font-semibold bg-linear-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
                             GRN List
                         </h1>
                     </div>
@@ -405,7 +405,7 @@ function GrnList() {
                             key={i}
                             className={`flex items-center p-4 space-x-3 transition-all bg-white rounded-2xl border border-gray-200 cursor-pointer group relative overflow-hidden`}
                         >
-                            <div className="absolute inset-0 bg-gradient-to-br from-transparent via-gray-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                            <div className="absolute inset-0 bg-linear-to-br from-transparent via-gray-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
 
                             <div className={`p-3 rounded-full ${stat.color} shadow-sm relative z-10`}>
                                 <stat.icon className={`w-6 h-6 ${stat.iconColor}`} />
@@ -488,7 +488,7 @@ function GrnList() {
                             <button
                                 onClick={searchGRNs}
                                 disabled={isSearching}
-                                className={`bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 rounded-lg py-2 px-4 flex items-center justify-center gap-2 shadow-lg shadow-emerald-200 hover:shadow-xl transition-all ${isSearching ? 'opacity-50 cursor-not-allowed' : ''
+                                className={`bg-linear-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 rounded-lg py-2 px-4 flex items-center justify-center gap-2 shadow-lg shadow-emerald-200 hover:shadow-xl transition-all ${isSearching ? 'opacity-50 cursor-not-allowed' : ''
                                     }`}
                             >
                                 <SearchCheck size={18} />
@@ -496,7 +496,7 @@ function GrnList() {
                             </button>
                             <button
                                 onClick={clearSearch}
-                                className="bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 rounded-lg py-2 px-4 flex items-center justify-center gap-2 shadow-lg shadow-gray-200 hover:shadow-xl transition-all"
+                                className="bg-linear-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 rounded-lg py-2 px-4 flex items-center justify-center gap-2 shadow-lg shadow-gray-200 hover:shadow-xl transition-all"
                             >
                                 <RefreshCw size={18} />
                                 Clear
@@ -507,11 +507,11 @@ function GrnList() {
 
 
                 <div
-                    className={'flex flex-col bg-white rounded-xl h-full p-6 justify-between border border-gray-200'}
+                    className={'flex flex-col bg-white rounded-xl flex-1 p-6 justify-between border border-gray-200 overflow-hidden shadow-sm'}
                 >
-                    <div className="overflow-y-auto max-h-md md:h-[320px] lg:h-[500px] rounded-lg scrollbar-thin scrollbar-thumb-emerald-300 scrollbar-track-gray-100">
+                    <div className="overflow-auto flex-1 rounded-lg scrollbar-thin scrollbar-thumb-emerald-300 scrollbar-track-gray-100">
                         <table className="min-w-full divide-y divide-gray-200">
-                            <thead className="bg-gradient-to-r from-emerald-600 to-emerald-700 sticky top-0 z-10">
+                            <thead className="bg-linear-to-r from-emerald-600 to-emerald-700 sticky top-0 z-10">
                                 <tr>
                                     {[
                                         'No', 'Supplier Name', 'Bill Number', 'Total Amount', 'Paid Amount', 'Balance', 'GRN Date', 'Status', 'Actions'

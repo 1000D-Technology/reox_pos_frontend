@@ -112,6 +112,27 @@ exports.searchCompany = catchAsync(async (req, res, next) => {
     res.status(200).json({ success: true, data: companies });
 });
 
+exports.getCompanies = catchAsync(async (req, res, next) => {
+    const companies = await Supplier.getAllCompanies();
+    res.status(200).json({ success: true, data: companies });
+});
+
+exports.updateCompany = catchAsync(async (req, res, next) => {
+    const { id } = req.params;
+    const { name, email, contact } = req.body;
+
+    const result = await Supplier.updateCompany(id, { name, email, contact });
+
+    if (result.affectedRows === 0) {
+        return next(new AppError("Company not found.", 404));
+    }
+
+    res.status(200).json({
+        success: true,
+        message: "Company updated successfully!"
+    });
+});
+
 exports.searchBank = catchAsync(async (req, res, next) => {
     const query = req.query.q || '';
     const banks = await Supplier.searchBanks(query);

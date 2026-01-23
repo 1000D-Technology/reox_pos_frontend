@@ -292,7 +292,7 @@ function ManageInvoice() {
                             <span className="mx-2">›</span>
                             <span className="text-gray-700 font-medium">Manage Invoice</span>
                         </div>
-                        <h1 className="text-3xl font-semibold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent leading-tight">
+                        <h1 className="text-3xl font-semibold bg-linear-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent leading-tight">
                             Manage Invoice
                         </h1>
                     </div>
@@ -329,7 +329,7 @@ function ManageInvoice() {
                             key={i}
                             className={`flex items-center p-4 space-x-3 transition-all bg-white rounded-xl border border-gray-200 cursor-pointer group relative overflow-hidden`}
                         >
-                            <div className="absolute inset-0 bg-gradient-to-br from-transparent via-gray-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                            <div className="absolute inset-0 bg-linear-to-br from-transparent via-gray-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
 
                             <div className={`p-3 ${stat.color} relative z-10 rounded-lg`}>
                                 <stat.icon className={`w-6 h-6 ${stat.iconColor}`} />
@@ -399,7 +399,7 @@ function ManageInvoice() {
                             <button
                                 onClick={handleSearch}
                                 disabled={loading}
-                                className={'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 py-2 rounded-lg flex items-center justify-center transition-all disabled:opacity-50'}
+                                className={'bg-linear-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 py-2 rounded-lg flex items-center justify-center transition-all disabled:opacity-50'}
                             >
                                 {loading ? <Loader2 className="animate-spin" size={14} /> : <SearchCheck className="mr-2" size={14} />}
                                 Search
@@ -407,7 +407,7 @@ function ManageInvoice() {
                             <button
                                 onClick={handleReset}
                                 disabled={loading}
-                                className={'bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 py-2 rounded-lg flex items-center justify-center transition-all disabled:opacity-50'}
+                                className={'bg-linear-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 py-2 rounded-lg flex items-center justify-center transition-all disabled:opacity-50'}
                             >
                                 <RefreshCw className="mr-2" size={14} />
                                 Reset
@@ -417,10 +417,10 @@ function ManageInvoice() {
                 </div>
 
                 {/* Invoice Table */}
-                <div className={'flex flex-col bg-white border border-gray-200 rounded-xl h-full p-4 justify-between'}>
-                    <div className="overflow-y-auto max-h-md md:h-[320px] lg:h-[360px] rounded-lg scrollbar-thin scrollbar-thumb-emerald-300 scrollbar-track-gray-100">
+                <div className="flex flex-col bg-white border border-gray-200 rounded-xl flex-1 p-4 justify-between overflow-hidden">
+                    <div className="overflow-auto flex-1 rounded-lg scrollbar-thin scrollbar-thumb-emerald-300 scrollbar-track-gray-100">
                         <table className="min-w-full divide-y divide-gray-200">
-                            <thead className="bg-gradient-to-r from-emerald-500 to-emerald-600 sticky top-0 z-10">
+                            <thead className="bg-linear-to-r from-emerald-500 to-emerald-600 sticky top-0 z-10">
                                 <tr>
                                     {[
                                         'ID',
@@ -476,7 +476,14 @@ function ManageInvoice() {
                                                 #{invoice.id}
                                             </td>
                                             <td className="px-6 py-2 whitespace-nowrap text-sm font-semibold text-gray-800">
-                                                {invoice.invoiceID}
+                                                <div className="flex items-center gap-2">
+                                                    {invoice.invoiceID}
+                                                    {Number(invoice.refundedAmount) > 0 && (
+                                                        <span className="px-2 py-0.5 bg-red-100 text-red-600 text-[10px] font-bold rounded-full border border-red-200 uppercase tracking-tighter">
+                                                            Returned
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </td>
                                             <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-gray-700">
                                                 {invoice.customerName}
@@ -503,7 +510,7 @@ function ManageInvoice() {
                                                             e.stopPropagation();
                                                             handleViewInvoice(invoice.invoiceID);
                                                         }}
-                                                        className="p-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg transition-all"
+                                                        className="p-2 bg-linear-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg transition-all"
                                                         title="View Invoice"
                                                     >
                                                         <Eye size={16} />
@@ -513,7 +520,7 @@ function ManageInvoice() {
                                                             e.stopPropagation();
                                                             handlePrintInvoice(invoice.invoiceID);
                                                         }}
-                                                        className="p-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white rounded-lg transition-all"
+                                                        className="p-2 bg-linear-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white rounded-lg transition-all"
                                                         title="Print Invoice"
                                                     >
                                                         <Printer size={16} />
@@ -557,7 +564,7 @@ function ManageInvoice() {
                                             disabled={loading}
                                             className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
                                                 currentPage === pageNum
-                                                    ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white'
+                                                    ? 'bg-linear-to-r from-emerald-500 to-emerald-600 text-white'
                                                     : 'text-gray-600 hover:bg-emerald-50 hover:text-emerald-600'
                                             }`}
                                         >
@@ -586,9 +593,14 @@ function ManageInvoice() {
                     <div className="fixed inset-0 bg-gray-900/10 backdrop-blur-xs z-50 flex items-center justify-center p-4">
                         <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
                             {/* Modal Header */}
-                            <div className="sticky top-0 bg-gradient-to-r from-emerald-500 to-emerald-600 px-6 py-4 flex items-center justify-between rounded-t-xl">
+                            <div className="sticky top-0 bg-linear-to-r from-emerald-500 to-emerald-600 px-6 py-4 flex items-center justify-between rounded-t-xl">
                                 <h2 className="text-2xl font-bold text-white">
                                     Invoice Details
+                                    {selectedInvoiceDetails.refundedAmount > 0 && (
+                                        <span className="ml-3 px-3 py-1 bg-red-500 text-white text-xs font-black rounded-full border border-red-400 uppercase tracking-widest shadow-sm">
+                                            Returned
+                                        </span>
+                                    )}
                                 </h2>
                                 <button
                                     onClick={() => setShowDetailModal(false)}
@@ -694,14 +706,14 @@ function ManageInvoice() {
                                         <div className="flex gap-3 pt-4">
                                             <button
                                                 onClick={() => handlePrintInvoice(selectedInvoiceDetails.invoiceNo)}
-                                                className="flex-1 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white px-4 py-3 rounded-lg transition-all flex items-center justify-center gap-2 font-medium"
+                                                className="flex-1 bg-linear-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white px-4 py-3 rounded-lg transition-all flex items-center justify-center gap-2 font-medium"
                                             >
                                                 <Printer size={18} />
                                                 Print Invoice
                                             </button>
                                             <button
                                                 onClick={() => setShowDetailModal(false)}
-                                                className="flex-1 bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white px-4 py-3 rounded-lg transition-all flex items-center justify-center gap-2 font-medium"
+                                                className="flex-1 bg-linear-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white px-4 py-3 rounded-lg transition-all flex items-center justify-center gap-2 font-medium"
                                             >
                                                 Close
                                             </button>

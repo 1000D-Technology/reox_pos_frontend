@@ -131,7 +131,7 @@ function DatabaseSetup() {
 
     if (isChecking) {
         return (
-            <div className="flex flex-col items-center justify-center h-screen bg-gradient-to-br from-emerald-50 to-green-100">
+            <div className="flex flex-col items-center justify-center h-screen bg-linear-to-br from-emerald-50 to-green-100">
                 <img src={logo} alt="REOX" className="h-20 mb-6 animate-pulse" />
                 <Loader2 className="animate-spin text-emerald-600" size={40} />
                 <p className="mt-4 text-gray-700 font-medium">Checking configuration...</p>
@@ -141,7 +141,7 @@ function DatabaseSetup() {
 
     if (isConnected) {
         return (
-            <div className="flex flex-col items-center justify-center h-screen bg-gradient-to-br from-emerald-50 to-green-100">
+            <div className="flex flex-col items-center justify-center h-screen bg-linear-to-br from-emerald-50 to-green-100">
                 <div className="bg-white p-10 rounded-3xl shadow-xl text-center max-w-md">
                     <div className="h-20 w-20 mx-auto bg-emerald-500 rounded-full flex items-center justify-center mb-6 animate-bounce">
                         <Check className="text-white" size={40} />
@@ -156,7 +156,7 @@ function DatabaseSetup() {
 
     if (!isUnlocked) {
         return (
-            <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-emerald-50 via-green-50 to-emerald-100 p-4">
+            <div className="flex items-center justify-center min-h-screen bg-linear-to-br from-emerald-50 via-green-50 to-emerald-100 p-4">
                 <div className="bg-white p-10 rounded-3xl shadow-xl w-full max-w-md border-2 border-emerald-100">
                     <div className="flex flex-col items-center mb-8">
                         <img src={logo} alt="REOX" className="h-16 mb-6" />
@@ -205,7 +205,7 @@ function DatabaseSetup() {
                         >
                             {isValidating ? (
                                 <>
-                                    <div className="absolute inset-0 bg-gradient-to-r from-emerald-400 via-green-500 to-emerald-400 animate-shimmer" />
+                                    <div className="absolute inset-0 bg-linear-to-r from-emerald-400 via-green-500 to-emerald-400 animate-shimmer" />
                                     <div className="relative flex items-center justify-center gap-2">
                                         <Loader2 className="animate-spin" size={20} />
                                         <span>Validating PIN...</span>
@@ -229,10 +229,10 @@ function DatabaseSetup() {
     }
 
     return (
-        <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-emerald-50 via-green-50 to-emerald-100 p-6">
+        <div className="flex items-center justify-center min-h-screen bg-linear-to-br from-emerald-50 via-green-50 to-emerald-100 p-6">
             <div className="bg-white rounded-3xl shadow-xl w-full max-w-7xl overflow-hidden border-2 border-emerald-100">
                 {/* Header */}
-                <div className="bg-gradient-to-r from-emerald-500 to-green-600 p-8 text-white">
+                <div className="bg-linear-to-r from-emerald-500 to-green-600 p-8 text-white">
                     <div className="flex items-center justify-center gap-4 mb-4">
                         <img src={logo} alt="REOX" className="h-12" />
                         <Database size={40} />
