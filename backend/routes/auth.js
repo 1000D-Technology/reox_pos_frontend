@@ -1,7 +1,7 @@
 const express = require('express');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const db = require('../config/db');
+const prisma = require('../config/prismaClient');
 
 const router = express.Router();
 
@@ -19,35 +19,30 @@ router.post('/login', async (req, res) => {
 
         console.log('Login attempt for:', username); // Debug log
 
-        // Query user with joins
-        const query = `
-            SELECT
-                u.id,
-                u.name,
-                u.contact,
-                u.email,
-                u.password,
-                u.role_id,
-                u.status_id,
-                r.user_role as role,
-                s.ststus
-            FROM user u
-            LEFT JOIN role r ON u.role_id = r.id
-            LEFT JOIN status s ON u.status_id = s.id
-            WHERE (u.contact = ? OR u.email = ?)
-            LIMIT 1
-        `;
+        // Query user with Prisma
+        const user = await prisma.user.findFirst({
+            where: {
+                OR: [
+                    { contact: username },
+                    { email: username },
+                    { name: username }
+                ]
+            },
+            include: {
+                role: {
+                    select: {
+                        user_role: true
+                    }
+                }
+            }
+        });
 
-        const [users] = await db.query(query, [username, username]);
-
-        if (!users || users.length === 0) {
+        if (!user) {
             return res.status(401).json({
                 success: false,
                 message: 'Invalid username or password'
             });
         }
-
-        const user = users[0];
 
         // Check password
         const isPasswordValid = await bcrypt.compare(password, user.password);
@@ -59,11 +54,16 @@ router.post('/login', async (req, res) => {
             });
         }
 
+        // Fetch user status
+        const userStatus = await prisma.status.findUnique({
+            where: { id: user.status_id }
+        });
+
         // Check if user is active
         if (user.status_id !== 1) {
             return res.status(403).json({
                 success: false,
-                message: `Account is ${user.status || 'inactive'}. Please contact support.`
+                message: `Account is ${userStatus?.ststus || 'inactive'}. Please contact support.`
             });
         }
 
@@ -78,14 +78,23 @@ router.post('/login', async (req, res) => {
             { expiresIn: '24h' }
         );
 
-        // Remove password from response
-        delete user.password;
+        // Format user response
+        const userResponse = {
+            id: user.id,
+            name: user.name,
+            contact: user.contact,
+            email: user.email,
+            role_id: user.role_id,
+            status_id: user.status_id,
+            role: user.role?.user_role,
+            ststus: userStatus?.ststus
+        };
 
         res.status(200).json({
             success: true,
             message: 'Login successful',
             token,
-            user
+            user: userResponse
         });
 
     } catch (error) {
@@ -93,6 +102,41 @@ router.post('/login', async (req, res) => {
         res.status(500).json({
             success: false,
             message: error.message || 'Server error occurred'
+        });
+    }
+});
+
+router.get('/users', async (req, res) => {
+    try {
+        const users = await prisma.user.findMany({
+            where: {
+                status_id: 1 // Active users only
+            },
+            select: {
+                id: true,
+                name: true,
+                email: true,
+                contact: true,
+                role: {
+                    select: {
+                        user_role: true
+                    }
+                }
+            },
+            orderBy: {
+                name: 'asc'
+            }
+        });
+
+        res.json({
+            success: true,
+            data: users
+        });
+    } catch (error) {
+        console.error('Error fetching users:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch users'
         });
     }
 });

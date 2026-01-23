@@ -1,5 +1,4 @@
 import {
-    BookmarkCheck,
     ChevronLeft,
     ChevronRight,
     Copy,
@@ -10,15 +9,13 @@ import {
     Printer,
     RefreshCw,
     SearchCheck,
-    ArrowUpRight,
-    ArrowDownRight,
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
 import toast, { Toaster } from 'react-hot-toast';
 import { supplierService } from '../../../services/supplierService';
 import { grnService } from '../../../services/grnService';
 import TypeableSelect from '../../../components/TypeableSelect';
+import GrnViewPopup from '../../../components/models/GrnViewPopup';
 
 interface GRNData {
     id: number;
@@ -43,11 +40,18 @@ interface SupplierOption {
     label: string;
 }
 
-
+interface ApiError {
+    response?: {
+        data?: {
+            message?: string;
+        };
+    };
+    message?: string;
+}
 
 function SupplierGrn() {
 
-     const [grnData, setGrnData] = useState<GRNData[]>([]);
+    const [grnData, setGrnData] = useState<GRNData[]>([]);
     const [isLoadingGRN, setIsLoadingGRN] = useState(true);
     const [stats, setStats] = useState({
         totalGrn: 0,
@@ -56,7 +60,13 @@ function SupplierGrn() {
         totalBalance: 0
     });
     const [isLoadingStats, setIsLoadingStats] = useState(true);
-    
+
+    // Popup State
+    const [selectedGrn, setSelectedGrn] = useState<any>(null);
+    const [isViewPopupOpen, setIsViewPopupOpen] = useState(false);
+    const [isLoadingDetails, setIsLoadingDetails] = useState(false);
+    const [shouldAutoPrint, setShouldAutoPrint] = useState(false);
+
     const summaryCards = [
         {
             icon: FileSpreadsheet,
@@ -65,7 +75,7 @@ function SupplierGrn() {
             trend: '',
             color: 'bg-gradient-to-br from-emerald-400 to-emerald-500',
             iconColor: 'text-white',
-            bgGlow: 'shadow-emerald-200'
+            bgGlow: ''
         },
         {
             icon: DollarSign,
@@ -74,7 +84,7 @@ function SupplierGrn() {
             trend: '',
             color: 'bg-gradient-to-br from-purple-400 to-purple-500',
             iconColor: 'text-white',
-            bgGlow: 'shadow-purple-200'
+            bgGlow: ''
         },
         {
             icon: Download,
@@ -83,7 +93,7 @@ function SupplierGrn() {
             trend: '',
             color: 'bg-gradient-to-br from-blue-400 to-blue-500',
             iconColor: 'text-white',
-            bgGlow: 'shadow-blue-200'
+            bgGlow: ''
         },
         {
             icon: DollarSign,
@@ -92,18 +102,18 @@ function SupplierGrn() {
             trend: '',
             color: 'bg-gradient-to-br from-red-400 to-red-500',
             iconColor: 'text-white',
-            bgGlow: 'shadow-red-200'
+            bgGlow: ''
         },
-        
+
     ];
 
-   
+
 
     const [selectedIndex, setSelectedIndex] = useState(0);
     const [suppliers, setSuppliers] = useState<SupplierOption[]>([]);
     const [isLoadingSuppliers, setIsLoadingSuppliers] = useState(true);
     const [selectedSupplier, setSelectedSupplier] = useState<SupplierOption | null>(null);
-    
+
     // Search form state
     const [fromDate, setFromDate] = useState('');
     const [toDate, setToDate] = useState('');
@@ -117,12 +127,18 @@ function SupplierGrn() {
             } else if (e.key === "ArrowUp") {
                 e.preventDefault();
                 setSelectedIndex((prev) => (prev > 0 ? prev - 1 : prev));
+            } else if (e.key === "Enter" && e.shiftKey) {
+                // View on Shift+Enter
+                e.preventDefault();
+                if (grnData[selectedIndex]) {
+                    fetchGrnDetails(grnData[selectedIndex].id, false);
+                }
             }
         };
 
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [grnData.length]);
+    }, [grnData.length, selectedIndex]);
 
     // Fetch suppliers on component mount
     useEffect(() => {
@@ -184,16 +200,37 @@ function SupplierGrn() {
         fetchGRNData();
     }, []);
 
+    // Fetch GRN Details
+    const fetchGrnDetails = async (grnId: number, autoPrint: boolean = false) => {
+        setIsLoadingDetails(true);
+        setShouldAutoPrint(autoPrint);
+        try {
+            const response = await grnService.getGRNDetails(grnId);
+            if (response.data.success) {
+                setSelectedGrn(response.data.data);
+                setIsViewPopupOpen(true);
+            } else {
+                toast.error('Failed to load GRN details');
+            }
+        } catch (error) {
+            const apiError = error as ApiError;
+            console.error('Error fetching GRN details:', error);
+            toast.error(apiError.response?.data?.message || 'Failed to load GRN details');
+        } finally {
+            setIsLoadingDetails(false);
+        }
+    };
+
     const handleSearch = async () => {
         try {
             setIsSearching(true);
             const queryParams = new URLSearchParams();
-            
+
             // Add supplier name if selected
             if (selectedSupplier && selectedSupplier.label) {
                 queryParams.append('supplierName', selectedSupplier.label.split(' - ')[0]);
             }
-            
+
             // Add date filters
             if (fromDate) {
                 queryParams.append('fromDate', fromDate);
@@ -201,10 +238,10 @@ function SupplierGrn() {
             if (toDate) {
                 queryParams.append('toDate', toDate);
             }
-            
+
             const response = await grnService.searchGRNList(queryParams.toString());
             setGrnData(response.data.data || []);
-            
+
             toast.success(`Found ${response.data.data?.length || 0} GRN records`);
         } catch (error) {
             console.error('Error searching GRN data:', error);
@@ -220,12 +257,12 @@ function SupplierGrn() {
             setSelectedSupplier(null);
             setFromDate('');
             setToDate('');
-            
+
             // Reload all GRN data
             setIsLoadingGRN(true);
             const response = await grnService.getGRNList();
             setGrnData(response.data.data || []);
-            
+
             toast.success('Filters cleared successfully');
         } catch (error) {
             console.error('Error resetting GRN data:', error);
@@ -239,13 +276,13 @@ function SupplierGrn() {
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage] = useState(10);
 
-// Calculate pagination values
+    // Calculate pagination values
     const totalPages = Math.ceil(grnData.length / itemsPerPage);
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
     const currentGRNData = grnData.slice(startIndex, endIndex);
 
-// Pagination functions
+    // Pagination functions
     const goToPage = (page: number) => {
         if (page >= 1 && page <= totalPages) {
             setCurrentPage(page);
@@ -335,17 +372,13 @@ function SupplierGrn() {
                 {/* Stats Cards */}
                 <div className={'grid md:grid-cols-4 grid-cols-1 gap-4'}>
                     {summaryCards.map((stat, i) => (
-                        <motion.div
+                        <div
                             key={i}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: i * 0.1 }}
-                            whileHover={{ scale: 1.05, y: -2 }}
-                            className={`flex items-center p-4 space-x-3 transition-all bg-white rounded-2xl shadow-lg hover:shadow-xl ${stat.bgGlow} cursor-pointer group relative overflow-hidden`}
+                            className={`flex items-center p-4 space-x-3 transition-all bg-white rounded-2xl border border-gray-200 cursor-pointer group relative overflow-hidden`}
                         >
                             <div className="absolute inset-0 bg-gradient-to-br from-transparent via-gray-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
 
-                            <div className={`p-3 rounded-full ${stat.color} shadow-md relative z-10`}>
+                            <div className={`p-3 rounded-full ${stat.color} relative z-10`}>
                                 <stat.icon className={`w-6 h-6 ${stat.iconColor}`} />
                             </div>
 
@@ -361,16 +394,13 @@ function SupplierGrn() {
                                 </div>
                                 <p className="text-sm font-bold text-gray-700">{stat.value}</p>
                             </div>
-                        </motion.div>
+                        </div>
                     ))}
                 </div>
 
                 {/* Filter Section */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.6 }}
-                    className={'bg-white rounded-xl p-4 flex flex-col shadow-lg'}
+                <div
+                    className={'bg-white rounded-xl p-4 flex flex-col border border-gray-200'}
                 >
                     <h2 className="text-xl font-semibold text-gray-700 mb-3">Filter</h2>
                     <div className={'grid md:grid-cols-4 gap-4'}>
@@ -411,135 +441,150 @@ function SupplierGrn() {
                             />
                         </div>
                         <div className={'grid grid-cols-2 md:items-end items-start gap-2 text-white font-medium'}>
-                            <button 
+                            <button
                                 onClick={handleSearch}
                                 disabled={isSearching}
-                                className={'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 py-2 rounded-lg flex items-center justify-center shadow-lg shadow-emerald-200 hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed'}
+                                className={'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 py-2 rounded-lg flex items-center justify-center transition-all disabled:opacity-50 disabled:cursor-not-allowed'}
                             >
                                 {isSearching ? (
-                                    <RefreshCw className="animate-spin mr-2" size={14}/>
+                                    <RefreshCw className="animate-spin mr-2" size={14} />
                                 ) : (
-                                    <SearchCheck className="mr-2" size={14}/>
+                                    <SearchCheck className="mr-2" size={14} />
                                 )}
                                 {isSearching ? 'Searching...' : 'Search'}
                             </button>
-                            <button 
+                            <button
                                 onClick={handleReset}
                                 disabled={isSearching || isLoadingGRN}
-                                className={'bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 py-2 rounded-lg flex items-center justify-center shadow-lg shadow-gray-200 hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed'}
+                                className={'bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 py-2 rounded-lg flex items-center justify-center transition-all disabled:opacity-50 disabled:cursor-not-allowed'}
                             >
-                                <RefreshCw className="mr-2" size={14}/>Clear
+                                <RefreshCw className="mr-2" size={14} />Clear
                             </button>
                         </div>
                     </div>
-                </motion.div>
+                </div>
 
                 {/* GRN Table */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.7 }}
-                    className={'flex flex-col bg-white rounded-xl h-full p-4 justify-between shadow-lg'}
+                <div
+                    className={'flex flex-col bg-white rounded-xl h-full p-4 justify-between border border-gray-200'}
                 >
                     <div className="overflow-y-auto max-h-md md:h-[320px] lg:h-[500px] rounded-lg scrollbar-thin scrollbar-thumb-emerald-300 scrollbar-track-gray-100">
                         <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-gradient-to-r from-emerald-500 to-emerald-600 sticky top-0 z-10">
-                            <tr>
-                                {[
-                                    'Supplier ID',
-                                    'Supplier Name',
-                                    'Bill Number',
-                                    'Amount',
-                                    'Paid',
-                                    'Balance',
-                                    'Date',
-                                    'Status',
-                                    'Action'
-                                ].map((header, i, arr) => (
-                                    <th
-                                        key={i}
-                                        scope="col"
-                                        className={`px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider ${
-                                            i === 0 ? 'rounded-tl-lg' : i === arr.length - 1 ? 'rounded-tr-lg' : ''
-                                        }`}
-                                    >
-                                        {header}
-                                    </th>
-                                ))}
-                            </tr>
+                                <tr>
+                                    {[
+                                        'Supplier ID',
+                                        'Supplier Name',
+                                        'Bill Number',
+                                        'Amount',
+                                        'Paid',
+                                        'Balance',
+                                        'Date',
+                                        'Status',
+                                        'Action'
+                                    ].map((header, i, arr) => (
+                                        <th
+                                            key={i}
+                                            scope="col"
+                                            className={`px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider ${i === 0 ? 'rounded-tl-lg' : i === arr.length - 1 ? 'rounded-tr-lg' : ''
+                                                }`}
+                                        >
+                                            {header}
+                                        </th>
+                                    ))}
+                                </tr>
                             </thead>
 
                             <tbody className="bg-white divide-y divide-gray-200">
-                            {isLoadingGRN ? (
-                                <tr>
-                                    <td colSpan={9} className="px-6 py-8 text-center text-gray-500">
-                                        <div className="flex items-center justify-center">
-                                            <RefreshCw className="animate-spin mr-2" size={16} />
-                                            Loading GRN data...
-                                        </div>
-                                    </td>
-                                </tr>
-                            ) : grnData.length === 0 ? (
-                                <tr>
-                                    <td colSpan={9} className="px-6 py-8 text-center text-gray-500">
-                                        No GRN records found
-                                    </td>
-                                </tr>
-                            ) : (
-                                grnData.map((grn, index) => (
-                                    <tr
-                                        key={grn.id}
-                                        onClick={() => setSelectedIndex(index)}
-                                        className={`cursor-pointer transition-all ${
-                                            selectedIndex === index
-                                                ? 'bg-emerald-50 border-l-4 border-l-emerald-500'
-                                                : 'hover:bg-gray-50'
-                                        }`}
-                                    >
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-semibold text-gray-800">
-                                            {grn.supplierId}
-                                        </td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-gray-700">
-                                            {grn.supplierName}
-                                        </td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-600">
-                                            {grn.billNumber}
-                                        </td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-bold text-emerald-600">
-                                            LKR {grn.totalAmount.toLocaleString()}
-                                        </td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-blue-600">
-                                            LKR {grn.paidAmount.toLocaleString()}
-                                        </td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-red-600">
-                                            LKR {grn.balanceAmount.toLocaleString()}
-                                        </td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-600">
-                                            {grn.grnDate}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                                                grn.statusName === 'Active' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'
-                                            }`}>
-                                                {grn.statusName === 'Active' ? 'Pending' : 'Complete'}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
-                                            <div className="flex gap-2">
-                                                <button className="p-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all">
-                                                    <Eye size={16}/>
-                                                </button>
-                                                <button className="p-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all">
-                                                    <Printer size={16}/>
-                                                </button>
-                                                <button className="p-2 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all">
-                                                    <Copy size={16}/>
-                                                </button>
+                                {isLoadingGRN ? (
+                                    <tr>
+                                        <td colSpan={9} className="px-6 py-8 text-center text-gray-500">
+                                            <div className="flex items-center justify-center">
+                                                <RefreshCw className="animate-spin mr-2" size={16} />
+                                                Loading GRN data...
                                             </div>
                                         </td>
                                     </tr>
-                                ))
-                            )}
+                                ) : grnData.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={9} className="px-6 py-8 text-center text-gray-500">
+                                            No GRN records found
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    grnData.map((grn, index) => (
+                                        <tr
+                                            key={grn.id}
+                                            onClick={() => setSelectedIndex(index)}
+                                            className={`cursor-pointer transition-all ${selectedIndex === index
+                                                ? 'bg-emerald-50 border-l-4 border-l-emerald-500'
+                                                : 'hover:bg-gray-50'
+                                                }`}
+                                        >
+                                            <td className="px-6 py-2 whitespace-nowrap text-sm font-semibold text-gray-800">
+                                                {grn.supplierId}
+                                            </td>
+                                            <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-gray-700">
+                                                {grn.supplierName}
+                                            </td>
+                                            <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-600">
+                                                {grn.billNumber}
+                                            </td>
+                                            <td className="px-6 py-2 whitespace-nowrap text-sm font-bold text-emerald-600">
+                                                LKR {grn.totalAmount.toLocaleString()}
+                                            </td>
+                                            <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-blue-600">
+                                                LKR {grn.paidAmount.toLocaleString()}
+                                            </td>
+                                            <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-red-600">
+                                                LKR {grn.balanceAmount.toLocaleString()}
+                                            </td>
+                                            <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-600">
+                                                {grn.grnDate}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${grn.statusName === 'Active' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'
+                                                    }`}>
+                                                    {grn.statusName === 'Active' ? 'Pending' : 'Complete'}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
+                                                <div className="flex gap-2">
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            fetchGrnDetails(grn.id, false);
+                                                        }}
+                                                        disabled={isLoadingDetails}
+                                                        className="p-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg transition-all disabled:opacity-50"
+                                                    >
+                                                        <Eye size={16} />
+                                                    </button>
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            fetchGrnDetails(grn.id, true);
+                                                        }}
+                                                        disabled={isLoadingDetails}
+                                                        className="p-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white rounded-lg transition-all disabled:opacity-50"
+                                                    >
+                                                        <Printer size={16} />
+                                                    </button>
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            navigator.clipboard.writeText(grn.billNumber);
+                                                            toast.success('Bill number copied to clipboard');
+                                                        }}
+                                                        className="p-2 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white rounded-lg transition-all"
+                                                    >
+                                                        <Copy size={16} />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
                             </tbody>
                         </table>
                     </div>
@@ -554,51 +599,55 @@ function SupplierGrn() {
                             <button
                                 onClick={goToPreviousPage}
                                 disabled={currentPage === 1}
-                                className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${
-                                    currentPage === 1
-                                        ? 'text-gray-400 cursor-not-allowed'
-                                        : 'text-gray-600 hover:text-emerald-600 hover:bg-emerald-50'
-                                }`}
+                                className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${currentPage === 1
+                                    ? 'text-gray-400 cursor-not-allowed'
+                                    : 'text-gray-600 hover:text-emerald-600 hover:bg-emerald-50'
+                                    }`}
                             >
                                 <ChevronLeft className="mr-2 h-5 w-5" /> Previous
                             </button>
 
                             {getPageNumbers().map((page, index) =>
-                                    typeof page === 'number' ? (
-                                        <button
-                                            key={index}
-                                            onClick={() => goToPage(page)}
-                                            className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${
-                                                currentPage === page
-                                                    ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-md'
-                                                    : 'text-gray-600 hover:bg-emerald-50 hover:text-emerald-600'
+                                typeof page === 'number' ? (
+                                    <button
+                                        key={index}
+                                        onClick={() => goToPage(page)}
+                                        className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${currentPage === page
+                                            ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white'
+                                            : 'text-gray-600 hover:bg-emerald-50 hover:text-emerald-600'
                                             }`}
-                                        >
-                                            {page}
-                                        </button>
-                                    ) : (
-                                        <span key={index} className="text-gray-400 px-2">
-                    {page}
-                </span>
-                                    )
+                                    >
+                                        {page}
+                                    </button>
+                                ) : (
+                                    <span key={index} className="text-gray-400 px-2">
+                                        {page}
+                                    </span>
+                                )
                             )}
 
                             <button
                                 onClick={goToNextPage}
                                 disabled={currentPage === totalPages}
-                                className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${
-                                    currentPage === totalPages
-                                        ? 'text-gray-400 cursor-not-allowed'
-                                        : 'text-gray-600 hover:text-emerald-600 hover:bg-emerald-50'
-                                }`}
+                                className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${currentPage === totalPages
+                                    ? 'text-gray-400 cursor-not-allowed'
+                                    : 'text-gray-600 hover:text-emerald-600 hover:bg-emerald-50'
+                                    }`}
                             >
                                 Next <ChevronRight className="ml-2 h-5 w-5" />
                             </button>
                         </div>
                     </nav>
 
-                </motion.div>
+                </div>
             </div>
+            {/* GRN View Popup */}
+            <GrnViewPopup
+                isOpen={isViewPopupOpen}
+                onClose={() => setIsViewPopupOpen(false)}
+                grnData={selectedGrn}
+                autoPrint={shouldAutoPrint}
+            />
         </>
     );
 }

@@ -1,575 +1,380 @@
-import { motion,  } from "framer-motion";
 import {
-    ChartNoAxesCombined,
-    FileSpreadsheet,
-    UserCheck,
-    Boxes,
-    Users,
-    Zap,
-    BadgeInfo,
-    SunDim,
-    Star,
-    Laptop,
-    Moon,
-    type LucideIcon,
     TrendingUp,
     ArrowUpRight,
     ArrowDownRight,
+    Loader2,
+    DollarSign,
+    Package,
+    Clock,
+    Star,
+    Laptop,
+    FileSpreadsheet,
+    UserCheck,
+    Users,
+    Zap,
+    BadgeInfo,
+    PieChart as PieChartIcon,
+    BarChart3
 } from "lucide-react";
-import { Line } from "react-chartjs-2";
+import { Line, Bar, Doughnut } from "react-chartjs-2";
 import {
     Chart as ChartJS,
     CategoryScale,
     LinearScale,
     PointElement,
     LineElement,
+    BarElement,
+    ArcElement,
     Title,
     Tooltip,
     Legend,
     Filler,
-    ArcElement,
-    BarElement,
 } from "chart.js";
 import { useEffect, useState } from "react";
+import { reportService } from "../../services/reportService";
+import { Toaster } from "react-hot-toast";
+import { useNavigate } from "react-router-dom";
 
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler, ArcElement, BarElement);
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, ArcElement, Title, Tooltip, Legend, Filler);
 
 export default function Dashboard() {
-    const stats = [
-        { icon: ChartNoAxesCombined, label: "Today Sales", value: "LKR 500,000.00", trend: "+12%", color: "bg-gradient-to-br from-emerald-400 to-emerald-500", iconColor: "text-white", bgGlow: "shadow-emerald-200" },
-        { icon: FileSpreadsheet, label: "Today Invoice", value: "20", trend: "+8%", color: "bg-gradient-to-br from-blue-400 to-blue-500", iconColor: "text-white", bgGlow: "shadow-blue-200" },
-        { icon: UserCheck, label: "Supplier", value: "20", trend: "+5%", color: "bg-gradient-to-br from-red-400 to-red-500", iconColor: "text-white", bgGlow: "shadow-red-200" },
-        { icon: Boxes, label: "Product", value: "20", trend: "+15%", color: "bg-gradient-to-br from-purple-400 to-purple-500", iconColor: "text-white", bgGlow: "shadow-purple-200" },
-        { icon: Users, label: "Customer", value: "20", trend: "+10%", color: "bg-gradient-to-br from-cyan-400 to-cyan-500", iconColor: "text-white", bgGlow: "shadow-cyan-200" },
-        { icon: Zap, label: "Employee", value: "5000", trend: "+3%", color: "bg-gradient-to-br from-orange-400 to-orange-500", iconColor: "text-white", bgGlow: "shadow-orange-200" },
-        { icon: BadgeInfo, label: "Low Stock", value: "37", trend: "-5%", color: "bg-gradient-to-br from-yellow-400 to-yellow-500", iconColor: "text-white", bgGlow: "shadow-yellow-200" },
+    const navigate = useNavigate();
+    const [isLoading, setIsLoading] = useState(true);
+    const [dashboardData, setDashboardData] = useState<any>(null);
+    const [chartData, setChartData] = useState<any>(null);
+
+    const fetchDashboardData = async () => {
+        try {
+            setIsLoading(true);
+            const [detailed, trend] = await Promise.all([
+                reportService.getDetailedDashboardData(),
+                reportService.getDashboardData()
+            ]);
+
+            if (detailed.success) setDashboardData(detailed.data);
+            if (trend.success) setChartData(trend.data);
+        } catch (error) {
+            console.error("Dashboard load error:", error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchDashboardData();
+    }, []);
+
+    if (isLoading) {
+        return (
+            <div className="flex h-[80vh] items-center justify-center">
+                <Loader2 className="h-10 w-10 animate-spin text-emerald-500" />
+            </div>
+        );
+    }
+
+    const { stats, summary, topProducts, categories } = dashboardData || {};
+
+    const metrics = [
+        { icon: DollarSign, label: "Today's Sales", value: `Rs. ${stats?.todaySales.toLocaleString()}`, trend: stats?.trends.sales, color: "text-emerald-600", bg: "bg-emerald-50" },
+        { icon: FileSpreadsheet, label: "Invoices", value: stats?.todayInvoices.toString(), trend: stats?.trends.invoices, color: "text-blue-600", bg: "bg-blue-50" },
+        { icon: UserCheck, label: "Suppliers", value: stats?.supplierCount.toString(), trend: stats?.trends.suppliers, color: "text-indigo-600", bg: "bg-indigo-50" },
+        { icon: Package, label: "Products", value: stats?.productCount.toString(), trend: stats?.trends.products, color: "text-purple-600", bg: "bg-purple-50" },
+        { icon: Users, label: "Customers", value: stats?.customerCount.toString(), trend: stats?.trends.customers, color: "text-cyan-600", bg: "bg-cyan-50" },
+        { icon: Zap, label: "Staff", value: stats?.employeeCount.toString(), trend: stats?.trends.employees, color: "text-amber-600", bg: "bg-amber-50" },
+        { icon: BadgeInfo, label: "Low Stock", value: stats?.lowStockCount.toString(), trend: stats?.trends.lowStock, color: "text-rose-600", bg: "bg-rose-50" },
     ];
 
     return (
-        <div className="min-h-screen flex flex-col gap-3 overflow-x-auto">
-            <div>
-                <div className="text-sm text-gray-400 flex items-center">
-                    <span>Pages</span>
-                    <span className="mx-2">›</span>
-                    <span className="text-gray-700 font-medium">Main Dashboard</span>
+        <div className="p-1 space-y-6">
+            <Toaster position="top-right" />
+            
+            {/* Header Section */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <h1 className="text-2xl font-bold text-gray-800 tracking-tight">System Overview</h1>
+                    <p className="text-sm text-gray-500">Real-time business intelligence dashboard</p>
                 </div>
-                <h1 className="text-3xl font-semibold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
-                    Main Dashboard
-                </h1>
+                <div className="flex items-center gap-3 bg-white p-2 rounded-xl border border-gray-100 shadow-sm">
+                    <div className="bg-emerald-50 p-2 rounded-lg text-emerald-600">
+                        <Clock size={20} />
+                    </div>
+                    <div className="pr-2">
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">Current Time</p>
+                        <p className="text-sm font-bold text-gray-700 tabular-nums"><CurrentTime /></p>
+                    </div>
+                </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-7">
-                {stats.map((stat, i) => (
-                    <motion.div
-                        key={i}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: i * 0.1 }}
-                        whileHover={{ scale: 1.05, y: -2 }}
-                        className={`flex items-center p-4 space-x-3 transition-all bg-white rounded-2xl shadow-lg hover:shadow-xl ${stat.bgGlow} cursor-pointer group relative overflow-hidden`}
-                    >
-                        <div className="absolute inset-0 bg-gradient-to-br from-transparent via-gray-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-
-                        <div className={`p-3 rounded-full ${stat.color} shadow-md relative z-10`}>
-                            <stat.icon className={`w-6 h-6 ${stat.iconColor}`} />
-                        </div>
-
-                        <div className="w-px h-10 bg-gray-200"></div>
-
-                        <div className="relative z-10 flex-1">
-                            <div className="flex items-center justify-between">
-                                <p className="text-sm text-gray-500">{stat.label}</p>
-                                <div className={`flex items-center gap-0.5 text-[10px] font-semibold ${stat.trend.startsWith('+') ? 'text-emerald-600' : 'text-red-600'}`}>
-                                    {stat.trend.startsWith('+') ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
-                                    {stat.trend}
-                                </div>
+            {/* Quick Stats Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4">
+                {metrics.map((m, i) => (
+                    <div key={i} className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow group">
+                        <div className="flex items-start justify-between mb-3">
+                            <div className={`${m.bg} ${m.color} p-2.5 rounded-xl transition-transform group-hover:scale-110 duration-300`}>
+                                <m.icon size={20} />
                             </div>
-                            <p className="text-sm font-bold text-gray-700">{stat.value}</p>
+                            <div className={`flex items-center text-[10px] font-bold ${m.trend?.startsWith('+') ? 'text-emerald-500' : 'text-rose-500'}`}>
+                                {m.trend?.startsWith('+') ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
+                                {m.trend}
+                            </div>
                         </div>
-                    </motion.div>
+                        <div>
+                            <p className="text-xs font-medium text-gray-500 mb-1">{m.label}</p>
+                            <p className="text-lg font-bold text-gray-800 tracking-tight">{m.value}</p>
+                        </div>
+                    </div>
                 ))}
             </div>
 
-            <div className="flex flex-col gap-6">
-                <SalesChart />
+            {/* Charts & Summary Row */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+                    <div className="flex items-center justify-between mb-8">
+                        <div>
+                            <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                                <TrendingUp size={20} className="text-emerald-500" />
+                                Sales Performance
+                            </h3>
+                            <p className="text-xs text-gray-500">Daily revenue trends</p>
+                        </div>
+                        <div className="flex gap-2 p-1 bg-gray-50 rounded-lg border border-gray-100">
+                             <span className="px-3 py-1 text-[10px] font-bold bg-white text-emerald-600 shadow-sm border border-gray-100 rounded-md">Last 30 Days</span>
+                        </div>
+                    </div>
+                    <div className="h-[300px]">
+                        <SalesTrendChart data={chartData?.dailySales} />
+                    </div>
+                </div>
+
+                <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col">
+                    <h3 className="text-lg font-bold text-gray-800 mb-6 flex items-center gap-2">
+                        <DollarSign size={20} className="text-blue-500" />
+                        Monthly Summary
+                    </h3>
+                    <div className="space-y-4 flex-1">
+                        <SummaryItem label="Gross Sales" value={summary?.totalSales} color="text-emerald-600" />
+                        <SummaryItem label="Total Discounts" value={summary?.totalDiscount} color="text-blue-400" />
+                        <SummaryItem label="Net Profit" value={summary?.totalProfit} color="text-indigo-600" isMain />
+                        <div className="pt-4 mt-2 border-t border-gray-50">
+                             <SummaryItem label="Misc. Expenses" value={summary?.totalExpenses} color="text-gray-400" isSmall />
+                        </div>
+                    </div>
+                    <div className="mt-6 bg-emerald-50 p-4 rounded-xl border border-emerald-100">
+                         <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-1">Current Cycle</p>
+                         <p className="text-sm font-bold text-emerald-900">{summary?.monthName} {summary?.year}</p>
+                    </div>
+                </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                <div className="col-span-1">
-                    <Summary />
+            {/* Middle Row: New Analytics Charts */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+                    <h3 className="text-lg font-bold text-gray-800 mb-6 flex items-center gap-2">
+                        <PieChartIcon size={20} className="text-purple-500" />
+                        Stock Allocation by Category
+                    </h3>
+                    <div className="h-[300px]">
+                        <CategoryDistChart data={categories} />
+                    </div>
+                </div>
+                <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+                    <h3 className="text-lg font-bold text-gray-800 mb-6 flex items-center gap-2">
+                        <BarChart3 size={20} className="text-amber-500" />
+                        Inventory Health Metrics
+                    </h3>
+                    <div className="h-[300px]">
+                         <InventoryHealthChart lowStock={stats?.lowStockCount} totalProducts={stats?.productCount} />
+                    </div>
+                </div>
+            </div>
+
+            {/* Bottom Row: Top Products & Infrastructure */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <div className="lg:col-span-8 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                    <div className="flex items-center justify-between mb-6">
+                        <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                            <Star size={20} className="text-amber-400 fill-amber-400" />
+                            Elite Product Matrix
+                        </h3>
+                        <button 
+                            onClick={() => navigate('/stock')}
+                            className="text-xs font-bold text-emerald-600 hover:bg-emerald-50 px-3 py-1.5 rounded-lg transition-colors border border-emerald-100"
+                        >
+                            Explore Inventory
+                        </button>
+                    </div>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left">
+                            <thead className="bg-gray-50 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                                <tr>
+                                    <th className="px-6 py-4 rounded-l-xl">SKU REF</th>
+                                    <th className="px-6 py-4">Product Name</th>
+                                    <th className="px-6 py-4 text-right">Unit Price</th>
+                                    <th className="px-6 py-4 text-center rounded-r-xl">Sales Volume</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-50">
+                                {topProducts?.map((p: any, i: number) => (
+                                    <tr key={i} className="hover:bg-gray-50/30 transition-colors group">
+                                        <td className="px-6 py-4 text-xs font-mono font-bold text-gray-300">{p.id}</td>
+                                        <td className="px-6 py-4 text-sm font-bold text-gray-700">{p.name}</td>
+                                        <td className="px-6 py-4 text-sm font-black text-right text-gray-800 tracking-tight">Rs. {p.mrp}</td>
+                                        <td className="px-6 py-4 text-center">
+                                            <span className="bg-blue-50 text-blue-600 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-tighter shadow-sm">{p.quantity} Units</span>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
 
-                <div className="grid grid-cols-[230px_1fr] col-span-1 gap-3">
-                    <ClockCard />
-                    <CalendarCard />
-                </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-[450px_1fr] gap-3 w-full md:col-span-2">
-                    <SystemStatus />
-                    <TopProducts />
+                <div className="lg:col-span-4 space-y-4">
+                     <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm h-full flex flex-col">
+                        <h3 className="text-sm font-bold text-gray-800 mb-6 flex items-center gap-2">
+                            <Laptop size={18} className="text-blue-500" />
+                            Engine Health
+                        </h3>
+                        <div className="space-y-8 flex-1">
+                             <HealthBar label="Database Cluster" value={22} color="bg-indigo-500" />
+                             <HealthBar label="Memory Utilization" value={58} color="bg-blue-500" />
+                             <HealthBar label="Compute Load" value={34} color="bg-emerald-500" />
+                        </div>
+                        <div className="mt-8 pt-6 border-t border-gray-50 flex items-center gap-3">
+                             <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                             <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Sytem Operational</span>
+                        </div>
+                     </div>
                 </div>
             </div>
         </div>
     );
 }
 
-export function SalesChart() {
-    const filters = ["1 Week", "1 Month", "1 Year", "Custom"] as const;
-    type FilterType = typeof filters[number];
-    const [filter, setFilter] = useState<FilterType>("1 Year");
-
-    const datasets: Record<FilterType, number[]> = {
-        "1 Week": [40, 45, 35, 50, 60, 55, 70],
-        "1 Month": [80, 70, 90, 100, 120, 150, 130, 160, 180, 200, 220, 210],
-        "1 Year": [120, 190, 170, 220, 180, 250, 210, 280, 240, 290, 260, 310],
-        "Custom": [150, 200, 230, 180, 260, 310, 290, 330],
-    };
-
-    const data = {
-        labels:
-            filter === "1 Week"
-                ? ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-                : ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
-        datasets: [
-            {
-                label: "Sales",
-                data: datasets[filter],
-                borderColor: "rgb(52,211,153)",
-                backgroundColor: "rgba(52,211,153,0.1)",
-                fill: true,
-                tension: 0.4,
-                pointRadius: 5,
-                pointHoverRadius: 7,
-                pointBackgroundColor: "rgb(16,185,129)",
-                pointBorderColor: "#fff",
-                pointBorderWidth: 3,
-            },
-        ],
-    };
-
-    const options = {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-            legend: { display: false },
-            tooltip: {
-                backgroundColor: "rgba(0,0,0,0.8)",
-                padding: 12,
-                borderRadius: 8,
-            },
-        },
-        scales: {
-            y: {
-                beginAtZero: true,
-                grid: { color: "rgba(0,0,0,0.05)", drawBorder: false },
-                ticks: { color: "#6B7280" },
-            },
-            x: {
-                grid: { color: "rgba(0,0,0,0.05)", display: false },
-                ticks: { color: "#6B7280" },
-            },
-        },
-    };
-
+function SummaryItem({ label, value, color, isMain = false, isSmall = false }: any) {
     return (
-        <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="p-6 bg-white rounded-xl shadow-lg hover:shadow-xl transition-all"
-        >
-            <div className="flex flex-col mb-4 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                    <div className="flex items-center gap-2 mb-1">
-                        <TrendingUp className="w-5 h-5 text-emerald-500" />
-                        <h3 className="text-lg font-semibold text-gray-800">Sales Analyze</h3>
-                    </div>
-                    <p className="text-sm text-gray-500">
-                        Sales for the last <span className="font-semibold text-emerald-600">{filter}</span>
-                    </p>
-                </div>
-                <div className="flex gap-2 mt-3 sm:mt-0">
-                    {filters.map((item) => (
-                        <motion.button
-                            key={item}
-                            onClick={() => setFilter(item)}
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            className={`px-4 py-2 text-sm font-medium rounded-lg border-2 transition-all ${
-                                filter === item
-                                    ? "bg-gradient-to-r from-emerald-500 to-emerald-600 text-white border-emerald-500 shadow-md shadow-emerald-200"
-                                    : "text-gray-600 border-gray-200 hover:border-emerald-300 hover:text-emerald-600"
-                            }`}
-                        >
-                            {item}
-                        </motion.button>
-                    ))}
-                </div>
-            </div>
-            <div className="h-[390px] w-[95%] mx-auto overflow-y-hidden">
-                <Line data={data} options={options} />
-            </div>
-        </motion.div>
+        <div className={`flex justify-between items-center ${isMain ? 'p-5 bg-gradient-to-br from-emerald-50 to-white rounded-2xl border border-emerald-100 shadow-sm shadow-emerald-50' : 'px-2'}`}>
+            <span className={`font-bold transition-all ${isSmall ? 'text-[10px] text-gray-400 uppercase tracking-widest' : 'text-xs text-gray-500'}`}>{label}</span>
+            <span className={`font-black tracking-tighter ${color || 'text-gray-800'} ${isMain ? 'text-2xl' : 'text-sm'}`}>
+                Rs. {value?.toLocaleString() || "0"}
+            </span>
+        </div>
     );
 }
 
-export function Summary() {
-    const summary = [
-        { label: "Total Sales", value: "LKR.14500.00", bgColor: "bg-gradient-to-r from-emerald-50 to-emerald-100", textColor: "text-emerald-700", borderColor: "border-emerald-200" },
-        { label: "Total Discount", value: "LKR.14500.00", bgColor: "bg-gradient-to-r from-blue-50 to-blue-100", textColor: "text-blue-700", borderColor: "border-blue-200" },
-        { label: "Total Profit", value: "LKR.14500.00", bgColor: "bg-gradient-to-r from-purple-50 to-purple-100", textColor: "text-purple-700", borderColor: "border-purple-200" },
-        { label: "Total Expenses", value: "LKR.14500.00", bgColor: "bg-gradient-to-r from-orange-50 to-orange-100", textColor: "text-orange-700", borderColor: "border-orange-200" },
-        { label: "Net Profit", value: "LKR.14500.00", bgColor: "bg-gradient-to-r from-cyan-50 to-cyan-100", textColor: "text-cyan-700", borderColor: "border-cyan-200" },
-    ];
-
-    const [clickedIndex, setClickedIndex] = useState<number | null>(null);
-
+function HealthBar({ label, value, color }: any) {
     return (
-        <motion.div
-            className="p-6 bg-white rounded-xl h-[320px] overflow-y-auto shadow-lg hover:shadow-xl transition-all"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-        >
-            <h2 className="mb-4 text-lg font-semibold text-gray-800">
-                Summary of October 2025 Sales
-            </h2>
-            <div className="space-y-2">
-                {summary.map((item, index) => (
-                    <motion.div
-                        key={index}
-                        className={`flex justify-between items-center py-3 px-4 rounded-xl cursor-pointer border-2 ${item.bgColor} ${item.borderColor} ${clickedIndex === index ? 'shadow-md' : ''}`}
-                        whileHover={{ scale: 1.02, x: 4 }}
-                        whileTap={{ scale: 0.98 }}
-                        onClick={() => setClickedIndex(index)}
-                    >
-                        <span className={`font-semibold text-sm ${item.textColor}`}>{item.label}</span>
-                        <span className={`font-bold text-sm ${item.textColor}`}>{item.value}</span>
-                    </motion.div>
-                ))}
+        <div className="space-y-3">
+            <div className="flex justify-between text-[11px] font-bold uppercase tracking-widest text-gray-400">
+                <span>{label}</span>
+                <span className="text-gray-800 font-black">{value}%</span>
             </div>
-        </motion.div>
+            <div className="h-2 w-full bg-gray-50 rounded-full overflow-hidden border border-gray-100">
+                <div className={`h-full ${color} rounded-full transition-all duration-1000 shadow-sm`} style={{ width: `${value}%` }} />
+            </div>
+        </div>
     );
 }
 
-export function ClockCard() {
-    const [currentTime, setCurrentTime] = useState(new Date());
+function SalesTrendChart({ data }: { data: any[] }) {
+    if (!data || data.length === 0) return <div className="h-full flex items-center justify-center text-gray-300 font-bold italic">No transaction records found...</div>;
+
+    const chartData = {
+        labels: data.map(d => d.date.split('-').slice(1).join('/')),
+        datasets: [{
+            label: 'Sales (Rs.)',
+            data: data.map(d => d.totalSales),
+            borderColor: '#10b981',
+            backgroundColor: 'rgba(16, 185, 129, 0.05)',
+            borderWidth: 3,
+            tension: 0.4,
+            fill: true,
+            pointRadius: 4,
+            pointBackgroundColor: '#fff',
+            pointBorderColor: '#10b981',
+            pointBorderWidth: 2,
+            pointHoverRadius: 6,
+            pointHoverBorderWidth: 3,
+        }]
+    };
+
+    return (
+        <Line 
+            data={chartData} 
+            options={{ 
+                responsive: true, 
+                maintainAspectRatio: false, 
+                plugins: { legend: { display: false } },
+                scales: { 
+                    y: { grid: { color: '#f3f4f6', borderDash: [5, 5] }, ticks: { font: { size: 10, weight: 'bold' } } },
+                    x: { grid: { display: false }, ticks: { font: { size: 10, weight: 'bold' } } }
+                }
+            } as any} 
+        />
+    );
+}
+
+function CategoryDistChart({ data }: { data: any[] }) {
+    if (!data || data.length === 0) return <div className="h-full flex items-center justify-center text-gray-300 font-bold">Data loading...</div>;
+    return (
+        <Doughnut 
+            data={{
+                labels: data.map(d => d.name),
+                datasets: [{ 
+                    data: data.map(d => d.value), 
+                    backgroundColor: ['#10b981', '#3b82f6', '#6366f1', '#a855f7', '#f59e0b', '#ec4899'],
+                    hoverOffset: 20,
+                    borderWidth: 4,
+                    borderColor: '#fff'
+                }]
+            }}
+            options={{ 
+                responsive: true, 
+                maintainAspectRatio: false, 
+                cutout: '70%',
+                plugins: { 
+                    legend: { 
+                        position: 'right',
+                        labels: { boxWidth: 12, padding: 20, font: { weight: 'bold', size: 11 } }
+                    } 
+                } 
+            } as any}
+        />
+    );
+}
+
+function InventoryHealthChart({ lowStock, totalProducts }: { lowStock: number, totalProducts: number }) {
+    const normalStock = Math.max(0, totalProducts - lowStock);
+    return (
+        <Bar 
+            data={{
+                labels: ['Low Stock', 'Stable Stock'],
+                datasets: [{
+                    label: 'Items',
+                    data: [lowStock, normalStock],
+                    backgroundColor: ['#f43f5e', '#10b981'],
+                    borderRadius: 12,
+                    barThickness: 40
+                }]
+            }}
+            options={{
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true, grid: { color: '#f3f4f6' }, ticks: { font: { weight: 'bold' } } },
+                    x: { grid: { display: false }, ticks: { font: { weight: 'bold' } } }
+                }
+            } as any}
+        />
+    );
+}
+
+function CurrentTime() {
+    const [time, setTime] = useState(new Date());
     useEffect(() => {
-        const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+        const timer = setInterval(() => setTime(new Date()), 1000);
         return () => clearInterval(timer);
     }, []);
-
-    const formatTime = (date: Date) => {
-        const hours = date.getHours();
-        const minutes = date.getMinutes();
-        const ampm = hours >= 12 ? "PM" : "AM";
-        const displayHours = hours % 12 || 12;
-        return `${displayHours}:${minutes.toString().padStart(2, "0")} ${ampm}`;
-    };
-
-    const getGreeting = () => {
-        const hour = currentTime.getHours();
-        if (hour < 12) return "Good Morning!";
-        if (hour < 17) return "Good Afternoon!";
-        return "Good Evening!";
-    };
-
-    const hour = currentTime.getHours();
-    const isDayTime = hour >= 6 && hour < 18;
-    const Icon: LucideIcon = isDayTime ? SunDim : Moon;
-
-    return (
-        <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className={`flex flex-col items-center justify-center h-full p-6 text-white rounded-xl shadow-lg hover:shadow-xl transition-all ${
-                isDayTime ? 'bg-gradient-to-br from-amber-400 to-orange-500' : 'bg-gradient-to-br from-indigo-500 to-purple-600'
-            }`}
-        >
-            <motion.div
-                animate={{ rotate: isDayTime ? 360 : 0 }}
-                transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-            >
-                <Icon className="mb-2 drop-shadow-lg" size={100} />
-            </motion.div>
-
-            <div className="mt-2 text-sm opacity-90">
-                {currentTime.toLocaleDateString("en-US", {
-                    weekday: "long",
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                })}
-            </div>
-
-            <div className="text-2xl font-bold tracking-tight">
-                {formatTime(currentTime)}
-            </div>
-
-            <div className="mt-1 text-2xl font-semibold">{getGreeting()}</div>
-        </motion.div>
-    );
-}
-
-export function CalendarCard() {
-    const [selectedDate, setSelectedDate] = useState(new Date());
-    const { firstDay, daysInMonth } = getDaysInMonth(selectedDate);
-    const monthNames = ["January", "February", "March", "April", "May", "June",
-        "July", "August", "September", "October", "November", "December"];
-
-    function getDaysInMonth(date: Date) {
-        const year = date.getFullYear();
-        const month = date.getMonth();
-        const firstDay = new Date(year, month, 1).getDay();
-        const daysInMonth = new Date(year, month + 1, 0).getDate();
-        return { firstDay, daysInMonth };
-    }
-
-    function changeMonth(direction: number) {
-        const newDate = new Date(selectedDate);
-        newDate.setMonth(newDate.getMonth() + direction);
-        setSelectedDate(newDate);
-    }
-
-    const today = new Date();
-
-    return (
-        <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-            className="h-full p-5 bg-white rounded-xl shadow-lg hover:shadow-xl transition-all"
-        >
-            <div className="flex items-center justify-between mb-2">
-                <motion.button
-                    whileHover={{ scale: 1.2 }}
-                    whileTap={{ scale: 0.9 }}
-                    onClick={() => changeMonth(-1)}
-                    className="text-gray-600 hover:text-emerald-500 font-bold text-2xl w-8 h-8 flex items-center justify-center rounded-lg hover:bg-emerald-50 transition-all"
-                >
-                    ‹
-                </motion.button>
-                <span className="text-lg font-semibold bg-gradient-to-r from-emerald-600 to-emerald-500 bg-clip-text text-transparent">
-                    {monthNames[selectedDate.getMonth()]} {selectedDate.getFullYear()}
-                </span>
-                <motion.button
-                    whileHover={{ scale: 1.2 }}
-                    whileTap={{ scale: 0.9 }}
-                    onClick={() => changeMonth(1)}
-                    className="text-gray-600 hover:text-emerald-500 font-bold text-2xl w-8 h-8 flex items-center justify-center rounded-lg hover:bg-emerald-50 transition-all"
-                >
-                    ›
-                </motion.button>
-            </div>
-            <div className="grid grid-cols-7 gap-y-6 gap-x-1 text-center">
-                {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((day) => (
-                    <div key={day} className="py-2 text-xs font-bold text-gray-500">
-                        {day}
-                    </div>
-                ))}
-
-                {Array.from({ length: firstDay }).map((_, i) => (
-                    <div key={`empty-${i}`} />
-                ))}
-                {Array.from({ length: daysInMonth }).map((_, i) => {
-                    const day = i + 1;
-                    const isToday =
-                        day === today.getDate() &&
-                        selectedDate.getMonth() === today.getMonth() &&
-                        selectedDate.getFullYear() === today.getFullYear();
-                    return (
-                        <motion.button
-                            key={day}
-                            whileHover={{ scale: 1.15 }}
-                            whileTap={{ scale: 0.95 }}
-                            className={`rounded-xl text-sm py-2 font-medium transition-all ${
-                                isToday
-                                    ? "bg-gradient-to-br from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-200"
-                                    : "hover:bg-emerald-50 text-gray-700 hover:text-emerald-600"
-                            }`}
-                        >
-                            {day}
-                        </motion.button>
-                    );
-                })}
-            </div>
-        </motion.div>
-    );
-}
-
-export function SystemStatus() {
-    const [metrics, setMetrics] = useState({
-        loadStatus: 0,
-        cpuUsage: 0,
-        ramUsage: 0,
-        diskUsage: 0
-    });
-
-    const getStatusText = (value: number) => {
-        if (value > 80) return "Critical";
-        if (value > 60) return "Warning";
-        return "Normal";
-    };
-
-    const getStatusColor = (value: number) => {
-        if (value > 80) return { ring: "rgb(239,68,68)", bg: "from-red-400 to-red-500" };
-        if (value > 60) return { ring: "rgb(251,146,60)", bg: "from-orange-400 to-orange-500" };
-        return { ring: "rgb(52,211,153)", bg: "from-emerald-400 to-emerald-500" };
-    };
-
-    useEffect(() => {
-        const interval = setInterval(() => {
-            setMetrics({
-                loadStatus: Math.floor(Math.random() * 100),
-                cpuUsage: Math.floor(Math.random() * 100),
-                ramUsage: Math.floor(Math.random() * 100),
-                diskUsage: Math.floor(Math.random() * 100)
-            });
-        }, 2000);
-
-        return () => clearInterval(interval);
-    }, []);
-
-    const status = [
-        { label: "Load Status", value: metrics.loadStatus, ...getStatusColor(metrics.loadStatus) },
-        { label: "CPU Usage", value: metrics.cpuUsage, ...getStatusColor(metrics.cpuUsage) },
-        { label: "RAM Usage", value: metrics.ramUsage, ...getStatusColor(metrics.ramUsage) },
-        { label: "Disk Usage", value: metrics.diskUsage, ...getStatusColor(metrics.diskUsage) }
-    ];
-
-    return (
-        <motion.div
-            initial={{ opacity: 0, y: 18 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.36 }}
-            className="p-6 transition-all bg-white rounded-xl shadow-lg hover:shadow-xl"
-        >
-            <div className="flex items-center gap-2 mb-4">
-                <div className="p-2 bg-gradient-to-br from-blue-400 to-blue-500 rounded-xl">
-                    <Laptop className="w-5 h-5 text-white" />
-                </div>
-                <h2 className="text-lg font-semibold text-gray-600">
-                    System Status
-                </h2>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-                {status.map((item, idx) => (
-                    <motion.div
-                        key={idx}
-                        initial={{ scale: 0.9, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        transition={{ delay: 0.1 * idx }}
-                        whileHover={{ scale: 1.03 }}
-                        className="flex flex-col items-center justify-center p-4 text-center bg-gradient-to-br from-gray-50 to-gray-100 border-2 border-gray-200 rounded-xl hover:shadow-md transition-all"
-                    >
-                        <div className="relative mb-2">
-                            <svg width="80" height="80" viewBox="0 0 96 96" className="-rotate-90">
-                                <circle cx="48" cy="48" r="38" stroke="#e5e7eb" strokeWidth="8" fill="none" />
-                                <motion.circle
-                                    cx="48"
-                                    cy="48"
-                                    r="38"
-                                    stroke={item.ring}
-                                    strokeWidth="8"
-                                    fill="none"
-                                    strokeDasharray={2 * Math.PI * 38}
-                                    strokeDashoffset={`${2 * Math.PI * 38 * (1 - item.value / 100)}`}
-                                    strokeLinecap="round"
-                                    initial={{ strokeDashoffset: 2 * Math.PI * 38 }}
-                                    animate={{ strokeDashoffset: `${2 * Math.PI * 38 * (1 - item.value / 100)}` }}
-                                    transition={{ duration: 1, ease: "easeOut" }}
-                                />
-                            </svg>
-                            <div className="absolute inset-0 flex items-center justify-center">
-                                <span className="text-lg font-bold text-gray-800">{item.value}%</span>
-                            </div>
-                        </div>
-
-                        <div>
-                            <div className="text-sm font-semibold text-gray-700 mb-1">{item.label}</div>
-                            <div className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                                item.value > 80 ? "bg-red-100 text-red-600" :
-                                    item.value > 60 ? "bg-orange-100 text-orange-600" :
-                                        "bg-emerald-100 text-emerald-600"
-                            }`}>
-                                {getStatusText(item.value)}
-                            </div>
-                        </div>
-                    </motion.div>
-                ))}
-            </div>
-        </motion.div>
-    );
-}
-
-export function TopProducts() {
-    const products = [
-        { id: "P001", name: "Table", category: "Table", mrp: "1500.00", barcode: "1234567890", quantity: 150 },
-        { id: "P002", name: "Chair", category: "Chair", mrp: "1200.00", barcode: "9876543210", quantity: 120 },
-    ];
-
-    return (
-        <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6 }}
-            className="w-full h-full p-6 transition-all bg-white rounded-xl shadow-lg hover:shadow-xl"
-        >
-            <div className="flex items-center gap-2 mb-4">
-                <div className="p-2 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-xl">
-                    <Star className="w-5 h-5 text-white fill-white" />
-                </div>
-                <h2 className="text-lg font-semibold text-gray-600">
-                    Top Products
-                </h2>
-            </div>
-
-            <div className="overflow-x-auto overflow-y-hidden w-full">
-                <table className="w-full min-w-max border-separate border-spacing-0">
-                    <thead>
-                    <tr className="bg-gradient-to-r from-emerald-400 to-emerald-500">
-                        <th className="px-4 py-3 text-xs font-semibold tracking-wider text-left text-white uppercase rounded-tl-lg">
-                            Product ID
-                        </th>
-                        <th className="px-4 py-3 text-xs font-semibold tracking-wider text-left text-white uppercase">
-                            Name
-                        </th>
-                        <th className="px-4 py-3 text-xs font-semibold tracking-wider text-left text-white uppercase">
-                            MRP
-                        </th>
-                        <th className="px-4 py-3 text-xs font-semibold tracking-wider text-left text-white uppercase">
-                            Barcode
-                        </th>
-                        <th className="px-4 py-3 text-xs font-semibold tracking-wider text-left text-white uppercase rounded-tr-lg">
-                            Quantity
-                        </th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    {products.map((product, index) => (
-                        <motion.tr
-                            key={product.id}
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: 0.1 * index }}
-                            whileHover={{ backgroundColor: "rgba(16,185,129,0.05)", x: 4 }}
-                            className="border-b border-gray-100 transition-colors cursor-pointer"
-                        >
-                            <td className="px-4 py-3 text-sm font-semibold text-gray-700">{product.id}</td>
-                            <td className="px-4 py-3 text-sm font-semibold text-gray-700">{product.name}</td>
-                            <td className="px-4 py-3 text-sm font-semibold text-emerald-600">LKR {product.mrp}</td>
-                            <td className="px-4 py-3 text-sm font-medium text-gray-600">{product.barcode}</td>
-                            <td className="px-4 py-3 text-sm">
-                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-blue-100 to-blue-200 text-blue-700">
-                                    {product.quantity}
-                                </span>
-                            </td>
-                        </motion.tr>
-                    ))}
-                    </tbody>
-                </table>
-            </div>
-        </motion.div>
-    );
+    return <>{time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</>;
 }

@@ -1,5 +1,4 @@
 import {
-    BookmarkCheck,
     ChevronLeft,
     ChevronRight,
     Copy,
@@ -10,17 +9,14 @@ import {
     HandCoins,
     Printer,
     RefreshCw,
-    Save,
-    ArrowUpRight,
-    ArrowDownRight,
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
 import toast, { Toaster } from 'react-hot-toast';
 import { supplierService } from '../../../services/supplierService';
 import { grnService } from '../../../services/grnService';
 import { paymentTypeService } from '../../../services/paymentTypeService';
 import TypeableSelect from "../../../components/TypeableSelect.tsx";
+import GrnViewPopup from '../../../components/models/GrnViewPopup';
 
 interface GRNData {
     id: number;
@@ -45,6 +41,15 @@ interface SupplierOption {
     label: string;
 }
 
+interface ApiError {
+    response?: {
+        data?: {
+            message?: string;
+        };
+    };
+    message?: string;
+}
+
 function SupplierPayment() {
     const [grnData, setGrnData] = useState<GRNData[]>([]);
     const [isLoadingGRN, setIsLoadingGRN] = useState(true);
@@ -60,11 +65,10 @@ function SupplierPayment() {
     const [suppliers, setSuppliers] = useState<SupplierOption[]>([]);
     const [isLoadingSuppliers, setIsLoadingSuppliers] = useState(true);
     const [selectedSupplier, setSelectedSupplier] = useState<SupplierOption | null>(null);
-    
+
     // Payment processing state
-    const [selectedBillNumber, setSelectedBillNumber] = useState<string | null>(null);
     const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
-    const [billNumberOptions, setBillNumberOptions] = useState<{id: number, bill_number: string, total: number, balance: number}[]>([]);
+    const [billNumberOptions, setBillNumberOptions] = useState<{ id: number, bill_number: string, total: number, balance: number }[]>([]);
     const [isLoadingBills, setIsLoadingBills] = useState(false);
     const [paymentTypes, setPaymentTypes] = useState<any[]>([]);
     const [selectedPaymentType, setSelectedPaymentType] = useState<string | null>(null);
@@ -72,6 +76,14 @@ function SupplierPayment() {
     const [paymentAmount, setPaymentAmount] = useState<string>('');
     const [isProcessingPayment, setIsProcessingPayment] = useState(false);
     const [selectedBill, setSelectedBill] = useState<any>(null);
+    const [selectedBillDetails, setSelectedBillDetails] = useState<any>(null);
+    const [isLoadingBillDetails, setIsLoadingBillDetails] = useState(false);
+
+    // Popup State
+    const [selectedGrn, setSelectedGrn] = useState<any>(null);
+    const [isViewPopupOpen, setIsViewPopupOpen] = useState(false);
+    const [isLoadingDetails, setIsLoadingDetails] = useState(false);
+    const [shouldAutoPrint, setShouldAutoPrint] = useState(false);
 
     // Add state for pagination
     const [currentPage, setCurrentPage] = useState(1);
@@ -83,7 +95,7 @@ function SupplierPayment() {
     const endIndex = startIndex + itemsPerPage;
     const currentGRNData = grnData.slice(startIndex, endIndex);
 
-// Pagination functions
+    // Pagination functions
     const goToPage = (page: number) => {
         if (page >= 1 && page <= totalPages) {
             setCurrentPage(page);
@@ -134,6 +146,37 @@ function SupplierPayment() {
         return pages;
     };
 
+    const summaryCards = [
+        {
+            icon: FileSpreadsheet,
+            label: 'Total Bills',
+            value: isLoadingStats ? '...' : stats.totalGrn.toString(),
+            color: 'bg-gradient-to-br from-emerald-400 to-emerald-500',
+            iconColor: 'text-white'
+        },
+        {
+            icon: DollarSign,
+            label: 'Total Amount',
+            value: isLoadingStats ? '...' : `LKR ${stats.totalAmount.toLocaleString()}`,
+            color: 'bg-gradient-to-br from-purple-400 to-purple-500',
+            iconColor: 'text-white'
+        },
+        {
+            icon: Download,
+            label: 'Total Paid',
+            value: isLoadingStats ? '...' : `LKR ${stats.totalPaid.toLocaleString()}`,
+            color: 'bg-gradient-to-br from-blue-400 to-blue-500',
+            iconColor: 'text-white'
+        },
+        {
+            icon: DollarSign,
+            label: 'Total Balance',
+            value: isLoadingStats ? '...' : `LKR ${stats.totalBalance.toLocaleString()}`,
+            color: 'bg-gradient-to-br from-red-400 to-red-500',
+            iconColor: 'text-white'
+        }
+    ];
+
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -143,12 +186,18 @@ function SupplierPayment() {
             } else if (e.key === "ArrowUp") {
                 e.preventDefault();
                 setSelectedIndex((prev) => (prev > 0 ? prev - 1 : prev));
+            } else if (e.key === "Enter" && e.shiftKey) {
+                // View on Shift+Enter
+                e.preventDefault();
+                if (grnData[selectedIndex]) {
+                    fetchGrnDetails(grnData[selectedIndex].id, false);
+                }
             }
         };
 
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [grnData.length]);
+    }, [grnData.length, selectedIndex]);
 
     // Fetch suppliers on component mount
     useEffect(() => {
@@ -210,12 +259,32 @@ function SupplierPayment() {
         fetchGRNData();
     }, []);
 
+    // Fetch GRN Details
+    const fetchGrnDetails = async (grnId: number, autoPrint: boolean = false) => {
+        setIsLoadingDetails(true);
+        setShouldAutoPrint(autoPrint);
+        try {
+            const response = await grnService.getGRNDetails(grnId);
+            if (response.data.success) {
+                setSelectedGrn(response.data.data);
+                setIsViewPopupOpen(true);
+            } else {
+                toast.error('Failed to load GRN details');
+            }
+        } catch (error) {
+            const apiError = error as ApiError;
+            console.error('Error fetching GRN details:', error);
+            toast.error(apiError.response?.data?.message || 'Failed to load GRN details');
+        } finally {
+            setIsLoadingDetails(false);
+        }
+    };
+
     // Fetch bills when supplier changes
     useEffect(() => {
         const fetchBills = async () => {
             if (!selectedSupplier?.value) {
                 setBillNumberOptions([]);
-                setSelectedBillNumber(null);
                 return;
             }
 
@@ -234,6 +303,44 @@ function SupplierPayment() {
 
         fetchBills();
     }, [selectedSupplier]);
+
+    // Handle bill selection change
+    const handleBillChange = async (opt: any) => {
+        if (!opt) {
+            setSelectedBill(null);
+            setSelectedInvoice(null);
+            setSelectedBillDetails(null);
+            return;
+        }
+
+        const billNumber = opt.label;
+
+
+        // Map billNumberOptions to find the ID
+        const selectedBillData = billNumberOptions.find(bill => bill.bill_number === billNumber);
+        
+        if (selectedBillData) {
+            setSelectedBill(selectedBillData);
+            setSelectedInvoice({
+                amount: selectedBillData.total.toFixed(2),
+                balance: selectedBillData.balance.toFixed(2)
+            });
+
+            // Fetch full details
+            try {
+                setIsLoadingBillDetails(true);
+                const response = await grnService.getGRNDetails(selectedBillData.id);
+                if (response.data.success) {
+                    setSelectedBillDetails(response.data.data);
+                }
+            } catch (error) {
+                console.error('Error fetching GRN details:', error);
+                toast.error('Failed to load bill details');
+            } finally {
+                setIsLoadingBillDetails(false);
+            }
+        }
+    };
 
     // Fetch payment types on component mount
     useEffect(() => {
@@ -260,58 +367,48 @@ function SupplierPayment() {
             toast.error('Please select a bill first');
             return;
         }
-        
+
         if (!paymentAmount || parseFloat(paymentAmount) <= 0) {
             toast.error('Please enter a valid payment amount');
             return;
         }
-        
+
         if (!selectedPaymentType) {
             toast.error('Please select a payment type');
             return;
         }
-        
+
         const amount = parseFloat(paymentAmount);
         const balance = parseFloat(selectedInvoice?.balance || '0');
-        
+
         if (amount > balance) {
             toast.error('Payment amount cannot exceed the outstanding balance');
             return;
         }
-        
+
         try {
             setIsProcessingPayment(true);
-            
+
             const paymentData = {
                 grn_id: selectedBill.id,
                 payment_amount: amount,
                 payment_type_id: parseInt(selectedPaymentType)
             };
-            
+
             const response = await grnService.processPayment(paymentData);
-            
+
             if (response.data.success) {
                 toast.success('Payment processed successfully!');
-                
-                // Clear form
-                setPaymentAmount('');
-                setSelectedPaymentType(null);
-                setSelectedBillNumber(null);
-                setSelectedBill(null);
-                setSelectedInvoice(null);
-                
+
+                // Reset all filters and fields
+                handleClear();
+
                 // Refresh data
                 const grnResponse = await grnService.getGRNList();
                 setGrnData(grnResponse.data.data || []);
-                
+
                 const statsResponse = await grnService.getStats();
                 setStats(statsResponse.data.data);
-                
-                // Refresh bills for the same supplier
-                if (selectedSupplier?.value) {
-                    const billsResponse = await grnService.getBillsBySupplier(selectedSupplier.value);
-                    setBillNumberOptions(billsResponse.data.data || []);
-                }
             }
         } catch (error: any) {
             console.error('Payment processing error:', error);
@@ -321,13 +418,13 @@ function SupplierPayment() {
             setIsProcessingPayment(false);
         }
     };
-    
+
     // Handle form clear
     const handleClear = () => {
         setSelectedSupplier(null);
-        setSelectedBillNumber(null);
         setSelectedBill(null);
         setSelectedInvoice(null);
+        setSelectedBillDetails(null);
         setPaymentAmount('');
         setSelectedPaymentType(null);
         setBillNumberOptions([]);
@@ -371,11 +468,33 @@ function SupplierPayment() {
                     </h1>
                 </div>
 
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.6 }}
-                    className={'bg-white rounded-xl p-4 flex flex-col shadow-lg'}
+                {/* Summary Stats */}
+                <div className={'grid md:grid-cols-4 grid-cols-1 gap-4'}>
+                    {summaryCards.map((stat, i) => (
+                        <div
+                            key={i}
+                            className={`flex items-center p-4 space-x-3 transition-all bg-white rounded-2xl border border-gray-200 cursor-pointer group relative overflow-hidden`}
+                        >
+                            <div className="absolute inset-0 bg-gradient-to-br from-transparent via-gray-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+
+                            <div className={`p-3 rounded-full ${stat.color} relative z-10`}>
+                                <stat.icon className={`w-6 h-6 ${stat.iconColor}`} />
+                            </div>
+
+                            <div className="w-px h-10 bg-gray-200"></div>
+
+                            <div className="relative z-10 flex-1">
+                                <div className="flex items-center justify-between">
+                                    <p className="text-sm text-gray-500">{stat.label}</p>
+                                </div>
+                                <p className="text-sm font-bold text-gray-700">{stat.value}</p>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                <div
+                    className={'bg-white rounded-xl p-4 flex flex-col border border-gray-200'}
                 >
                     <h2 className="text-xl font-semibold text-gray-700 mb-3">Payment Processing</h2>
                     <div className={'grid md:grid-cols-6 gap-4'}>
@@ -388,7 +507,6 @@ function SupplierPayment() {
                                 value={selectedSupplier?.value || null}
                                 onChange={(opt) => {
                                     setSelectedSupplier(opt);
-                                    setSelectedBillNumber(null); // Reset bill number when supplier changes
                                 }}
                                 placeholder={isLoadingSuppliers ? "Loading suppliers..." : "Type to search supplier"}
                                 disabled={isLoadingSuppliers}
@@ -398,51 +516,25 @@ function SupplierPayment() {
                             <label htmlFor="bill-number" className="block text-sm font-medium text-gray-700 mb-1">
                                 Bill Number
                             </label>
-                            <select
+                            <TypeableSelect
                                 id="bill-number"
-                                value={selectedBillNumber || ''}
-                                onChange={(e) => {
-                                    const billNumber = e.target.value || null;
-                                    setSelectedBillNumber(billNumber);
-                                    
-                                    // Find the selected bill object and set invoice details
-                                    if (billNumber) {
-                                        const selectedBillData = billNumberOptions.find(bill => bill.bill_number === billNumber);
-                                        if (selectedBillData) {
-                                            setSelectedBill(selectedBillData);
-                                            setSelectedInvoice({
-                                                amount: selectedBillData.total.toFixed(2),
-                                                balance: selectedBillData.balance.toFixed(2)
-                                            });
-                                        }
-                                    } else {
-                                        setSelectedBill(null);
-                                        setSelectedInvoice(null);
-                                    }
-                                }}
+                                options={billNumberOptions.map(bill => ({ value: bill.id, label: bill.bill_number }))}
+                                value={selectedBill?.id || null}
+                                onChange={handleBillChange}
+                                placeholder={isLoadingBills ? "Loading bills..." : !selectedSupplier ? "Select supplier first" : "Search bill number..."}
                                 disabled={!selectedSupplier || isLoadingBills}
-                                className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-400 focus:outline-none transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
-                            >
-                                <option value="">
-                                    {isLoadingBills ? 'Loading bills...' : !selectedSupplier ? 'Select supplier first' : 'Select Bill Number...'}
-                                </option>
-                                {billNumberOptions.map((bill) => (
-                                    <option key={bill.id} value={bill.bill_number}>
-                                        {bill.bill_number}
-                                    </option>
-                                ))}
-                            </select>
+                            />
                         </div>
                         <div className="flex flex-col justify-end">
                             <label className="block text-xs font-medium text-gray-500 mb-1">
                                 Total: <span className="text-gray-700 font-semibold">
-            LKR {selectedInvoice?.amount || '0.00'}
-        </span>
+                                    LKR {selectedInvoice?.amount || '0.00'}
+                                </span>
                             </label>
                             <label className="text-sm font-semibold text-gray-700">
                                 Balance: <span className={`${parseFloat(selectedInvoice?.balance || '0') > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
-            LKR {selectedInvoice?.balance || '0.00'}
-        </span>
+                                    LKR {selectedInvoice?.balance || '0.00'}
+                                </span>
                             </label>
                         </div>
 
@@ -462,7 +554,7 @@ function SupplierPayment() {
                                 className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-400 focus:outline-none transition-all"
                             />
                         </div>
-                        
+
                         <div>
                             <label htmlFor="payment-type" className="block text-sm font-medium text-gray-700 mb-1">
                                 Payment Type
@@ -486,10 +578,10 @@ function SupplierPayment() {
                         </div>
 
                         <div className={'grid grid-cols-2 md:items-end items-start gap-2 text-white font-medium'}>
-                            <button 
+                            <button
                                 onClick={handlePayment}
                                 disabled={isProcessingPayment || !selectedBill || !paymentAmount || !selectedPaymentType}
-                                className={'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 py-2 rounded-lg flex items-center justify-center shadow-lg shadow-emerald-200 hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed'}
+                                className={'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 py-2 rounded-lg flex items-center justify-center transition-all disabled:opacity-50 disabled:cursor-not-allowed'}
                             >
                                 {isProcessingPayment ? (
                                     <RefreshCw className="animate-spin mr-2" size={14} />
@@ -498,122 +590,233 @@ function SupplierPayment() {
                                 )}
                                 {isProcessingPayment ? 'Processing...' : 'Pay Now'}
                             </button>
-                            <button 
+                            <button
                                 onClick={handleClear}
                                 disabled={isProcessingPayment}
-                                className={'bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 py-2 rounded-lg flex items-center justify-center shadow-lg shadow-gray-200 hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed'}
+                                className={'bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 py-2 rounded-lg flex items-center justify-center transition-all disabled:opacity-50 disabled:cursor-not-allowed'}
                             >
                                 <RefreshCw className="mr-2" size={14} />Clear
                             </button>
                         </div>
                     </div>
-                </motion.div>
+                </div>
 
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.7 }}
-                    className={'flex flex-col bg-white rounded-xl h-full p-4 justify-between shadow-lg'}
+                {/* Bill Details Section */}
+                {(selectedBillDetails || isLoadingBillDetails) && (
+                    <div className="bg-white rounded-xl p-5 border border-gray-200 animate-in fade-in slide-in-from-top-2 duration-300">
+                        <div className="flex items-center justify-between mb-4 pb-2 border-b border-gray-100">
+                            <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                                <Copy className="w-5 h-5 text-emerald-500" />
+                                Bill Information: {selectedBillDetails?.billNumber}
+                            </h3>
+                            {isLoadingBillDetails && (
+                                <div className="flex items-center gap-2 text-sm text-gray-400">
+                                    <RefreshCw className="w-4 h-4 animate-spin" />
+                                    Updating details...
+                                </div>
+                            )}
+                        </div>
+
+                        {selectedBillDetails ? (
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                {/* Left Column: Summary Info */}
+                                <div className="space-y-4">
+                                    <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                                        <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">General Details</h4>
+                                        <div className="space-y-3">
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-sm text-gray-500">Bill Date</span>
+                                                <span className="text-sm font-semibold text-gray-700">{selectedBillDetails.grnDate}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-sm text-gray-500">Supplier</span>
+                                                <span className="text-sm font-semibold text-gray-700">{selectedBillDetails.supplierName}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-sm text-gray-500">Status</span>
+                                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                                    selectedBillDetails.statusName === 'Active' ? 'bg-yellow-100 text-yellow-700' : 'bg-emerald-100 text-emerald-700'
+                                                }`}>
+                                                    {selectedBillDetails.statusName === 'Active' ? 'PENDING' : 'PAID'}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-emerald-50/50 rounded-xl p-4 border border-emerald-100">
+                                        <h4 className="text-xs font-bold text-emerald-600 uppercase tracking-wider mb-3">Financials</h4>
+                                        <div className="space-y-3">
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-sm text-gray-600">Grand Total</span>
+                                                <span className="text-sm font-bold text-gray-800 uppercase">LKR {selectedBillDetails.totalAmount.toLocaleString()}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-sm text-gray-600">Total Paid</span>
+                                                <span className="text-sm font-bold text-blue-600 uppercase">LKR {selectedBillDetails.paidAmount.toLocaleString()}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center pt-2 border-t border-emerald-100">
+                                                <span className="text-sm font-bold text-gray-700">Remaining</span>
+                                                <span className="text-lg font-black text-red-600 uppercase">LKR {selectedBillDetails.balanceAmount.toLocaleString()}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Right Column: Item Table (Span 2) */}
+                                <div className="lg:col-span-2 overflow-hidden rounded-xl border border-gray-100">
+                                    <table className="min-w-full divide-y divide-gray-200">
+                                        <thead className="bg-gray-50">
+                                            <tr>
+                                                <th className="px-4 py-2 text-left text-[10px] font-bold text-gray-500 uppercase tracking-wider">Item Name</th>
+                                                <th className="px-4 py-2 text-right text-[10px] font-bold text-gray-500 uppercase tracking-wider">Qty</th>
+                                                <th className="px-4 py-2 text-right text-[10px] font-bold text-gray-500 uppercase tracking-wider">Unit Cost</th>
+                                                <th className="px-4 py-2 text-right text-[10px] font-bold text-gray-500 uppercase tracking-wider">Subtotal</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="bg-white divide-y divide-gray-100">
+                                            {selectedBillDetails.items.map((item: any) => (
+                                                <tr key={item.id} className="hover:bg-gray-50/50 transition-colors">
+                                                    <td className="px-4 py-2 text-xs font-medium text-gray-700">{item.itemName}</td>
+                                                    <td className="px-4 py-2 text-xs text-right text-gray-600 font-semibold">{item.quantity}</td>
+                                                    <td className="px-4 py-2 text-xs text-right text-gray-600">LKR {item.unitPrice.toLocaleString()}</td>
+                                                    <td className="px-4 py-2 text-xs text-right text-emerald-600 font-bold">LKR {item.totalPrice.toLocaleString()}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="flex flex-col items-center justify-center py-10 text-gray-400">
+                                <div className="mb-4 p-4 bg-gray-50 rounded-full">
+                                    <RefreshCw className="w-8 h-8 animate-spin text-emerald-400" />
+                                </div>
+                                <p className="text-sm">Fetching detailed item information...</p>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                <div
+                    className={'flex flex-col bg-white rounded-xl h-full p-4 justify-between border border-gray-200'}
                 >
                     <div className="overflow-y-auto max-h-md md:h-[320px] lg:h-[500px] rounded-lg scrollbar-thin scrollbar-thumb-emerald-300 scrollbar-track-gray-100">
                         <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-gradient-to-r from-emerald-500 to-emerald-600 sticky top-0 z-10">
-                            <tr>
-                                {[
-                                    'Supplier ID',
-                                    'Supplier Name',
-                                    'Bill Number',
-                                    'Amount',
-                                    'Paid',
-                                    'Balance',
-                                    'Date',
-                                    'Status',
-                                    'Action'
-                                ].map((header, i, arr) => (
-                                    <th
-                                        key={i}
-                                        scope="col"
-                                        className={`px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider ${
-                                            i === 0 ? 'rounded-tl-lg' : i === arr.length - 1 ? 'rounded-tr-lg' : ''
-                                        }`}
-                                    >
-                                        {header}
-                                    </th>
-                                ))}
-                            </tr>
+                                <tr>
+                                    {[
+                                        'Supplier ID',
+                                        'Supplier Name',
+                                        'Bill Number',
+                                        'Amount',
+                                        'Paid',
+                                        'Balance',
+                                        'Date',
+                                        'Status',
+                                        'Action'
+                                    ].map((header, i, arr) => (
+                                        <th
+                                            key={i}
+                                            scope="col"
+                                            className={`px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider ${i === 0 ? 'rounded-tl-lg' : i === arr.length - 1 ? 'rounded-tr-lg' : ''
+                                                }`}
+                                        >
+                                            {header}
+                                        </th>
+                                    ))}
+                                </tr>
                             </thead>
 
                             <tbody className="bg-white divide-y divide-gray-200">
-                            {isLoadingGRN ? (
-                                <tr>
-                                    <td colSpan={9} className="px-6 py-8 text-center text-gray-500">
-                                        <div className="flex items-center justify-center">
-                                            <RefreshCw className="animate-spin mr-2" size={16} />
-                                            Loading GRN data...
-                                        </div>
-                                    </td>
-                                </tr>
-                            ) : grnData.length === 0 ? (
-                                <tr>
-                                    <td colSpan={9} className="px-6 py-8 text-center text-gray-500">
-                                        No GRN records found
-                                    </td>
-                                </tr>
-                            ) : (
-                                grnData.map((grn, index) => (
-                                    <tr
-                                        key={grn.id}
-                                        onClick={() => setSelectedIndex(index)}
-                                        className={`cursor-pointer transition-all ${
-                                            selectedIndex === index
-                                                ? 'bg-emerald-50 border-l-4 border-l-emerald-500'
-                                                : 'hover:bg-gray-50'
-                                        }`}
-                                    >
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-semibold text-gray-800">
-                                            {grn.supplierId}
-                                        </td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-gray-700">
-                                            {grn.supplierName}
-                                        </td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-600">
-                                            {grn.billNumber}
-                                        </td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-bold text-emerald-600">
-                                            LKR {grn.totalAmount.toLocaleString()}
-                                        </td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-blue-600">
-                                            LKR {grn.paidAmount.toLocaleString()}
-                                        </td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-red-600">
-                                            LKR {grn.balanceAmount.toLocaleString()}
-                                        </td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-600">
-                                            {grn.grnDate}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                                                grn.statusName === 'Active' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'
-                                            }`}>
-                                                {grn.statusName === 'Active' ? 'Pending' : 'Complete'}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
-                                            <div className="flex gap-2">
-                                                <button className="p-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all">
-                                                    <Eye size={16}/>
-                                                </button>
-                                                <button className="p-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all">
-                                                    <Printer size={16}/>
-                                                </button>
-                                                <button className="p-2 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all">
-                                                    <Copy size={16}/>
-                                                </button>
+                                {isLoadingGRN ? (
+                                    <tr>
+                                        <td colSpan={9} className="px-6 py-8 text-center text-gray-500">
+                                            <div className="flex items-center justify-center">
+                                                <RefreshCw className="animate-spin mr-2" size={16} />
+                                                Loading GRN data...
                                             </div>
                                         </td>
                                     </tr>
-                                ))
-                            )}
+                                ) : grnData.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={9} className="px-6 py-8 text-center text-gray-500">
+                                            No GRN records found
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    currentGRNData.map((grn, index) => (
+                                        <tr
+                                            key={grn.id}
+                                            onClick={() => setSelectedIndex(index)}
+                                            className={`cursor-pointer transition-all ${selectedIndex === index
+                                                ? 'bg-emerald-50 border-l-4 border-l-emerald-500'
+                                                : 'hover:bg-gray-50'
+                                                }`}
+                                        >
+                                            <td className="px-6 py-2 whitespace-nowrap text-sm font-semibold text-gray-800">
+                                                {grn.supplierId}
+                                            </td>
+                                            <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-gray-700">
+                                                {grn.supplierName}
+                                            </td>
+                                            <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-600">
+                                                {grn.billNumber}
+                                            </td>
+                                            <td className="px-6 py-2 whitespace-nowrap text-sm font-bold text-emerald-600">
+                                                LKR {grn.totalAmount.toLocaleString()}
+                                            </td>
+                                            <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-blue-600">
+                                                LKR {grn.paidAmount.toLocaleString()}
+                                            </td>
+                                            <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-red-600">
+                                                LKR {grn.balanceAmount.toLocaleString()}
+                                            </td>
+                                            <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-600">
+                                                {grn.grnDate}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${grn.statusName === 'Active' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'
+                                                    }`}>
+                                                    {grn.statusName === 'Active' ? 'Pending' : 'Complete'}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
+                                                <div className="flex gap-2">
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            fetchGrnDetails(grn.id, false);
+                                                        }}
+                                                        disabled={isLoadingDetails}
+                                                        className="p-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg transition-all disabled:opacity-50"
+                                                    >
+                                                        <Eye size={16} />
+                                                    </button>
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            fetchGrnDetails(grn.id, true);
+                                                        }}
+                                                        disabled={isLoadingDetails}
+                                                        className="p-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white rounded-lg transition-all disabled:opacity-50"
+                                                    >
+                                                        <Printer size={16} />
+                                                    </button>
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            navigator.clipboard.writeText(grn.billNumber);
+                                                            toast.success('Bill number copied to clipboard');
+                                                        }}
+                                                        className="p-2 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white rounded-lg transition-all"
+                                                    >
+                                                        <Copy size={16} />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
                             </tbody>
                         </table>
                     </div>
@@ -628,51 +831,55 @@ function SupplierPayment() {
                             <button
                                 onClick={goToPreviousPage}
                                 disabled={currentPage === 1}
-                                className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${
-                                    currentPage === 1
-                                        ? 'text-gray-400 cursor-not-allowed'
-                                        : 'text-gray-600 hover:text-emerald-600 hover:bg-emerald-50'
-                                }`}
+                                className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${currentPage === 1
+                                    ? 'text-gray-400 cursor-not-allowed'
+                                    : 'text-gray-600 hover:text-emerald-600 hover:bg-emerald-50'
+                                    }`}
                             >
                                 <ChevronLeft className="mr-2 h-5 w-5" /> Previous
                             </button>
 
                             {getPageNumbers().map((page, index) =>
-                                    typeof page === 'number' ? (
-                                        <button
-                                            key={index}
-                                            onClick={() => goToPage(page)}
-                                            className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${
-                                                currentPage === page
-                                                    ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-md'
-                                                    : 'text-gray-600 hover:bg-emerald-50 hover:text-emerald-600'
+                                typeof page === 'number' ? (
+                                    <button
+                                        key={index}
+                                        onClick={() => goToPage(page)}
+                                        className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${currentPage === page
+                                            ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white'
+                                            : 'text-gray-600 hover:bg-emerald-50 hover:text-emerald-600'
                                             }`}
-                                        >
-                                            {page}
-                                        </button>
-                                    ) : (
-                                        <span key={index} className="text-gray-400 px-2">
-                    {page}
-                </span>
-                                    )
+                                    >
+                                        {page}
+                                    </button>
+                                ) : (
+                                    <span key={index} className="text-gray-400 px-2">
+                                        {page}
+                                    </span>
+                                )
                             )}
 
                             <button
                                 onClick={goToNextPage}
                                 disabled={currentPage === totalPages}
-                                className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${
-                                    currentPage === totalPages
-                                        ? 'text-gray-400 cursor-not-allowed'
-                                        : 'text-gray-600 hover:text-emerald-600 hover:bg-emerald-50'
-                                }`}
+                                className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${currentPage === totalPages
+                                    ? 'text-gray-400 cursor-not-allowed'
+                                    : 'text-gray-600 hover:text-emerald-600 hover:bg-emerald-50'
+                                    }`}
                             >
                                 Next <ChevronRight className="ml-2 h-5 w-5" />
                             </button>
                         </div>
                     </nav>
 
-                </motion.div>
+                </div>
             </div>
+            {/* GRN View Popup */}
+            <GrnViewPopup
+                isOpen={isViewPopupOpen}
+                onClose={() => setIsViewPopupOpen(false)}
+                grnData={selectedGrn}
+                autoPrint={shouldAutoPrint}
+            />
         </>
     );
 }

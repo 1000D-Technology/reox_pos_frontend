@@ -1,369 +1,692 @@
-const db = require("../config/db");
+const prisma = require("../config/prismaClient");
 
 class Stock {
     /**
-     * @desc Get all current stock with product and supplier details
+     * @desc Get ALL stock data with individual variation rows (not grouped)
+     */
+    static async getAllStockWithVariations(filters = {}) {
+        const whereClause = {};
+        
+        if (filters.hasStock) {
+            whereClause.qty = { gt: 0 };
+        }
+
+        const stocks = await prisma.stock.findMany({
+            where: whereClause,
+            include: {
+                product_variations: {
+                    include: {
+                        product: {
+                            include: {
+                                unit_id_product_unit_idTounit_id: true,
+                                category: true,
+                                brand: true
+                            }
+                        },
+                        product_status: true
+                    }
+                },
+                batch: true,
+                grn_items: {
+                    include: {
+                        grn: {
+                            include: {
+                                supplier: true
+                            }
+                        }
+                    },
+                    take: 1
+                }
+            },
+            orderBy: [
+                { product_variations: { product: { product_name: 'asc' } } },
+                { product_variations: { id: 'asc' } },
+                { id: 'asc' }
+            ]
+        });
+
+        return stocks.map(s => {
+            const pv = s.product_variations;
+            const p = pv.product;
+            const supplier = s.grn_items[0]?.grn?.supplier;
+
+            // Build full product name
+            let fullProductName = p.product_name;
+            if (pv.color) fullProductName += ` - ${pv.color}`;
+            if (pv.size) fullProductName += ` - ${pv.size}`;
+            if (pv.storage_capacity) fullProductName += ` - ${pv.storage_capacity}`;
+
+            return {
+                stock_id: s.id,
+                product_variations_id: s.product_variations_id,
+                batch_id: s.batch_id,
+                qty: s.qty,
+                cost_price: s.cost_price,
+                mrp: s.mrp,
+                selling_price: s.rsp,
+                mfd: s.mfd,
+                exp: s.exp,
+                product_id: p.id,
+                product_name: p.product_name,
+                product_code: p.product_code,
+                barcode: pv.barcode,
+                color: pv.color,
+                size: pv.size,
+                storage_capacity: pv.storage_capacity,
+                full_product_name: fullProductName,
+                unit: p.unit_id_product_unit_idTounit_id?.name,
+                category: p.category?.name,
+                brand: p.brand?.name,
+                batch_name: s.batch?.batch_name,
+                supplier: supplier?.supplier_name,
+                product_status: pv.product_status?.status_name
+            };
+        });
+    }
+
+    /**
+     * @desc Get all current stock with product and supplier details (grouped by product)
      */
     static async getAllStock() {
-        const query = `
-            SELECT 
-                p.id AS product_id,
-                p.product_name AS product_name,
-                u.name AS unit,
-                s.cost_price,
-                s.mrp,
-                s.rsp AS selling_price,
-                sup.supplier_name AS supplier,
-                SUM(s.qty) AS stock_qty
-            FROM stock s
-            INNER JOIN product_variations pv ON s.product_variations_id = pv.id
-            INNER JOIN product p ON pv.product_id = p.id
-            INNER JOIN unit_id u ON p.unit_id = u.idunit_id
-            LEFT JOIN grn_items gi ON s.id = gi.stock_id
-            LEFT JOIN grn g ON gi.grn_id = g.id
-            LEFT JOIN supplier sup ON g.supplier_id = sup.id
-            WHERE s.qty > 0
-            GROUP BY p.id, p.product_name, u.name, s.cost_price, s.mrp, s.rsp, sup.supplier_name
-            ORDER BY p.product_name ASC
-        `;
-        const [rows] = await db.execute(query);
-        return rows;
+        return this.searchStock({});
     }
 
     static async searchStock(filters) {
-        let query = `
-        SELECT 
-            pv.id AS variation_id,
-            CONCAT(p.product_name, 
-                   IF(pv.color IS NOT NULL AND pv.color != '', CONCAT(' - ', pv.color), ''), 
-                   IF(pv.size IS NOT NULL AND pv.size != '', CONCAT(' - ', pv.size), '')
-            ) AS full_product_name,
-            u.name AS unit,
-            s.cost_price,
-            s.mrp,
-            s.rsp AS selling_price,
-            sup.supplier_name AS supplier,
-            SUM(s.qty) AS stock_qty
-        FROM stock s
-        INNER JOIN product_variations pv ON s.product_variations_id = pv.id
-        INNER JOIN product p ON pv.product_id = p.id
-        INNER JOIN unit_id u ON p.unit_id = u.idunit_id
-        LEFT JOIN grn_items gi ON s.id = gi.stock_id
-        LEFT JOIN grn g ON gi.grn_id = g.id
-        LEFT JOIN supplier sup ON g.supplier_id = sup.id
-        WHERE s.qty > 0
-    `;
+        // Fetch all stocks with relations using Prisma
+        const stocks = await prisma.stock.findMany({
+            where: {
+                qty: { gt: 0 }
+            },
+            include: {
+                product_variations: {
+                    include: {
+                        product: {
+                            include: {
+                                unit_id_product_unit_idTounit_id: true,
+                                category: true
+                            }
+                        }
+                    }
+                },
+                grn_items: {
+                    include: {
+                        grn: {
+                            include: {
+                                supplier: true
+                            }
+                        }
+                    }
+                }
+            }
+        });
 
-        const queryParams = [];
+        let filteredStocks = stocks;
 
         if (filters.category) {
-            query += ` AND p.category_id = ?`;
-            queryParams.push(filters.category);
+            filteredStocks = filteredStocks.filter(s =>
+                s.product_variations.product.category_id === parseInt(filters.category)
+            );
         }
+
         if (filters.unit) {
-            query += ` AND p.unit_id = ?`;
-            queryParams.push(filters.unit);
+            filteredStocks = filteredStocks.filter(s =>
+                s.product_variations.product.unit_id === parseInt(filters.unit)
+            );
         }
+
         if (filters.supplier) {
-            query += ` AND g.supplier_id = ?`;
-            queryParams.push(filters.supplier);
+            filteredStocks = filteredStocks.filter(s =>
+                s.grn_items.some(gi => gi.grn?.supplier_id === parseInt(filters.supplier))
+            );
         }
+
         if (filters.searchQuery) {
-            query += ` AND (p.product_name LIKE ? OR pv.id = ?)`;
-            queryParams.push(`%${filters.searchQuery}%`, filters.searchQuery);
+            const query = filters.searchQuery.toLowerCase();
+            filteredStocks = filteredStocks.filter(s => {
+                const product = s.product_variations.product;
+                const barcode = s.barcode || '';
+                return product.product_name.toLowerCase().includes(query) ||
+                    product.id.toString() === filters.searchQuery ||
+                    barcode.toLowerCase().includes(query);
+            });
         }
 
-        query += ` GROUP BY 
-                pv.id, p.product_name, pv.color, pv.size, u.name, 
-                s.cost_price, s.mrp, s.rsp, sup.supplier_name
-               ORDER BY p.product_name ASC`;
+        // Map to individual items (no grouping)
+        const result = filteredStocks.map(s => {
+            const pv = s.product_variations;
+            const p = pv.product;
+            const supplier = s.grn_items[0]?.grn?.supplier;
 
-        const [rows] = await db.execute(query, queryParams);
-        return rows;
+            // Build full product name
+            let fullProductName = p.product_name;
+            if (pv.color) fullProductName += ` - ${pv.color}`;
+            if (pv.size) fullProductName += ` - ${pv.size}`;
+            if (pv.storage_capacity) fullProductName += ` - ${pv.storage_capacity}`;
+
+            return {
+                stock_id: s.id,
+                product_variations_id: s.product_variations_id,
+                batch_id: s.batch_id,
+                qty: s.qty,
+                cost_price: s.cost_price,
+                mrp: s.mrp,
+                selling_price: s.rsp,
+                mfd: s.mfd,
+                exp: s.exp,
+                product_id: p.id,
+                product_name: p.product_name,
+                full_product_name: fullProductName,
+                product_code: p.product_code,
+                barcode: pv.barcode,
+                color: pv.color,
+                size: pv.size,
+                storage_capacity: pv.storage_capacity,
+                unit: p.unit_id_product_unit_idTounit_id?.name,
+                category: p.category?.name,
+                brand: p.brand?.name,
+                batch_name: s.batch?.batch_name,
+                supplier: supplier?.supplier_name,
+                product_status: pv.product_status?.status_name
+            };
+        });
+
+        return result;
     }
 
     static async getDashboardSummary() {
-        const queries = {
-            // 1. Total Active Products count (based on product_status in variations)
-            totalProducts: `
-                SELECT COUNT(DISTINCT product_id) as count 
-                FROM product_variations 
-                WHERE product_status_id = 1`,
+        const currentDate = new Date();
+        const currentMonth = currentDate.getMonth() + 1;
+        const currentYear = currentDate.getFullYear();
 
-            // 2. Total Stock Value for the current month (based on stock cost_price)
-            totalValue: `
-                SELECT SUM(cost_price * qty) as total 
-                FROM stock 
-                WHERE MONTH(mfd) = MONTH(CURRENT_DATE()) 
-                AND YEAR(mfd) = YEAR(CURRENT_DATE())`,
+        // Total Active Products
+        const totalProducts = await prisma.product_variations.groupBy({
+            by: ['product_id'],
+            where: { product_status_id: 1 },
+            _count: true
+        });
 
-            // 3. Low Stock Items count (qty < 5 and status active)
-            lowStock: `
-                SELECT COUNT(*) as count 
-                FROM stock s
-                JOIN product_variations pv ON s.product_variations_id = pv.id
-                WHERE s.qty < 5 AND pv.product_status_id = 1`,
+        // Total Stock Value for current month
+        const stockValue = await prisma.stock.aggregate({
+            where: {
+                mfd: {
+                    gte: new Date(currentYear, currentMonth - 1, 1),
+                    lt: new Date(currentYear, currentMonth, 1)
+                }
+            },
+            _sum: {
+                cost_price: true,
+                qty: true
+            }
+        });
 
-            // 4. Total Active Suppliers count
-            totalSuppliers: `SELECT COUNT(*) as count FROM supplier WHERE status_id = 1`,
+        // Low Stock Items
+        const lowStock = await prisma.stock.count({
+            where: {
+                qty: { lt: 5 },
+                product_variations: {
+                    product_status_id: 1
+                }
+            }
+        });
 
-            // 5. Total Categories count
-            totalCategories: `SELECT COUNT(*) as count FROM category`
-        };
+        // Total Active Suppliers
+        const totalSuppliers = await prisma.supplier.count({
+            where: { status_id: 1 }
+        });
 
-        const [products] = await db.execute(queries.totalProducts);
-        const [value] = await db.execute(queries.totalValue);
-        const [lowStock] = await db.execute(queries.lowStock);
-        const [suppliers] = await db.execute(queries.totalSuppliers);
-        const [categories] = await db.execute(queries.totalCategories);
+        // Total Categories
+        const totalCategories = await prisma.category.count();
 
         return {
-            totalProducts: products[0].count || 0,
-            totalValue: value[0].total || 0,
-            lowStock: lowStock[0].count || 0,
-            totalSuppliers: suppliers[0].count || 0,
-            totalCategories: categories[0].count || 0
+            totalProducts: totalProducts.length || 0,
+            totalValue: (stockValue._sum.cost_price || 0) * (stockValue._sum.qty || 0),
+            lowStock: lowStock || 0,
+            totalSuppliers: totalSuppliers || 0,
+            totalCategories: totalCategories || 0
         };
     }
 
     static async getOutOfStock() {
-    const query = `
-        SELECT 
-            pv.id AS variation_id,
-            CONCAT(p.product_name, 
-                   IF(pv.color IS NOT NULL AND pv.color != '', CONCAT(' - ', pv.color), ''), 
-                   IF(pv.size IS NOT NULL AND pv.size != '', CONCAT(' - ', pv.size), '')
-            ) AS full_product_name,
-            u.name AS unit,
-            s.cost_price,
-            s.mrp,
-            s.rsp AS selling_price,
-            sup.supplier_name AS supplier,
-            SUM(s.qty) AS stock_qty
-        FROM stock s
-        INNER JOIN product_variations pv ON s.product_variations_id = pv.id
-        INNER JOIN product p ON pv.product_id = p.id
-        INNER JOIN unit_id u ON p.unit_id = u.idunit_id
-        LEFT JOIN grn_items gi ON s.id = gi.stock_id
-        LEFT JOIN grn g ON gi.grn_id = g.id
-        LEFT JOIN supplier sup ON g.supplier_id = sup.id
-        WHERE s.qty = 0
-        GROUP BY 
-            pv.id, p.product_name, pv.color, pv.size, u.name, 
-            s.cost_price, s.mrp, s.rsp, sup.supplier_name
-        ORDER BY p.product_name ASC
-    `;
-    const [rows] = await db.execute(query);
-    return rows;
-}
+        // Get all out of stock items using pure Prisma
+        const stocks = await prisma.stock.findMany({
+            where: {
+                qty: 0
+            },
+            include: {
+                product_variations: {
+                    include: {
+                        product: {
+                            include: {
+                                unit_id_product_unit_idTounit_id: true
+                            }
+                        }
+                    }
+                },
+                grn_items: {
+                    include: {
+                        grn: {
+                            include: {
+                                supplier: true
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // Group by product and aggregate
+        const productMap = new Map();
+
+        stocks.forEach(stock => {
+            const product = stock.product_variations.product;
+            const productId = product.id;
+
+            if (!productMap.has(productId)) {
+                productMap.set(productId, {
+                    product_id: productId,
+                    product_name: product.product_name,
+                    unit: product.unit_id_product_unit_idTounit_id?.name,
+                    cost_prices: [],
+                    mrps: [],
+                    rsps: [],
+                    suppliers: new Set(),
+                    total_qty: 0
+                });
+            }
+
+            const data = productMap.get(productId);
+            data.cost_prices.push(stock.cost_price);
+            data.mrps.push(stock.mrp);
+            data.rsps.push(stock.rsp);
+            data.total_qty += stock.qty;
+
+            stock.grn_items.forEach(grnItem => {
+                if (grnItem.grn?.supplier?.supplier_name) {
+                    data.suppliers.add(grnItem.grn.supplier.supplier_name);
+                }
+            });
+        });
+
+        // Calculate averages and format result
+        const result = Array.from(productMap.values()).map(data => ({
+            product_id: data.product_id,
+            product_name: data.product_name,
+            unit: data.unit,
+            cost_price: data.cost_prices.length > 0 ? data.cost_prices.reduce((a, b) => a + b, 0) / data.cost_prices.length : 0,
+            mrp: data.mrps.length > 0 ? data.mrps.reduce((a, b) => a + b, 0) / data.mrps.length : 0,
+            selling_price: data.rsps.length > 0 ? data.rsps.reduce((a, b) => a + b, 0) / data.rsps.length : 0,
+            supplier: Array.from(data.suppliers).join(', '),
+            stock_qty: data.total_qty
+        }));
+
+        return result.sort((a, b) => a.product_name.localeCompare(b.product_name));
+    }
 
     static async searchOutOfStock(filters) {
-    let query = `
-        SELECT 
-            pv.id AS variation_id,
-            CONCAT(p.product_name, 
-                   IF(pv.color IS NOT NULL AND pv.color != '', CONCAT(' - ', pv.color), ''), 
-                   IF(pv.size IS NOT NULL AND pv.size != '', CONCAT(' - ', pv.size), '')
-            ) AS full_product_name,
-            u.name AS unit,
-            s.cost_price,
-            s.mrp,
-            s.rsp AS selling_price,
-            sup.supplier_name AS supplier,
-            SUM(s.qty) AS stock_qty,
-            s.mfd AS manufacture_date
-        FROM stock s
-        INNER JOIN product_variations pv ON s.product_variations_id = pv.id
-        INNER JOIN product p ON pv.product_id = p.id
-        INNER JOIN unit_id u ON p.unit_id = u.idunit_id
-        LEFT JOIN grn_items gi ON s.id = gi.stock_id
-        LEFT JOIN grn g ON gi.grn_id = g.id
-        LEFT JOIN supplier sup ON g.supplier_id = sup.id
-        WHERE s.qty = 0
-    `;
+        // Get all out of stock items using pure Prisma
+        const stocks = await prisma.stock.findMany({
+            where: {
+                qty: 0
+            },
+            include: {
+                product_variations: {
+                    include: {
+                        product: {
+                            include: {
+                                unit_id_product_unit_idTounit_id: true
+                            }
+                        }
+                    }
+                },
+                grn_items: {
+                    include: {
+                        grn: {
+                            include: {
+                                supplier: true
+                            }
+                        }
+                    }
+                }
+            }
+        });
 
-    const queryParams = [];
+        // Filter in JavaScript
+        let filteredStocks = stocks;
 
-    // Filter by Product Name or Variation ID
-    if (filters.searchQuery) {
-        query += ` AND (p.product_name LIKE ? OR pv.id = ?)`;
-        queryParams.push(`%${filters.searchQuery}%`, filters.searchQuery);
+        if (filters.searchQuery) {
+            const query = filters.searchQuery.toLowerCase();
+            filteredStocks = filteredStocks.filter(s => {
+                const product = s.product_variations.product;
+                return product.product_name.toLowerCase().includes(query) || 
+                       product.id.toString() === filters.searchQuery;
+            });
+        }
+
+        if (filters.category) {
+            filteredStocks = filteredStocks.filter(s => 
+                s.product_variations.product.category_id === parseInt(filters.category)
+            );
+        }
+
+        if (filters.supplier) {
+            filteredStocks = filteredStocks.filter(s => 
+                s.grn_items.some(gi => gi.grn?.supplier_id === parseInt(filters.supplier))
+            );
+        }
+
+        if (filters.fromDate && filters.toDate) {
+            const fromDate = new Date(filters.fromDate);
+            const toDate = new Date(filters.toDate);
+            filteredStocks = filteredStocks.filter(s => {
+                if (!s.mfd) return false;
+                const mfd = new Date(s.mfd);
+                return mfd >= fromDate && mfd <= toDate;
+            });
+        }
+
+        // Map to individual items (no grouping)
+        const result = filteredStocks.map(s => {
+            const pv = s.product_variations;
+            const p = pv.product;
+            const supplier = s.grn_items[0]?.grn?.supplier;
+
+            // Build full product name
+            let fullProductName = p.product_name;
+            if (pv.color) fullProductName += ` - ${pv.color}`;
+            if (pv.size) fullProductName += ` - ${pv.size}`;
+            if (pv.storage_capacity) fullProductName += ` - ${pv.storage_capacity}`;
+
+            return {
+                stock_id: s.id,
+                product_variations_id: s.product_variations_id,
+                batch_id: s.batch_id,
+                qty: s.qty,
+                cost_price: s.cost_price,
+                mrp: s.mrp,
+                selling_price: s.rsp,
+                mfd: s.mfd,
+                exp: s.exp,
+                product_id: p.id,
+                product_name: p.product_name,
+                full_product_name: fullProductName,
+                product_code: p.product_code,
+                barcode: pv.barcode,
+                color: pv.color,
+                size: pv.size,
+                storage_capacity: pv.storage_capacity,
+                unit: p.unit_id_product_unit_idTounit_id?.name,
+                category: p.category?.name,
+                brand: p.brand?.name,
+                batch_name: s.batch?.batch_name,
+                supplier: supplier?.supplier_name,
+                product_status: pv.product_status?.status_name
+            };
+        });
+
+        return result;
     }
 
-    if (filters.category) {
-        query += ` AND p.category_id = ?`;
-        queryParams.push(filters.category);
+    static async getStockByProductVariation(productId) {
+        const stocks = await prisma.stock.findMany({
+            where: {
+                product_variations: {
+                    product_id: parseInt(productId)
+                },
+                qty: { gt: 0 }
+            },
+            include: {
+                product_variations: {
+                    include: {
+                        product: true
+                    }
+                },
+                batch: true
+            },
+            orderBy: [
+                { product_variations: { id: 'asc' } },
+                { batch: { date_time: 'desc' } }
+            ]
+        });
+
+        return stocks.map(s => {
+            const pv = s.product_variations;
+            const p = pv.product;
+            
+            let fullStockDisplay = p.product_name;
+            if (pv.color) fullStockDisplay += ` - ${pv.color}`;
+            if (pv.size) fullStockDisplay += ` - ${pv.size}`;
+            fullStockDisplay += ` (${s.batch.batch_name})`;
+
+            return {
+                stock_id: s.id,
+                full_stock_display: fullStockDisplay,
+                available_qty: s.qty,
+                selling_price: s.rsp
+            };
+        });
     }
 
-    if (filters.supplier) {
-        query += ` AND g.supplier_id = ?`;
-        queryParams.push(filters.supplier);
-    }
-
-    if (filters.fromDate && filters.toDate) {
-        query += ` AND s.mfd BETWEEN ? AND ?`;
-        queryParams.push(filters.fromDate, filters.toDate);
-    }
-
-    query += `
-        GROUP BY pv.id, p.product_name, pv.color, pv.size, u.name, s.cost_price, s.mrp, s.rsp, sup.supplier_name, s.mfd
-        ORDER BY p.product_name ASC
-    `;
-
-    const [rows] = await db.execute(query, queryParams);
-    return rows;
-}
-
-static async getStockByProductVariation(productId) {
-    const query = `SELECT 
-            s.id AS stock_id,
-            CONCAT(p.product_name, 
-                   IF(pv.color IS NOT NULL AND pv.color != '', CONCAT(' - ', pv.color), ''), 
-                   IF(pv.size IS NOT NULL AND pv.size != '', CONCAT(' - ', pv.size), ''),
-                   ' (', b.batch_name, ')'
-            ) AS full_stock_display,
-            s.qty AS available_qty,
-            s.rsp AS selling_price
-        FROM stock s
-        INNER JOIN product_variations pv ON s.product_variations_id = pv.id
-        INNER JOIN product p ON pv.product_id = p.id
-        INNER JOIN batch b ON s.batch_id = b.id
-        WHERE p.id = ? AND s.qty > 0 
-        ORDER BY pv.id ASC, b.date_time DESC
-    `;
-    const [rows] = await db.execute(query, [productId]);
-    return rows;
-}
-
-// Get all stock items where quantity is less than 15
+    // Get all stock items where quantity is less than 15
     static async getLowStockRecords() {
-        const query = `
-            SELECT 
-                p.product_code AS product_id_code,
-                p.product_name,
-                u.name AS unit,
-                s.qty AS available_qty,
-                s.cost_price,
-                s.mrp,
-                s.rsp AS selling_price,
-                sup.supplier_name AS supplier
-            FROM stock s
-            INNER JOIN product_variations pv ON s.product_variations_id = pv.id
-            INNER JOIN product p ON pv.product_id = p.id
-            INNER JOIN unit_id u ON p.unit_id = u.idunit_id
-            -- English Comment: Joining through grn to get the supplier name
-            INNER JOIN grn_items gi ON s.id = gi.stock_id
-            INNER JOIN grn g ON gi.grn_id = g.id
-            INNER JOIN supplier sup ON g.supplier_id = sup.id
-            WHERE s.qty < 15 AND s.qty >= 0
-            ORDER BY s.qty ASC
-        `;
-        const [rows] = await db.execute(query);
-        return rows;
+        const stocks = await prisma.stock.findMany({
+            where: {
+                qty: { lt: 15, gte: 0 }
+            },
+            include: {
+                product_variations: {
+                    include: {
+                        product: {
+                            include: {
+                                unit_id_product_unit_idTounit_id: true
+                            }
+                        }
+                    }
+                },
+                grn_items: {
+                    include: {
+                        grn: {
+                            include: {
+                                supplier: true
+                            }
+                        }
+                    },
+                    take: 1
+                }
+            },
+            orderBy: {
+                qty: 'asc'
+            }
+        });
+
+        return stocks.map(s => {
+            const product = s.product_variations.product;
+            const supplier = s.grn_items[0]?.grn?.supplier;
+
+            return {
+                product_id_code: product.product_code,
+                product_name: product.product_name,
+                unit: product.unit_id_product_unit_idTounit_id?.name,
+                available_qty: s.qty,
+                cost_price: s.cost_price,
+                mrp: s.mrp,
+                selling_price: s.rsp,
+                supplier: supplier?.supplier_name
+            };
+        });
     }
 
-    //  Search low stock records based on provided filter IDs
+    // Search low stock records based on provided filter IDs
     static async searchLowStock(filters) {
-        let query = `
-            SELECT 
-                p.product_code AS product_id_code,
-                p.product_name,
-                u.name AS unit,
-                s.qty AS available_qty,
-                s.cost_price,
-                s.mrp,
-                s.rsp AS selling_price,
-                sup.supplier_name AS supplier
-            FROM stock s
-            INNER JOIN product_variations pv ON s.product_variations_id = pv.id
-            INNER JOIN product p ON pv.product_id = p.id
-            INNER JOIN unit_id u ON p.unit_id = u.idunit_id
-            INNER JOIN grn_items gi ON s.id = gi.stock_id
-            INNER JOIN grn g ON gi.grn_id = g.id
-            INNER JOIN supplier sup ON g.supplier_id = sup.id
-            WHERE s.qty < 15 AND s.qty >= 0 -- Base condition for low stock
-        `;
+        const stocks = await prisma.stock.findMany({
+            where: {
+                qty: { lt: 15, gte: 0 }
+            },
+            include: {
+                product_variations: {
+                    include: {
+                        product: {
+                            include: {
+                                unit_id_product_unit_idTounit_id: true
+                            }
+                        }
+                    }
+                },
+                grn_items: {
+                    include: {
+                        grn: {
+                            include: {
+                                supplier: true
+                            }
+                        }
+                    },
+                    take: 1
+                }
+            },
+            orderBy: {
+                qty: 'asc'
+            }
+        });
 
-        const queryParams = [];
+        // Filter in JavaScript
+        let filteredStocks = stocks;
 
-        // Filter by Supplier ID if provided
         if (filters.supplier_id) {
-            query += ` AND g.supplier_id = ?`;
-            queryParams.push(filters.supplier_id);
+            filteredStocks = filteredStocks.filter(s => 
+                s.grn_items.some(gi => gi.grn?.supplier_id === parseInt(filters.supplier_id))
+            );
         }
 
-        //  Filter by Category ID if provided
         if (filters.category_id) {
-            query += ` AND p.category_id = ?`;
-            queryParams.push(filters.category_id);
+            filteredStocks = filteredStocks.filter(s => 
+                s.product_variations.product.category_id === parseInt(filters.category_id)
+            );
         }
 
-        // : Filter by Unit ID if provided
         if (filters.unit_id) {
-            query += ` AND p.unit_id = ?`;
-            queryParams.push(filters.unit_id);
+            filteredStocks = filteredStocks.filter(s => 
+                s.product_variations.product.unit_id === parseInt(filters.unit_id)
+            );
         }
 
-        //  Filter by specific Product ID if provided
         if (filters.product_id) {
-            query += ` AND p.id = ?`;
-            queryParams.push(filters.product_id);
+            filteredStocks = filteredStocks.filter(s => 
+                s.product_variations.product.id === parseInt(filters.product_id)
+            );
         }
 
-        query += ` ORDER BY s.qty ASC`;
+        return filteredStocks.map(s => {
+            const product = s.product_variations.product;
+            const supplier = s.grn_items[0]?.grn?.supplier;
 
-        const [rows] = await db.execute(query, queryParams);
-        return rows;
+            return {
+                product_id_code: product.product_code,
+                product_name: product.product_name,
+                unit: product.unit_id_product_unit_idTounit_id?.name,
+                available_qty: s.qty,
+                cost_price: s.cost_price,
+                mrp: s.mrp,
+                selling_price: s.rsp,
+                supplier: supplier?.supplier_name
+            };
+        });
     }
 
     // Get summary data for Out of Stock dashboard
     static async getOutOfStockSummary() {
-        const query = `
-            SELECT 
-                -- 1. Total unique products that are currently out of stock
-                COUNT(DISTINCT s.product_variations_id) AS total_out_of_stock_products,
+        const stocks = await prisma.stock.findMany({
+            where: {
+                qty: { lte: 0 }
+            },
+            select: {
+                product_variations_id: true,
+                mfd: true,
+                grn_items: {
+                    select: {
+                        grn: {
+                            select: {
+                                supplier_id: true
+                            }
+                        }
+                    }
+                }
+            }
+        });
 
-                -- 2. Count of unique suppliers affected by zero stock items
-                COUNT(DISTINCT g.supplier_id) AS affected_suppliers,
+        // Calculate statistics in JavaScript
+        const uniqueProducts = new Set();
+        const uniqueSuppliers = new Set();
+        const daysOutArray = [];
+        const currentDate = new Date();
 
-                -- 3. Average days since stock reached zero (assuming we track when qty became 0)
-                -- Note: If you don't have a 'stock_out_date', we use a default or simplified logic.
-                -- Here we calculate based on the last updated time of zero stock.
-                ROUND(AVG(DATEDIFF(CURDATE(), s.mfd)), 1) AS avg_days_out 
-            FROM stock s
-            INNER JOIN grn_items gi ON s.id = gi.stock_id
-            INNER JOIN grn g ON gi.grn_id = g.id
-            WHERE s.qty <= 0
-        `;
-        
-        const [rows] = await db.execute(query);
-        return rows[0];
+        stocks.forEach(stock => {
+            uniqueProducts.add(stock.product_variations_id);
+
+            stock.grn_items.forEach(gi => {
+                if (gi.grn?.supplier_id) {
+                    uniqueSuppliers.add(gi.grn.supplier_id);
+                }
+            });
+
+            if (stock.mfd) {
+                const mfdDate = new Date(stock.mfd);
+                const daysDiff = Math.floor((currentDate - mfdDate) / (1000 * 60 * 60 * 24));
+                daysOutArray.push(daysDiff);
+            }
+        });
+
+        const avgDaysOut = daysOutArray.length > 0 
+            ? Math.round((daysOutArray.reduce((a, b) => a + b, 0) / daysOutArray.length) * 10) / 10
+            : 0;
+
+        return {
+            total_out_of_stock_products: uniqueProducts.size,
+            affected_suppliers: uniqueSuppliers.size,
+            avg_days_out: avgDaysOut
+        };
     }
 
     static async getLowStockSummary() {
-        const query = `
-            SELECT 
-                -- 1. Total number of batches/records that are low in stock
-                COUNT(s.id) AS low_stock_items_count,
+        const stocks = await prisma.stock.findMany({
+            where: {
+                qty: { lt: 15, gt: 0 }
+            },
+            select: {
+                qty: true,
+                cost_price: true,
+                product_variations: {
+                    select: {
+                        product_id: true
+                    }
+                }
+            }
+        });
 
-                -- 2. Unique products affected by low stock
-                COUNT(DISTINCT pv.product_id) AS total_products_count,
+        // Calculate statistics in JavaScript
+        const uniqueProducts = new Set();
+        const productsNeedingReorder = new Set();
+        let totalValue = 0;
+        let belowThresholdCount = 0;
 
-                -- 3. Potential Value/Loss (Sum of remaining qty * cost price)
-                SUM(s.qty * s.cost_price) AS potential_loss_value,
+        stocks.forEach(stock => {
+            uniqueProducts.add(stock.product_variations.product_id);
+            totalValue += stock.qty * stock.cost_price;
 
-                -- 4. Count of items specifically below a critical threshold (e.g., 5 units)
-                COUNT(CASE WHEN s.qty <= 5 THEN s.id END) AS below_threshold_count,
+            if (stock.qty <= 5) {
+                belowThresholdCount++;
+            }
 
-                -- 5. Number of unique products that need reordering
-                COUNT(DISTINCT CASE WHEN s.qty < 10 THEN pv.product_id END) AS reorder_required_count
-            FROM stock s
-            INNER JOIN product_variations pv ON s.product_variations_id = pv.id
-            WHERE s.qty < 15 AND s.qty > 0
-        `;
-        
-        const [rows] = await db.execute(query);
-        return rows[0];
+            if (stock.qty < 10) {
+                productsNeedingReorder.add(stock.product_variations.product_id);
+            }
+        });
+
+        return {
+            low_stock_items_count: stocks.length,
+            total_products_count: uniqueProducts.size,
+            potential_loss_value: totalValue,
+            below_threshold_count: belowThresholdCount,
+            reorder_required_count: productsNeedingReorder.size
+        };
     }
 }
 

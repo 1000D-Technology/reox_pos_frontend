@@ -1,6 +1,126 @@
+const fs = require('fs');
+const path = require('path');
+const xlsx = require('xlsx');
 const Product = require('../models/productModel');
+const Category = require('../models/categoryModel');
+const Brand = require('../models/brandModel');
+const Unit = require('../models/unitModel');
+const ProductType = require('../models/productTypeModel');
 const catchAsync = require('../utils/catchAsync');
 const { AppError } = require('../middleware/errorHandler');
+
+/**
+ * @desc    Import products from Excel/CSV file
+ * @route   POST /api/products/import
+ */
+exports.importProducts = catchAsync(async (req, res, next) => {
+    if (!req.file) {
+        return next(new AppError('Please upload a file!', 400));
+    }
+
+    const filePath = req.file.path;
+    let successCount = 0;
+    let skippedCount = 0;
+    let errors = [];
+
+    try {
+        const workbook = xlsx.readFile(filePath);
+        const sheetName = workbook.SheetNames[0];
+        const rows = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName]);
+
+        if (rows.length === 0) {
+            fs.unlinkSync(filePath); // Delete file
+            return next(new AppError('File is empty!', 400));
+        }
+
+        for (const row of rows) {
+            // Map keys (normalize to lowercase/trim to match expectations)
+            // Expected headers: Name, Code, Barcode, Category, Brand, Unit, Type, Color, Size, Storage
+            const productName = (row['Name'] || row['Product Name'] || '').toString().trim();
+            const productCode = (row['Code'] || row['Product Code'] || '').toString().trim();
+            const barcode = (row['Barcode'] || '').toString().trim();
+            const categoryName = (row['Category'] || '').toString().trim();
+            const brandName = (row['Brand'] || '').toString().trim();
+            const unitName = (row['Unit'] || '').toString().trim();
+            const typeName = (row['Type'] || row['Product Type'] || '').toString().trim();
+            
+            // Optional Variation fields
+            const color = (row['Color'] || 'Default').toString().trim();
+            const size = (row['Size'] || 'Default').toString().trim();
+            const storage = (row['Storage'] || row['Capacity'] || 'N/A').toString().trim();
+
+            if (!productName || !productCode || !categoryName || !brandName || !unitName || !typeName) {
+                skippedCount++;
+                errors.push({ name: productName || 'Unknown', error: 'Missing required fields (Name, Code, Category, Brand, Unit, Type)' });
+                continue;
+            }
+
+            try {
+                // Lookup IDs
+                const categoryId = await Category.getIdByName(categoryName);
+                if (!categoryId) throw new Error(`Category '${categoryName}' not found`);
+
+                const brandId = await Brand.getIdByName(brandName);
+                if (!brandId) throw new Error(`Brand '${brandName}' not found`);
+
+                const unitId = await Unit.getIdByName(unitName);
+                if (!unitId) throw new Error(`Unit '${unitName}' not found`);
+
+                const typeId = await ProductType.getIdByName(typeName);
+                if (!typeId) throw new Error(`Product Type '${typeName}' not found`);
+
+                // Check for duplicate product code or barcode
+                const codeExists = await Product.checkIdExists('product', 'product_code', productCode);
+                if (codeExists) throw new Error(`Product Code '${productCode}' already exists`);
+
+                if (barcode) {
+                     const barcodeExists = await Product.checkIdExists('product_variations', 'barcode', barcode);
+                     if (barcodeExists) throw new Error(`Barcode '${barcode}' already exists`);
+                }
+
+                // Prepare Data
+                const productData = {
+                    name: productName,
+                    code: productCode,
+                    categoryId,
+                    brandId,
+                    unitId,
+                    typeId
+                };
+
+                const variations = [{
+                    barcode: barcode || Math.floor(Math.random() * 100000000000).toString(), // Generate simplified random barcode if missing
+                    color: color,
+                    size: size,
+                    capacity: storage,
+                    statusId: 1
+                }];
+
+                await Product.create(productData, variations);
+                successCount++;
+
+            } catch (err) {
+                skippedCount++;
+                errors.push({ name: productName, error: err.message });
+            }
+        }
+
+    } catch (error) {
+        console.error("File processing error:", error);
+        return next(new AppError('Error processing file', 500));
+    } finally {
+        // Cleanup file
+        if (fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath);
+        }
+    }
+
+    res.status(200).json({
+        success: true,
+        message: `Import processed. Success: ${successCount}, Skipped: ${skippedCount}`,
+        data: { successCount, skippedCount, errors }
+    });
+});
 
 /**
  * @desc    Add a new product with its variations
@@ -105,8 +225,9 @@ exports.updateProduct = catchAsync(async (req, res, next) => {
  * @route   GET /api/products/search
  */
 exports.searchProducts = catchAsync(async (req, res, next) => {
-    const { productTypeId, searchTerm } = req.query;
-    const products = await Product.searchProducts({ productTypeId, searchTerm }, 1);
+    const { productTypeId, searchTerm, unitId } = req.query;
+    console.log(`Searching Active Products - Type: ${productTypeId}, Unit: ${unitId}, Term: ${searchTerm}`);
+    const products = await Product.searchProducts({ productTypeId, searchTerm, unitId }, 1);
 
     res.status(200).json({ 
         success: true, 
@@ -119,8 +240,8 @@ exports.searchProducts = catchAsync(async (req, res, next) => {
  * @route   GET /api/products/search-deactive
  */
 exports.searchDeactiveProducts = catchAsync(async (req, res, next) => {
-    const { productTypeId, searchTerm } = req.query;
-    const products = await Product.searchProducts({ productTypeId, searchTerm }, 2);
+    const { productTypeId, searchTerm, unitId } = req.query;
+    const products = await Product.searchProducts({ productTypeId, searchTerm, unitId }, 2);
 
     res.status(200).json({ 
         success: true, 

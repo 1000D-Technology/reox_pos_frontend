@@ -1,8 +1,6 @@
-import axios from 'axios';
+import api from '../api/axiosConfig';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
-const API_URL = `${API_BASE_URL}/api`;
-
+// Service for cash session operations
 export interface CashierCounter {
     id: number;
     cashier_counter: string;
@@ -19,19 +17,48 @@ export const cashSessionService = {
         hasActiveSession: boolean;
         session?: CashSession;
     }> {
-        const response = await axios.get(`${API_URL}/cash-sessions/check`, {
+        const response = await api.get('/cash-sessions/check', {
             params: { userId, counterCode }
         });
         return response.data;
     },
 
     async getCashierCounters(): Promise<CashierCounter[]> {
-        const response = await axios.get(`${API_URL}/cashier-counters`);
+        const response = await api.get('/cashier-counters');
         return response.data;
     },
 
     async createCashSession(sessionData: any): Promise<{ sessionId: number }> {
-        const response = await axios.post(`${API_URL}/cash-sessions`, sessionData);
+        const response = await api.post('/cash-sessions', sessionData);
+        return response.data;
+    },
+
+    async getAllSessions(params?: {
+        date?: string;
+        userId?: number;
+        status?: number;
+        fromDate?: string;
+        toDate?: string;
+        counterId?: number;
+    }): Promise<any> {
+        const response = await api.get('/cash-sessions', { params });
+        return response.data;
+    },
+
+    async getSessionDetails(sessionId: number): Promise<any> {
+        const response = await api.get(`/cash-sessions/${sessionId}`);
+        return response.data;
+    },
+
+    async getAllUsers(): Promise<any> {
+        const response = await api.get('/auth/users');
+        return response.data;
+    },
+
+    async closeSession(sessionId: number, actualBalance: number): Promise<any> {
+        const response = await api.put(`/cash-sessions/${sessionId}/close`, {
+            actualBalance
+        });
         return response.data;
     }
 };

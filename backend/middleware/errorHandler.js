@@ -55,15 +55,48 @@ const globalErrorHandler = (err, req, res, next) => {
     err.statusCode = err.statusCode || 500;
     err.status = err.status || 'error';
 
-    console.error('ERROR:', err);
+    // Enhanced error logging
+    console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.error('❌ ERROR OCCURRED:');
+    console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.error('📍 Route:', req.method, req.originalUrl);
+    console.error('💬 Message:', err.message);
+    console.error('🔢 Status Code:', err.statusCode);
+    console.error('📦 Error Name:', err.name);
+    
+    // Log Prisma-specific errors
+    if (err.code) {
+        console.error('🔑 Prisma Error Code:', err.code);
+    }
+    
+    // Log full error object for debugging
+    console.error('📋 Full Error:', err);
+    console.error('📚 Stack Trace:', err.stack);
+    console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 
-    if (process.env.NODE_ENV === 'development') {
+    // Handle Prisma errors
+    if (err.code === 'P2002') {
+        return res.status(400).json({
+            success: false,
+            message: 'A record with this value already exists'
+        });
+    }
+
+    if (err.code === 'P2025') {
+        return res.status(404).json({
+            success: false,
+            message: 'Record not found'
+        });
+    }
+
+    if (process.env.NODE_ENV === 'development' || !process.env.NODE_ENV) {
         res.status(err.statusCode).json({
             success: false,
             status: err.status,
             error: err,
             message: err.message,
-            stack: err.stack
+            stack: err.stack,
+            code: err.code
         });
     } else {
         if (err.isOperational) {
@@ -73,10 +106,13 @@ const globalErrorHandler = (err, req, res, next) => {
                 message: err.message
             });
         } else {
+            // TEMPORARY DEBUG: Return detailed error even in production
             res.status(500).json({
                 success: false,
                 status: 'error',
-                message: 'Something went wrong!'
+                message: err.message,
+                stack: err.stack,
+                error: err
             });
         }
     }

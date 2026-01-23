@@ -1,221 +1,350 @@
-const db = require("../config/db");
+const prisma = require("../config/prismaClient");
 
 class GRN {
 
     static async createGRN(data) {
-        const connection = (await db.getConnection());
         try {
-            await connection.beginTransaction();
+            return await prisma.$transaction(async (tx) => {
+                // Determine GRN status based on balance
+                const grnStatusId = data.balance > 0 ? 1 : 2;
 
-            // Determine GRN status based on balance
-            const grnStatusId = data.balance > 0 ? 1 : 2;
+                // Create GRN with items and payment in a single transaction
+                const grn = await tx.grn.create({
+                    data: {
+                        bill_number: data.billNumber,
+                        supplier_id: data.supplierId,
+                        total: data.grandTotal,
+                        paid_amount: data.paidAmount,
+                        balance: data.balance,
+                        grn_status_id: grnStatusId,
+                        grn_items: {
+                            create: await Promise.all(data.items.map(async (item) => {
+                                // Check if batch exists
+                                let batch = await tx.batch.findFirst({
+                                    where: { batch_name: item.batchIdentifier }
+                                });
 
-            const [grnResult] = await connection.execute(
-                `INSERT INTO grn (bill_number, supplier_id, total, paid_amount, balance, grn_status_id, create_at) 
-             VALUES (?, ?, ?, ?, ?, ?, NOW())`,
-                [data.billNumber, data.supplierId, data.grandTotal, data.paidAmount, data.balance, grnStatusId]
-            );
-            const grnId = grnResult.insertId;
+                                // Create batch if it doesn't exist
+                                if (!batch) {
+                                    batch = await tx.batch.create({
+                                        data: { batch_name: item.batchIdentifier }
+                                    });
+                                }
 
-            for (const item of data.items) {
-                let finalBatchId;
+                                // Create stock entry
+                                const stock = await tx.stock.create({
+                                    data: {
+                                        product_variations_id: item.variantId,
+                                        barcode: item.barcode,
+                                        batch_id: batch.id,
+                                        mfd: item.mfd ? new Date(item.mfd) : null,
+                                        exp: item.exp ? new Date(item.exp) : null,
+                                        cost_price: item.costPrice,
+                                        mrp: item.mrp,
+                                        rsp: item.rsp,
+                                        wsp: item.wsp,
+                                        qty: item.qty,
+                                        free_qty: item.freeQty
+                                    }
+                                });
 
-                // First check if batch name already exists in the batch table
-                const [existingBatch] = await connection.execute(
-                    `SELECT id FROM batch WHERE batch_name = ?`, [item.batchIdentifier]
-                );
+                                // Return grn_items data
+                                return {
+                                    stock_id: stock.id,
+                                    qty: item.qty,
+                                    free_qty: item.freeQty
+                                };
+                            }))
+                        },
+                        grn_payments: data.paidAmount > 0 ? {
+                            create: {
+                                paid_amount: data.paidAmount,
+                                payment_types_id: data.paymentMethodId
+                            }
+                        } : undefined
+                    }
+                });
 
-                if (existingBatch.length > 0) {
-                    // Batch name exists, use the existing batch ID
-                    finalBatchId = existingBatch[0].id;
-                } else {
-                    // Batch name doesn't exist, create new batch
-                    const [newBatch] = await connection.execute(
-                        `INSERT INTO batch (batch_name, date_time) VALUES (?, NOW())`,
-                        [item.batchIdentifier]
-                    );
-                    finalBatchId = newBatch.insertId;
-                }
-
-                const [stockResult] = await connection.execute(
-                    `INSERT INTO stock (product_variations_id, barcode, batch_id, mfd, exp, cost_price, mrp, rsp, wsp, qty, free_qty) 
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-                    [
-                        item.variantId, item.barcode, finalBatchId, item.mfd, item.exp,
-                        item.costPrice, item.mrp, item.rsp, item.wsp, item.qty, item.freeQty
-                    ]
-                );
-                const stockId = stockResult.insertId;
-
-                await connection.execute(
-                    `INSERT INTO grn_items (grn_id, stock_id, qty, free_qty) VALUES (?, ?, ?, ?)`,
-                    [grnId, stockId, item.qty, item.freeQty]
-                );
-            }
-
-            if (data.paidAmount > 0) {
-                await connection.execute(
-                    `INSERT INTO grn_payments (paid_amount, payment_types_id, grn_id, created_at) 
-                 VALUES (?, ?, ?, NOW())`,
-                    [data.paidAmount, data.paymentMethodId, grnId]
-                );
-            }
-
-            await connection.commit();
-            return grnId;
+                return grn.id;
+            });
         } catch (error) {
-            await connection.rollback();
             throw error;
-        } finally {
-            connection.release();
         }
     }
 
     static async getGRNSummary() {
-        const query = `
-        SELECT 
-            COUNT(id) AS totalGrnCount,
-            SUM(total) AS totalAmount,
-            SUM(paid_amount) AS totalPaid,
-            SUM(balance) AS totalBalance
-        FROM grn
-    `;
-        const [rows] = await db.execute(query);
-        return rows[0];
+        const result = await prisma.grn.aggregate({
+            _count: { id: true },
+            _sum: {
+                total: true,
+                paid_amount: true,
+                balance: true
+            }
+        });
+
+        return {
+            totalGrnCount: result._count.id || 0,
+            totalAmount: result._sum.total || 0,
+            totalPaid: result._sum.paid_amount || 0,
+            totalBalance: result._sum.balance || 0
+        };
     }
 
     static async getAllGRNs() {
-        const query = `
-        SELECT 
-            g.id AS id,
-            s.supplier_name AS supplierName,
-            s.id AS supplierId,
-            g.bill_number AS billNumber,
-            g.total AS totalAmount,
-            g.paid_amount AS paidAmount,
-            g.balance AS balanceAmount,
-            DATE_FORMAT(g.create_at, '%Y.%m.%d %h:%i %p') AS grnDate,
-            st.ststus AS statusName
-        FROM grn g
-        JOIN supplier s ON g.supplier_id = s.id
-        JOIN status st ON g.grn_status_id = st.id
-        ORDER BY g.id DESC
-    `;
-        const [rows] = await db.execute(query);
-        return rows;
+        const grns = await prisma.grn.findMany({
+            include: {
+                supplier: {
+                    select: {
+                        id: true,
+                        supplier_name: true
+                    }
+                },
+                status: {
+                    select: {
+                        ststus: true
+                    }
+                }
+            },
+            orderBy: {
+                id: 'desc'
+            }
+        });
+
+        return grns.map(g => ({
+            id: g.id,
+            supplierName: g.supplier.supplier_name,
+            supplierId: g.supplier.id,
+            billNumber: g.bill_number,
+            totalAmount: g.total,
+            paidAmount: g.paid_amount,
+            balanceAmount: g.balance,
+            grnDate: this.formatDateTime(g.create_at),
+            statusName: g.status.ststus
+        }));
     }
 
     static async searchGRNs(filters) {
-        let query = `
-        SELECT 
-            g.id AS id,
-            s.supplier_name AS supplierName,
-            s.id AS supplierId,
-            g.bill_number AS billNumber,
-            g.total AS totalAmount,
-            g.paid_amount AS paidAmount,
-            g.balance AS balanceAmount,
-            DATE_FORMAT(g.create_at, '%Y.%m.%d %h:%i %p') AS grnDate,
-            st.ststus AS statusName
-        FROM grn g
-        JOIN supplier s ON g.supplier_id = s.id
-        JOIN status st ON g.grn_status_id = st.id
-        WHERE 1=1
-    `;
-
-        const queryParams = [];
+        const whereClause = {};
 
         if (filters.supplierName) {
-            query += ` AND s.supplier_name LIKE ?`;
-            queryParams.push(`%${filters.supplierName}%`);
+            whereClause.supplier = {
+                supplier_name: {
+                    contains: filters.supplierName
+                }
+            };
         }
 
         if (filters.billNumber) {
-            query += ` AND g.bill_number LIKE ?`;
-            queryParams.push(`%${filters.billNumber}%`);
+            whereClause.bill_number = {
+                contains: filters.billNumber
+            };
         }
 
         if (filters.fromDate && filters.toDate) {
-            query += ` AND DATE(g.create_at) BETWEEN ? AND ?`;
-            queryParams.push(filters.fromDate, filters.toDate);
+            whereClause.create_at = {
+                gte: new Date(filters.fromDate),
+                lte: new Date(filters.toDate + 'T23:59:59')
+            };
         }
 
-        query += ` ORDER BY g.id DESC`;
+        const grns = await prisma.grn.findMany({
+            where: whereClause,
+            include: {
+                supplier: {
+                    select: {
+                        id: true,
+                        supplier_name: true
+                    }
+                },
+                status: {
+                    select: {
+                        ststus: true
+                    }
+                }
+            },
+            orderBy: {
+                id: 'desc'
+            }
+        });
 
-        const [rows] = await db.execute(query, queryParams);
-        return rows;
+        return grns.map(g => ({
+            id: g.id,
+            supplierName: g.supplier.supplier_name,
+            supplierId: g.supplier.id,
+            billNumber: g.bill_number,
+            totalAmount: g.total,
+            paidAmount: g.paid_amount,
+            balanceAmount: g.balance,
+            grnDate: this.formatDateTime(g.create_at),
+            statusName: g.status.ststus
+        }));
     }
 
-    //  Fetch Bill Numbers for a specific supplier with active status
+    // Fetch Bill Numbers for a specific supplier with active status
     static async getActiveBillNumbersBySupplier(supplierId) {
-        const query = `
-            SELECT 
-                id, 
-                bill_number,
-                total,
-                balance
-            FROM grn 
-            WHERE supplier_id = ? 
-            AND grn_status_id = 1
-            ORDER BY create_at DESC
-        `;
-        
-        const [rows] = await db.execute(query, [supplierId]);
-        return rows;
+        const grns = await prisma.grn.findMany({
+            where: {
+                supplier_id: parseInt(supplierId),
+                grn_status_id: 1
+            },
+            select: {
+                id: true,
+                bill_number: true,
+                total: true,
+                balance: true
+            },
+            orderBy: {
+                create_at: 'desc'
+            }
+        });
+
+        return grns;
+    }
+
+    static async getGRNDetailsById(id) {
+        const grn = await prisma.grn.findUnique({
+            where: { id: parseInt(id) },
+            include: {
+                supplier: {
+                    select: {
+                        id: true,
+                        supplier_name: true
+                    }
+                },
+                status: {
+                    select: {
+                        ststus: true
+                    }
+                },
+                grn_items: {
+                    include: {
+                        stock: {
+                            include: {
+                                product_variations: {
+                                    include: {
+                                        product: {
+                                            select: {
+                                                product_name: true
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                grn_payments: {
+                    include: {
+                        payment_types: {
+                            select: {
+                                payment_types: true
+                            }
+                        }
+                    },
+                    orderBy: {
+                        created_at: 'desc'
+                    }
+                }
+            }
+        });
+
+        if (!grn) return null;
+
+        return {
+            id: grn.id,
+            supplierName: grn.supplier.supplier_name,
+            supplierId: grn.supplier.id,
+            billNumber: grn.bill_number,
+            totalAmount: grn.total,
+            paidAmount: grn.paid_amount,
+            balanceAmount: grn.balance,
+            grnDate: this.formatDateTime(grn.create_at, 'YYYY-MM-DD hh:mm A'),
+            statusName: grn.status.ststus,
+            items: grn.grn_items.map(item => ({
+                id: item.id,
+                itemName: item.stock.product_variations.product.product_name,
+                quantity: item.qty,
+                unitPrice: item.stock.cost_price,
+                totalPrice: item.qty * item.stock.cost_price,
+                expiryDate: item.stock.exp ? item.stock.exp.toISOString().split('T')[0] : null
+            })),
+            payments: grn.grn_payments.map(payment => ({
+                id: payment.id,
+                amount: payment.paid_amount,
+                date: this.formatDateTime(payment.created_at),
+                type: payment.payment_types.payment_types
+            }))
+        };
     }
 
     static async updatePayment(data) {
-        const connection = await db.getConnection();
         try {
-            await connection.beginTransaction();
+            return await prisma.$transaction(async (tx) => {
+                // 1. Fetch current balance and paid amount for validation
+                const grn = await tx.grn.findUnique({
+                    where: { id: data.grn_id },
+                    select: {
+                        balance: true,
+                        paid_amount: true
+                    }
+                });
 
-            // 1. Fetch current balance and paid amount for validation
-            const [grnRows] = await connection.execute(
-                'SELECT balance, paid_amount FROM grn WHERE id = ? FOR UPDATE',
-                [data.grn_id]
-            );
+                if (!grn) throw new Error("GRN record not found.");
 
-            if (grnRows.length === 0) throw new Error("GRN record not found.");
+                const { balance, paid_amount } = grn;
 
-            const { balance, paid_amount } = grnRows[0];
+                // 2. Validation: Ensure new payment is not greater than current balance
+                if (parseFloat(data.payment_amount) > parseFloat(balance)) {
+                    throw new Error(`Invalid Amount. Maximum payable balance is LKR ${balance}`);
+                }
 
-            // 2. Validation: Ensure new payment is not greater than current balance
-            if (parseFloat(data.payment_amount) > parseFloat(balance)) {
-                throw new Error(`Invalid Amount. Maximum payable balance is LKR ${balance}`);
-            }
+                // 3. Calculate new values
+                const newBalance = parseFloat(balance) - parseFloat(data.payment_amount);
+                const newPaidAmount = parseFloat(paid_amount) + parseFloat(data.payment_amount);
+                
+                // If balance becomes 0, status_id becomes 2 (Paid), else stays 1 (Pending)
+                const newStatusId = newBalance === 0 ? 2 : 1;
 
-            // 3. Calculate new values
-            const newBalance = parseFloat(balance) - parseFloat(data.payment_amount);
-            const newPaidAmount = parseFloat(paid_amount) + parseFloat(data.payment_amount);
-            
-            // If balance becomes 0, status_id becomes 2 (Paid), else stays 1 (Pending)
-            const newStatusId = newBalance === 0 ? 2 : 1;
+                // 4. Update grn table
+                await tx.grn.update({
+                    where: { id: data.grn_id },
+                    data: {
+                        balance: newBalance,
+                        paid_amount: newPaidAmount,
+                        grn_status_id: newStatusId
+                    }
+                });
 
-            // 4. Update grn table
-            await connection.execute(
-                `UPDATE grn SET 
-                    balance = ?, 
-                    paid_amount = ?, 
-                    grn_status_id = ? 
-                 WHERE id = ?`,
-                [newBalance, newPaidAmount, newStatusId, data.grn_id]
-            );
+                // 5. Insert record into grn_payment table
+                await tx.grn_payments.create({
+                    data: {
+                        grn_id: data.grn_id,
+                        paid_amount: parseFloat(data.payment_amount),
+                        payment_types_id: data.payment_type_id
+                    }
+                });
 
-            // 5. Insert record into grn_payment table
-            await connection.execute(
-                `INSERT INTO grn_payments (grn_id, paid_amount, payment_types_id, created_at) 
-                 VALUES (?, ?, ?, NOW())`,
-                [data.grn_id, data.payment_amount, data.payment_type_id]
-            );
-
-            await connection.commit();
-            return { success: true, remainingBalance: newBalance };
+                return { success: true, remainingBalance: newBalance };
+            });
         } catch (error) {
-            await connection.rollback();
             throw error;
-        } finally {
-            connection.release();
         }
+    }
+
+    // Helper method to format datetime
+    static formatDateTime(date, format = '%Y.%m.%d %h:%i %p') {
+        if (!date) return null;
+        const d = new Date(date);
+        
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        const hours = d.getHours();
+        const minutes = String(d.getMinutes()).padStart(2, '0');
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        const hours12 = hours % 12 || 12;
+        
+        return `${year}.${month}.${day} ${String(hours12).padStart(2, '0')}:${minutes} ${ampm}`;
     }
 }
 

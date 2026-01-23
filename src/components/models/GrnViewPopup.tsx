@@ -12,6 +12,13 @@ interface GrnItem {
     expiryDate?: string;
 }
 
+interface GrnPayment {
+    id: number;
+    amount: number;
+    date: string;
+    type: string;
+}
+
 interface GrnDetails {
     id: number;
     supplierName: string;
@@ -22,15 +29,17 @@ interface GrnDetails {
     grnDate: string;
     statusName: string;
     items: GrnItem[];
+    payments?: GrnPayment[];
 }
 
 interface GrnViewPopupProps {
     isOpen: boolean;
     onClose: () => void;
     grnData: GrnDetails | null;
+    autoPrint?: boolean;
 }
 
-const GrnViewPopup = ({ isOpen, onClose, grnData }: GrnViewPopupProps) => {
+const GrnViewPopup = ({ isOpen, onClose, grnData, autoPrint = false }: GrnViewPopupProps) => {
     useEffect(() => {
         const handleEscape = (e: KeyboardEvent) => {
             if (e.key === 'Escape') {
@@ -40,10 +49,19 @@ const GrnViewPopup = ({ isOpen, onClose, grnData }: GrnViewPopupProps) => {
 
         if (isOpen) {
             window.addEventListener('keydown', handleEscape);
+
+            // Handle auto-print
+            if (autoPrint) {
+                // Short timeout to ensure content is fully rendered and animations settle
+                const timer = setTimeout(() => {
+                    window.print();
+                }, 500);
+                return () => clearTimeout(timer);
+            }
         }
 
         return () => window.removeEventListener('keydown', handleEscape);
-    }, [isOpen, onClose]);
+    }, [isOpen, onClose, autoPrint]);
 
     if (!grnData) return null;
 
@@ -149,36 +167,79 @@ const GrnViewPopup = ({ isOpen, onClose, grnData }: GrnViewPopupProps) => {
                                     <div className="overflow-x-auto rounded-lg border border-gray-200">
                                         <table className="min-w-full divide-y divide-gray-200">
                                             <thead className="bg-gray-50">
-                                            <tr>
-                                                {['No', 'Item Name', 'Quantity', 'Unit Price', 'Total Price', 'Expiry Date'].map((header, i) => (
-                                                    <th
-                                                        key={i}
-                                                        className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider"
-                                                    >
-                                                        {header}
-                                                    </th>
-                                                ))}
-                                            </tr>
+                                                <tr>
+                                                    {['No', 'Item Name', 'Quantity', 'Unit Price', 'Total Price', 'Expiry Date'].map((header, i) => (
+                                                        <th
+                                                            key={i}
+                                                            className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider"
+                                                        >
+                                                            {header}
+                                                        </th>
+                                                    ))}
+                                                </tr>
                                             </thead>
                                             <tbody className="bg-white divide-y divide-gray-200">
-                                            {grnData.items.map((item, index) => (
-                                                <tr key={item.id} className="hover:bg-gray-50 transition-colors">
-                                                    <td className="px-4 py-3 text-sm text-gray-900">{index + 1}</td>
-                                                    <td className="px-4 py-3 text-sm text-gray-900 font-medium">{item.itemName}</td>
-                                                    <td className="px-4 py-3 text-sm text-gray-900">{item.quantity}</td>
-                                                    <td className="px-4 py-3 text-sm text-gray-900">LKR {item.unitPrice.toFixed(2)}</td>
-                                                    <td className="px-4 py-3 text-sm font-semibold text-gray-900">LKR {item.totalPrice.toFixed(2)}</td>
-                                                    <td className="px-4 py-3 text-sm text-gray-900">
-                                                        {item.expiryDate
-                                                            ? new Date(item.expiryDate).toLocaleDateString('en-US')
-                                                            : 'N/A'}
-                                                    </td>
-                                                </tr>
-                                            ))}
+                                                {grnData.items.map((item, index) => (
+                                                    <tr key={item.id} className="hover:bg-gray-50 transition-colors">
+                                                        <td className="px-4 py-3 text-sm text-gray-900">{index + 1}</td>
+                                                        <td className="px-4 py-3 text-sm text-gray-900 font-medium">{item.itemName}</td>
+                                                        <td className="px-4 py-3 text-sm text-gray-900">{item.quantity}</td>
+                                                        <td className="px-4 py-3 text-sm text-gray-900">LKR {item.unitPrice.toFixed(2)}</td>
+                                                        <td className="px-4 py-3 text-sm font-semibold text-gray-900">LKR {item.totalPrice.toFixed(2)}</td>
+                                                        <td className="px-4 py-3 text-sm text-gray-900">
+                                                            {item.expiryDate
+                                                                ? new Date(item.expiryDate).toLocaleDateString('en-US')
+                                                                : 'N/A'}
+                                                        </td>
+                                                    </tr>
+                                                ))}
                                             </tbody>
                                         </table>
                                     </div>
                                 </div>
+                                
+                                {/* Payment History */}
+                                {grnData.payments && grnData.payments.length > 0 && (
+                                    <div className="mb-6">
+                                        <h3 className="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                                            <Calendar className="w-5 h-5 text-blue-600" />
+                                            Payment History
+                                        </h3>
+                                        <div className="overflow-x-auto rounded-lg border border-gray-200">
+                                            <table className="min-w-full divide-y divide-gray-200">
+                                                <thead className="bg-gray-50">
+                                                    <tr>
+                                                        {['Date', 'Amount', 'Payment Mode'].map((header, i) => (
+                                                            <th
+                                                                key={i}
+                                                                className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider"
+                                                            >
+                                                                {header}
+                                                            </th>
+                                                        ))}
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="bg-white divide-y divide-gray-200">
+                                                    {grnData.payments.map((payment) => (
+                                                        <tr key={payment.id} className="hover:bg-gray-50 transition-colors">
+                                                            <td className="px-4 py-3 text-sm text-gray-900 font-medium">
+                                                                {payment.date}
+                                                            </td>
+                                                            <td className="px-4 py-3 text-sm font-bold text-emerald-600">
+                                                                LKR {payment.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                            </td>
+                                                            <td className="px-4 py-3 text-sm text-gray-900">
+                                                                <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-[10px] font-bold">
+                                                                    {payment.type}
+                                                                </span>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                )}
 
                                 {/* Payment Summary */}
                                 <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-6 border border-gray-200">
@@ -194,13 +255,12 @@ const GrnViewPopup = ({ isOpen, onClose, grnData }: GrnViewPopupProps) => {
                                         </div>
                                         <div className="flex justify-between items-center pt-2">
                                             <span className="text-gray-700 font-semibold">Balance Amount</span>
-                                            <span className={`text-xl font-bold ${
-                                                grnData.balanceAmount === 0
-                                                    ? 'text-green-600'
-                                                    : grnData.balanceAmount > 0
-                                                        ? 'text-red-600'
-                                                        : 'text-blue-600'
-                                            }`}>
+                                            <span className={`text-xl font-bold ${grnData.balanceAmount === 0
+                                                ? 'text-green-600'
+                                                : grnData.balanceAmount > 0
+                                                    ? 'text-red-600'
+                                                    : 'text-blue-600'
+                                                }`}>
                                                 LKR {grnData.balanceAmount.toFixed(2)}
                                             </span>
                                         </div>

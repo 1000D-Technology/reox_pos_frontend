@@ -12,13 +12,16 @@ import {
     Users,
     ArrowUpRight,
     ArrowDownRight,
+    X,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
 import toast, { Toaster } from 'react-hot-toast';
 import TypeableSelect from '../../../components/TypeableSelect.tsx';
 import { stockService } from '../../../services/stockService';
 import { productService } from '../../../services/productService';
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 function DamagedStock() {
     // State for summary data
@@ -29,7 +32,7 @@ function DamagedStock() {
         thisMonth: 0,
         affectedSuppliers: 0
     });
-    
+
     const summaryCards = [
         {
             icon: AlertTriangle,
@@ -115,6 +118,10 @@ function DamagedStock() {
     // Table data state
     const [salesData, setSalesData] = useState<any[]>([]);
     const [loadingTable, setLoadingTable] = useState<boolean>(true);
+
+    // Detail modal state
+    const [isDetailModalOpen, setIsDetailModalOpen] = useState<boolean>(false);
+    const [selectedDetailRecord, setSelectedDetailRecord] = useState<any>(null);
 
     const [selectedIndex, setSelectedIndex] = useState(0);
     const [currentPage, setCurrentPage] = useState(1);
@@ -270,7 +277,7 @@ function DamagedStock() {
         try {
             setLoadingTable(true);
             const response = await stockService.getDamagedTableData();
-            
+
             if (response.data?.success) {
                 // Map API response to table format
                 const mappedData = response.data.data.map((item: any) => ({
@@ -284,7 +291,10 @@ function DamagedStock() {
                     stock: item.stockStatus,
                     damagedQty: item.damagedQty,
                     reason: item.reason,
-                    status: item.status
+                    status: item.status,
+                    id: item.id,
+                    description: item.description,
+                    date: item.date
                 }));
                 setSalesData(mappedData);
             } else {
@@ -305,18 +315,63 @@ function DamagedStock() {
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
+            const target = e.target as HTMLElement;
+            const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA';
+
+            // F2 to focus search input (fromDate)
+            if (e.key === 'F2') {
+                e.preventDefault();
+                const searchInput = document.getElementById('filter-category');
+                if (searchInput) {
+                    searchInput.focus();
+                }
+                return;
+            }
+
+            // Arrow keys for navigation
             if (e.key === "ArrowDown") {
                 e.preventDefault();
-                setSelectedIndex((prev) => (prev < currentSalesData.length - 1 ? prev + 1 : prev));
+                setSelectedIndex((prev) => {
+                    const nextIndex = prev < currentSalesData.length - 1 ? prev + 1 : prev;
+                    return nextIndex;
+                });
             } else if (e.key === "ArrowUp") {
                 e.preventDefault();
                 setSelectedIndex((prev) => (prev > 0 ? prev - 1 : prev));
+            } else if (e.key === "PageDown") {
+                e.preventDefault();
+                if (currentPage < totalPages) {
+                    goToNextPage();
+                }
+            } else if (e.key === "PageUp") {
+                e.preventDefault();
+                if (currentPage > 1) {
+                    goToPreviousPage();
+                }
+            } else if (e.key === "Home") {
+                if (!isInput) {
+                    e.preventDefault();
+                    setSelectedIndex(0);
+                }
+            } else if (e.key === "End") {
+                if (!isInput) {
+                    e.preventDefault();
+                    setSelectedIndex(currentSalesData.length - 1);
+                }
+            } else if (e.key === "Enter") {
+                if (!isInput && currentSalesData.length > 0) {
+                    e.preventDefault();
+                    const selectedItem = currentSalesData[selectedIndex];
+                    if (selectedItem) {
+                        handleRowDoubleClick(selectedItem);
+                    }
+                }
             }
         };
 
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [currentSalesData.length]);
+    }, [currentSalesData, selectedIndex, currentPage, totalPages]);
 
     const goToPage = (page: number) => {
         if (page >= 1 && page <= totalPages) {
@@ -393,26 +448,29 @@ function DamagedStock() {
             if (toDate) filters.toDate = toDate;
 
             const response = await stockService.searchDamagedRecords(filters);
-            
+
             if (response.data?.success) {
                 // Map API response to table format
                 const mappedData = response.data.data.map((item: any) => ({
-                    productId: item.product_id_code,
-                    productName: item.product_name,
+                    productId: item.productID,
+                    productName: item.productName,
                     unit: item.unit,
-                    costPrice: item.cost_price,
+                    costPrice: item.costPrice,
                     mrp: item.mrp,
                     price: item.price,
                     supplier: item.supplier,
-                    stock: item.stock_label,
-                    damagedQty: item.damaged_qty,
-                    reason: item.damage_reason,
-                    status: item.status
+                    stock: item.stockStatus,
+                    damagedQty: item.damagedQty,
+                    reason: item.reason,
+                    status: item.status,
+                    id: item.id,
+                    description: item.description,
+                    date: item.date
                 }));
                 setSalesData(mappedData);
                 setCurrentPage(1); // Reset to first page
                 setSelectedIndex(0);
-                
+
                 if (mappedData.length > 0) {
                     toast.success(`Found ${response.data.count || mappedData.length} records`);
                 } else {
@@ -496,34 +554,205 @@ function DamagedStock() {
         }
     };
 
+    const handleStatusChange = async (recordId: string, newStatusId: string) => {
+        try {
+            const response = await stockService.updateDamagedStatus(recordId, newStatusId);
+            if (response.data?.success) {
+                toast.success('Status updated successfully');
+                loadDamagedTableData(); // Refresh table
+                loadSummaryData(); // Refresh summary cards as well
+            } else {
+                toast.error('Failed to update status');
+            }
+        } catch (error) {
+            console.error('Error updating status:', error);
+            toast.error('Failed to update status');
+        }
+    };
+
+    const handleRowDoubleClick = (record: any) => {
+        setSelectedDetailRecord(record);
+        setIsDetailModalOpen(true);
+    };
+
+    // Export to Excel
+    const handleExportExcel = () => {
+        try {
+            const exportData = salesData.map((item, index) => ({
+                'No': index + 1,
+                'Product ID': item.productId,
+                'Product Name': item.productName,
+                'Unit': item.unit,
+                'Cost Price': item.costPrice,
+                'MRP': item.mrp,
+                'Selling Price': item.price,
+                'Supplier': item.supplier || 'N/A',
+                'Stock': item.stock,
+                'Damaged Qty': item.damagedQty,
+                'Reason': item.reason,
+                'Status': item.status,
+                'Date & Time': item.date ? `${new Date(item.date).toLocaleDateString()} ${new Date(item.date).toLocaleTimeString()}` : 'N/A',
+                'Description': item.description || ''
+            }));
+
+            const ws = XLSX.utils.json_to_sheet(exportData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Damaged Stock');
+
+            const timestamp = new Date().toISOString().split('T')[0];
+            XLSX.writeFile(wb, `Damaged_Stock_Report_${timestamp}.xlsx`);
+            toast.success('Excel file exported successfully');
+        } catch (error) {
+            console.error('Error exporting Excel:', error);
+            toast.error('Failed to export Excel file');
+        }
+    };
+
+    // Export to CSV
+    const handleExportCSV = () => {
+        try {
+            const headers = ['No', 'Product ID', 'Product Name', 'Unit', 'Cost Price', 'MRP', 'Selling Price', 'Supplier', 'Stock', 'Damaged Qty', 'Reason', 'Status', 'Date & Time', 'Description'];
+            const csvData = salesData.map((item, index) => [
+                index + 1,
+                item.productId,
+                item.productName,
+                item.unit,
+                item.costPrice,
+                item.mrp,
+                item.price,
+                item.supplier || 'N/A',
+                item.stock,
+                item.damagedQty,
+                item.reason,
+                item.status,
+                item.date ? `${new Date(item.date).toLocaleDateString()} ${new Date(item.date).toLocaleTimeString()}` : 'N/A',
+                item.description || ''
+            ]);
+
+            const csvContent = [
+                headers.join(','),
+                ...csvData.map(row => row.map(cell => `"${cell}"`).join(','))
+            ].join('\n');
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            const timestamp = new Date().toISOString().split('T')[0];
+
+            link.setAttribute('href', url);
+            link.setAttribute('download', `Damaged_Stock_Report_${timestamp}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            toast.success('CSV file exported successfully');
+        } catch (error) {
+            console.error('Error exporting CSV:', error);
+            toast.error('Failed to export CSV file');
+        }
+    };
+
+    // Export to PDF
+    const handleExportPDF = () => {
+        try {
+            const doc = new jsPDF('l', 'mm', 'a4'); // Landscape orientation
+
+            // Add title
+            doc.setFontSize(18);
+            doc.setTextColor(239, 68, 68); // Red color
+            doc.text('Damaged Stock Report', 14, 22);
+
+            // Add date
+            doc.setFontSize(10);
+            doc.setTextColor(100);
+            doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 30);
+
+            // Prepare table data
+            const tableData = salesData.map((item, index) => [
+                index + 1,
+                item.productId,
+                item.productName,
+                item.unit,
+                item.costPrice,
+                item.price,
+                item.supplier || 'N/A',
+                item.stock,
+                item.damagedQty,
+                item.reason,
+                item.status,
+                item.date ? `${new Date(item.date).toLocaleDateString()} ${new Date(item.date).toLocaleTimeString()}` : 'N/A',
+                item.description || ''
+            ]);
+
+            // Add table
+            autoTable(doc, {
+                startY: 35,
+                head: [['No', 'ID', 'Product', 'Unit', 'Cost', 'Price', 'Supplier', 'Stock', 'Qty', 'Reason', 'Status', 'Date & Time', 'Description']],
+                body: tableData,
+                theme: 'grid',
+                headStyles: {
+                    fillColor: [239, 68, 68],
+                    textColor: 255,
+                    fontStyle: 'bold'
+                },
+                styles: {
+                    fontSize: 8,
+                    cellPadding: 2
+                }
+            });
+
+            const timestamp = new Date().toISOString().split('T')[0];
+            doc.save(`Damaged_Stock_Report_${timestamp}.pdf`);
+            toast.success('PDF file exported successfully');
+        } catch (error) {
+            console.error('Error exporting PDF:', error);
+            toast.error('Failed to export PDF file');
+        }
+    };
+
     return (
         <div className={'flex flex-col gap-4 h-full'}>
             {/* Header */}
-            <div>
-                <div className="text-sm text-gray-400 flex items-center">
-                    <span>Stock</span>
-                    <span className="mx-2">›</span>
-                    <span className="text-gray-700 font-medium">Damaged Stock</span>
+            <div className="flex items-center justify-between">
+                <div>
+                    <div className="text-sm text-gray-400 flex items-center">
+                        <span>Stock</span>
+                        <span className="mx-2">›</span>
+                        <span className="text-gray-700 font-medium">Damaged Stock</span>
+                    </div>
+                    <h1 className="text-3xl font-semibold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
+                        Damaged Stock
+                    </h1>
                 </div>
-                <h1 className="text-3xl font-semibold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
-                    Damaged Stock
-                </h1>
+
+                {/* Shortcuts Hint */}
+                <div className="hidden lg:flex items-center gap-3 bg-white px-4 py-2 rounded-xl border border-gray-100 shadow-sm border-b-2">
+                    <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg border border-gray-200">
+                        <span className="text-[10px] font-black text-gray-500 bg-white px-1.5 py-0.5 rounded shadow-sm border border-gray-200">↑↓</span>
+                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Navigate</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg border border-gray-200">
+                        <span className="text-[10px] font-black text-gray-500 bg-white px-1.5 py-0.5 rounded shadow-sm border border-gray-200">Enter</span>
+                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Details</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg border border-gray-200">
+                        <span className="text-[10px] font-black text-gray-500 bg-white px-1.5 py-0.5 rounded shadow-sm border border-gray-200">F2</span>
+                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Filters</span>
+                    </div>
+                </div>
             </div>
 
             {/* Stats Cards */}
             <div className={'grid md:grid-cols-5 grid-cols-1 gap-4'}>
                 {summaryCards.map((stat, i) => (
-                    <motion.div
+                    <div
                         key={i}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: i * 0.1 }}
-                        whileHover={{ scale: 1.05, y: -2 }}
-                        className={`flex items-center p-4 space-x-3 transition-all bg-white rounded-2xl shadow-lg hover:shadow-xl ${stat.bgGlow} cursor-pointer group relative overflow-hidden`}
+                        className={`flex items-center p-4 space-x-3 transition-all bg-white rounded-2xl border border-gray-200 cursor-pointer group relative overflow-hidden`}
                     >
                         <div className="absolute inset-0 bg-gradient-to-br from-transparent via-gray-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
 
-                        <div className={`p-3 rounded-full ${stat.color} shadow-md relative z-10`}>
+                        <div className={`p-3 rounded-full ${stat.color} shadow-sm relative z-10`}>
                             <stat.icon className={`w-6 h-6 ${stat.iconColor}`} />
                         </div>
 
@@ -539,16 +768,13 @@ function DamagedStock() {
                             </div>
                             <p className="text-sm font-bold text-gray-700">{stat.value}</p>
                         </div>
-                    </motion.div>
+                    </div>
                 ))}
             </div>
 
             {/* Filter & Add Section */}
-            <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.6 }}
-                className={'bg-white rounded-xl p-4 flex flex-col shadow-lg'}
+            <div
+                className={'bg-white rounded-xl p-4 flex flex-col border border-gray-200'}
             >
                 <h2 className="text-xl font-semibold text-gray-700 mb-3">Filter</h2>
                 <div className={'grid md:grid-cols-5 gap-4'}>
@@ -557,6 +783,7 @@ function DamagedStock() {
                             Category
                         </label>
                         <TypeableSelect
+                            id="filter-category"
                             options={category}
                             value={selectedCategory}
                             onChange={(opt) => setSelectedCategory(opt?.value as string || null)}
@@ -629,7 +856,7 @@ function DamagedStock() {
                         </div>
                     </div>
                     <div className={'grid grid-cols-2 md:items-end items-start gap-2 text-white font-medium'}>
-                        <button 
+                        <button
                             onClick={handleSearch}
                             disabled={isSearching || loading}
                             className={'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 py-2 rounded-lg flex items-center justify-center shadow-lg shadow-red-200 hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed'}
@@ -637,8 +864,8 @@ function DamagedStock() {
                             <SearchCheck className="mr-2" size={14} />
                             {isSearching ? 'Searching...' : 'Search'}
                         </button>
-                        <button 
-                            onClick={handleClearFilters} 
+                        <button
+                            onClick={handleClearFilters}
                             disabled={loading || loadingTable}
                             className={'bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 py-2 rounded-lg flex items-center justify-center shadow-lg shadow-gray-200 hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed'}
                         >
@@ -758,7 +985,7 @@ function DamagedStock() {
                             className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-red-400 focus:outline-none transition-all resize-none"
                         />
                     </div>
-                    <div className={'grid grid-cols-2 md:items-end items-start gap-2 text-white font-medium'}>
+                    <div className={'col-span-2 grid grid-cols-2 items-end gap-2 text-white font-medium'}>
                         <button
                             onClick={handleAddDamaged}
                             disabled={isSubmitting}
@@ -772,20 +999,17 @@ function DamagedStock() {
                         </button>
                     </div>
                 </div>
-            </motion.div>
+            </div>
 
             {/* Table */}
-            <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.7 }}
-                className={'flex flex-col bg-white rounded-xl h-full p-4 justify-between shadow-lg'}
+            <div
+                className={'flex flex-col bg-white rounded-xl h-full p-4 justify-between border border-gray-200'}
             >
                 <div className="overflow-y-auto max-h-md md:h-[320px] lg:h-[500px] rounded-lg scrollbar-thin scrollbar-thumb-red-300 scrollbar-track-gray-100">
                     <table className="min-w-full divide-y divide-gray-200">
                         <thead className="bg-gradient-to-r from-red-500 to-red-600 sticky top-0 z-10">
                             <tr>
-                                {['Product ID', 'Product Name', 'Unit', 'Cost Price', 'MRP', 'Price', 'Supplier', 'Stock', 'Damaged Qty', 'Reason', 'Status'].map((header, i, arr) => (
+                                {['Product ID', 'Product Name', 'Unit', 'Cost Price', 'MRP', 'Price', 'Supplier', 'Stock', 'Damaged Qty', 'Reason', 'Status', 'Date & Time'].map((header, i, arr) => (
                                     <th
                                         key={i}
                                         scope="col"
@@ -801,7 +1025,7 @@ function DamagedStock() {
                         <tbody className="bg-white divide-y divide-gray-200">
                             {currentSalesData.length === 0 ? (
                                 <tr>
-                                    <td colSpan={10} className="px-6 py-8 text-center text-gray-500">
+                                    <td colSpan={12} className="px-6 py-8 text-center text-gray-500">
                                         No damaged stock records found
                                     </td>
                                 </tr>
@@ -810,9 +1034,10 @@ function DamagedStock() {
                                     <tr
                                         key={index}
                                         onClick={() => setSelectedIndex(index)}
+                                        onDoubleClick={() => handleRowDoubleClick(sale)}
                                         className={`cursor-pointer transition-all ${selectedIndex === index
-                                                ? 'bg-gradient-to-r from-red-50 to-red-100 shadow-md'
-                                                : 'hover:bg-gray-50'
+                                            ? 'bg-gradient-to-r from-red-50 to-red-100 shadow-md'
+                                            : 'hover:bg-gray-50'
                                             }`}
                                     >
                                         <td className="px-6 py-2 whitespace-nowrap text-sm font-semibold text-gray-800">
@@ -848,16 +1073,32 @@ function DamagedStock() {
                                             {sale.reason}
                                         </td>
                                         <td className="px-6 py-2 whitespace-nowrap">
-                                            <span className={`px-3 py-1 text-xs font-semibold rounded-full ${
-                                                sale.status === 'Damaged' ? 'bg-gradient-to-r from-red-100 to-red-200 text-red-800' :
-                                                sale.status === 'Pending Review' ? 'bg-gradient-to-r from-yellow-100 to-yellow-200 text-yellow-800' :
-                                                sale.status === 'Under Review' ? 'bg-gradient-to-r from-yellow-100 to-yellow-200 text-yellow-800' :
-                                                sale.status === 'Disposed' ? 'bg-gradient-to-r from-gray-100 to-gray-200 text-gray-800' :
-                                                'bg-gradient-to-r from-blue-100 to-blue-200 text-blue-800'
-                                            }`}>
-                                                {sale.status}
-                                            </span>
+                                            <select
+                                                value={status.find(s => s.label === sale.status)?.value || ''}
+                                                onChange={(e) => handleStatusChange(sale.id, e.target.value)}
+                                                className={`px-2 py-1 text-xs font-semibold rounded-full border-none focus:ring-2 focus:ring-red-400 cursor-pointer transition-all outline-none ${sale.status === 'Damaged' ? 'bg-red-100 text-red-800' :
+                                                        sale.status === 'Pending Review' ? 'bg-yellow-100 text-yellow-800' :
+                                                            sale.status === 'Under Review' ? 'bg-yellow-100 text-yellow-800' :
+                                                                sale.status === 'Disposed' ? 'bg-gray-100 text-gray-800' :
+                                                                    'bg-blue-100 text-blue-800'
+                                                    }`}
+                                            >
+                                                {status.map((statusOption) => (
+                                                    <option key={statusOption.value} value={statusOption.value} className="bg-white text-gray-800">
+                                                        {statusOption.label}
+                                                    </option>
+                                                ))}
+                                            </select>
                                         </td>
+                                        <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-600">
+                                            {sale.date ? (
+                                                <div className="flex flex-col">
+                                                    <span className="font-medium">{new Date(sale.date).toLocaleDateString()}</span>
+                                                    <span className="text-[10px] text-gray-400">{new Date(sale.date).toLocaleTimeString()}</span>
+                                                </div>
+                                            ) : 'N/A'}
+                                        </td>
+                                        
                                     </tr>
                                 ))
                             )}
@@ -876,8 +1117,8 @@ function DamagedStock() {
                             onClick={goToPreviousPage}
                             disabled={currentPage === 1}
                             className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${currentPage === 1
-                                    ? 'text-gray-400 cursor-not-allowed'
-                                    : 'text-gray-600 hover:text-red-600 hover:bg-red-50'
+                                ? 'text-gray-400 cursor-not-allowed'
+                                : 'text-gray-600 hover:text-red-600 hover:bg-red-50'
                                 }`}
                         >
                             <ChevronLeft className="mr-2 h-5 w-5" /> Previous
@@ -889,8 +1130,8 @@ function DamagedStock() {
                                     key={index}
                                     onClick={() => goToPage(page)}
                                     className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${currentPage === page
-                                            ? 'bg-gradient-to-r from-red-500 to-red-600 text-white shadow-md'
-                                            : 'text-gray-600 hover:bg-red-50 hover:text-red-600'
+                                        ? 'bg-gradient-to-r from-red-500 to-red-600 text-white shadow-md'
+                                        : 'text-gray-600 hover:bg-red-50 hover:text-red-600'
                                         }`}
                                 >
                                     {page}
@@ -906,33 +1147,158 @@ function DamagedStock() {
                             onClick={goToNextPage}
                             disabled={currentPage === totalPages}
                             className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${currentPage === totalPages
-                                    ? 'text-gray-400 cursor-not-allowed'
-                                    : 'text-gray-600 hover:text-red-600 hover:bg-red-50'
+                                ? 'text-gray-400 cursor-not-allowed'
+                                : 'text-gray-600 hover:text-red-600 hover:bg-red-50'
                                 }`}
                         >
                             Next <ChevronRight className="ml-2 h-5 w-5" />
                         </button>
                     </div>
                 </nav>
-            </motion.div>
+            </div>
 
             {/* Export Buttons */}
-            <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.8 }}
-                className={'bg-white flex justify-center p-4 gap-4 rounded-xl shadow-lg'}
+            <div
+                className={'bg-white flex justify-center p-4 gap-4 rounded-xl border border-gray-200'}
             >
-                <button className={'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 px-6 py-2 font-medium text-white rounded-lg flex gap-2 items-center shadow-lg shadow-emerald-200 hover:shadow-xl transition-all'}>
+                <button 
+                    onClick={handleExportExcel}
+                    className={'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 px-6 py-2 font-medium text-white rounded-lg flex gap-2 items-center shadow-lg shadow-emerald-200 hover:shadow-xl transition-all active:scale-95'}
+                >
                     <FileText size={15} />Excel
                 </button>
-                <button className={'bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 px-6 py-2 font-medium text-white rounded-lg flex gap-2 items-center shadow-lg shadow-yellow-200 hover:shadow-xl transition-all'}>
+                <button 
+                    onClick={handleExportCSV}
+                    className={'bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 px-6 py-2 font-medium text-white rounded-lg flex gap-2 items-center shadow-lg shadow-yellow-200 hover:shadow-xl transition-all active:scale-95'}
+                >
                     <FileText size={15} />CSV
                 </button>
-                <button className={'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 px-6 py-2 font-medium text-white rounded-lg flex gap-2 items-center shadow-lg shadow-red-200 hover:shadow-xl transition-all'}>
+                <button 
+                    onClick={handleExportPDF}
+                    className={'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 px-6 py-2 font-medium text-white rounded-lg flex gap-2 items-center shadow-lg shadow-red-200 hover:shadow-xl transition-all active:scale-95'}
+                >
                     <FileText size={15} />PDF
                 </button>
-            </motion.div>
+            </div>
+
+            {/* Detail Modal */}
+            {isDetailModalOpen && selectedDetailRecord && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+                        {/* Modal Header */}
+                        <div className="bg-gradient-to-r from-red-500 to-red-600 px-6 py-4 flex items-center justify-between">
+                            <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                                <AlertTriangle className="w-6 h-6" />
+                                Damaged Record Details
+                            </h3>
+                            <button 
+                                onClick={() => setIsDetailModalOpen(false)}
+                                className="p-1.5 hover:bg-white/20 rounded-full transition-colors text-white"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        {/* Modal Content */}
+                        <div className="p-6 max-h-[80vh] overflow-y-auto custom-scrollbar">
+                            <div className="grid grid-cols-2 gap-6">
+                                {/* Product Section */}
+                                <div className="space-y-4">
+                                    <div>
+                                        <h4 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">Product Information</h4>
+                                        <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 space-y-3">
+                                            <div>
+                                                <p className="text-[10px] text-gray-500 uppercase font-bold">Product ID</p>
+                                                <p className="text-sm font-semibold text-gray-800">{selectedDetailRecord.productId}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-[10px] text-gray-500 uppercase font-bold">Product Name</p>
+                                                <p className="text-sm font-semibold text-gray-800">{selectedDetailRecord.productName}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-[10px] text-gray-500 uppercase font-bold">Unit Type</p>
+                                                <p className="text-sm font-semibold text-gray-800">{selectedDetailRecord.unit}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <h4 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">Stock Details</h4>
+                                        <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 space-y-3">
+                                            <div>
+                                                <p className="text-[10px] text-gray-500 uppercase font-bold">Batch/Stock Info</p>
+                                                <p className="text-sm font-semibold text-gray-800">{selectedDetailRecord.stock}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-[10px] text-gray-500 uppercase font-bold">Supplier</p>
+                                                <p className="text-sm font-semibold text-gray-800">{selectedDetailRecord.supplier}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Damage Section */}
+                                <div className="space-y-4">
+                                    <div>
+                                        <h4 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">Damage Information</h4>
+                                        <div className="bg-red-50/30 rounded-xl p-4 border border-red-100 space-y-3">
+                                            <div>
+                                                <p className="text-[10px] text-red-500 uppercase font-bold">Damaged Quantity</p>
+                                                <p className="text-lg font-bold text-red-600">{selectedDetailRecord.damagedQty}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-[10px] text-gray-500 uppercase font-bold">Reason</p>
+                                                <p className="text-sm font-semibold text-gray-800">{selectedDetailRecord.reason}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-[10px] text-gray-500 uppercase font-bold">Date of Record</p>
+                                                <p className="text-sm font-semibold text-gray-800">
+                                                    {new Date(selectedDetailRecord.date).toLocaleDateString()} {new Date(selectedDetailRecord.date).toLocaleTimeString()}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <h4 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">Pricing (At Time of Record)</h4>
+                                        <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 grid grid-cols-2 gap-3">
+                                            <div>
+                                                <p className="text-[10px] text-gray-500 uppercase font-bold">Cost Price</p>
+                                                <p className="text-sm font-semibold text-blue-600">LKR {selectedDetailRecord.costPrice}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-[10px] text-gray-500 uppercase font-bold">Selling Price</p>
+                                                <p className="text-sm font-semibold text-emerald-600">LKR {selectedDetailRecord.price}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Full Width Description */}
+                                <div className="col-span-2">
+                                    <h4 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">Notes / Description</h4>
+                                    <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 min-h-[80px]">
+                                        <p className="text-sm text-gray-600 italic">
+                                            {selectedDetailRecord.description || 'No additional notes provided for this record.'}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Modal Footer */}
+                        <div className="bg-gray-50 px-6 py-4 flex justify-end">
+                            <button 
+                                onClick={() => setIsDetailModalOpen(false)}
+                                className="px-6 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold rounded-xl transition-all active:scale-95"
+                            >
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <Toaster
                 position="top-right"
                 toastOptions={{

@@ -1,11 +1,21 @@
 const express = require('express');
 const router = express.Router();
-const posConteroller = require('../controllers/posController');
+const posController = require('../controllers/posController');
 
 
-// Route to get available products for POS
-router.get('/products/available', posConteroller.getPOSProductsList);
-// Route to search product by barcode
-router.get('/products/barcode/:barcode', posConteroller.searchProductByBarcode);
+// Product routes (Search by barcode is still used by POS)
+router.get('/products/barcode/:barcode', posController.searchProductByBarcode);
+
+// Invoice routes
+router.post('/invoice', posController.createInvoice);
+router.get('/invoices', posController.getAllInvoices);
+router.get('/invoices/stats', posController.getInvoiceStats);
+router.get('/invoice/:invoiceNo', posController.getInvoice);
+router.post('/invoice/payment', posController.processInvoicePayment);
+
+// Route to convert bulk stock to loose stock
+router.post('/convert', posController.convertBulkToLoose);
+// Route to process return
+router.post('/return', posController.processReturn);
 
 module.exports = router;

@@ -1,0 +1,10 @@
+const { contextBridge, ipcRenderer } = require('electron');
+
+// Expose protected methods that allow the renderer process to use
+// ipcRenderer without exposing the entire object
+contextBridge.exposeInMainWorld('electronAPI', {
+  getAppPath: () => ipcRenderer.invoke('get-app-path'),
+  getBackendStatus: () => ipcRenderer.invoke('get-backend-status'),
+  platform: process.platform,
+  isElectron: true
+});

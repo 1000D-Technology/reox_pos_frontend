@@ -3,14 +3,11 @@ import {
     ChevronRight,
     Pencil,
     Plus,
-    RefreshCw,
-    SearchCheck,
     Trash,
     X,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import toast, { Toaster } from 'react-hot-toast';
-import { motion } from 'framer-motion';
 import { unitService } from '../../../services/unitService';
 import ConfirmationModal from '../../../components/modals/ConfirmationModal';
 
@@ -27,9 +24,8 @@ function ManageUnit() {
     const [newUnitName, setNewUnitName] = useState('');
     const [isSaving, setIsSaving] = useState(false);
     const [units, setUnits] = useState<Unit[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+    const [isLoading, setIsLoading] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
-    const [isSearching, setIsSearching] = useState(false);
     const [updateUnitName, setUpdateUnitName] = useState('');
     const [isUpdating, setIsUpdating] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
@@ -39,6 +35,7 @@ function ManageUnit() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedUnit, setSelectedUnit] = useState<Unit | null>(null);
     const [selectedIndex, setSelectedIndex] = useState(0);
+    const [isInitialMount, setIsInitialMount] = useState(true);
 
     const totalPages = Math.ceil(units.length / itemsPerPage);
     const startIndex = (currentPage - 1) * itemsPerPage;
@@ -76,7 +73,6 @@ function ManageUnit() {
             toast.error('Error loading units. Please try again.');
         } finally {
             setIsLoading(false);
-            setIsSearching(false);
         }
     };
 
@@ -85,6 +81,12 @@ function ManageUnit() {
     }, []);
 
     useEffect(() => {
+        // Skip the search effect on initial mount
+        if (isInitialMount) {
+            setIsInitialMount(false);
+            return;
+        }
+
         const timeoutId = setTimeout(() => {
             fetchUnits(searchTerm);
             setCurrentPage(1);
@@ -95,16 +97,86 @@ function ManageUnit() {
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
+            // Escape to close modals
+            if (e.key === "Escape") {
+                setIsModalOpen(false);
+                setUnitToDelete(null);
+            }
+
+            // Arrow navigation for list
             if (e.key === "ArrowDown") {
-                setSelectedIndex((prev) => (prev < salesData.length - 1 ? prev + 1 : prev));
+                const target = e.target as HTMLElement;
+                if (target.tagName !== 'INPUT' && target.tagName !== 'TEXTAREA') {
+                    e.preventDefault();
+                    setSelectedIndex((prev) => (prev < salesData.length - 1 ? prev + 1 : prev));
+                }
             } else if (e.key === "ArrowUp") {
-                setSelectedIndex((prev) => (prev > 0 ? prev - 1 : prev));
+                const target = e.target as HTMLElement;
+                if (target.tagName !== 'INPUT' && target.tagName !== 'TEXTAREA') {
+                    e.preventDefault();
+                    setSelectedIndex((prev) => (prev > 0 ? prev - 1 : prev));
+                }
+            } else if (e.key === "PageDown") {
+                const target = e.target as HTMLElement;
+                if (target.tagName !== 'INPUT' && target.tagName !== 'TEXTAREA') {
+                    e.preventDefault();
+                    goToPage(currentPage + 1);
+                }
+            } else if (e.key === "PageUp") {
+                const target = e.target as HTMLElement;
+                if (target.tagName !== 'INPUT' && target.tagName !== 'TEXTAREA') {
+                    e.preventDefault();
+                    goToPage(currentPage - 1);
+                }
+            }
+
+            // Enter key behaviors
+            if (e.key === "Enter" && !e.shiftKey) {
+                const target = e.target as HTMLElement;
+                // Double click simulation on enter
+                if (target.tagName !== 'INPUT' && target.tagName !== 'TEXTAREA' && salesData[selectedIndex] && !isModalOpen) {
+                    handleEditClick(salesData[selectedIndex]);
+                }
+            }
+
+            // Shift + Enter to save in Edit Modal
+            if (e.key === "Enter" && e.shiftKey && isModalOpen) {
+                e.preventDefault();
+                if (!isUpdating) {
+                    handleUpdateUnit();
+                }
+            }
+
+            // Alt Key Combinations
+            if (e.altKey) {
+                switch (e.key.toLowerCase()) {
+                    case 'e': // Edit
+                        e.preventDefault();
+                        if (salesData[selectedIndex]) {
+                            handleEditClick(salesData[selectedIndex]);
+                        }
+                        break;
+                    case 'd': // Delete
+                        e.preventDefault();
+                        if (salesData[selectedIndex]) {
+                            handleDeleteClick(salesData[selectedIndex]);
+                        }
+                        break;
+                    case 's': // Search Focus
+                        e.preventDefault();
+                        document.getElementById('unit-search')?.focus();
+                        break;
+                    case 'a': // Add Input Focus
+                        e.preventDefault();
+                        document.getElementById('unit-add')?.focus();
+                        break;
+                }
             }
         };
 
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [salesData.length]);
+    }, [salesData, isModalOpen, isUpdating, selectedIndex, currentPage, itemsPerPage]);
 
     const handleEditClick = (unit: Unit) => {
         setSelectedUnit(unit);
@@ -277,21 +349,45 @@ function ManageUnit() {
                 }}
             />
             <div className={'flex flex-col gap-4 h-full'}>
-                <div>
-                    <div className="text-sm text-gray-400 flex items-center">
-                        <span>Products</span>
-                        <span className="mx-2">›</span>
-                        <span className="text-gray-700 font-medium">Manage Unit</span>
+                <div className="flex justify-between items-center mb-4">
+                    <div>
+                        <div className="text-sm text-gray-400 flex items-center">
+                            <span>Products</span>
+                            <span className="mx-2">›</span>
+                            <span className="text-gray-700 font-medium">Manage Unit</span>
+                        </div>
+                        <h1 className="text-3xl font-semibold bg-linear-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
+                            Manage Unit
+                        </h1>
                     </div>
-                    <h1 className="text-3xl font-semibold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
-                        Manage Unit
-                    </h1>
+
+                    {/* Shortcuts Hint Style */}
+                    <div className="hidden lg:flex items-center gap-2 bg-white px-4 py-2 rounded-xl border border-gray-100 shadow-sm border-b-2">
+                        <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg border border-gray-100">
+                            <span className="text-[10px] font-black text-gray-500 bg-white px-1.5 py-0.5 rounded shadow-sm border border-gray-200">↑↓</span>
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Navigate</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg border border-gray-100">
+                            <span className="text-[10px] font-black text-gray-500 bg-white px-1.5 py-0.5 rounded shadow-sm border border-gray-200">ALT+A</span>
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Add</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg border border-gray-100">
+                            <span className="text-[10px] font-black text-gray-500 bg-white px-1.5 py-0.5 rounded shadow-sm border border-gray-200">ALT+E</span>
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Edit</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg border border-gray-100">
+                            <span className="text-[10px] font-black text-gray-500 bg-white px-1.5 py-0.5 rounded shadow-sm border border-gray-200">ALT+D</span>
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Delete</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg border border-gray-100">
+                            <span className="text-[10px] font-black text-gray-500 bg-white px-1.5 py-0.5 rounded shadow-sm border border-gray-200">ALT+S</span>
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Search</span>
+                        </div>
+                    </div>
                 </div>
 
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className={'flex flex-col bg-white rounded-xl p-6 justify-between gap-6 shadow-lg'}
+                <div
+                    className={'flex flex-col bg-white rounded-xl p-6 justify-between gap-6 border border-gray-200'}
                 >
                     <div className={'grid md:grid-cols-5 gap-4'}>
 
@@ -299,6 +395,7 @@ function ManageUnit() {
                             <label className="block text-sm font-medium text-gray-700 mb-1">Search</label>
                             <input
                                 type="text"
+                                id="unit-search"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 placeholder="Search units..."
@@ -311,6 +408,7 @@ function ManageUnit() {
                             <label className="block text-sm font-medium text-gray-700 mb-1">Unit Name</label>
                             <input
                                 type="text"
+                                id="unit-add"
                                 value={newUnitName}
                                 onChange={(e) => setNewUnitName(e.target.value)}
                                 onKeyPress={handleKeyPress}
@@ -322,85 +420,83 @@ function ManageUnit() {
                             <button
                                 onClick={handleSaveUnit}
                                 disabled={isSaving}
-                                className={`bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 py-2 rounded-lg flex items-center justify-center shadow-lg shadow-emerald-200 hover:shadow-xl transition-all ${
-                                    isSaving ? 'opacity-50 cursor-not-allowed' : ''
-                                }`}
+                                className={`bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 py-2 rounded-lg flex items-center justify-center shadow-lg shadow-emerald-200 hover:shadow-xl transition-all ${isSaving ? 'opacity-50 cursor-not-allowed' : ''
+                                    }`}
                             >
-                                <Plus className="mr-2" size={16}/>{isSaving ? 'Adding...' : 'Add Unit'}
+                                <Plus className="mr-2" size={16} />{isSaving ? 'Adding...' : 'Add Unit'}
                             </button>
                         </div>
                     </div>
 
-                    <div className="overflow-y-auto max-h-md md:h-[320px] lg:h-[630px] rounded-lg scrollbar-thin scrollbar-thumb-emerald-300 scrollbar-track-gray-100">
+                    <div className="overflow-y-auto max-h-md md:h-[320px] lg:h-[400px] rounded-lg scrollbar-thin scrollbar-thumb-emerald-300 scrollbar-track-gray-100">
                         <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-gradient-to-r from-emerald-500 to-emerald-600 sticky top-0 z-10">
-                            <tr>
-                                {['No', 'Unit Name', 'Created On', 'Actions'].map((header, i, arr) => (
-                                    <th
-                                        key={i}
-                                        className={`px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider ${
-                                            i === 0 ? 'rounded-tl-lg' : i === arr.length - 1 ? 'rounded-tr-lg' : ''
-                                        }`}
-                                    >
-                                        {header}
-                                    </th>
-                                ))}
-                            </tr>
+                                <tr>
+                                    {['No', 'Unit Name', 'Created On', 'Actions'].map((header, i, arr) => (
+                                        <th
+                                            key={i}
+                                            className={`px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider ${i === 0 ? 'rounded-tl-lg' : i === arr.length - 1 ? 'rounded-tr-lg' : ''
+                                                }`}
+                                        >
+                                            {header}
+                                        </th>
+                                    ))}
+                                </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
-                            {isLoading ? (
-                                <tr>
-                                    <td colSpan={4} className="px-6 py-8 text-center text-gray-500">
-                                        <div className="flex justify-center items-center">
-                                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500"></div>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ) : salesData.length === 0 ? (
-                                <tr>
-                                    <td colSpan={4} className="px-6 py-8 text-center text-gray-500">
-                                        No units found
-                                    </td>
-                                </tr>
-                            ) : (
-                                salesData.map((unit, index) => (
-                                    <motion.tr
-                                        key={unit.id}
-                                        onClick={() => setSelectedIndex(index)}
-                                        className={`cursor-pointer transition-all ${
-                                            selectedIndex === index
-                                                ? 'bg-emerald-50 border-l-4 border-emerald-500'
-                                                : 'hover:bg-emerald-50/10'
-                                        }`}
-                                    >
-                                        <td className="px-6 py-3 whitespace-nowrap text-sm font-semibold text-gray-800">
-                                            {unit.no}
-                                        </td>
-                                        <td className="px-6 py-3 whitespace-nowrap text-sm font-medium text-gray-700">
-                                            {unit.unitName}
-                                        </td>
-                                        <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-600">
-                                            {unit.createdOn}
-                                        </td>
-                                        <td className="px-6 py-3 whitespace-nowrap text-sm font-medium">
-                                            <div className="flex space-x-2">
-                                                <button
-                                                    onClick={() => handleEditClick(unit)}
-                                                    className="p-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all"
-                                                >
-                                                    <Pencil size={16}/>
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDeleteClick(unit)}
-                                                    className="p-2 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all"
-                                                >
-                                                    <Trash size={16}/>
-                                                </button>
+                                {isLoading ? (
+                                    <tr>
+                                        <td colSpan={4} className="px-6 py-8 text-center text-gray-500">
+                                            <div className="flex justify-center items-center">
+                                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500"></div>
                                             </div>
                                         </td>
-                                    </motion.tr>
-                                ))
-                            )}
+                                    </tr>
+                                ) : salesData.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={4} className="px-6 py-8 text-center text-gray-500">
+                                            No units found
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    salesData.map((unit, index) => (
+                                        <tr
+                                            key={unit.id}
+                                            onClick={() => setSelectedIndex(index)}
+                                            onDoubleClick={() => handleEditClick(unit)}
+                                            className={`cursor-pointer transition-all ${selectedIndex === index
+                                                    ? 'bg-emerald-50 border-l-4 border-emerald-500'
+                                                    : 'hover:bg-emerald-50/10'
+                                                }`}
+                                        >
+                                            <td className="px-6 py-3 whitespace-nowrap text-sm font-semibold text-gray-800">
+                                                {unit.no}
+                                            </td>
+                                            <td className="px-6 py-3 whitespace-nowrap text-sm font-medium text-gray-700">
+                                                {unit.unitName}
+                                            </td>
+                                            <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-600">
+                                                {unit.createdOn}
+                                            </td>
+                                            <td className="px-6 py-3 whitespace-nowrap text-sm font-medium">
+                                                <div className="flex space-x-2">
+                                                    <button
+                                                        onClick={() => handleEditClick(unit)}
+                                                        className="p-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all"
+                                                    >
+                                                        <Pencil size={16} />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDeleteClick(unit)}
+                                                        className="p-2 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all"
+                                                    >
+                                                        <Trash size={16} />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
                             </tbody>
                         </table>
                     </div>
@@ -414,13 +510,12 @@ function ManageUnit() {
                             <button
                                 onClick={() => goToPage(currentPage - 1)}
                                 disabled={currentPage === 1}
-                                className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${
-                                    currentPage === 1
+                                className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${currentPage === 1
                                         ? 'text-gray-400 cursor-not-allowed'
                                         : 'text-gray-600 hover:text-emerald-600 hover:bg-emerald-50'
-                                }`}
+                                    }`}
                             >
-                                <ChevronLeft className="mr-2 h-5 w-5"/> Previous
+                                <ChevronLeft className="mr-2 h-5 w-5" /> Previous
                             </button>
                             {getPageNumbers().map((page, index) =>
                                 page === '...' ? (
@@ -429,11 +524,10 @@ function ManageUnit() {
                                     <button
                                         key={index}
                                         onClick={() => goToPage(page as number)}
-                                        className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
-                                            currentPage === page
+                                        className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${currentPage === page
                                                 ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-md'
                                                 : 'text-gray-600 hover:bg-emerald-50 hover:text-emerald-600'
-                                        }`}
+                                            }`}
                                     >
                                         {page}
                                     </button>
@@ -442,32 +536,29 @@ function ManageUnit() {
                             <button
                                 onClick={() => goToPage(currentPage + 1)}
                                 disabled={currentPage === totalPages}
-                                className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${
-                                    currentPage === totalPages
+                                className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${currentPage === totalPages
                                         ? 'text-gray-400 cursor-not-allowed'
                                         : 'text-gray-600 hover:text-emerald-600 hover:bg-emerald-50'
-                                }`}
+                                    }`}
                             >
-                                Next <ChevronRight className="ml-2 h-5 w-5"/>
+                                Next <ChevronRight className="ml-2 h-5 w-5" />
                             </button>
                         </div>
                     </nav>
-                </motion.div>
+                </div>
             </div>
 
             {/* Update Modal */}
             {isModalOpen && selectedUnit && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
+                    <div
                         className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md relative"
                     >
                         <button
                             onClick={handleCloseModal}
                             className="absolute top-4 right-4 p-2 hover:bg-gray-100 rounded-full transition-all"
                         >
-                            <X size={20} className="text-gray-600"/>
+                            <X size={20} className="text-gray-600" />
                         </button>
 
                         <h2 className="text-2xl font-bold text-gray-800 mb-6">Update Unit</h2>
@@ -493,14 +584,13 @@ function ManageUnit() {
                             <button
                                 onClick={handleUpdateUnit}
                                 disabled={isUpdating}
-                                className={`flex-1 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-medium rounded-lg shadow-lg shadow-emerald-200 hover:shadow-xl transition-all ${
-                                    isUpdating ? 'opacity-50 cursor-not-allowed' : ''
-                                }`}
+                                className={`flex-1 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-medium rounded-lg shadow-lg shadow-emerald-200 hover:shadow-xl transition-all ${isUpdating ? 'opacity-50 cursor-not-allowed' : ''
+                                    }`}
                             >
                                 {isUpdating ? 'Updating...' : 'Update Unit'}
                             </button>
                         </div>
-                    </motion.div>
+                    </div>
                 </div>
             )}
 

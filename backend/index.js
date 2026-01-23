@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const { globalErrorHandler, AppError } = require('./middleware/errorHandler');
@@ -20,24 +21,34 @@ const customerRoutes = require('./routes/customerRoutes');
 const userRoutes = require('./routes/userRoutes');
 const roleRoutes = require('./routes/roleRoutes');
 const { scheduleBackup } = require('./schedulers/backupScheduler');
-
-require('dotenv').config();
+const { scheduleSessionClosure } = require('./schedulers/sessionClosureScheduler');
+const moneyExchangeRoutes = require('./routes/moneyExchangeRoutes');
 const swaggerJsDoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
 const seedDatabase = require('./config/dbInit');
 const cashSessionRoutes = require('./routes/cashSessionRoutes');
+const quotationRoutes = require('./routes/quotationRoutes');
+const reportRoutes = require('./routes/reportRoutes');
+const analyticsRoutes = require('./routes/reportRoutes'); // Using the same file for now
 
 
 // Middleware
 const app = express();
 app.use(cors({
-    origin: 'http://localhost:5173',
+    origin: ['http://localhost:5173', 'http://localhost:5174', 'http://127.0.0.1:5173'],
     credentials: true
 }));
 const authRoutes = require('./routes/auth');
 app.use(express.json());
 
+// Health check endpoint for Electron
+app.get('/api/health', (req, res) => {
+    res.status(200).json({ status: 'ok', message: 'Backend is running' });
+});
+
 // Routes
+app.use('/api/analytics', analyticsRoutes);
+app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/suppliers', supplierRoutes);
 app.use('/api/grn', grnRoutes);
@@ -54,11 +65,12 @@ app.use('/api/setup', setupRoutes);
 app.use('/api/backup', backupRoutes);
 app.use('/api/pos', posRoutes);
 app.use('/api/customers', customerRoutes);
-app.use('/api/auth', authRoutes);
 app.use('/api', cashSessionRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/roles', roleRoutes);
 
+app.use('/api/money-exchange', moneyExchangeRoutes);
+app.use('/api/quotations', quotationRoutes);
 
 // Handle undefined routes
 app.use((req, res, next) => {
@@ -80,6 +92,14 @@ seedDatabase().then(() => {
             console.log('✅ Backup scheduler started successfully');
         } catch (error) {
             console.error('❌ Failed to start backup scheduler:', error.message);
+        }
+
+        // Initialize session auto-close scheduler
+        try {
+            scheduleSessionClosure();
+            console.log('✅ Session auto-close scheduler started successfully');
+        } catch (error) {
+            console.error('❌ Failed to start session auto-close scheduler:', error.message);
         }
     });
 }).catch(err => {

@@ -136,7 +136,7 @@ export default function Layout() {
     }, []);
 
     return (
-        <div className="flex h-screen w-full bg-gradient-to-r from-emerald-50 to-yellow-50">
+        <div className="flex h-screen w-full  bg-gray-50">
             <Sidebar isOpen={isOpen} toggle={() => setIsOpen(!isOpen)} />
 
             <div className="flex-1 flex flex-col pt-3 pe-1">
@@ -150,7 +150,7 @@ export default function Layout() {
                         <PanelLeft />
                     </button>
 
-                    <div className="flex items-center justify-between gap-3 bg-white px-3 py-2 rounded-full">
+                    <div className="flex items-center justify-between gap-3 bg-white px-3 py-2 rounded-full border-2 border-gray-200">
                         <button
                             onClick={handlePOSClick}
                             className="px-7 py-2 bg-gray-800 text-white rounded-full flex items-center gap-4 hover:bg-gray-900 transition cursor-pointer"

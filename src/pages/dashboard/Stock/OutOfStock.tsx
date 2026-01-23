@@ -13,16 +13,18 @@ import {
     ArrowDownRight,
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
 import TypeableSelect from "../../../components/TypeableSelect.tsx";
 import { productService } from '../../../services/productService';
 import { categoryService } from '../../../services/categoryService';
 import { supplierService } from '../../../services/supplierService';
 import { stockService } from '../../../services/stockService';
 import toast, { Toaster } from 'react-hot-toast';
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 function OutOfStock() {
- 
+
     const [outOfStockCount, setOutOfStockCount] = useState<number>(0);
     const [summaryData, setSummaryData] = useState({
         totalProducts: 0,
@@ -69,7 +71,7 @@ function OutOfStock() {
         },
     ];
 
-       // State for out-of-stock data
+    // State for out-of-stock data
     const [stockData, setStockData] = useState<any[]>([]);
     const [isLoadingStock, setIsLoadingStock] = useState(false);
 
@@ -117,8 +119,6 @@ function OutOfStock() {
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
     const [selectedSupplier, setSelectedSupplier] = useState<string | null>(null);
     const [selectedProduct, setSelectedProduct] = useState<string | null>(null);
-    const [fromDate, setFromDate] = useState<string>('');
-    const [toDate, setToDate] = useState<string>('');
 
     // Dropdown options state
     const [categories, setCategories] = useState<SelectOption[]>([]);
@@ -173,36 +173,41 @@ function OutOfStock() {
 
     // Search functionality
     const handleSearch = async () => {
-        if (!selectedProduct && !selectedCategory && !selectedSupplier && !fromDate && !toDate) {
-            toast.error('Please select at least one filter');
-            return;
-        }
-
         setIsLoadingStock(true);
         try {
-            const filters = {
-                product: selectedProduct || undefined,
-                category: selectedCategory || undefined,
-                supplier: selectedSupplier || undefined,
-                fromDate: fromDate || undefined,
-                toDate: toDate || undefined
-            };
-
-            const response = await stockService.searchOutOfStock(filters);
-            console.log(response);
-
-            if (response.data?.success) {
-                setStockData(response.data.data || []);
-                setCurrentPage(1);
-                setSelectedIndex(0);
-                if (response.data.count > 0) {
-                    toast.success(`Found ${response.data.count} out-of-stock items`);
+            // If no filters selected, load all data
+            if (!selectedProduct && !selectedCategory && !selectedSupplier) {
+                const response = await stockService.getOutOfStockList();
+                if (response.data?.success) {
+                    setStockData(response.data.data);
+                    setCurrentPage(1);
+                    setSelectedIndex(0);
+                    const count = response.data.count || response.data.data.length;
+                    toast.success(`Found ${count} out-of-stock items`);
                 } else {
-                    toast.error('No out-of-stock items found matching the criteria');
+                    toast.error('Failed to load out-of-stock data');
                 }
             } else {
-                toast.error('Search failed');
-                setStockData([]);
+                // Search with filters
+                const filters = {
+                    product: selectedProduct || undefined,
+                    category: selectedCategory || undefined,
+                    supplier: selectedSupplier || undefined
+                };
+
+                const response = await stockService.searchOutOfStock(filters);
+                console.log(response);
+
+                if (response.data?.success) {
+                    setStockData(response.data.data || []);
+                    setCurrentPage(1);
+                    setSelectedIndex(0);
+                    const count = response.data.count || response.data.data.length;
+                    toast.success(`Found ${count} out-of-stock items`);
+                } else {
+                    toast.error('Search failed');
+                    setStockData([]);
+                }
             }
         } catch (error) {
             console.error('Error searching out-of-stock data:', error);
@@ -218,11 +223,144 @@ function OutOfStock() {
         setSelectedProduct(null);
         setSelectedCategory(null);
         setSelectedSupplier(null);
-        setFromDate('');
-        setToDate('');
         setCurrentPage(1);
         loadOutOfStockData();
         toast.success('Filters cleared');
+    };
+
+    // Export to Excel
+    const handleExportExcel = () => {
+        try {
+            const exportData = stockData.map((item, index) => ({
+                'No': index + 1,
+                'Product ID': item.productID,
+                'Product Name': item.productName,
+                'Unit': item.unit,
+                'Cost Price': item.costPrice,
+                'MRP': item.MRP,
+                'Price': item.Price,
+                'Supplier': item.supplier,
+                'Stock': item.stockQty
+            }));
+
+            const ws = XLSX.utils.json_to_sheet(exportData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Out of Stock');
+
+            const timestamp = new Date().toISOString().split('T')[0];
+            XLSX.writeFile(wb, `Out_Of_Stock_${timestamp}.xlsx`);
+            toast.success('Excel file exported successfully');
+        } catch (error) {
+            console.error('Error exporting Excel:', error);
+            toast.error('Failed to export Excel file');
+        }
+    };
+
+    // Export to CSV
+    const handleExportCSV = () => {
+        try {
+            const headers = ['No', 'Product ID', 'Product Name', 'Unit', 'Cost Price', 'MRP', 'Price', 'Supplier', 'Stock'];
+            const csvData = stockData.map((item, index) => [
+                index + 1,
+                item.productID,
+                item.productName,
+                item.unit,
+                item.costPrice,
+                item.MRP,
+                item.Price,
+                item.supplier,
+                item.stockQty
+            ]);
+
+            const csvContent = [
+                headers.join(','),
+                ...csvData.map(row => row.map(cell => `"${cell}"`).join(','))
+            ].join('\n');
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            const timestamp = new Date().toISOString().split('T')[0];
+
+            link.setAttribute('href', url);
+            link.setAttribute('download', `Out_Of_Stock_${timestamp}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            toast.success('CSV file exported successfully');
+        } catch (error) {
+            console.error('Error exporting CSV:', error);
+            toast.error('Failed to export CSV file');
+        }
+    };
+
+    // Export to PDF
+    const handleExportPDF = () => {
+        try {
+            const doc = new jsPDF();
+
+            // Add title
+            doc.setFontSize(18);
+            doc.text('Out of Stock Report', 14, 22);
+
+            // Add date
+            doc.setFontSize(10);
+            doc.text(`Generated on: ${new Date().toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            })}`, 14, 30);
+
+            // Prepare table data
+            const tableData = stockData.map((item, index) => [
+                index + 1,
+                item.productID,
+                item.productName,
+                item.unit,
+                item.costPrice,
+                item.MRP,
+                item.Price,
+                item.supplier,
+                item.stockQty
+            ]);
+
+            // Add table
+            autoTable(doc, {
+                startY: 35,
+                head: [['No', 'Product ID', 'Product Name', 'Unit', 'Cost Price', 'MRP', 'Price', 'Supplier', 'Stock']],
+                body: tableData,
+                theme: 'grid',
+                headStyles: {
+                    fillColor: [239, 68, 68],
+                    textColor: 255,
+                    fontStyle: 'bold'
+                },
+                styles: {
+                    fontSize: 8,
+                    cellPadding: 2
+                },
+                columnStyles: {
+                    0: { cellWidth: 10 },
+                    1: { cellWidth: 20 },
+                    2: { cellWidth: 35 },
+                    3: { cellWidth: 15 },
+                    4: { cellWidth: 20 },
+                    5: { cellWidth: 20 },
+                    6: { cellWidth: 20 },
+                    7: { cellWidth: 30 },
+                    8: { cellWidth: 15 }
+                }
+            });
+
+            const timestamp = new Date().toISOString().split('T')[0];
+            doc.save(`Out_Of_Stock_${timestamp}.pdf`);
+            toast.success('PDF file exported successfully');
+        } catch (error) {
+            console.error('Error exporting PDF:', error);
+            toast.error('Failed to export PDF file');
+        }
     };
 
     const [selectedIndex, setSelectedIndex] = useState(0);
@@ -242,18 +380,58 @@ function OutOfStock() {
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
+            // Prevent keyboard shortcuts when typing in input fields
+            const target = e.target as HTMLElement;
+            if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+                return;
+            }
+
+            if (e.key === 'F2') {
+                e.preventDefault();
+                const searchInput = document.getElementById('filter-product');
+                if (searchInput) {
+                    searchInput.focus();
+                }
+                return;
+            }
+
             if (e.key === "ArrowDown") {
                 e.preventDefault();
                 setSelectedIndex((prev) => (prev < currentStockData.length - 1 ? prev + 1 : prev));
             } else if (e.key === "ArrowUp") {
                 e.preventDefault();
                 setSelectedIndex((prev) => (prev > 0 ? prev - 1 : prev));
+            } else if (e.key === "PageDown") {
+                e.preventDefault();
+                if (currentPage < totalPages) {
+                    goToNextPage();
+                }
+            } else if (e.key === "PageUp") {
+                e.preventDefault();
+                if (currentPage > 1) {
+                    goToPreviousPage();
+                }
+            } else if (e.key === "Home") {
+                e.preventDefault();
+                setSelectedIndex(0);
+            } else if (e.key === "End") {
+                e.preventDefault();
+                setSelectedIndex(currentStockData.length - 1);
+            } else if (e.key === "Enter" && currentStockData.length > 0) {
+                e.preventDefault();
+                const selectedItem = currentStockData[selectedIndex];
+                if (selectedItem) {
+                    toast.success(`Selected: ${selectedItem.productName} (ID: ${selectedItem.productID})`);
+                }
+            } else if (e.key === "Escape") {
+                e.preventDefault();
+                setSelectedIndex(0);
             }
         };
 
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [currentStockData.length]);
+    }, [currentStockData.length, selectedIndex, currentStockData, currentPage, totalPages]);
 
     const goToPage = (page: number) => {
         if (page >= 1 && page <= totalPages) {
@@ -309,31 +487,40 @@ function OutOfStock() {
         <>
             <div className={'flex flex-col gap-4 h-full'}>
                 {/* Header */}
-                <div>
-                    <div className="text-sm text-gray-400 flex items-center">
-                        <span>Stock</span>
-                        <span className="mx-2">›</span>
-                        <span className="text-gray-700 font-medium">Out of Stock</span>
+                <div className="flex items-center justify-between">
+                    <div>
+                        <div className="text-sm text-gray-400 flex items-center">
+                            <span>Stock</span>
+                            <span className="mx-2">›</span>
+                            <span className="text-gray-700 font-medium">Out of Stock</span>
+                        </div>
+                        <h1 className="text-3xl font-semibold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
+                            Out of Stock
+                        </h1>
                     </div>
-                    <h1 className="text-3xl font-semibold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
-                        Out of Stock
-                    </h1>
+
+                    <div className="hidden lg:flex items-center gap-3 bg-white px-4 py-2 rounded-xl border border-gray-100 shadow-sm border-b-2">
+                        <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg border border-gray-200">
+                            <span className="text-[10px] font-black text-gray-500 bg-white px-1.5 py-0.5 rounded shadow-sm border border-gray-200">↑↓</span>
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Navigate</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg border border-gray-200">
+                            <span className="text-[10px] font-black text-gray-500 bg-white px-1.5 py-0.5 rounded shadow-sm border border-gray-200">F2</span>
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Filters</span>
+                        </div>
+                    </div>
                 </div>
 
                 {/* Stats Cards */}
                 <div className={'grid md:grid-cols-4 grid-cols-1 gap-4'}>
                     {summaryCards.map((stat, i) => (
-                        <motion.div
+                        <div
                             key={i}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: i * 0.1 }}
-                            whileHover={{ scale: 1.05, y: -2 }}
-                            className={`flex items-center p-4 space-x-3 transition-all bg-white rounded-2xl shadow-lg hover:shadow-xl ${stat.bgGlow} cursor-pointer group relative overflow-hidden`}
+                            className={`flex items-center p-4 space-x-3 transition-all bg-white rounded-2xl border border-gray-200 cursor-pointer group relative overflow-hidden`}
                         >
                             <div className="absolute inset-0 bg-gradient-to-br from-transparent via-gray-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
 
-                            <div className={`p-3 rounded-full ${stat.color} shadow-md relative z-10`}>
+                            <div className={`p-3 rounded-full ${stat.color} shadow-sm relative z-10`}>
                                 <stat.icon className={`w-6 h-6 ${stat.iconColor}`} />
                             </div>
 
@@ -349,24 +536,22 @@ function OutOfStock() {
                                 </div>
                                 <p className="text-sm font-bold text-gray-700">{stat.value}</p>
                             </div>
-                        </motion.div>
+                        </div>
                     ))}
                 </div>
 
                 {/* Filter Section */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.6 }}
-                    className={'bg-white rounded-xl p-4 flex flex-col shadow-lg'}
+                <div
+                    className={'bg-white rounded-xl p-4 flex flex-col border border-gray-200'}
                 >
                     <h2 className="text-xl font-semibold text-gray-700 mb-3">Filter</h2>
-                    <div className={'grid md:grid-cols-6 gap-4'}>
+                    <div className={'grid md:grid-cols-4 gap-4'}>
                         <div>
                             <label htmlFor="product" className="block text-sm font-medium text-gray-700 mb-1">
                                 Product
                             </label>
                             <TypeableSelect
+                                id="filter-product"
                                 options={products}
                                 value={selectedProduct}
                                 onChange={(opt) => setSelectedProduct(opt?.value as string || null)}
@@ -398,30 +583,6 @@ function OutOfStock() {
                                 disabled={isLoadingDropdowns}
                             />
                         </div>
-                        <div>
-                            <label htmlFor="fromDate" className="block text-sm font-medium text-gray-700 mb-1">
-                                From Date
-                            </label>
-                            <input
-                                type="date"
-                                id="fromDate"
-                                value={fromDate}
-                                onChange={(e) => setFromDate(e.target.value)}
-                                className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-red-400 focus:outline-none transition-all"
-                            />
-                        </div>
-                        <div>
-                            <label htmlFor="toDate" className="block text-sm font-medium text-gray-700 mb-1">
-                                To Date
-                            </label>
-                            <input
-                                type="date"
-                                id="toDate"
-                                value={toDate}
-                                onChange={(e) => setToDate(e.target.value)}
-                                className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-red-400 focus:outline-none transition-all"
-                            />
-                        </div>
                         <div className={'grid grid-cols-2 md:items-end items-start gap-2 text-white font-medium'}>
                             <button
                                 onClick={handleSearch}
@@ -437,14 +598,11 @@ function OutOfStock() {
                             </button>
                         </div>
                     </div>
-                </motion.div>
+                </div>
 
                 {/* Stock Table */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.7 }}
-                    className={'flex flex-col bg-white rounded-xl h-full p-4 justify-between shadow-lg'}
+                <div
+                    className={'flex flex-col bg-white rounded-xl h-full p-4 justify-between border border-gray-200'}
                 >
                     <div className="overflow-y-auto max-h-md md:h-[320px] lg:h-[500px] rounded-lg scrollbar-thin scrollbar-thumb-red-300 scrollbar-track-gray-100">
                         <table className="min-w-full divide-y divide-gray-200">
@@ -491,8 +649,8 @@ function OutOfStock() {
                                             key={`${item.productID}-${currentPage}-${index}`}
                                             onClick={() => setSelectedIndex(index)}
                                             className={`cursor-pointer transition-all ${selectedIndex === index
-                                                    ? 'bg-red-50 border-l-4 border-l-red-500'
-                                                    : 'hover:bg-gray-50'
+                                                ? 'bg-red-50 border-l-4 border-l-red-500'
+                                                : 'hover:bg-gray-50'
                                                 }`}
                                         >
                                             <td className="px-6 py-2 whitespace-nowrap text-sm font-semibold text-gray-800">
@@ -540,8 +698,8 @@ function OutOfStock() {
                                 onClick={goToPreviousPage}
                                 disabled={currentPage === 1}
                                 className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${currentPage === 1
-                                        ? 'text-gray-400 cursor-not-allowed'
-                                        : 'text-gray-600 hover:text-red-600 hover:bg-red-50'
+                                    ? 'text-gray-400 cursor-not-allowed'
+                                    : 'text-gray-600 hover:text-red-600 hover:bg-red-50'
                                     }`}
                             >
                                 <ChevronLeft className="mr-2 h-5 w-5" /> Previous
@@ -553,8 +711,8 @@ function OutOfStock() {
                                         key={index}
                                         onClick={() => goToPage(page)}
                                         className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${currentPage === page
-                                                ? 'bg-gradient-to-r from-red-500 to-red-600 text-white shadow-md'
-                                                : 'text-gray-600 hover:bg-red-50 hover:text-red-600'
+                                            ? 'bg-gradient-to-r from-red-500 to-red-600 text-white shadow-md'
+                                            : 'text-gray-600 hover:bg-red-50 hover:text-red-600'
                                             }`}
                                     >
                                         {page}
@@ -570,33 +728,36 @@ function OutOfStock() {
                                 onClick={goToNextPage}
                                 disabled={currentPage === totalPages}
                                 className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${currentPage === totalPages
-                                        ? 'text-gray-400 cursor-not-allowed'
-                                        : 'text-gray-600 hover:text-red-600 hover:bg-red-50'
+                                    ? 'text-gray-400 cursor-not-allowed'
+                                    : 'text-gray-600 hover:text-red-600 hover:bg-red-50'
                                     }`}
                             >
                                 Next <ChevronRight className="ml-2 h-5 w-5" />
                             </button>
                         </div>
                     </nav>
-                </motion.div>
+                </div>
 
                 {/* Export Buttons */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.8 }}
-                    className={'bg-white flex justify-center p-4 gap-4 rounded-xl shadow-lg'}
+                <div
+                    className={'bg-white flex justify-center p-4 gap-4 rounded-xl border border-gray-200'}
                 >
-                    <button className={'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 px-6 py-2 font-medium text-white rounded-lg flex gap-2 items-center shadow-lg shadow-emerald-200 hover:shadow-xl transition-all'}>
+                    <button
+                        onClick={handleExportExcel}
+                        className={'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 px-6 py-2 font-medium text-white rounded-lg flex gap-2 items-center shadow-lg shadow-emerald-200 hover:shadow-xl transition-all'}>
                         <FileText size={15} />Excel
                     </button>
-                    <button className={'bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 px-6 py-2 font-medium text-white rounded-lg flex gap-2 items-center shadow-lg shadow-yellow-200 hover:shadow-xl transition-all'}>
+                    <button
+                        onClick={handleExportCSV}
+                        className={'bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 px-6 py-2 font-medium text-white rounded-lg flex gap-2 items-center shadow-lg shadow-yellow-200 hover:shadow-xl transition-all'}>
                         <FileText size={15} />CSV
                     </button>
-                    <button className={'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 px-6 py-2 font-medium text-white rounded-lg flex gap-2 items-center shadow-lg shadow-red-200 hover:shadow-xl transition-all'}>
+                    <button
+                        onClick={handleExportPDF}
+                        className={'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 px-6 py-2 font-medium text-white rounded-lg flex gap-2 items-center shadow-lg shadow-red-200 hover:shadow-xl transition-all'}>
                         <FileText size={15} />PDF
                     </button>
-                </motion.div>
+                </div>
             </div>
             <Toaster
                 position="top-right"

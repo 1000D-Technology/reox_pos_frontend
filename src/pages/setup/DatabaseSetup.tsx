@@ -9,6 +9,7 @@ interface DBConfig {
     DB_PASSWORD: string;
     DB_NAME: string;
     PORT: string;
+    DB_PORT: string;
 }
 
 function DatabaseSetup() {
@@ -20,10 +21,11 @@ function DatabaseSetup() {
     const [isValidating, setIsValidating] = useState(false);
     const [config, setConfig] = useState<DBConfig>({
         DB_HOST: 'localhost',
-        DB_USER: 'root',
+        DB_USER: '',
         DB_PASSWORD: '',
-        DB_NAME: 'reox_db',
-        PORT: '5000'
+        DB_NAME: '',
+        PORT: '3000',
+        DB_PORT: '3306'
     });
     const [isChecking, setIsChecking] = useState(true);
     const [isTesting, setIsTesting] = useState(false);
@@ -41,7 +43,7 @@ function DatabaseSetup() {
 
     const checkEnvExists = async () => {
         try {
-            const response = await fetch('http://localhost:5000/api/setup/check-env');
+            const response = await fetch('http://localhost:3000/api/setup/check-env');
             const data = await response.json();
 
             if (data.exists && data.connected) {
@@ -92,7 +94,7 @@ function DatabaseSetup() {
             addLog(`🗄️  Accessing database: ${config.DB_NAME}`);
             await new Promise(resolve => setTimeout(resolve, 500));
 
-            const response = await fetch('http://localhost:5000/api/setup/test-connection', {
+            const response = await fetch('http://localhost:3000/api/setup/test-connection', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(config)
@@ -298,6 +300,18 @@ function DatabaseSetup() {
                                 </div>
 
                                 <div>
+                                    <label className="block mb-2 text-sm font-medium text-gray-700">Database Port</label>
+                                    <input
+                                        type="text"
+                                        name="DB_PORT"
+                                        value={config.DB_PORT}
+                                        onChange={handleInputChange}
+                                        className="bg-white border-2 border-emerald-200 focus:border-emerald-500 text-sm rounded-xl w-full p-3 focus:ring-4 focus:ring-emerald-100 transition-all"
+                                        placeholder="3306"
+                                    />
+                                </div>
+
+                                <div>
                                     <label className="block mb-2 text-sm font-medium text-gray-700">Server Port</label>
                                     <input
                                         type="text"
@@ -305,7 +319,7 @@ function DatabaseSetup() {
                                         value={config.PORT}
                                         onChange={handleInputChange}
                                         className="bg-white border-2 border-emerald-200 focus:border-emerald-500 text-sm rounded-xl w-full p-3 focus:ring-4 focus:ring-emerald-100 transition-all"
-                                        placeholder="5000"
+                                        placeholder="3000"
                                     />
                                 </div>
                             </div>

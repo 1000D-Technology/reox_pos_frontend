@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Printer, Upload, Settings as SettingsIcon, Save, RefreshCw, Image, FileText, Ruler, DollarSign, ShoppingCart, Package, Bell, Lock, Globe, CreditCard, BarChart3 } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
+import CustomConfirmModal from '../../components/common/CustomConfirmModal';
 import type { PrintSettings, POSSettings, SystemSettings, PaymentSettings } from '../../types/settingConfig';
 import { RollSize, FontSize, Language, Timezone, DateFormat, TimeFormat, Theme, BackupFrequency, SettingsTab } from '../../enum/settings';
 
@@ -8,6 +9,7 @@ function Setting() {
     const [activeTab, setActiveTab] = useState<string>(SettingsTab.PRINT);
     const [logoPreview, setLogoPreview] = useState<string>('');
     const [logoFile, setLogoFile] = useState<File | null>(null);
+    const [showResetConfirm, setShowResetConfirm] = useState(false);
 
     const [printSettings, setPrintSettings] = useState<PrintSettings>({
         rollSize: RollSize.SIZE_80MM,
@@ -148,7 +150,7 @@ function Setting() {
         }
     };
 
-    const resetSettings = () => {
+    const handleConfirmReset = () => {
         const tabNames: { [key: string]: string } = {
             [SettingsTab.PRINT]: 'Print Settings',
             [SettingsTab.POS]: 'POS Settings',
@@ -156,94 +158,97 @@ function Setting() {
             [SettingsTab.PAYMENT]: 'Payment Settings'
         };
 
-        if (confirm(`Are you sure you want to reset ${tabNames[activeTab]} to default?`)) {
-            switch (activeTab) {
-                case SettingsTab.PRINT:
-                    // Reset print settings and logo
-                    localStorage.removeItem('printSettings');
-                    localStorage.removeItem('logoPath');
+        switch (activeTab) {
+            case SettingsTab.PRINT:
+                // Reset print settings and logo
+                localStorage.removeItem('printSettings');
+                localStorage.removeItem('logoPath');
 
-                    setPrintSettings({
-                        rollSize: RollSize.SIZE_80MM,
-                        fontSize: FontSize.MEDIUM,
-                        headerText: 'WELCOME TO OUR STORE',
-                        footerText: 'Thank you for your purchase!',
-                        showLogo: true,
-                        showBarcode: true,
-                        showQR: false,
-                        paperWidth: '80',
-                        copies: 1,
-                        autocut: true,
-                        printDate: true,
-                        printTime: true
-                    });
+                setPrintSettings({
+                    rollSize: RollSize.SIZE_80MM,
+                    fontSize: FontSize.MEDIUM,
+                    headerText: 'WELCOME TO OUR STORE',
+                    footerText: 'Thank you for your purchase!',
+                    showLogo: true,
+                    showBarcode: true,
+                    showQR: false,
+                    paperWidth: '80',
+                    copies: 1,
+                    autocut: true,
+                    printDate: true,
+                    printTime: true
+                });
 
-                    setLogoPreview('');
-                    setLogoFile(null);
+                setLogoPreview('');
+                setLogoFile(null);
 
-                    toast.success('Print settings reset to default successfully!');
-                    break;
+                toast.success('Print settings reset to default successfully!');
+                break;
 
-                case SettingsTab.POS:
-                    // Reset POS settings only
-                    localStorage.removeItem('posSettings');
+            case SettingsTab.POS:
+                // Reset POS settings only
+                localStorage.removeItem('posSettings');
 
-                    setPOSSettings({
-                        storeName: 'My POS Store',
-                        storeAddress: '123 Main Street, City',
-                        storePhone: '+1 234 567 8900',
-                        storeEmail: 'store@example.com',
-                        taxRate: 10,
-                        currency: 'Rs.',
-                        defaultDiscount: 0,
-                        lowStockAlert: 10,
-                        enableSound: true,
-                        enableVibration: false,
-                        quickSaleMode: false,
-                        showCustomerDisplay: true
-                    });
+                setPOSSettings({
+                    storeName: 'My POS Store',
+                    storeAddress: '123 Main Street, City',
+                    storePhone: '+1 234 567 8900',
+                    storeEmail: 'store@example.com',
+                    taxRate: 10,
+                    currency: 'Rs.',
+                    defaultDiscount: 0,
+                    lowStockAlert: 10,
+                    enableSound: true,
+                    enableVibration: false,
+                    quickSaleMode: false,
+                    showCustomerDisplay: true
+                });
 
-                    toast.success('POS settings reset to default successfully!');
-                    break;
+                toast.success('POS settings reset to default successfully!');
+                break;
 
-                case SettingsTab.SYSTEM:
-                    // Reset system settings only
-                    localStorage.removeItem('systemSettings');
+            case SettingsTab.SYSTEM:
+                // Reset system settings only
+                localStorage.removeItem('systemSettings');
 
-                    setSystemSettings({
-                        language: Language.ENGLISH,
-                        timezone: Timezone.UTC,
-                        dateFormat: DateFormat.DD_MM_YYYY,
-                        timeFormat: TimeFormat.TWENTY_FOUR_HOUR,
-                        theme: Theme.LIGHT,
-                        notifications: true,
-                        autoBackup: true,
-                        backupFrequency: BackupFrequency.DAILY
-                    });
+                setSystemSettings({
+                    language: Language.ENGLISH,
+                    timezone: Timezone.UTC,
+                    dateFormat: DateFormat.DD_MM_YYYY,
+                    timeFormat: TimeFormat.TWENTY_FOUR_HOUR,
+                    theme: Theme.LIGHT,
+                    notifications: true,
+                    autoBackup: true,
+                    backupFrequency: BackupFrequency.DAILY
+                });
 
-                    toast.success('System settings reset to default successfully!');
-                    break;
+                toast.success('System settings reset to default successfully!');
+                break;
 
-                case SettingsTab.PAYMENT:
-                    // Reset payment settings to default
-                    localStorage.removeItem('paymentSettings');
+            case SettingsTab.PAYMENT:
+                // Reset payment settings to default
+                localStorage.removeItem('paymentSettings');
 
-                    setPaymentSettings({
-                        cash: true,
-                        card: true,
-                        digitalWallet: false,
-                        bankTransfer: false
-                    });
+                setPaymentSettings({
+                    cash: true,
+                    card: true,
+                    digitalWallet: false,
+                    bankTransfer: false
+                });
 
-                    toast.success('Payment settings reset to default successfully!');
-                    break;
+                toast.success('Payment settings reset to default successfully!');
+                break;
 
-                default:
-                    toast.error('Unknown settings tab');
-            }
-
-            console.log(`${tabNames[activeTab]} reset to default`);
+            default:
+                toast.error('Unknown settings tab');
         }
+
+        console.log(`${tabNames[activeTab]} reset to default`);
+        setShowResetConfirm(false);
+    };
+
+    const resetSettings = () => {
+        setShowResetConfirm(true);
     };
 
     const tabs = [
@@ -308,12 +313,12 @@ function Setting() {
                     <div
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id)}
-                        className={`flex items-center p-4 space-x-3 transition-all bg-white rounded-2xl shadow-lg hover:shadow-xl cursor-pointer group relative overflow-hidden ${activeTab === tab.id ? 'ring-2 ring-green-500' : ''
+                        className={`flex items-center p-4 space-x-3 transition-all bg-white rounded-2xl border cursor-pointer group relative overflow-hidden ${activeTab === tab.id ? 'bg-green-50 border-green-500' : 'border-gray-200'
                             }`}
                     >
                         <div className="absolute inset-0 bg-gradient-to-br from-transparent via-gray-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
 
-                        <div className={`p-3 rounded-full ${tab.color} shadow-md relative z-10`}>
+                        <div className={`p-3 rounded-full ${tab.color} relative z-10`}>
                             <tab.icon className="w-6 h-6 text-white" />
                         </div>
 
@@ -333,7 +338,7 @@ function Setting() {
             {activeTab === SettingsTab.PRINT && (
                 <div className="space-y-6">
                     {/* Logo Upload Section */}
-                    <div className="bg-white rounded-lg shadow-md p-6">
+                    <div className="bg-white rounded-lg border border-gray-200 p-6">
                         <h3 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
                             <Image className="w-6 h-6 text-blue-600" />
                             Store Logo
@@ -373,7 +378,7 @@ function Setting() {
                     </div>
 
                     {/* Print Configuration */}
-                    <div className="bg-white rounded-lg shadow-md p-6">
+                    <div className="bg-white rounded-lg border border-gray-200 p-6">
                         <h3 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
                             <Printer className="w-6 h-6 text-blue-600" />
                             Print Configuration
@@ -387,7 +392,7 @@ function Setting() {
                                 <select
                                     value={printSettings.rollSize}
                                     onChange={(e) => handlePrintSettingChange('rollSize', e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 outline-none"
                                 >
                                     <option value={RollSize.SIZE_57MM}>57mm (2.25 inches)</option>
                                     <option value={RollSize.SIZE_80MM}>80mm (3.15 inches)</option>
@@ -402,7 +407,7 @@ function Setting() {
                                     type="number"
                                     value={printSettings.paperWidth}
                                     onChange={(e) => handlePrintSettingChange('paperWidth', e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 outline-none"
                                 />
                             </div>
 
@@ -411,7 +416,7 @@ function Setting() {
                                 <select
                                     value={printSettings.fontSize}
                                     onChange={(e) => handlePrintSettingChange('fontSize', e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 outline-none"
                                 >
                                     <option value={FontSize.SMALL}>Small</option>
                                     <option value={FontSize.MEDIUM}>Medium</option>
@@ -428,7 +433,7 @@ function Setting() {
                                     max="5"
                                     value={printSettings.copies}
                                     onChange={(e) => handlePrintSettingChange('copies', parseInt(e.target.value))}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 outline-none"
                                 />
                             </div>
 
@@ -438,7 +443,7 @@ function Setting() {
                                     type="text"
                                     value={printSettings.headerText}
                                     onChange={(e) => handlePrintSettingChange('headerText', e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 outline-none"
                                 />
                             </div>
 
@@ -448,7 +453,7 @@ function Setting() {
                                     type="text"
                                     value={printSettings.footerText}
                                     onChange={(e) => handlePrintSettingChange('footerText', e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 outline-none"
                                 />
                             </div>
                         </div>
@@ -459,7 +464,7 @@ function Setting() {
                                     type="checkbox"
                                     checked={printSettings.showLogo}
                                     onChange={(e) => handlePrintSettingChange('showLogo', e.target.checked)}
-                                    className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                                    className="w-4 h-4 text-blue-600 rounded"
                                 />
                                 <span className="text-sm text-gray-700">Show Logo</span>
                             </label>
@@ -469,7 +474,7 @@ function Setting() {
                                     type="checkbox"
                                     checked={printSettings.showBarcode}
                                     onChange={(e) => handlePrintSettingChange('showBarcode', e.target.checked)}
-                                    className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                                    className="w-4 h-4 text-blue-600 rounded"
                                 />
                                 <span className="text-sm text-gray-700">Show Barcode</span>
                             </label>
@@ -479,7 +484,7 @@ function Setting() {
                                     type="checkbox"
                                     checked={printSettings.showQR}
                                     onChange={(e) => handlePrintSettingChange('showQR', e.target.checked)}
-                                    className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                                    className="w-4 h-4 text-blue-600 rounded"
                                 />
                                 <span className="text-sm text-gray-700">Show QR Code</span>
                             </label>
@@ -489,7 +494,7 @@ function Setting() {
                                     type="checkbox"
                                     checked={printSettings.autocut}
                                     onChange={(e) => handlePrintSettingChange('autocut', e.target.checked)}
-                                    className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                                    className="w-4 h-4 text-blue-600 rounded"
                                 />
                                 <span className="text-sm text-gray-700">Auto Cut</span>
                             </label>
@@ -499,7 +504,7 @@ function Setting() {
                                     type="checkbox"
                                     checked={printSettings.printDate}
                                     onChange={(e) => handlePrintSettingChange('printDate', e.target.checked)}
-                                    className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                                    className="w-4 h-4 text-blue-600 rounded"
                                 />
                                 <span className="text-sm text-gray-700">Print Date</span>
                             </label>
@@ -509,7 +514,7 @@ function Setting() {
                                     type="checkbox"
                                     checked={printSettings.printTime}
                                     onChange={(e) => handlePrintSettingChange('printTime', e.target.checked)}
-                                    className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                                    className="w-4 h-4 text-blue-600 rounded"
                                 />
                                 <span className="text-sm text-gray-700">Print Time</span>
                             </label>
@@ -517,13 +522,13 @@ function Setting() {
                     </div>
 
                     {/* Bill Preview */}
-                    <div className="bg-white rounded-lg shadow-md p-6">
+                    <div className="bg-white rounded-lg border border-gray-200 p-6">
                         <h3 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
                             <FileText className="w-6 h-6 text-blue-600" />
                             Bill Preview
                         </h3>
                         <div className="bg-gray-50 rounded-lg p-6 max-w-md mx-auto border-2 border-dashed border-gray-300">
-                            <div className="bg-white p-4 rounded shadow">
+                            <div className="bg-white p-4 rounded border border-gray-200">
                                 {printSettings.showLogo && logoPreview && (
                                     <div className="text-center mb-3">
                                         <img src={logoPreview} alt="Logo" className="h-16 mx-auto" />
@@ -568,7 +573,7 @@ function Setting() {
             {activeTab === SettingsTab.POS && (
                 <div className="space-y-6">
                     {/* Store Information */}
-                    <div className="bg-white rounded-lg shadow-md p-6">
+                    <div className="bg-white rounded-lg border border-gray-200 p-6">
                         <h3 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
                             <ShoppingCart className="w-6 h-6 text-green-600" />
                             Store Information
@@ -580,7 +585,7 @@ function Setting() {
                                     type="text"
                                     value={posSettings.storeName}
                                     onChange={(e) => handlePOSSettingChange('storeName', e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-green-500 outline-none"
                                 />
                             </div>
 
@@ -590,7 +595,7 @@ function Setting() {
                                     type="text"
                                     value={posSettings.storePhone}
                                     onChange={(e) => handlePOSSettingChange('storePhone', e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-green-500 outline-none"
                                 />
                             </div>
 
@@ -600,7 +605,7 @@ function Setting() {
                                     type="email"
                                     value={posSettings.storeEmail}
                                     onChange={(e) => handlePOSSettingChange('storeEmail', e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-green-500 outline-none"
                                 />
                             </div>
 
@@ -610,14 +615,14 @@ function Setting() {
                                     value={posSettings.storeAddress}
                                     onChange={(e) => handlePOSSettingChange('storeAddress', e.target.value)}
                                     rows={3}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-green-500 outline-none"
                                 />
                             </div>
                         </div>
                     </div>
 
                     {/* Business Settings */}
-                    <div className="bg-white rounded-lg shadow-md p-6">
+                    <div className="bg-white rounded-lg border border-gray-200 p-6">
                         <h3 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
                             <DollarSign className="w-6 h-6 text-green-600" />
                             Business Settings
@@ -629,7 +634,7 @@ function Setting() {
                                     type="text"
                                     value={posSettings.currency}
                                     onChange={(e) => handlePOSSettingChange('currency', e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-green-500 outline-none"
                                 />
                             </div>
 
@@ -640,7 +645,7 @@ function Setting() {
                                     step="0.1"
                                     value={posSettings.taxRate}
                                     onChange={(e) => handlePOSSettingChange('taxRate', parseFloat(e.target.value))}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-green-500 outline-none"
                                 />
                             </div>
 
@@ -651,7 +656,7 @@ function Setting() {
                                     step="0.1"
                                     value={posSettings.defaultDiscount}
                                     onChange={(e) => handlePOSSettingChange('defaultDiscount', parseFloat(e.target.value))}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-green-500 outline-none"
                                 />
                             </div>
 
@@ -664,7 +669,7 @@ function Setting() {
                                     type="number"
                                     value={posSettings.lowStockAlert}
                                     onChange={(e) => handlePOSSettingChange('lowStockAlert', parseInt(e.target.value))}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-green-500 outline-none"
                                 />
                             </div>
                         </div>
@@ -675,7 +680,7 @@ function Setting() {
                                     type="checkbox"
                                     checked={posSettings.enableSound}
                                     onChange={(e) => handlePOSSettingChange('enableSound', e.target.checked)}
-                                    className="w-4 h-4 text-green-600 rounded focus:ring-green-500"
+                                    className="w-4 h-4 text-green-600 rounded"
                                 />
                                 <span className="text-sm text-gray-700">Enable Sound Effects</span>
                             </label>
@@ -685,7 +690,7 @@ function Setting() {
                                     type="checkbox"
                                     checked={posSettings.quickSaleMode}
                                     onChange={(e) => handlePOSSettingChange('quickSaleMode', e.target.checked)}
-                                    className="w-4 h-4 text-green-600 rounded focus:ring-green-500"
+                                    className="w-4 h-4 text-green-600 rounded"
                                 />
                                 <span className="text-sm text-gray-700">Quick Sale Mode</span>
                             </label>
@@ -695,7 +700,7 @@ function Setting() {
                                     type="checkbox"
                                     checked={posSettings.showCustomerDisplay}
                                     onChange={(e) => handlePOSSettingChange('showCustomerDisplay', e.target.checked)}
-                                    className="w-4 h-4 text-green-600 rounded focus:ring-green-500"
+                                    className="w-4 h-4 text-green-600 rounded"
                                 />
                                 <span className="text-sm text-gray-700">Customer Display</span>
                             </label>
@@ -708,7 +713,7 @@ function Setting() {
             {activeTab === SettingsTab.SYSTEM && (
                 <div className="space-y-6">
                     {/* General Settings */}
-                    <div className="bg-white rounded-lg shadow-md p-6">
+                    <div className="bg-white rounded-lg border border-gray-200 p-6">
                         <h3 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
                             <Globe className="w-6 h-6 text-purple-600" />
                             General Settings
@@ -719,7 +724,7 @@ function Setting() {
                                 <select
                                     value={systemSettings.language}
                                     onChange={(e) => handleSystemSettingChange('language', e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-purple-500 outline-none"
                                 >
                                     <option value={Language.ENGLISH}>English</option>
                                     <option value={Language.SPANISH}>Spanish</option>
@@ -734,7 +739,7 @@ function Setting() {
                                 <select
                                     value={systemSettings.timezone}
                                     onChange={(e) => handleSystemSettingChange('timezone', e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-purple-500 outline-none"
                                 >
                                     <option value={Timezone.UTC}>UTC</option>
                                     <option value={Timezone.EST}>EST (Eastern)</option>
@@ -749,7 +754,7 @@ function Setting() {
                                 <select
                                     value={systemSettings.dateFormat}
                                     onChange={(e) => handleSystemSettingChange('dateFormat', e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-purple-500 outline-none"
                                 >
                                     <option value={DateFormat.DD_MM_YYYY}>DD/MM/YYYY</option>
                                     <option value={DateFormat.MM_DD_YYYY}>MM/DD/YYYY</option>
@@ -762,7 +767,7 @@ function Setting() {
                                 <select
                                     value={systemSettings.timeFormat}
                                     onChange={(e) => handleSystemSettingChange('timeFormat', e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-purple-500 outline-none"
                                 >
                                     <option value={TimeFormat.TWELVE_HOUR}>12-hour (AM/PM)</option>
                                     <option value={TimeFormat.TWENTY_FOUR_HOUR}>24-hour</option>
@@ -774,7 +779,7 @@ function Setting() {
                                 <select
                                     value={systemSettings.theme}
                                     onChange={(e) => handleSystemSettingChange('theme', e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-purple-500 outline-none"
                                 >
                                     <option value={Theme.LIGHT}>Light</option>
                                     <option value={Theme.DARK}>Dark</option>
@@ -787,7 +792,7 @@ function Setting() {
                                 <select
                                     value={systemSettings.backupFrequency}
                                     onChange={(e) => handleSystemSettingChange('backupFrequency', e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-purple-500 outline-none"
                                 >
                                     <option value={BackupFrequency.HOURLY}>Hourly</option>
                                     <option value={BackupFrequency.DAILY}>Daily</option>
@@ -803,7 +808,7 @@ function Setting() {
                                     type="checkbox"
                                     checked={systemSettings.notifications}
                                     onChange={(e) => handleSystemSettingChange('notifications', e.target.checked)}
-                                    className="w-4 h-4 text-purple-600 rounded focus:ring-purple-500"
+                                    className="w-4 h-4 text-purple-600 rounded"
                                 />
                                 <span className="text-sm text-gray-700 flex items-center gap-1">
                                     <Bell className="w-4 h-4" />
@@ -816,7 +821,7 @@ function Setting() {
                                     type="checkbox"
                                     checked={systemSettings.autoBackup}
                                     onChange={(e) => handleSystemSettingChange('autoBackup', e.target.checked)}
-                                    className="w-4 h-4 text-purple-600 rounded focus:ring-purple-500"
+                                    className="w-4 h-4 text-purple-600 rounded"
                                 />
                                 <span className="text-sm text-gray-700">Enable Auto Backup</span>
                             </label>
@@ -824,7 +829,7 @@ function Setting() {
                     </div>
 
                     {/* Security Settings */}
-                    <div className="bg-white rounded-lg shadow-md p-6">
+                    <div className="bg-white rounded-lg border border-gray-200 p-6">
                         <h3 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
                             <Lock className="w-6 h-6 text-purple-600" />
                             Security Settings
@@ -844,7 +849,7 @@ function Setting() {
             {/* Payment Settings Tab */}
             {activeTab === SettingsTab.PAYMENT && (
                 <div className="space-y-6">
-                    <div className="bg-white rounded-lg shadow-md p-6">
+                    <div className="bg-white rounded-lg border border-gray-200 p-6">
                         <h3 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
                             <CreditCard className="w-6 h-6 text-orange-600" />
                             Payment Methods
@@ -925,6 +930,16 @@ function Setting() {
                     </div>
                 </div>
             )}
+
+            <CustomConfirmModal
+                isOpen={showResetConfirm}
+                onClose={() => setShowResetConfirm(false)}
+                onConfirm={handleConfirmReset}
+                title="Reset Settings"
+                message="Are you sure you want to reset the current settings to their default values? This action cannot be undone."
+                confirmText="Reset to Default"
+                variant="danger"
+            />
         </div>
     );
 }

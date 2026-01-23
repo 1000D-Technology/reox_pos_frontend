@@ -13,8 +13,10 @@ import { CustomerRegistrationModal } from '../../components/pos/CustomerRegistra
 import { BulkLooseModal } from '../../components/pos/BulkLooseModal';
 import { CashManagementModal } from '../../components/pos/CashManagementModal';
 import { CartPanel } from "../../components/pos/CartPanel.tsx";
+import { ProductAddModal } from '../../components/pos/ProductAddModal';
 import type { Product, CartItem, PaymentAmount } from '../../types';
 import toast, { Toaster } from 'react-hot-toast';
+import { printBill } from '../../utils/billPrinter';
 
 interface Customer {
     id: number;
@@ -30,19 +32,28 @@ const mapAPIProductToProduct = (apiData: any): Product => {
     const item = Array.isArray(apiData) ? apiData[0] : apiData;
 
     return {
-        id: item.id || item.stockID,
-        name: item.name || item.displayName,
-        barcode: item.barcode,
-        price: Number(item.price || 0),
-        wholesalePrice: Number(item.wholesalePrice || 0),
-        stock: Number(item.stock || 0),
-        category: item.category || item.unit || 'Pcs',
-        productCode: item.productCode || '',
-        isBulk: Boolean(item.isBulk) || String(item.unit || '').toLowerCase().includes('kg'),
-        batch: item.batch || '',
-        expiry: item.expiry || null
+        id: item.stockID || item.stock_id || item.productID || item.id,
+        name: item.displayName || item.productName || item.name,
+        barcode: item.barcode || '',
+        price: parseFloat(item.price || item.Price || item.selling_price) || 0,
+        wholesalePrice: parseFloat(item.wholesalePrice || item.wsp) || 0,
+        stock: parseInt(item.currentStock || item.stockQty || item.stock || item.qty) || 0,
+        category: item.unit || item.category || 'Pcs',
+        productCode: item.productCode || item.product_id_code || '',
+        isBulk: Boolean(item.isBulk) || String(item.unit || '').toLowerCase().includes('kg') || String(item.unit || '').toLowerCase().includes('bag'),
+        batch: item.batchName || item.batch || item.batch_name || '',
+        expiry: item.expiry || item.exp || null
     };
 };
+
+
+const demoCustomers: Customer[] = [
+    { id: 1, name: 'Rajesh Kumar', contact: '0771234567' },
+    { id: 2, name: 'Priya Sharma', contact: '0772234567' },
+    { id: 3, name: 'Amit Patel', contact: '0773234567' },
+    { id: 4, name: 'Sunita Rao', contact: '0774234567' },
+    { id: 5, name: 'Vikram Singh', contact: '0775234567' },
+];
 
 const POSInterface = () => {
     const [billingMode, setBillingMode] = useState<'retail' | 'wholesale'>('retail');
@@ -61,10 +72,12 @@ const POSInterface = () => {
     const [showBulkLooseModal, setShowBulkLooseModal] = useState(false);
     const [showCashModal, setShowCashModal] = useState(false);
     const [showReturnModal, setShowReturnModal] = useState(false);
-    const [customers, setCustomers] = useState<Customer[]>([]);
-    const [customersLoading, setCustomersLoading] = useState(false);
+    const [customers, setCustomers] = useState<Customer[]>(demoCustomers);
+    const [sessionChecked, setSessionChecked] = useState(false);
+    const [showProductAddModal, setShowProductAddModal] = useState(false);
+    const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+    const [currentSession, setCurrentSession] = useState<any>(null);
 
-    // Load products from API
     useEffect(() => {
         const loadProducts = async () => {
             try {
@@ -76,6 +89,7 @@ const POSInterface = () => {
                 }
             } catch (error) {
                 console.error('Failed to load products:', error);
+                toast.error('Failed to load products');
             } finally {
                 setProductsLoading(false);
             }
@@ -83,7 +97,6 @@ const POSInterface = () => {
         loadProducts();
     }, []);
 
-    // Load active cash session
     useEffect(() => {
         const checkSession = async () => {
             try {
@@ -104,14 +117,9 @@ const POSInterface = () => {
                     return;
                 }
 
-                const { hasActiveSession, session } = await cashSessionService.checkActiveCashSession(
-                    userId,
-                    counterCode
-                );
-
-                if (hasActiveSession && session) {
-                    setCurrentCashSessionId(session.id);
-                    console.log('Active session found:', session);
+                const response = await cashSessionService.checkActiveCashSession(userId, counterCode);
+                if (response.hasActiveSession) {
+                    setCurrentSession(response.session);
                 } else {
                     localStorage.removeItem('current_counter');
                     localStorage.removeItem('session_date');
@@ -122,51 +130,95 @@ const POSInterface = () => {
                 setSessionChecked(true);
             }
         };
-
         checkSession();
     }, []);
 
-    // Barcode search effect
     useEffect(() => {
-        const isNumericSearch = /^\d+$/.test(searchTerm.trim());
+        const isAlphanumericSearch = /^[a-zA-Z0-9]+$/.test(searchTerm.trim());
 
-        if (isNumericSearch && searchTerm.length > 3) {
+        console.log('=== BARCODE SEARCH DEBUG ===');
+        console.log('Search Term:', searchTerm);
+        console.log('Is Alphanumeric:', isAlphanumericSearch);
+        console.log('Length:', searchTerm.length);
+
+        if (isAlphanumericSearch && searchTerm.length >= 6) {
             const searchBarcode = async () => {
+                console.log('🔍 BARCODE SEARCH STARTED');
+                const startTime = performance.now();
+
                 try {
                     setBarcodeSearchLoading(true);
-                    const response = await posService.searchByBarcode(searchTerm);
+                    const response = await posService.searchByBarcode(searchTerm.trim());
+                    const endTime = performance.now();
+                    const duration = (endTime - startTime).toFixed(2);
 
-                    const apiResponse = response.data;
+                    console.log('✅ API Call Success in', `${duration}ms`);
 
-                    if (apiResponse?.success && apiResponse.data) {
-                        const product = mapAPIProductToProduct(apiResponse.data);
-                        if (product.id) {
-                            addToCart(product);
-                            setSearchTerm('');
-                        } else {
-                            console.error('Product ID not found in mapped data', product);
+                    if (response.data?.success && response.data.data) {
+                        // Handle both single product and array of products
+                        const productsData = Array.isArray(response.data.data)
+                            ? response.data.data
+                            : [response.data.data];
+
+                        const matchingProducts = productsData.map(mapAPIProductToProduct);
+
+                        console.log(`📦 Found ${matchingProducts.length} product(s) with barcode ${searchTerm}`);
+
+                        if (matchingProducts.length === 1) {
+                            // Single product - directly open modal
+                            const product = matchingProducts[0];
+                            if (product.stock <= 0) {
+                                toast.error('Product is out of stock!');
+                                setSearchTerm('');
+                                return;
+                            }
+                            handleProductSelect(product);
+                            toast.success(`Found: ${product.name}`);
+                        } else if (matchingProducts.length > 1) {
+                            // Multiple products - show in filtered list
+                            setProducts(prevProducts => {
+                                const otherProducts = prevProducts.filter(
+                                    p => !matchingProducts.some((mp: Product) => mp.id === p.id)
+                                );
+                                return [...matchingProducts, ...otherProducts];
+                            });
+                            toast.success(`Found ${matchingProducts.length} products with this barcode`);
+                            setBarcodeSearchLoading(false);
+                            return; // Don't clear search term - show filtered products
                         }
+
+                        setSearchTerm('');
+                    } else {
+                        console.warn('❌ Product Not Found');
+                        toast.error('Product not found with this barcode');
+                        setSearchTerm('');
                     }
-                } catch (error) {
-                    console.error('Barcode search failed:', error);
+                } catch (error: unknown) {
+                    console.error('❌ BARCODE SEARCH FAILED');
+                    const err = error as { response?: { data?: { message?: string } } };
+                    const message = err.response?.data?.message || 'Failed to search barcode';
+                    toast.error(message);
+                    setSearchTerm('');
                 } finally {
                     setBarcodeSearchLoading(false);
                 }
             };
 
-            const debounceTimer = setTimeout(searchBarcode, 500);
+            const debounceTimer = setTimeout(searchBarcode, 300);
             return () => clearTimeout(debounceTimer);
         }
     }, [searchTerm]);
 
-    // F-Key Event Handlers
+
+
+
+
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === 'F1') {
                 e.preventDefault();
                 setShowCashModal(true);
-            }
-            if (e.key === 'F2') {
+            } if (e.key === 'F2') {
                 e.preventDefault();
                 setShowBulkLooseModal(true);
             }
@@ -182,10 +234,10 @@ const POSInterface = () => {
 
     if (!sessionChecked) {
         return (
-            <div className="h-screen flex items-center justify-center bg-gradient-to-br">
+            <div className="h-screen flex items-center justify-center">
                 <div className="text-center">
                     <div className="w-16 h-16 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-                    <p className="text-gray-600 text-lg">Checking session...</p>
+                    <p className="text-gray-600 text-lg">Loading...</p>
                 </div>
             </div>
         );
@@ -201,7 +253,9 @@ const POSInterface = () => {
 
     const subtotal = cartItems.reduce((sum, item) => {
         const itemTotal = item.price * item.quantity;
-        const itemDiscount = (itemTotal * item.discount) / 100;
+        const itemDiscount = item.discountType === 'percentage'
+            ? (itemTotal * item.discount) / 100
+            : item.discount;
         return sum + (itemTotal - itemDiscount);
     }, 0);
     const discountAmount = (subtotal * discount) / 100;
@@ -211,18 +265,39 @@ const POSInterface = () => {
     const totalPaid = paymentAmounts.reduce((sum, p) => sum + p.amount, 0);
     const remaining = total - totalPaid;
 
-    const isNumericSearch = /^\d+$/.test(searchTerm.trim());
-
-    const filteredProducts = isNumericSearch && searchTerm.length > 0
+    const isAlphanumericSearch = /^[a-zA-Z0-9]+$/.test(searchTerm.trim());
+    const filteredProducts = isAlphanumericSearch && searchTerm.length >= 6
         ? []
         : products.filter(p =>
             p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
             p.productCode.toLowerCase().includes(searchTerm.toLowerCase())
         );
 
-    const addToCart = (product: Product) => {
+    const handleProductSelect = (product: Product) => {
+        setSelectedProduct(product);
+        setShowProductAddModal(true);
+    };
+    // Update the addToCartWithDetails function signature and implementation
+    const addToCartWithDetails = (
+        product: Product,
+        quantity: number,
+        discount: number,
+        discountType: 'percentage' | 'price',
+        discountAmount: number,
+        discountedPrice: number
+    ) => {
+        if (quantity <= 0) {
+            toast.error("Quantity must be greater than 0");
+            return;
+        }
+
         if (product.stock <= 0) {
-            alert("This product is out of stock!");
+            toast.error("Product is out of stock!");
+            return;
+        }
+
+        if (quantity > product.stock) {
+            toast.error("Cannot add more than available stock");
             return;
         }
 
@@ -230,52 +305,90 @@ const POSInterface = () => {
             const existingItem = prevCart.find(item => item.id === product.id);
 
             if (existingItem) {
-                if (existingItem.quantity >= product.stock) {
-                    alert("Cannot add more than available stock");
+                const newQuantity = existingItem.quantity + quantity;
+                if (newQuantity > product.stock) {
+                    toast.error("Cannot add more than available stock");
                     return prevCart;
-                }
-                return prevCart.map(item =>
-                    item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
+                } return prevCart.map(item =>
+                    item.id === product.id
+                        ? {
+                            ...item,
+                            quantity: newQuantity,
+                            discount,
+                            discountType,
+                            discountAmount,
+                            discountedPrice: discountedPrice * (newQuantity / quantity) // Scale up for increased quantity
+                        }
+                        : item
                 );
             }
 
             const priceToUse = billingMode === 'wholesale' ? product.wholesalePrice : product.price;
-
-            const newItem: CartItem = {
+            return [...prevCart, {
                 ...product,
                 price: priceToUse,
-                quantity: 1,
-                discount: 0,
-                discountType: 'percentage' as const,
+                quantity,
+                discount,
+                discountType,
+                discountAmount,
+                discountedPrice,
                 isBulk: product.isBulk
-            };
-
-            return [...prevCart, newItem];
+            }];
         });
-    };
 
+        toast.success(`${product.name} added to cart`);
+    };
     const updateQuantity = (id: number, delta: number) => {
-        setCartItems(prevCartItems => {
-            return prevCartItems.map(item => {
+        setCartItems(prevItems => {
+            return prevItems.map(item => {
                 if (item.id === id) {
                     const newQuantity = item.quantity + delta;
-                    
-                    // Check stock limit when increasing quantity
-                    if (delta > 0) {
-                        const product = products.find(p => p.id === id);
-                        if (product && newQuantity > product.stock) {
-                            toast.error(`Cannot add more than ${product.stock} items. Only ${product.stock} in stock.`);
-                            return item; // Return unchanged item
-                        }
+                    if (newQuantity < 1) return item;
+
+                    const product = products.find(p => p.id === id);
+                    if (product && newQuantity > product.stock) {
+                        toast.error("Cannot exceed available stock");
+                        return item;
                     }
-                    
-                    return { ...item, quantity: Math.max(1, newQuantity) };
+
+                    return { ...item, quantity: newQuantity };
                 }
                 return item;
-            }).filter(item => item.quantity > 0);
+            });
         });
     };
 
+    const updateCartItem = (
+        id: number,
+        quantity: number,
+        price: number,
+        discount: number,
+        discountType: 'percentage' | 'price'
+    ) => {
+        setCartItems(prevItems =>
+            prevItems.map(item => {
+                if (item.id === id) {
+                    const subtotal = price * quantity;
+                    const discountAmount = discountType === 'percentage'
+                        ? (subtotal * discount) / 100
+                        : discount;
+                    const discountedPrice = subtotal - discountAmount;
+
+                    return {
+                        ...item,
+                        quantity,
+                        price,
+                        discount,
+                        discountType,
+                        discountAmount,
+                        discountedPrice
+                    };
+                }
+                return item;
+            })
+        );
+        toast.success('Cart item updated successfully');
+    };
     const updateItemPrice = (id: number, newPrice: number) => {
         setCartItems(cartItems.map(item =>
             item.id === id ? { ...item, price: Math.max(0, newPrice) } : item
@@ -283,9 +396,13 @@ const POSInterface = () => {
     };
 
     const updateItemDiscount = (id: number, newDiscount: number) => {
-        setCartItems(cartItems.map(item =>
-            item.id === id ? { ...item, discount: Math.max(0, Math.min(100, newDiscount)) } : item
-        ));
+        setCartItems(cartItems.map(item => {
+            if (item.id === id) {
+                const maxDiscount = item.discountType === 'percentage' ? 100 : item.price * item.quantity;
+                return { ...item, discount: Math.max(0, Math.min(maxDiscount, newDiscount)) };
+            }
+            return item;
+        }));
     };
 
     const removeFromCart = (id: number) => {
@@ -295,7 +412,8 @@ const POSInterface = () => {
 
     const clearCart = () => {
         setCartItems([]);
-        setEditingItem(null);setPaymentAmounts([]);
+        setEditingItem(null);
+        setPaymentAmounts([]);
     };
 
     const updatePaymentAmount = (methodId: string, amount: number) => {
@@ -311,47 +429,21 @@ const POSInterface = () => {
 
     const handleCustomerSearch = async (value: string) => {
         setCustomerSearchTerm(value);
-        if (!value.trim()) {
-            setSelectedCustomer(null);
-            setCustomers([]);
-            return;
-        }
-
-        try {
-            setCustomersLoading(true);
-            const response = await customerService.searchCustomers(value);
-            
-            if (response.data?.success && Array.isArray(response.data.data)) {
-                setCustomers(response.data.data);
-            } else {
-                setCustomers([]);
-            }
-        } catch (error) {
-            console.error('Customer search failed:', error);
-            setCustomers([]);
-            toast.error('Failed to search customers');
-        } finally {
-            setCustomersLoading(false);
-        }
+        if (!value) setSelectedCustomer(null);
     };
 
     const handleCustomerSelect = (customer: Customer) => {
         setSelectedCustomer(customer);
         setCustomerSearchTerm(customer.name);
-        setCustomers([]); // Clear search results after selection
     };
 
     const registerCustomer = async (name: string, contact: string, email?: string, creditBalance?: number) => {
         try {
-            const customerData = {
+            const response = await customerService.addCustomer({
                 name: name.trim(),
                 contact: contact.trim(),
-                email: email?.trim() || undefined,
-                credit_balance: creditBalance || 0
-            };
-
-            const response = await customerService.addCustomer(customerData);
-            console.log('Customer registration response:', response);
+                email: email?.trim() || undefined
+            });
 
             if (response.data.success) {
                 const customerFromAPI = response.data.data;
@@ -360,7 +452,6 @@ const POSInterface = () => {
                     name: customerFromAPI.name,
                     contact: customerFromAPI.contact,
                     email: customerFromAPI.email,
-                    credit_balance: customerFromAPI.credit_balance,
                     status_id: customerFromAPI.status_id,
                     status_name: customerFromAPI.status_name
                 };
@@ -369,17 +460,11 @@ const POSInterface = () => {
                 setSelectedCustomer(newCustomer);
                 setCustomerSearchTerm(name);
                 setShowRegistrationModal(false);
-
                 toast.success('Customer registered successfully!');
-            } else {
-                const errorMessage = response.data.message || 'Failed to register customer';
-                toast.error(errorMessage);
             }
-        } catch (error: unknown) {
+        } catch (error: any) {
             console.error('Error registering customer:', error);
-            const errorMessage = error instanceof Error
-                ? error.message
-                : 'Failed to register customer. Please try again.';
+            const errorMessage = error.response?.data?.message || 'Failed to register customer';
             toast.error(errorMessage);
         }
     };
@@ -389,6 +474,67 @@ const POSInterface = () => {
             setShowBillModal(true);
         }
     };
+    
+    const submitInvoice = async () => {
+         try {
+            if (!currentSession) {
+                toast.error('No active cash session found. Please restart the POS.');
+                return;
+            }
+            const sessionId = currentSession.id;
+            const userId = currentSession.user_id || authService.getUserId() || 1;
+             
+            const items = cartItems.map(item => ({
+                stock_id: item.id,
+                qty: item.quantity,
+                price: item.price,
+                discount: item.discountType === 'percentage' ? item.discount : 0,
+                discountAmount: item.discountType === 'price' ? item.discount : 0,
+                quantity: item.quantity
+            }));
+
+            const payload = {
+                customer_id: selectedCustomer?.id,
+                user_id: userId,
+                items,
+                payment_details: paymentAmounts,
+                discount,
+                total_amount: total,
+                sub_total: subtotal,
+                cash_session_id: sessionId
+            };
+            
+            console.log('🚀 SUBMITTING INVOICE:');
+            console.log('Payment Amounts:', paymentAmounts);
+            console.log('Total:', total);
+            console.log('Subtotal:', subtotal);
+            console.log('Full Payload:', JSON.stringify(payload, null, 2));
+            
+            const response = await posService.createInvoice(payload);
+            if (response.data?.success) {
+                toast.success('Invoice Created!');
+                
+                // Print the bill
+                const invoiceData = response.data.data;
+                printBill({
+                    invoiceId: invoiceData.id,
+                    invoiceNumber: invoiceData.invoice_number,
+                    date: new Date(invoiceData.created_at),
+                    customer: selectedCustomer,
+                    items: cartItems,
+                    subtotal: subtotal,
+                    discount: discount,
+                    total: total,
+                    paymentAmounts: paymentAmounts
+                });
+
+                closeBillAndReset();
+            }
+         } catch (error) {
+             console.error(error);
+             toast.error('Failed to create invoice');
+         }
+    }
 
     const closeBillAndReset = () => {
         setShowBillModal(false);
@@ -400,12 +546,14 @@ const POSInterface = () => {
 
     const calculateItemTotal = (item: CartItem) => {
         const itemTotal = item.price * item.quantity;
-        const itemDiscount = (itemTotal * item.discount) / 100;
+        const itemDiscount = item.discountType === 'percentage'
+            ? (itemTotal * item.discount) / 100
+            : item.discount;
         return itemTotal - itemDiscount;
     };
 
     return (
-        <div className="h-screen bg-gradient-to-br p-4 flex flex-col overflow-hidden">
+        <div className="h-screen bg-linear-to-br from-gray-50 to-gray-100 p-4 flex flex-col overflow-hidden">
             <POSHeader
                 billingMode={billingMode}
                 onBillingModeChange={setBillingMode}
@@ -428,26 +576,19 @@ const POSInterface = () => {
                     products={products}
                     productsLoading={productsLoading}
                     barcodeSearchLoading={barcodeSearchLoading}
-                    onAddToCart={addToCart}
-                    isNumericSearch={isNumericSearch}
+                    onAddToCart={handleProductSelect}
+                    isNumericSearch={/^\d+$/.test(searchTerm)}
                     filteredProducts={filteredProducts}
                 />
-
                 <CartPanel
                     cartItems={cartItems}
                     itemsCount={itemsCount}
-                    editingItem={editingItem}
                     billingMode={billingMode}
                     onClearCart={clearCart}
                     onRemoveItem={removeFromCart}
-                    onUpdateQuantity={updateQuantity}
-                    onUpdatePrice={updateItemPrice}
-                    onUpdateDiscount={updateItemDiscount}
-                    onUpdateDiscountType={updateItemDiscountType}
-                    onEditItem={setEditingItem}
+                    onUpdateItem={updateCartItem}  // Changed from multiple update functions
                     calculateItemTotal={calculateItemTotal}
                 />
-
                 <PaymentPanel
                     selectedCustomer={selectedCustomer}
                     customerSearchTerm={customerSearchTerm}
@@ -461,16 +602,21 @@ const POSInterface = () => {
                     total={total}
                     cartItemsCount={itemsCount}
                     onCompletePayment={completePayment}
-                    customers={customers}
-                    customersLoading={customersLoading}
                 />
             </div>
 
-            <ReturnModal
-                isOpen={showReturnModal}
-                onClose={() => setShowReturnModal(false)}
+            <ProductAddModal
+                isOpen={showProductAddModal}
+                onClose={() => {
+                    setShowProductAddModal(false);
+                    setSelectedProduct(null);
+                }}
+                product={selectedProduct}
+                billingMode={billingMode}
+                onAddToCart={addToCartWithDetails}
             />
 
+            <ReturnModal isOpen={showReturnModal} onClose={() => setShowReturnModal(false)} />
             <BillModal
                 isOpen={showBillModal}
                 onClose={closeBillAndReset}
@@ -480,46 +626,16 @@ const POSInterface = () => {
                 discount={discount}
                 total={total}
                 paymentAmounts={paymentAmounts}
+                onComplete={submitInvoice}
             />
-
             <CustomerRegistrationModal
                 isOpen={showRegistrationModal}
                 onClose={() => setShowRegistrationModal(false)}
                 onRegister={registerCustomer}
-            />
+            /><BulkLooseModal isOpen={showBulkLooseModal} onClose={() => setShowBulkLooseModal(false)} />
+            <CashManagementModal isOpen={showCashModal} onClose={() => setShowCashModal(false)} />
 
-            <BulkLooseModal
-                isOpen={showBulkLooseModal}
-                onClose={() => setShowBulkLooseModal(false)}
-                products={products}
-            />
-
-            <CashManagementModal
-                isOpen={showCashModal}
-                onClose={() => setShowCashModal(false)}
-                cashSessionId={currentCashSessionId}
-            /><Toaster
-            position="top-right"
-            toastOptions={{
-                duration: 4000,
-                style: {
-                    background: '#363636',
-                    color: '#fff',
-                },
-                success: {
-                    duration: 3000,
-                    style: {
-                        background: '#10b981',
-                    },
-                },
-                error: {
-                    duration: 4000,
-                    style: {
-                        background: '#ef4444',
-                    },
-                },
-            }}
-        />
+            <Toaster position="top-right" />
         </div>
     );
 };

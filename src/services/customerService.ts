@@ -5,7 +5,7 @@ export const customerService = {
     getCustomers: () => axiosInstance.get('/api/customers/all'),
     
     // Add new customer
-    addCustomer: (customerData: { name: string; contact: string; email?: string; credit_balance?: number }) => 
+    addCustomer: (customerData: { name: string; contact: string; email?: string }) => 
         axiosInstance.post('/api/customers/add', customerData),
     
     // Update customer phone

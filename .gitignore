@@ -26,3 +26,11 @@ dist-ssr
 backend/.env
 backend/.env
 backend/backups/
+
+# Electron build
+build/
+release/
+out/
+*.exe
+*.dmg
+*.AppImage
