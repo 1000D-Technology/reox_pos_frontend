@@ -125,19 +125,35 @@ function CreateGrn() {
                 return;
             }
             if (!costPrice || parseFloat(costPrice) <= 0) {
-                toast.error('Please enter a valid cost price');
+                toast.error('Cost price must be a positive number');
                 return;
             }
             if (!mrp || parseFloat(mrp) <= 0) {
-                toast.error('Please enter a valid MRP');
+                toast.error('MRP must be a positive number');
+                return;
+            }
+            if (parseFloat(mrp) < parseFloat(costPrice)) {
+                toast.error('MRP cannot be less than cost price');
                 return;
             }
             if (!rsp || parseFloat(rsp) <= 0) {
-                toast.error('Please enter a valid retail selling price');
+                toast.error('Retail selling price must be a positive number');
+                return;
+            }
+            if (parseFloat(rsp) < parseFloat(costPrice)) {
+                toast.error('Retail price cannot be less than cost price');
+                return;
+            }
+            if (wsp && parseFloat(wsp) < 0) {
+                toast.error('Wholesale price cannot be negative');
                 return;
             }
             if (!qty || parseInt(qty) <= 0) {
-                toast.error('Please enter a valid quantity');
+                toast.error('Quantity must be a positive number');
+                return;
+            }
+            if (freeQty && parseInt(freeQty) < 0) {
+                toast.error('Free quantity cannot be negative');
                 return;
             }
 
@@ -196,30 +212,39 @@ function CreateGrn() {
         toast.success('Item removed from GRN');
     };
 
-    // Fetch all initial data using Promise.all
-    const fetchInitialData = async () => {
-        setIsLoadingPaymentTypes(true);
-
+    // Load products with search
+    const loadProducts = async (query?: string) => {
         try {
-            const [productsResponse, suppliersResponse, paymentTypesResponse] = await Promise.all([
-                productService.getProductsForDropdown(),
-                supplierService.getSuppliers(),
-                paymentTypeService.getPaymentType()
-            ]);
-
-            // Handle products response
-            if (productsResponse.data.success && productsResponse.data.data) {
-                const productOptions = productsResponse.data.data
+            const response = await productService.getProductsForDropdown({ searchTerm: query || '', limit: 10 });
+            if (response.data.success && response.data.data) {
+                const productOptions = response.data.data
                     .filter((product: any) => product && product.id && product.product_name)
                     .map((product: any) => ({
                         value: product.id.toString(),
                         label: product.product_name
                     }));
                 setProducts(productOptions);
-            } else {
-                console.error('Invalid products response structure:', productsResponse.data);
-                toast.error('Invalid response from products server');
+                // If this was an initial load (no query), we might want to keep these as defaults
             }
+        } catch (error) {
+            console.error('Error searching products:', error);
+            // Don't toast on every search error to avoid spamming user while typing
+        }
+    };
+
+    // Fetch all initial data using Promise.all
+    const fetchInitialData = async () => {
+        setIsLoadingPaymentTypes(true);
+
+        try {
+            // Load initial limited products, suppliers, payment types
+            const [suppliersResponse, paymentTypesResponse] = await Promise.all([
+                supplierService.getSuppliers(),
+                paymentTypeService.getPaymentType()
+            ]);
+
+            // Load products separately to handle its specific logic/error without failing everything
+            loadProducts();
 
             // Handle suppliers response
             if (suppliersResponse.data.success) {
@@ -556,6 +581,7 @@ function CreateGrn() {
                                         : setSelectedProduct(null)
                                 }
                                 placeholder="Type to search Product"
+                                onSearch={loadProducts}
                             />
                         </div>
                         <div>
@@ -648,6 +674,8 @@ function CreateGrn() {
                             </label>
                             <input
                                 type="number"
+                                min="0"
+                                step="0.01"
                                 value={costPrice}
                                 onChange={(e) => setCostPrice(e.target.value)}
                                 placeholder="0.00"
@@ -660,6 +688,8 @@ function CreateGrn() {
                             </label>
                             <input
                                 type="number"
+                                min="0"
+                                step="0.01"
                                 value={mrp}
                                 onChange={(e) => setMrp(e.target.value)}
                                 placeholder="0.00"
@@ -672,6 +702,8 @@ function CreateGrn() {
                             </label>
                             <input
                                 type="number"
+                                min="0"
+                                step="0.01"
                                 value={rsp}
                                 onChange={(e) => setRsp(e.target.value)}
                                 placeholder="0.00"
@@ -684,6 +716,8 @@ function CreateGrn() {
                             </label>
                             <input
                                 type="number"
+                                min="0"
+                                step="0.01"
                                 value={wsp}
                                 onChange={(e) => setWsp(e.target.value)}
                                 placeholder="0.00"
@@ -696,6 +730,7 @@ function CreateGrn() {
                             </label>
                             <input
                                 type="number"
+                                min="1"
                                 value={qty}
                                 onChange={(e) => setQty(e.target.value)}
                                 placeholder="0"
@@ -708,6 +743,7 @@ function CreateGrn() {
                             </label>
                             <input
                                 type="number"
+                                min="0"
                                 value={freeQty}
                                 onChange={(e) => setFreeQty(e.target.value)}
                                 placeholder="0"

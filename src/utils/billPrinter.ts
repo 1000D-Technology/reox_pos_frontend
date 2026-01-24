@@ -479,8 +479,7 @@ export const printBill = (data: BillData) => {
         printWindow.onload = () => {
             printWindow.focus();
             printWindow.print();
-            // Optional: Close window after printing
-            // printWindow.close();
+            printWindow.close();
         };
     } else {
         console.error("Failed to open print window");

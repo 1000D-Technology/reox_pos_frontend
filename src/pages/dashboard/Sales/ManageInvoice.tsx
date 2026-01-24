@@ -596,7 +596,7 @@ function ManageInvoice() {
                             <div className="sticky top-0 bg-linear-to-r from-emerald-500 to-emerald-600 px-6 py-4 flex items-center justify-between rounded-t-xl">
                                 <h2 className="text-2xl font-bold text-white">
                                     Invoice Details
-                                    {selectedInvoiceDetails.refundedAmount > 0 && (
+                                    {Number(selectedInvoiceDetails?.refundedAmount || 0) > 0 && (
                                         <span className="ml-3 px-3 py-1 bg-red-500 text-white text-xs font-black rounded-full border border-red-400 uppercase tracking-widest shadow-sm">
                                             Returned
                                         </span>

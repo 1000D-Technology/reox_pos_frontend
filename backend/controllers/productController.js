@@ -169,7 +169,9 @@ exports.getProducts = catchAsync(async (req, res, next) => {
  * @route   GET /api/products/dropdown
  */
 exports.getProductsForDropdown = catchAsync(async (req, res, next) => {
-    const products = await Product.getProductsForDropdown(1);
+    const { searchTerm, limit } = req.query;
+    console.log(`Dropdown Request - Search: '${searchTerm}', Limit: '${limit}'`);
+    const products = await Product.getProductsForDropdown(1, searchTerm, limit || 10);
     
     res.status(200).json({
         success: true,

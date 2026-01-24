@@ -52,7 +52,7 @@ function SignIn() {
             <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-cyan-500/10 rounded-full blur-[120px] pointer-events-none" />
             
             {/* Grid Pattern Overlay */}
-            <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 pointer-events-none mix-blend-soft-light" />
+            <div className="absolute inset-0 opacity-20 pointer-events-none mix-blend-soft-light" />
 
             <motion.div 
                 initial={{ opacity: 0, scale: 0.95, y: 20 }}

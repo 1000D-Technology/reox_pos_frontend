@@ -133,70 +133,12 @@ function DamagedStock() {
     const currentSalesData = salesData.slice(startIndex, endIndex);
 
     // Load dropdown data on component mount
-    useEffect(() => {
-        const loadDropdownData = async () => {
+    // Load product data with optional search
+        const loadProductData = async (query?: string) => {
             try {
-                setLoading(true);
-
-                const [categoriesResponse, unitsResponse, suppliersResponse] = await stockService.getStockFilterData();
-
-                // Transform categories
-                if (categoriesResponse.data?.success) {
-                    const categoryOptions = categoriesResponse.data.data.map((category: any) => ({
-                        value: category.id.toString(),
-                        label: category.name
-                    }));
-                    setCategory(categoryOptions);
-                }
-
-                // Transform units
-                if (unitsResponse.data?.success) {
-                    const unitOptions = unitsResponse.data.data.map((unit: any) => ({
-                        value: unit.id.toString(),
-                        label: unit.name
-                    }));
-                    setUnit(unitOptions);
-                }
-
-                // Transform suppliers
-                if (suppliersResponse.data?.success) {
-                    const supplierOptions = suppliersResponse.data.data.map((supplier: any) => ({
-                        value: supplier.id.toString(),
-                        label: supplier.supplierName
-                    }));
-                    setSupplier(supplierOptions);
-                }
-
-                // Initialize reason and return status from API
-                const reasonResponse = await stockService.getReasons();
-                const returnStatusResponse = await stockService.getReturnStatus();
-
-                if (reasonResponse.data?.success) {
-                    const reasonOptions = reasonResponse.data.data.map((reason: any) => ({
-                        value: reason.id.toString(),
-                        label: reason.reason
-                    }));
-                    setReason(reasonOptions);
-                }
-
-                if (returnStatusResponse.data?.success) {
-                    const statusOptions = returnStatusResponse.data.data.map((status: any) => ({
-                        value: status.id.toString(),
-                        label: status.name
-                    }));
-                    setStatus(statusOptions);
-                }
-
-                setLoading(false);
-            } catch (error) {
-                console.error('Error loading dropdown data:', error);
-                setLoading(false);
-            }
-        };
-
-        const loadProductData = async () => {
-            try {
-                const productsData = await productService.getProductsForDropdown();
+                // If query is provided, we use it. If not (initial load), we fetch default limited set.
+                // We pass query as 'searchTerm' to backend.
+                const productsData = await productService.getProductsForDropdown({ searchTerm: query || '', limit: 10 });
 
                 // Transform products
                 if (productsData.data?.success) {
@@ -204,18 +146,87 @@ function DamagedStock() {
                         value: product.id.toString(),
                         label: product.product_name || product.name
                     }));
-                    setProductSearch(productOptions);
+                    
+                    // We update the productAdd list which is used in the "Add Damaged Stock" section
                     setProductAdd(productOptions);
+                    
+                    // Note: We might also want to update 'productSearch' if that dropdown should also be searchable server-side,
+                    // but usually filter inputs behave differently. For now targeting the Add section as requested.
+                     if (!query) {
+                        // Initial load populates both
+                        setProductSearch(productOptions); 
+                     }
                 }
             } catch (error) {
                 console.error('Error loading product data:', error);
             }
         };
 
-        loadDropdownData();
-        loadProductData();
-        loadSummaryData();
-    }, []);
+        useEffect(() => {
+            const loadDropdownData = async () => {
+                try {
+                    setLoading(true);
+    
+                    const [categoriesResponse, unitsResponse, suppliersResponse] = await stockService.getStockFilterData();
+    
+                    // Transform categories
+                    if (categoriesResponse.data?.success) {
+                        const categoryOptions = categoriesResponse.data.data.map((category: any) => ({
+                            value: category.id.toString(),
+                            label: category.name
+                        }));
+                        setCategory(categoryOptions);
+                    }
+    
+                    // Transform units
+                    if (unitsResponse.data?.success) {
+                        const unitOptions = unitsResponse.data.data.map((unit: any) => ({
+                            value: unit.id.toString(),
+                            label: unit.name
+                        }));
+                        setUnit(unitOptions);
+                    }
+    
+                    // Transform suppliers
+                    if (suppliersResponse.data?.success) {
+                        const supplierOptions = suppliersResponse.data.data.map((supplier: any) => ({
+                            value: supplier.id.toString(),
+                            label: supplier.supplierName
+                        }));
+                        setSupplier(supplierOptions);
+                    }
+    
+                    // Initialize reason and return status from API
+                    const reasonResponse = await stockService.getReasons();
+                    const returnStatusResponse = await stockService.getReturnStatus();
+    
+                    if (reasonResponse.data?.success) {
+                        const reasonOptions = reasonResponse.data.data.map((reason: any) => ({
+                            value: reason.id.toString(),
+                            label: reason.reason
+                        }));
+                        setReason(reasonOptions);
+                    }
+    
+                    if (returnStatusResponse.data?.success) {
+                        const statusOptions = returnStatusResponse.data.data.map((status: any) => ({
+                            value: status.id.toString(),
+                            label: status.name
+                        }));
+                        setStatus(statusOptions);
+                    }
+    
+                    setLoading(false);
+                } catch (error) {
+                    console.error('Error loading dropdown data:', error);
+                    setLoading(false);
+                }
+            };
+
+            loadDropdownData();
+            loadProductData(); // Initial load
+            loadSummaryData();
+        }, []);
 
     // Load summary data
     const loadSummaryData = async () => {
@@ -464,7 +475,7 @@ function DamagedStock() {
     const handleExportPDF = () => toast.success('Exporting to PDF...');
 
     return (
-        <div className="flex flex-col gap-4 h-full">
+        <div className="flex flex-col gap-4 min-h-full">
             <Toaster position="top-right" />
             
             {/* Header */}
@@ -578,6 +589,7 @@ function DamagedStock() {
                             onChange={(opt) => setSelectedProductAdd(opt?.value as string || null)}
                             placeholder={loading ? "Loading products..." : "Choose a product..."}
                             disabled={loading}
+                            onSearch={loadProductData}
                         />
                     </div>
                     <div className="space-y-1.5 col-span-2">
@@ -646,7 +658,7 @@ function DamagedStock() {
 
 
             <div
-                className="flex flex-col bg-white rounded-2xl p-0 overflow-hidden border border-gray-200 flex-1 shadow-sm"
+                className="flex flex-col bg-white rounded-2xl p-0 overflow-hidden border border-gray-200 flex-1 shadow-sm min-h-[500px]"
             >
                 <div className="overflow-auto flex-1 rounded-lg scrollbar-thin scrollbar-thumb-emerald-200 scrollbar-track-gray-50">
                     <table className="min-w-full divide-y divide-gray-200 relative">

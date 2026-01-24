@@ -126,15 +126,26 @@ class Product {
     });
   }
 
-  static async getProductsForDropdown(statusId = 1) {
-    const products = await prisma.product.findMany({
-      where: {
-        product_variations: {
-          some: {
-            product_status_id: statusId,
-          },
+  static async getProductsForDropdown(statusId = 1, searchTerm = '', limit = 10) {
+    console.log(`Model getProductsForDropdown - Search: '${searchTerm}', Limit: '${limit}'`);
+    const take = 10;
+    const where = {
+      product_variations: {
+        some: {
+          product_status_id: statusId,
         },
       },
+    };
+
+    if (searchTerm) {
+      where.OR = [
+        { product_name: { contains: searchTerm } },
+        { product_code: { contains: searchTerm } },
+      ];
+    }
+
+    const products = await prisma.product.findMany({
+      where,
       select: {
         id: true,
         product_name: true,
@@ -143,6 +154,7 @@ class Product {
       orderBy: {
         product_name: "asc",
       },
+      take: take,
     });
     return products;
   }
