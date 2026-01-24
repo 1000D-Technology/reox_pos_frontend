@@ -151,7 +151,7 @@ function startBackend() {
 
       // Try to connect to backend
       const http = require('http');
-      const req = http.get('http://localhost:3000/api/health', (res) => {
+      const req = http.get('http://127.0.0.1:3000/api/health', (res) => {
         if (res.statusCode === 200 || res.statusCode === 404) {
           clearInterval(checkBackend);
           console.log('Backend is ready!');

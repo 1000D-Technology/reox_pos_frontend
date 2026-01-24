@@ -52,7 +52,12 @@ export default function App() {
                         <SignIn/>
                     </PublicRoute>
                 }/>
-                <Route path="/" element={<DatabaseSetup/>}/>
+                <Route path="/setup" element={<DatabaseSetup/>}/>
+                <Route path="/" element={
+                    <PublicRoute>
+                        <SignIn/>
+                    </PublicRoute>
+                }/>
                 {/* Dashboard layout */}
                 <Route element={<Layout/>}>
                     {/* Dashboard - All authenticated users */}

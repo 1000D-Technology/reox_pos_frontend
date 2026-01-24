@@ -43,7 +43,7 @@ function DatabaseSetup() {
 
     const checkEnvExists = async () => {
         try {
-            const response = await fetch('http://localhost:3000/api/setup/check-env');
+            const response = await fetch('http://127.0.0.1:3000/api/setup/check-env');
             const data = await response.json();
 
             if (data.exists && data.connected) {
@@ -94,7 +94,7 @@ function DatabaseSetup() {
             addLog(`🗄️  Accessing database: ${config.DB_NAME}`);
             await new Promise(resolve => setTimeout(resolve, 500));
 
-            const response = await fetch('http://localhost:3000/api/setup/test-connection', {
+            const response = await fetch('http://127.0.0.1:3000/api/setup/test-connection', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(config)

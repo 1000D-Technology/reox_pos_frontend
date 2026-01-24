@@ -102,7 +102,7 @@ export default function Sidebar({ isOpen }: SidebarProps) {
             label: "Stock",
             path: "/stock",
             icon: <FolderTree size={20} />,
-            roles: ['Admin', 'Storekeeper'],
+            roles: ['Admin', 'Cashier'],
             children: [
                 { label: "Stock List", path: "/stock/stock-list" },
                 { label: "Out of Stock", path: "/stock/out-of-stock" },
@@ -114,7 +114,7 @@ export default function Sidebar({ isOpen }: SidebarProps) {
             label: "GRN",
             path: "/grn",
             icon: <FolderSymlink size={20} />,
-            roles: ['Admin', 'Storekeeper'],
+            roles: ['Admin', 'Cashier'],
             children: [
                 { label: "Create GRN", path: "/grn/create-grn" },
                 { label: "GRN List", path: "/grn/grn-list" },
@@ -124,7 +124,7 @@ export default function Sidebar({ isOpen }: SidebarProps) {
             label: "Products",
             path: "/products",
             icon: <Boxes size={20} />,
-            roles: ['Admin', 'Storekeeper'],
+            roles: ['Admin', 'Cashier'],
             children: [
                 { label: "Create Product", path: "/products/create-product" },
                 { label: "Product List", path: "/products/product-list" },

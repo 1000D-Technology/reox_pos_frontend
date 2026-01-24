@@ -170,44 +170,82 @@ function CreateQuotation() {
             return;
         }
 
-        const subtotal = selectedProduct.price * addQty;
-        let discountAmount = 0;
+        const existingItemIndex = quotationData.findIndex(item => item.id === selectedProduct.stockID);
 
-        if (discountType === 'percentage') {
-            discountAmount = (subtotal * addDiscount) / 100;
+        if (existingItemIndex !== -1) {
+            // Item exists, update quantity and amounts
+            const existingItem = quotationData[existingItemIndex];
+            const newQty = existingItem.qty + addQty;
+            const subtotal = selectedProduct.price * newQty;
+            let discountAmount = 0;
+
+            if (discountType === 'percentage') {
+                discountAmount = (subtotal * addDiscount) / 100;
+            } else {
+                discountAmount = addDiscount * newQty;
+            }
+
+            const totalAmount = subtotal - discountAmount;
+            const netUnitPrice = totalAmount / newQty;
+
+            // Validation: Cannot sell below Wholesale Price
+            if (netUnitPrice < selectedProduct.wholesalePrice) {
+                toast.error(`Price too low for consolidated item! Min price: LKR ${selectedProduct.wholesalePrice} (WSP)`);
+                return;
+            }
+
+            const updatedQuotationData = [...quotationData];
+            updatedQuotationData[existingItemIndex] = {
+                ...existingItem,
+                qty: newQty,
+                discount: discountAmount,
+                discountType: discountType,
+                amount: totalAmount > 0 ? totalAmount : 0
+            };
+
+            setQuotationData(updatedQuotationData);
+            toast.success('Quantity updated');
         } else {
-            discountAmount = addDiscount * addQty; // Fixed amount per unit * qty
+            // New item, add to list
+            const subtotal = selectedProduct.price * addQty;
+            let discountAmount = 0;
+
+            if (discountType === 'percentage') {
+                discountAmount = (subtotal * addDiscount) / 100;
+            } else {
+                discountAmount = addDiscount * addQty;
+            }
+
+            const totalAmount = subtotal - discountAmount;
+            const netUnitPrice = totalAmount / addQty;
+
+            // Validation: Cannot sell below Wholesale Price
+            if (netUnitPrice < selectedProduct.wholesalePrice) {
+                toast.error(`Price too low! Min price: LKR ${selectedProduct.wholesalePrice} (WSP)`);
+                return;
+            }
+
+            const newItem: QuotationItem = {
+                id: selectedProduct.stockID,
+                productId: selectedProduct.productCode,
+                name: selectedProduct.productName,
+                mrp: selectedProduct.price,
+                discount: discountAmount,
+                discountType: discountType,
+                rate: selectedProduct.price,
+                qty: addQty,
+                amount: totalAmount > 0 ? totalAmount : 0
+            };
+
+            setQuotationData(prev => [...prev, newItem]);
+            toast.success('Item added');
         }
-
-        const totalAmount = subtotal - discountAmount;
-        const netUnitPrice = totalAmount / addQty;
-
-        // Validation: Cannot sell below Wholesale Price
-        if (netUnitPrice < selectedProduct.wholesalePrice) {
-            toast.error(`Price too low! Min price: LKR ${selectedProduct.wholesalePrice} (WSP)`);
-            return;
-        }
-
-        const newItem: QuotationItem = {
-            id: selectedProduct.stockID,
-            productId: selectedProduct.productCode,
-            name: selectedProduct.productName,
-            mrp: selectedProduct.price,
-            discount: discountAmount,
-            discountType: discountType,
-            rate: selectedProduct.price,
-            qty: addQty,
-            amount: totalAmount > 0 ? totalAmount : 0
-        };
-
-        setQuotationData(prev => [...prev, newItem]);
         
         // Reset Item Form
         setSelectedProduct(null);
         setAddQty(1);
         setAddDiscount(0);
         setDiscountType('percentage');
-        toast.success('Item added');
     };
 
     const handleRemoveItem = (index: number) => {
