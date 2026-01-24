@@ -31,6 +31,7 @@ const cashSessionRoutes = require('./routes/cashSessionRoutes');
 const quotationRoutes = require('./routes/quotationRoutes');
 const reportRoutes = require('./routes/reportRoutes');
 const analyticsRoutes = require('./routes/reportRoutes'); // Using the same file for now
+const subscriptionRoutes = require('./routes/subscriptionRoutes');
 
 
 // Middleware
@@ -66,12 +67,12 @@ app.use('/api/setup', setupRoutes);
 app.use('/api/backup', backupRoutes);
 app.use('/api/pos', posRoutes);
 app.use('/api/customers', customerRoutes);
+app.use('/api/subscription', subscriptionRoutes);
+app.use('/api/money-exchange', moneyExchangeRoutes);
+app.use('/api/quotations', quotationRoutes);
 app.use('/api', cashSessionRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/roles', roleRoutes);
-
-app.use('/api/money-exchange', moneyExchangeRoutes);
-app.use('/api/quotations', quotationRoutes);
 
 // Handle undefined routes
 app.use((req, res, next) => {

@@ -5,11 +5,11 @@
   "type": "module",
   "main": "electron/main.cjs",
   "scripts": {
-    "dev": "concurrently \"cd backend && node index.js\" \"vite\"",
+    "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "electron:dev": "concurrently \"cd backend && node index.js\" \"npm run dev\" \"wait-on http://localhost:5173 && wait-on http://localhost:3000/api/health && electron .\"",
+    "electron:dev": "concurrently --kill-others \"cd backend && node index.js\" \"vite\" \"wait-on http://127.0.0.1:5173 && wait-on http://127.0.0.1:3000/api/health && electron .\"",
     "electron:build": "npm run build && cd backend && npm install --production && cd .. && electron-builder",
     "electron:build:win": "npm run build && cd backend && npm install --production && cd .. && electron-builder --win",
     "pack": "npm run build && cd backend && npm install --production && cd .. && electron-builder --dir",

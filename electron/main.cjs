@@ -59,7 +59,7 @@ function createWindow() {
   // Load the app
   if (isDev) {
     // Development mode - load from Vite dev server
-    mainWindow.loadURL('http://localhost:5173');
+    mainWindow.loadURL('http://127.0.0.1:5173');
     mainWindow.webContents.openDevTools();
   } else {
     // Production mode - load from built files

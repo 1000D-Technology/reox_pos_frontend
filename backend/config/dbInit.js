@@ -107,6 +107,18 @@ const seedDatabase = async () => {
             console.log("Role data seeded successfully!");
         }
 
+        // Seed subscription table
+        const [subscriptionRows] = await db.execute("SELECT COUNT(*) as count FROM subscription");
+        
+        if (subscriptionRows[0].count === 0) {
+            console.log("Seeding initial subscription data...");
+            const nextMonth = new Date();
+            nextMonth.setDate(nextMonth.getDate() + 30);
+            const formattedDate = nextMonth.toISOString().slice(0, 19).replace('T', ' ');
+            await db.execute("INSERT INTO subscription (amount, due_date, status, is_paid) VALUES (5000.00, ?, 'Active', 0)", [formattedDate]);
+            console.log("Initial subscription seeded successfully!");
+        }
+
         console.log("Database seeding completed!");
     } catch (error) {
         console.error("Database seeding failed:", error.message);

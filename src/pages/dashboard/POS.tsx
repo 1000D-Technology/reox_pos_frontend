@@ -559,7 +559,7 @@ const POSInterface = () => {
     };
 
     return (
-        <div className="h-screen bg-linear-to-br from-gray-50 to-gray-100 p-4 flex flex-col overflow-hidden">
+        <div className="h-full bg-linear-to-br from-gray-50 to-gray-100 p-4 flex flex-col overflow-hidden">
             <POSHeader
                 billingMode={billingMode}
                 onBillingModeChange={setBillingMode}

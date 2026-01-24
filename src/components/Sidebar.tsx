@@ -179,12 +179,12 @@ export default function Sidebar({ isOpen }: SidebarProps) {
         >
             <div className="h-full flex flex-col transition-all duration-500 rounded-xl bg-white border-gray-100 border-2">
                 {/* Logo */}
-                <div className="flex items-center justify-center h-16">
-                    {isOpen ? (
-                        <img src={logo} alt="" className="h-8" />
-                    ) : (
-                        <img src={logo} alt="" className="h-3" />
-                    )}
+                <div className="flex items-center justify-center h-20 px-2">
+                    <img 
+                        src={logo} 
+                        alt="ReoX POS" 
+                        className={`transition-all duration-500 object-contain max-w-full px-2 ${isOpen ? "h-12" : "h-9"}`} 
+                    />
                 </div>
 
                 {/* Navigation */}

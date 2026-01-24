@@ -10,6 +10,7 @@ import CalculatorModal from "./models/CalculatorModal.tsx";
 import ShutdownModal from "./ShutdownModal.tsx";
 import { authService } from "../services/authService";
 import { cashSessionService } from "../services/cashSessionService";
+import SubscriptionBanner from "./SubscriptionBanner";
 
 const OPEN_INVOICE_MODAL_EVENT = "openInvoiceModal";
 const OPEN_QUOTATION_MODAL_EVENT = "openQuotationModal";
@@ -160,9 +161,11 @@ export default function Layout() {
         <div className="flex h-screen w-full bg-gray-50 overflow-hidden">
             <Sidebar isOpen={isOpen} toggle={() => setIsOpen(!isOpen)} />
 
-            <div className="flex-1 flex flex-col pt-3 pe-1">
-                <header className={`h-16 flex items-center px-4 justify-between backdrop-blur-sm rounded-xl transition-colors duration-300 ${
-                    isScrolled ? 'bg-white/30' : 'bg-white/10'
+            <div className="flex-1 flex flex-col pt-0 pe-1 min-h-0 overflow-hidden">
+               
+
+                <header className={`h-16 flex items-center px-6 justify-between backdrop-blur-md rounded-2xl transition-all duration-300 border-b  mt-4 ${
+                    isScrolled ? 'bg-white/80 shadow-sm border-gray-200' : 'bg-white/40 border-transparent'
                 }`}>
                     <button
                         onClick={() => setIsOpen(!isOpen)}
@@ -224,8 +227,8 @@ export default function Layout() {
                         </div>
                     </div>
                 </header>
-
-                <main className="flex-1 overflow-y-auto ps-3 pe-1 mb-3 me-3 hide-scrollbar flex flex-col">
+                 <SubscriptionBanner />
+                <main className="flex-1 overflow-y-auto ps-3 pe-1 mb-3 me-3 flex flex-col min-h-0 hide-scrollbar">
                     <Outlet/>
                 </main>
 
@@ -303,7 +306,7 @@ export default function Layout() {
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm"
+                            className="fixed inset-0 z-60 flex items-center justify-center bg-black/50 backdrop-blur-sm"
                             onClick={() => setIsCalculatorOpen(false)}
                         >
                             <motion.div
