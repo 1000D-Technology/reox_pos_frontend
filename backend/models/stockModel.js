@@ -96,7 +96,7 @@ class Stock {
         return this.searchStock({}, page, limit);
     }
 
-    static async searchStock(filters) {
+    static async searchStock(filters, page = 1, limit = 10) {
         const whereClause = {
             qty: { gt: 0 }
         };
@@ -154,7 +154,14 @@ class Stock {
             }
         }
 
-        // Fetch all stocks with relations using Prisma
+        // Get total count for pagination
+        const totalCount = await prisma.stock.count({
+            where: whereClause
+        });
+
+        const skip = (page - 1) * limit;
+
+        // Fetch paginated stocks with relations using Prisma
         const stocks = await prisma.stock.findMany({
             where: whereClause,
             include: {
@@ -182,7 +189,8 @@ class Stock {
                     take: 1
                 }
             },
-            take: filters.limit ? parseInt(filters.limit) : undefined,
+            take: limit,
+            skip: skip,
             orderBy: {
                 product_variations: {
                     product: {
