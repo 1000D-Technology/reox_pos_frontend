@@ -110,20 +110,29 @@ function LowStock() {
     const [selectedIndex, setSelectedIndex] = useState(0);
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage] = useState(10);
+    const [pagination, setPagination] = useState({
+        currentPage: 1,
+        totalPages: 1,
+        totalItems: 0,
+        itemsPerPage: 10,
+        hasNextPage: false,
+        hasPrevPage: false
+    });
 
-    const totalPages = Math.ceil(salesData.length / itemsPerPage);
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    const currentSalesData = salesData.slice(startIndex, endIndex);
+    const currentSalesData = salesData;
 
     // Load low stock data from API
-    const loadLowStockData = async () => {
+    const loadLowStockData = async (page: number = 1) => {
         try {
             setLoading(true);
-            const response = await stockService.getLowStockList();
+            const response = await stockService.getLowStockList(page, itemsPerPage);
 
             if (response.data?.success) {
                 setSalesData(response.data.data);
+                if (response.data.pagination) {
+                    setPagination(response.data.pagination);
+                    setCurrentPage(response.data.pagination.currentPage);
+                }
             } else {
                 setSalesData([]);
             }
@@ -135,7 +144,7 @@ function LowStock() {
         }
     };
 
-    const handleSearch = async () => {
+    const handleSearch = async (page: number = 1) => {
         try {
             setIsSearching(true);
             setLoading(true);
@@ -146,15 +155,18 @@ function LowStock() {
             if (selectedSupplier) filters.supplier_id = selectedSupplier;
             if (selectedProduct) filters.product_id = selectedProduct;
 
-            const response = await stockService.searchLowStock(filters);
+            const response = await stockService.searchLowStock(filters, page, itemsPerPage);
 
             if (response.data?.success) {
                 setSalesData(response.data.data);
-                setCurrentPage(1); // Reset to first page
+                if (response.data.pagination) {
+                    setPagination(response.data.pagination);
+                    setCurrentPage(response.data.pagination.currentPage);
+                }
                 setSelectedIndex(0);
 
                 if (response.data.data.length > 0) {
-                    toast.success(`Found ${response.data.count || response.data.data.length} records`);
+                    toast.success(`Found ${response.data.pagination?.totalItems || response.data.data.length} records`);
                 } else {
                     toast.error('No records found matching your search criteria');
                 }
@@ -172,13 +184,23 @@ function LowStock() {
         }
     };
 
+    const loadPage = async (page: number) => {
+        const hasActiveFilters = selectedCategory || selectedUnit || selectedSupplier || selectedProduct;
+        
+        if (hasActiveFilters) {
+            await handleSearch(page);
+        } else {
+            await loadLowStockData(page);
+        }
+    };
+
     const handleClearFilters = () => {
         setSelectedCategory(null);
         setSelectedUnit(null);
         setSelectedSupplier(null);
         setSelectedProduct(null);
         // Reload original data
-        loadLowStockData();
+        loadLowStockData(1);
     };
 
     // Export to Excel
@@ -421,12 +443,12 @@ function LowStock() {
                 setSelectedIndex((prev) => (prev > 0 ? prev - 1 : prev));
             } else if (e.key === "PageDown") {
                 e.preventDefault();
-                if (currentPage < totalPages) {
+                if (pagination.hasNextPage) {
                     goToNextPage();
                 }
             } else if (e.key === "PageUp") {
                 e.preventDefault();
-                if (currentPage > 1) {
+                if (pagination.hasPrevPage) {
                     goToPreviousPage();
                 }
             } else if (e.key === "Home") {
@@ -457,25 +479,25 @@ function LowStock() {
 
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [currentSalesData.length, selectedIndex, currentSalesData, currentPage, totalPages]);
+    }, [currentSalesData.length, selectedIndex, currentSalesData, currentPage, pagination]);
 
     const goToPage = (page: number) => {
-        if (page >= 1 && page <= totalPages) {
-            setCurrentPage(page);
+        if (page >= 1 && page <= pagination.totalPages) {
+            loadPage(page);
             setSelectedIndex(0);
         }
     };
 
     const goToPreviousPage = () => {
-        if (currentPage > 1) {
-            setCurrentPage(currentPage - 1);
+        if (pagination.hasPrevPage) {
+            loadPage(currentPage - 1);
             setSelectedIndex(0);
         }
     };
 
     const goToNextPage = () => {
-        if (currentPage < totalPages) {
-            setCurrentPage(currentPage + 1);
+        if (pagination.hasNextPage) {
+            loadPage(currentPage + 1);
             setSelectedIndex(0);
         }
     };
@@ -488,6 +510,7 @@ function LowStock() {
     const getPageNumbers = () => {
         const pages: (number | string)[] = [];
         const maxPagesToShow = 5;
+        const totalPages = pagination.totalPages;
 
         if (totalPages <= maxPagesToShow) {
             for (let i = 1; i <= totalPages; i++) {
@@ -749,15 +772,15 @@ function LowStock() {
 
                 <nav className="bg-white flex items-center justify-between sm:px-6 pt-4 border-t-2 border-gray-100">
                     <div className="text-sm text-gray-600">
-                        Showing <span className="font-semibold text-gray-800">{startIndex + 1}</span> to{' '}
-                        <span className="font-semibold text-gray-800">{Math.min(endIndex, salesData.length)}</span> of{' '}
-                        <span className="font-semibold text-gray-800">{salesData.length}</span> results
+                        Showing <span className="font-semibold text-gray-800">{((pagination.currentPage - 1) * pagination.itemsPerPage) + 1}</span> to{' '}
+                        <span className="font-semibold text-gray-800">{Math.min(pagination.currentPage * pagination.itemsPerPage, pagination.totalItems)}</span> of{' '}
+                        <span className="font-semibold text-gray-800">{pagination.totalItems}</span> results
                     </div>
                     <div className="flex items-center space-x-2">
                         <button
                             onClick={goToPreviousPage}
-                            disabled={currentPage === 1}
-                            className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${currentPage === 1
+                            disabled={!pagination.hasPrevPage}
+                            className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${!pagination.hasPrevPage
                                     ? 'text-gray-400 cursor-not-allowed'
                                     : 'text-gray-600 hover:text-orange-600 hover:bg-orange-50'
                                 }`}
@@ -786,8 +809,8 @@ function LowStock() {
 
                         <button
                             onClick={goToNextPage}
-                            disabled={currentPage === totalPages}
-                            className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${currentPage === totalPages
+                            disabled={!pagination.hasNextPage}
+                            className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${!pagination.hasNextPage
                                     ? 'text-gray-400 cursor-not-allowed'
                                     : 'text-gray-600 hover:text-orange-600 hover:bg-orange-50'
                                 }`}
