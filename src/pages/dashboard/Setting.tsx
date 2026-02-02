@@ -3,7 +3,8 @@ import { Printer, Upload, Settings as SettingsIcon, Save, RefreshCw, Image, File
 import toast, { Toaster } from 'react-hot-toast';
 import CustomConfirmModal from '../../components/common/CustomConfirmModal';
 import type { PrintSettings, POSSettings, SystemSettings, PaymentSettings } from '../../types/settingConfig';
-import { RollSize, FontSize, Language, Timezone, DateFormat, TimeFormat, Theme, BackupFrequency, SettingsTab } from '../../enum/settings';
+import { RollSize, FontSize, Language, Timezone, DateFormat, TimeFormat, Theme as ThemeEnum, BackupFrequency, SettingsTab } from '../../enum/settings';
+import { useTheme } from '../../context/ThemeContext';
 
 function Setting() {
     const [activeTab, setActiveTab] = useState<string>(SettingsTab.PRINT);
@@ -42,12 +43,14 @@ function Setting() {
         stockCodeType: 'barcode'
     });
 
+    const { theme: currentTheme, setTheme } = useTheme();
+
     const [systemSettings, setSystemSettings] = useState<SystemSettings>({
         language: Language.ENGLISH,
         timezone: Timezone.UTC,
         dateFormat: DateFormat.DD_MM_YYYY,
         timeFormat: TimeFormat.TWENTY_FOUR_HOUR,
-        theme: Theme.LIGHT,
+        theme: currentTheme === 'dark' ? ThemeEnum.DARK : ThemeEnum.LIGHT,
         notifications: true,
         autoBackup: true,
         backupFrequency: BackupFrequency.DAILY
@@ -120,6 +123,10 @@ function Setting() {
 
     const handleSystemSettingChange = (field: keyof SystemSettings, value: string | boolean) => {
         setSystemSettings(prev => ({ ...prev, [field]: value }));
+        
+        if (field === 'theme') {
+            setTheme(value === ThemeEnum.DARK ? 'dark' : 'light');
+        }
     };
 
     const handlePaymentSettingChange = (field: keyof PaymentSettings, value: boolean) => {
@@ -218,7 +225,7 @@ function Setting() {
                     timezone: Timezone.UTC,
                     dateFormat: DateFormat.DD_MM_YYYY,
                     timeFormat: TimeFormat.TWENTY_FOUR_HOUR,
-                    theme: Theme.LIGHT,
+                    theme: ThemeEnum.LIGHT,
                     notifications: true,
                     autoBackup: true,
                     backupFrequency: BackupFrequency.DAILY
@@ -795,9 +802,8 @@ function Setting() {
                                     onChange={(e) => handleSystemSettingChange('theme', e.target.value)}
                                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-purple-500 outline-none"
                                 >
-                                    <option value={Theme.LIGHT}>Light</option>
-                                    <option value={Theme.DARK}>Dark</option>
-                                    <option value={Theme.AUTO}>Auto (System)</option>
+                                    <option value={ThemeEnum.LIGHT}>Light</option>
+                                    <option value={ThemeEnum.DARK}>Dark</option>
                                 </select>
                             </div>
 

@@ -43,9 +43,12 @@ import {PublicRoute} from "./components/PublicRoute.tsx";
 import {ProtectedRoute} from "./components/ProtectedRoute.tsx";
 import InternetStatusWrapper from "./components/InternetStatusWrapper";
 
+import { ThemeProvider } from "./context/ThemeContext";
+
 export default function App() {
     return (
-        <Router>
+        <ThemeProvider>
+            <Router>
             <InternetStatusWrapper>
                 <Routes>
                     {/* Auth */}
@@ -307,5 +310,6 @@ export default function App() {
                 </Routes>
             </InternetStatusWrapper>
         </Router>
+        </ThemeProvider>
     );
 }
