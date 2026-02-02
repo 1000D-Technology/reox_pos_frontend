@@ -42,7 +42,8 @@ class Stock {
                 { product_variations: { product: { product_name: 'asc' } } },
                 { product_variations: { id: 'asc' } },
                 { id: 'asc' }
-            ]
+            ],
+            take: filters.limit ? parseInt(filters.limit) : undefined
         });
 
         return stocks.map(s => {
@@ -50,11 +51,14 @@ class Stock {
             const p = pv.product;
             const supplier = s.grn_items[0]?.grn?.supplier;
 
-            // Build full product name
+            // Build full product name - Only include meaningful variants
+            const variations = [pv.color, pv.size, pv.storage_capacity]
+                .filter(v => v && !['n/a', 'na', 'n.a.', 'none', 'default', 'not applicable'].includes(v.toLowerCase().trim()) && v.trim() !== '');
+            
             let fullProductName = p.product_name;
-            if (pv.color) fullProductName += ` - ${pv.color}`;
-            if (pv.size) fullProductName += ` - ${pv.size}`;
-            if (pv.storage_capacity) fullProductName += ` - ${pv.storage_capacity}`;
+            if (variations.length > 0) {
+                fullProductName += ` - ${variations.join(' - ')}`;
+            }
 
             return {
                 stock_id: s.id,
@@ -93,122 +97,123 @@ class Stock {
     }
 
     static async searchStock(filters, page = 1, limit = 10) {
-        const skip = (page - 1) * limit;
-
-        // Build database-level WHERE conditions
-        const whereCondition = {
+        const whereClause = {
             qty: { gt: 0 }
         };
 
-        // Product filters
-        const productFilters = {};
         if (filters.category) {
-            productFilters.category_id = parseInt(filters.category);
+            whereClause.product_variations = {
+                product: {
+                    category_id: parseInt(filters.category)
+                }
+            };
         }
+
         if (filters.unit) {
-            productFilters.unit_id = parseInt(filters.unit);
+            if (!whereClause.product_variations) whereClause.product_variations = { product: {} };
+            whereClause.product_variations.product.unit_id = parseInt(filters.unit);
         }
 
-        // Search query filter
+        if (filters.supplier) {
+            whereClause.grn_items = {
+                some: {
+                    grn: {
+                        supplier_id: parseInt(filters.supplier)
+                    }
+                }
+            };
+        }
+
         if (filters.searchQuery) {
-            const query = filters.searchQuery;
-            const searchConditions = [
-                { product_name: { contains: query, mode: 'insensitive' } }
-            ];
-            
-            // Add ID search if query is numeric
-            if (!isNaN(query)) {
-                searchConditions.push({ id: parseInt(query) });
-            }
-            
-            productFilters.OR = searchConditions;
-        }
-
-        // Add product filters to WHERE condition if any exist
-        if (Object.keys(productFilters).length > 0) {
-            whereCondition.product_variations = {
-                product: productFilters
-            };
-        }
-
-        // Barcode filter (at variation level)
-        if (filters.searchQuery && !whereCondition.product_variations) {
-            whereCondition.product_variations = {
-                barcode: { contains: filters.searchQuery, mode: 'insensitive' }
-            };
-        } else if (filters.searchQuery && whereCondition.product_variations) {
-            // Combine with existing product filters
-            whereCondition.OR = [
-                { product_variations: whereCondition.product_variations },
-                { product_variations: { barcode: { contains: filters.searchQuery, mode: 'insensitive' } } }
-            ];
-            delete whereCondition.product_variations;
-        }
-
-        // Supplier filter (needs JavaScript filtering as it's in related grn_items)
-        const needsSupplierFilter = filters.supplier ? true : false;
-
-        // Fetch data with pagination and count in parallel
-        const [stocks, totalCountBeforeSupplier] = await Promise.all([
-            prisma.stock.findMany({
-                where: whereCondition,
-                skip: needsSupplierFilter ? 0 : skip,  // If supplier filter needed, fetch all first
-                take: needsSupplierFilter ? undefined : limit,
-                include: {
+            const query = filters.searchQuery.toLowerCase();
+            whereClause.OR = [
+                {
                     product_variations: {
-                        include: {
-                            product: {
-                                include: {
-                                    unit_id_product_unit_idTounit_id: true,
-                                    category: true,
-                                    brand: true
-                                }
-                            },
-                            product_status: true
+                        product: {
+                            OR: [
+                                { product_name: { contains: query } },
+                                { product_code: { contains: query } }
+                            ]
                         }
-                    },
-                    batch: true,
-                    grn_items: {
-                        include: {
-                            grn: {
-                                include: {
-                                    supplier: true
-                                }
-                            }
-                        },
-                        take: 1
                     }
                 },
-                orderBy: { id: 'desc' }
-            }),
-            prisma.stock.count({ where: whereCondition })
-        ]);
+                { barcode: { contains: query } },
+                { product_variations: { barcode: { contains: query } } }
+            ];
 
-        // Apply supplier filter in JavaScript if needed (as it's in related table)
-        let filteredStocks = stocks;
-        if (needsSupplierFilter) {
-            filteredStocks = stocks.filter(s =>
-                s.grn_items.some(gi => gi.grn?.supplier_id === parseInt(filters.supplier))
-            );
+            // If query is a number, also check ID
+            const numericId = parseInt(query);
+            if (!isNaN(numericId)) {
+                whereClause.OR.push({
+                    product_variations: {
+                        product: {
+                            id: numericId
+                        }
+                    }
+                });
+            }
         }
 
-        // Calculate final count and apply pagination if supplier filter was used
-        const totalCount = needsSupplierFilter ? filteredStocks.length : totalCountBeforeSupplier;
-        const paginatedStocks = needsSupplierFilter 
-            ? filteredStocks.slice(skip, skip + limit)
-            : filteredStocks;
+        // Get total count for pagination
+        const totalCount = await prisma.stock.count({
+            where: whereClause
+        });
+
+        const skip = (page - 1) * limit;
+
+        // Fetch paginated stocks with relations using Prisma
+        const stocks = await prisma.stock.findMany({
+            where: whereClause,
+            include: {
+                product_variations: {
+                    include: {
+                        product: {
+                            include: {
+                                unit_id_product_unit_idTounit_id: true,
+                                category: true,
+                                brand: true
+                            }
+                        },
+                        product_status: true
+                    }
+                },
+                batch: true,
+                grn_items: {
+                    include: {
+                        grn: {
+                            include: {
+                                supplier: true
+                            }
+                        }
+                    },
+                    take: 1
+                }
+            },
+            take: limit,
+            skip: skip,
+            orderBy: {
+                product_variations: {
+                    product: {
+                        product_name: 'asc'
+                    }
+                }
+            }
+        });
 
         // Map to individual items (no grouping)
-        const result = paginatedStocks.map(s => {
+        const result = stocks.map(s => {
             const pv = s.product_variations;
             const p = pv.product;
             const supplier = s.grn_items[0]?.grn?.supplier;
 
-            // Build full product name
+            // Build full product name - Only include meaningful variants
+            const variations = [pv.color, pv.size, pv.storage_capacity]
+                .filter(v => v && !['n/a', 'na', 'n.a.', 'none', 'default', 'not applicable'].includes(v.toLowerCase().trim()) && v.trim() !== '');
+            
             let fullProductName = p.product_name;
-            if (pv.color) fullProductName += ` - ${pv.color}`;
-            if (pv.size) fullProductName += ` - ${pv.size}`;
-            if (pv.storage_capacity) fullProductName += ` - ${pv.storage_capacity}`;
+            if (variations.length > 0) {
+                fullProductName += ` - ${variations.join(' - ')}`;
+            }
 
             return {
                 stock_id: s.id,
@@ -416,6 +421,7 @@ class Stock {
             filteredStocks = filteredStocks.filter(s => {
                 const product = s.product_variations.product;
                 return product.product_name.toLowerCase().includes(query) || 
+                       product.product_code.toLowerCase().includes(query) ||
                        product.id.toString() === filters.searchQuery;
             });
         }
@@ -448,11 +454,14 @@ class Stock {
             const p = pv.product;
             const supplier = s.grn_items[0]?.grn?.supplier;
 
-            // Build full product name
+            // Build full product name - Only include meaningful variants
+            const variations = [pv.color, pv.size, pv.storage_capacity]
+                .filter(v => v && !['n/a', 'na', 'n.a.', 'none', 'default', 'not applicable'].includes(v.toLowerCase().trim()) && v.trim() !== '');
+            
             let fullProductName = p.product_name;
-            if (pv.color) fullProductName += ` - ${pv.color}`;
-            if (pv.size) fullProductName += ` - ${pv.size}`;
-            if (pv.storage_capacity) fullProductName += ` - ${pv.storage_capacity}`;
+            if (variations.length > 0) {
+                fullProductName += ` - ${variations.join(' - ')}`;
+            }
 
             return {
                 stock_id: s.id,
@@ -510,9 +519,14 @@ class Stock {
             const pv = s.product_variations;
             const p = pv.product;
             
+            // Build full product name - Only include meaningful variants
+            const variations = [pv.color, pv.size]
+                .filter(v => v && !['n/a', 'na', 'n.a.', 'none', 'default', 'not applicable'].includes(v.toLowerCase().trim()) && v.trim() !== '');
+            
             let fullStockDisplay = p.product_name;
-            if (pv.color) fullStockDisplay += ` - ${pv.color}`;
-            if (pv.size) fullStockDisplay += ` - ${pv.size}`;
+            if (variations.length > 0) {
+                fullStockDisplay += ` - ${variations.join(' - ')}`;
+            }
             fullStockDisplay += ` (${s.batch.batch_name})`;
 
             return {

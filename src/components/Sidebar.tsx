@@ -132,7 +132,7 @@ export default function Sidebar({ isOpen }: SidebarProps) {
                 { label: "Manage Unit", path: "/products/manage-unit" },
                 { label: "Manage Category", path: "/products/manage-category" },
                 { label: "Manage Brand", path: "/products/manage-brand" },
-                { label: "Removed Products", path: "/products/removed-products" },
+                { label: "Deactivated Products", path: "/products/deactivated-products" },
             ],
         },
         {
@@ -218,7 +218,7 @@ export default function Sidebar({ isOpen }: SidebarProps) {
 
                                         {isOpen && (
                                             <ul className={`ml-7 mt-1 space-y-1 overflow-hidden transition-all duration-300 ease-in-out
-    ${expandedItems[item.label] ? "max-h-48 opacity-100" : "max-h-0 opacity-0"}`}>
+    ${expandedItems[item.label] ? "max-h-96 opacity-100" : "max-h-0 opacity-0"}`}>
                                                 {item.children.map((child, childIndex) => (
                                                     <li key={childIndex} className="relative">
                                                         <div

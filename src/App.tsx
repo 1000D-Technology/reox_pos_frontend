@@ -23,7 +23,7 @@ import LowStock from "./pages/dashboard/Stock/LowStock.tsx";
 import ProductList from "./pages/dashboard/Products/ProductList.tsx";
 import ManageUnit from "./pages/dashboard/Products/ManageUnit.tsx";
 import ManageCategory from "./pages/dashboard/Products/ManageCategory.tsx";
-import RemovedProducts from "./pages/dashboard/Products/RemovedProducts.tsx";
+import DeactivatedProducts from "./pages/dashboard/Products/DeactivatedProducts.tsx";
 import CreateSupplier from "./pages/dashboard/Supplier/CreateSupplier.tsx";
 import ManageCompany from "./pages/dashboard/Supplier/ManageCompany.tsx";
 import SupplierGRN from "./pages/dashboard/Supplier/SupplierGRN.tsx";
@@ -43,9 +43,12 @@ import {PublicRoute} from "./components/PublicRoute.tsx";
 import {ProtectedRoute} from "./components/ProtectedRoute.tsx";
 import InternetStatusWrapper from "./components/InternetStatusWrapper";
 
+import { ThemeProvider } from "./context/ThemeContext";
+
 export default function App() {
     return (
-        <Router>
+        <ThemeProvider>
+            <Router>
             <InternetStatusWrapper>
                 <Routes>
                     {/* Auth */}
@@ -195,9 +198,9 @@ export default function App() {
                                 <ManageBrand/>
                             </ProtectedRoute>
                         }/>
-                        <Route path="/products/removed-products" element={
+                        <Route path="/products/deactivated-products" element={
                             <ProtectedRoute allowedRoles={['Admin']}>
-                                <RemovedProducts/>
+                                <DeactivatedProducts/>
                             </ProtectedRoute>
                         }/>
 
@@ -307,5 +310,6 @@ export default function App() {
                 </Routes>
             </InternetStatusWrapper>
         </Router>
+        </ThemeProvider>
     );
 }

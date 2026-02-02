@@ -37,6 +37,13 @@ export const productService = {
         axiosInstance.get('/api/products/search/deactive', { params }),
 
     // Get product variants by product ID
-    getProductVariants: (productId: number) =>
-        axiosInstance.get(`/api/products/${productId}/variants`),
+    getProductVariants: (productId: number, params?: { statusId?: number }) =>
+        axiosInstance.get(`/api/products/${productId}/variants`, { params }),
+
+    // Permanently delete a product variation
+    deleteProduct: (pvId: number) => axiosInstance.delete(`/api/products/${pvId}`),
+
+    // Add new variation to existing product
+    addProductVariation: (productId: number, variationData: any) =>
+        axiosInstance.post(`/api/products/${productId}/variants`, variationData),
 };

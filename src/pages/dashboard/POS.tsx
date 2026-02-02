@@ -31,15 +31,21 @@ interface Customer {
 const mapAPIProductToProduct = (apiData: any): Product => {
     const item = Array.isArray(apiData) ? apiData[0] : apiData;
 
+    // Clean display name if it contains placeholder variants
+    let name = item.displayName || item.productName || item.name;
+    if (name) {
+        name = name.replace(/ - (N\/A|NA|N\.A\.|None|Default|Not Applicable)/gi, '');
+    }
+
     return {
         id: item.stockID || item.stock_id || item.productID || item.id,
-        name: item.displayName || item.productName || item.name,
+        name: name,
         barcode: item.barcode || '',
         price: parseFloat(item.price || item.Price || item.selling_price) || 0,
         wholesalePrice: parseFloat(item.wholesalePrice || item.wsp) || 0,
         stock: parseInt(item.currentStock || item.stockQty || item.stock || item.qty) || 0,
         category: item.unit || item.category || 'Pcs',
-        productCode: item.productCode || item.product_id_code || '',
+        productCode: item.productCode || item.productID || item.product_id_code || item.product_code || '',
         isBulk: Boolean(item.isBulk) || String(item.unit || '').toLowerCase().includes('kg') || String(item.unit || '').toLowerCase().includes('bag'),
         batch: item.batchName || item.batch || item.batch_name || '',
         expiry: item.expiry || item.exp || null
@@ -80,22 +86,21 @@ const POSInterface = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
-        const loadProducts = async () => {
+        const loadInitialProducts = async () => {
             try {
                 setProductsLoading(true);
-                const response = await posService.getPOSProductsList();
+                const response = await posService.getPOSProductsList(10); // Initial 10
                 if (response.data?.success && Array.isArray(response.data.data)) {
                     const mappedProducts = response.data.data.map(mapAPIProductToProduct);
                     setProducts(mappedProducts);
                 }
             } catch (error) {
                 console.error('Failed to load products:', error);
-                toast.error('Failed to load products');
             } finally {
                 setProductsLoading(false);
             }
         };
-        loadProducts();
+        loadInitialProducts();
     }, []);
 
     useEffect(() => {
@@ -135,79 +140,72 @@ const POSInterface = () => {
     }, []);
 
     useEffect(() => {
-        const isAlphanumericSearch = /^[a-zA-Z0-9]+$/.test(searchTerm.trim());
-
-        console.log('=== BARCODE SEARCH DEBUG ===');
-        console.log('Search Term:', searchTerm);
-        console.log('Is Alphanumeric:', isAlphanumericSearch);
-        console.log('Length:', searchTerm.length);
-
-        if (isAlphanumericSearch && searchTerm.length >= 6) {
-            const searchBarcode = async () => {
-                console.log('🔍 BARCODE SEARCH STARTED');
-                const startTime = performance.now();
-
+        const trimmedSearch = searchTerm.trim();
+        if (!trimmedSearch) {
+            // Revert to initial 10 products
+            const loadInitialProducts = async () => {
                 try {
+                    setProductsLoading(true);
+                    const response = await posService.getPOSProductsList(10);
+                    if (response.data?.success && Array.isArray(response.data.data)) {
+                        setProducts(response.data.data.map(mapAPIProductToProduct));
+                    }
+                } catch (error) {
+                    console.error('Failed to load products:', error);
+                } finally {
+                    setProductsLoading(false);
+                }
+            };
+            loadInitialProducts();
+            return;
+        }
+
+        const isBarcodeSearch = trimmedSearch.length >= 8 && /^\d+$/.test(trimmedSearch);
+        
+        const performSearch = async () => {
+            try {
+                if (isBarcodeSearch) {
                     setBarcodeSearchLoading(true);
-                    const response = await posService.searchByBarcode(searchTerm.trim());
-                    const endTime = performance.now();
-                    const duration = (endTime - startTime).toFixed(2);
-
-                    console.log('✅ API Call Success in', `${duration}ms`);
-
+                    const response = await posService.searchByBarcode(trimmedSearch);
                     if (response.data?.success && response.data.data) {
-                        // Handle both single product and array of products
                         const productsData = Array.isArray(response.data.data)
                             ? response.data.data
                             : [response.data.data];
 
                         const matchingProducts = productsData.map(mapAPIProductToProduct);
-
-                        console.log(`📦 Found ${matchingProducts.length} product(s) with barcode ${searchTerm}`);
-
+                        
                         if (matchingProducts.length === 1) {
-                            // Single product - directly open modal
                             const product = matchingProducts[0];
                             if (product.stock <= 0) {
                                 toast.error('Product is out of stock!');
-                                setSearchTerm('');
                                 return;
                             }
                             handleProductSelect(product);
-                            toast.success(`Found: ${product.name}`);
-                        } else if (matchingProducts.length > 1) {
-                            // Multiple products - show in filtered list
-                            setProducts(prevProducts => {
-                                const otherProducts = prevProducts.filter(
-                                    p => !matchingProducts.some((mp: Product) => mp.id === p.id)
-                                );
-                                return [...matchingProducts, ...otherProducts];
-                            });
-                            toast.success(`Found ${matchingProducts.length} products with this barcode`);
-                            setBarcodeSearchLoading(false);
-                            return; // Don't clear search term - show filtered products
+                            setSearchTerm('');
+                        } else {
+                            setProducts(matchingProducts);
                         }
-
-                        setSearchTerm('');
-                    } else {
-                        console.warn('❌ Product Not Found');
-                        toast.error('Product not found with this barcode');
-                        setSearchTerm('');
                     }
-                } catch (error: unknown) {
-                    console.error('❌ BARCODE SEARCH FAILED');
-                    const err = error as { response?: { data?: { message?: string } } };
-                    const message = err.response?.data?.message || 'Failed to search barcode';
-                    toast.error(message);
-                    setSearchTerm('');
-                } finally {
-                    setBarcodeSearchLoading(false);
+                } else {
+                    // General search if at least 2 chars
+                    if (trimmedSearch.length >= 2) {
+                        setProductsLoading(true);
+                        const response = await posService.searchProducts(trimmedSearch, 20);
+                        if (response.data?.success && Array.isArray(response.data.data)) {
+                            setProducts(response.data.data.map(mapAPIProductToProduct));
+                        }
+                    }
                 }
-            };
+            } catch (error) {
+                console.error('Search error:', error);
+            } finally {
+                setBarcodeSearchLoading(false);
+                setProductsLoading(false);
+            }
+        };
 
-            const debounceTimer = setTimeout(searchBarcode, 300);
-            return () => clearTimeout(debounceTimer);
-        }
+        const debounceTimer = setTimeout(performSearch, 400);
+        return () => clearTimeout(debounceTimer);
     }, [searchTerm]);
 
 
@@ -266,13 +264,7 @@ const POSInterface = () => {
     const totalPaid = paymentAmounts.reduce((sum, p) => sum + p.amount, 0);
     const remaining = total - totalPaid;
 
-    const isAlphanumericSearch = /^[a-zA-Z0-9]+$/.test(searchTerm.trim());
-    const filteredProducts = isAlphanumericSearch && searchTerm.length >= 6
-        ? []
-        : products.filter(p =>
-            p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            p.productCode.toLowerCase().includes(searchTerm.toLowerCase())
-        );
+    const filteredProducts = products; // Already filtered from backend or initial load
 
     const handleProductSelect = (product: Product) => {
         setSelectedProduct(product);

@@ -28,6 +28,7 @@ export interface POSSettings {
     enableVibration: boolean;
     quickSaleMode: boolean;
     showCustomerDisplay: boolean;
+    stockCodeType: 'barcode' | 'qr';
 }
 
 export interface SystemSettings {

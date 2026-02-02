@@ -19,7 +19,8 @@ class POS {
             where: {
                 OR: [
                     { barcode: barcode },
-                    { product_variations: { barcode: barcode } }
+                    { product_variations: { barcode: barcode } },
+                    { product_variations: { product: { product_code: { contains: barcode } } } }
                 ],
                 qty: { gt: 0 },
                 product_variations: {
@@ -41,7 +42,7 @@ class POS {
             orderBy: {
                 mfd: 'asc'
             },
-            take: 1
+            take: 10
         });
 
         return stocks.map(s => {

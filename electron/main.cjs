@@ -48,7 +48,7 @@ function createWindow() {
     icon: path.join(__dirname, '../public/icon.png'),
     autoHideMenuBar: true,
     show: false,
-    fullscreen: true
+    fullscreen: false
   });
 
   // Show window when ready to avoid flickering

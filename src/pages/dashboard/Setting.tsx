@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Printer, Upload, Settings as SettingsIcon, Save, RefreshCw, Image, FileText, Ruler, DollarSign, ShoppingCart, Package, Bell, Lock, Globe, CreditCard, BarChart3 } from 'lucide-react';
+import { Printer, Upload, Settings as SettingsIcon, Save, RefreshCw, Image, FileText, Ruler, DollarSign, ShoppingCart, Package, Bell, Lock, Globe, CreditCard, BarChart3, Barcode } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import CustomConfirmModal from '../../components/common/CustomConfirmModal';
 import type { PrintSettings, POSSettings, SystemSettings, PaymentSettings } from '../../types/settingConfig';
-import { RollSize, FontSize, Language, Timezone, DateFormat, TimeFormat, Theme, BackupFrequency, SettingsTab } from '../../enum/settings';
+import { RollSize, FontSize, Language, Timezone, DateFormat, TimeFormat, Theme as ThemeEnum, BackupFrequency, SettingsTab } from '../../enum/settings';
+import { useTheme } from '../../context/ThemeContext';
 
 function Setting() {
     const [activeTab, setActiveTab] = useState<string>(SettingsTab.PRINT);
@@ -38,15 +39,18 @@ function Setting() {
         enableSound: true,
         enableVibration: false,
         quickSaleMode: false,
-        showCustomerDisplay: true
+        showCustomerDisplay: true,
+        stockCodeType: 'barcode'
     });
+
+    const { theme: currentTheme, setTheme } = useTheme();
 
     const [systemSettings, setSystemSettings] = useState<SystemSettings>({
         language: Language.ENGLISH,
         timezone: Timezone.UTC,
         dateFormat: DateFormat.DD_MM_YYYY,
         timeFormat: TimeFormat.TWENTY_FOUR_HOUR,
-        theme: Theme.LIGHT,
+        theme: currentTheme === 'dark' ? ThemeEnum.DARK : ThemeEnum.LIGHT,
         notifications: true,
         autoBackup: true,
         backupFrequency: BackupFrequency.DAILY
@@ -119,6 +123,10 @@ function Setting() {
 
     const handleSystemSettingChange = (field: keyof SystemSettings, value: string | boolean) => {
         setSystemSettings(prev => ({ ...prev, [field]: value }));
+        
+        if (field === 'theme') {
+            setTheme(value === ThemeEnum.DARK ? 'dark' : 'light');
+        }
     };
 
     const handlePaymentSettingChange = (field: keyof PaymentSettings, value: boolean) => {
@@ -201,7 +209,8 @@ function Setting() {
                     enableSound: true,
                     enableVibration: false,
                     quickSaleMode: false,
-                    showCustomerDisplay: true
+                    showCustomerDisplay: true,
+                    stockCodeType: 'barcode'
                 });
 
                 toast.success('POS settings reset to default successfully!');
@@ -216,7 +225,7 @@ function Setting() {
                     timezone: Timezone.UTC,
                     dateFormat: DateFormat.DD_MM_YYYY,
                     timeFormat: TimeFormat.TWENTY_FOUR_HOUR,
-                    theme: Theme.LIGHT,
+                    theme: ThemeEnum.LIGHT,
                     notifications: true,
                     autoBackup: true,
                     backupFrequency: BackupFrequency.DAILY
@@ -672,6 +681,21 @@ function Setting() {
                                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-green-500 outline-none"
                                 />
                             </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    <Barcode className="w-4 h-4 inline mr-1" />
+                                    Stock Code Type
+                                </label>
+                                <select
+                                    value={posSettings.stockCodeType || 'barcode'}
+                                    onChange={(e) => handlePOSSettingChange('stockCodeType', e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-green-500 outline-none"
+                                >
+                                    <option value="barcode">Barcode (1D)</option>
+                                    <option value="qr">QR Code (2D)</option>
+                                </select>
+                            </div>
                         </div>
 
                         <div className="mt-6 grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -727,10 +751,7 @@ function Setting() {
                                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-purple-500 outline-none"
                                 >
                                     <option value={Language.ENGLISH}>English</option>
-                                    <option value={Language.SPANISH}>Spanish</option>
-                                    <option value={Language.FRENCH}>French</option>
-                                    <option value={Language.GERMAN}>German</option>
-                                    <option value={Language.CHINESE}>Chinese</option>
+                                    <option value={Language.SINHALA}>Sinhala (සිංහල)</option>
                                 </select>
                             </div>
 
@@ -781,9 +802,8 @@ function Setting() {
                                     onChange={(e) => handleSystemSettingChange('theme', e.target.value)}
                                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-purple-500 outline-none"
                                 >
-                                    <option value={Theme.LIGHT}>Light</option>
-                                    <option value={Theme.DARK}>Dark</option>
-                                    <option value={Theme.AUTO}>Auto (System)</option>
+                                    <option value={ThemeEnum.LIGHT}>Light</option>
+                                    <option value={ThemeEnum.DARK}>Dark</option>
                                 </select>
                             </div>
 

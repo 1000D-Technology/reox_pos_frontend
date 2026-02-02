@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { X, Printer, Minus, Plus } from 'lucide-react';
 import Barcode from 'react-barcode';
+import { QRCodeSVG } from 'qrcode.react';
 import { useReactToPrint } from 'react-to-print';
 
 interface Product {
@@ -21,6 +22,7 @@ const BarcodePrintModal: React.FC<BarcodePrintModalProps> = ({ isOpen, onClose, 
     const componentRef = useRef<HTMLDivElement>(null);
     const [quantity, setQuantity] = useState(1);
     const [storeName, setStoreName] = useState('My POS Store');
+    const [stockCodeType, setStockCodeType] = useState<'barcode' | 'qr'>('barcode');
 
     // Reset quantity when modal opens/product changes and fetch store name
     useEffect(() => {
@@ -32,6 +34,9 @@ const BarcodePrintModal: React.FC<BarcodePrintModalProps> = ({ isOpen, onClose, 
                     const parsed = JSON.parse(savedPOSSettings);
                     if (parsed.storeName) {
                         setStoreName(parsed.storeName);
+                    }
+                    if (parsed.stockCodeType) {
+                        setStockCodeType(parsed.stockCodeType);
                     }
                 } catch (e) {
                     console.error("Failed to parse POS settings", e);
@@ -122,13 +127,19 @@ const BarcodePrintModal: React.FC<BarcodePrintModalProps> = ({ isOpen, onClose, 
                             <div className="flex flex-col items-center text-center">
                                 <p className="text-xs font-bold mb-1 max-w-[150px] truncate">{storeName}</p>
                                 <p className="text-xs font-medium mb-1 max-w-[150px] truncate">{product.productName}</p>
-                                <Barcode
-                                    value={barcodeValue}
-                                    width={1.5}
-                                    height={40}
-                                    fontSize={14}
-                                    margin={0}
-                                />
+                                {stockCodeType === 'qr' ? (
+                                    <div className="py-2">
+                                        <QRCodeSVG value={barcodeValue} size={100} level="M" />
+                                    </div>
+                                ) : (
+                                    <Barcode
+                                        value={barcodeValue}
+                                        width={1.5}
+                                        height={40}
+                                        fontSize={14}
+                                        margin={0}
+                                    />
+                                )}
                                 {product.price && (
                                     <p className="text-xs font-bold mt-1">MRP: Rs.{product.price.toFixed(2)}</p>
                                 )}
@@ -175,14 +186,20 @@ const BarcodePrintModal: React.FC<BarcodePrintModalProps> = ({ isOpen, onClose, 
                                 <div key={idx} className="barcode-item">
                                     <p className="store-name">{storeName}</p>
                                     <p className="prod-name">{product.productName}</p>
-                                    <Barcode
-                                        value={barcodeValue}
-                                        width={1.3}
-                                        height={35}
-                                        fontSize={11}
-                                        margin={2}
-                                        displayValue={true}
-                                    />
+                                    {stockCodeType === 'qr' ? (
+                                        <div style={{ display: 'flex', justifyContent: 'center', margin: '5px 0' }}>
+                                            <QRCodeSVG value={barcodeValue} size={80} level="M" />
+                                        </div>
+                                    ) : (
+                                        <Barcode
+                                            value={barcodeValue}
+                                            width={1.3}
+                                            height={35}
+                                            fontSize={11}
+                                            margin={2}
+                                            displayValue={true}
+                                        />
+                                    )}
                                     {product.price && (
                                         <p className="mrp-text">MRP: Rs.{product.price.toFixed(2)}</p>
                                     )}

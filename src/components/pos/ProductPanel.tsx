@@ -71,7 +71,7 @@ export const ProductPanel = ({
             }
 
             // Navigate products with arrow keys (only when products are visible)
-            if (filteredProducts.length > 0 && !isNumericSearch) {
+            if (filteredProducts.length > 0) {
                 const productElements = productListRef.current?.querySelectorAll('[data-product-id]');
                 if (!productElements) return;
 
@@ -103,12 +103,18 @@ export const ProductPanel = ({
                 }
 
                 // Enter or Space - Add focused product to cart
-                if ((e.key === 'Enter' || e.key === ' ') && currentIndex >= 0) {
-                    e.preventDefault();
-                    const productId = Number(productElements[currentIndex].getAttribute('data-product-id'));
-                    const product = filteredProducts.find(p => p.id === productId);
-                    if (product) {
-                        onAddToCart(product);
+                if ((e.key === 'Enter' || e.key === ' ')) {
+                    if (currentIndex >= 0) {
+                        e.preventDefault();
+                        const productId = Number(productElements[currentIndex].getAttribute('data-product-id'));
+                        const product = filteredProducts.find(p => p.id === productId);
+                        if (product) {
+                            onAddToCart(product);
+                        }
+                    } else if (e.key === 'Enter' && document.activeElement === searchInputRef.current && filteredProducts.length > 0) {
+                        // If in search input and press Enter, pick first product
+                        e.preventDefault();
+                        onAddToCart(filteredProducts[0]);
                     }
                 }
             }
@@ -141,7 +147,11 @@ export const ProductPanel = ({
                     className="w-full pl-10 pr-10 py-2.5 text-sm bg-gray-50 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-emerald-500 transition-colors"
                     autoFocus
                 />
-                {isNumericSearch && searchTerm.length > 0 ? (
+                {barcodeSearchLoading ? (
+                    <div className="absolute right-3 top-3">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
+                    </div>
+                ) : isNumericSearch && searchTerm.length > 0 ? (
                     <Scan className="absolute right-3 top-3 w-4 h-4 text-blue-500 animate-pulse" />
                 ) : (
                     <Barcode className="absolute right-3 top-3 w-4 h-4 text-gray-400" />
@@ -159,12 +169,11 @@ export const ProductPanel = ({
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500 mb-2"></div>
                         <span className="text-sm text-gray-500">Loading products...</span>
                     </div>
-                ) : barcodeSearchLoading ? (
+                ) : filteredProducts.length === 0 && barcodeSearchLoading ? (
                     <div className="flex flex-col items-center justify-center h-32">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mb-2"></div>
                         <span className="text-sm text-gray-500">Searching barcode...</span>
                     </div>
-
                 ) : filteredProducts.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-32 text-gray-400">
                         <Package className="w-12 h-12 mb-2" />
@@ -193,16 +202,16 @@ export const ProductPanel = ({
                         >
                             <div className="flex justify-between items-start mb-1">
                                 <div className="flex-1">
-                                    <h3 className="font-semibold text-gray-800 text-sm leading-tight">
+                                    <h3 className="font-semibold text-gray-800 text-sm leading-tight flex items-center gap-2">
+                                        <span className="text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded text-[10px] font-bold border border-emerald-100 uppercase tracking-tighter">
+                                            {product.productCode}
+                                        </span>
                                         {product.name}
                                     </h3>
                                     <div className="flex items-center gap-2 mt-1 flex-wrap">
-                                        <span className="text-xs text-gray-500 bg-gray-200 px-2 py-0.5 rounded">
-                                            {product.productCode}
-                                        </span>
                                         {product.barcode && (
-                                            <span className="flex items-center gap-1 text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded">
-                                                <Barcode className="w-3 h-3" />
+                                            <span className="flex items-center gap-1 text-[10px] text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
+                                                <Barcode className="w-2.5 h-2.5" />
                                                 {product.barcode}
                                             </span>
                                         )}
