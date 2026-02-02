@@ -92,8 +92,8 @@ class Stock {
     /**
      * @desc Get all current stock with product and supplier details (grouped by product)
      */
-    static async getAllStock() {
-        return this.searchStock({});
+    static async getAllStock(page = 1, limit = 10) {
+        return this.searchStock({}, page, limit);
     }
 
     static async searchStock(filters) {
@@ -170,6 +170,7 @@ class Stock {
                         product_status: true
                     }
                 },
+                batch: true,
                 grn_items: {
                     include: {
                         grn: {
@@ -177,7 +178,8 @@ class Stock {
                                 supplier: true
                             }
                         }
-                    }
+                    },
+                    take: 1
                 }
             },
             take: filters.limit ? parseInt(filters.limit) : undefined,
@@ -233,7 +235,17 @@ class Stock {
             };
         });
 
-        return result;
+        return {
+            data: result,
+            pagination: {
+                currentPage: page,
+                itemsPerPage: limit,
+                totalItems: totalCount,
+                totalPages: Math.ceil(totalCount / limit),
+                hasNextPage: page < Math.ceil(totalCount / limit),
+                hasPrevPage: page > 1
+            }
+        };
     }
 
     static async getDashboardSummary() {
