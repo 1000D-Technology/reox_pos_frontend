@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Printer, Upload, Settings as SettingsIcon, Save, RefreshCw, Image, FileText, Ruler, DollarSign, ShoppingCart, Package, Bell, Lock, Globe, CreditCard, BarChart3 } from 'lucide-react';
+import { Printer, Upload, Settings as SettingsIcon, Save, RefreshCw, Image, FileText, Ruler, DollarSign, ShoppingCart, Package, Bell, Lock, Globe, CreditCard, BarChart3, Barcode } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import CustomConfirmModal from '../../components/common/CustomConfirmModal';
 import type { PrintSettings, POSSettings, SystemSettings, PaymentSettings } from '../../types/settingConfig';
@@ -38,7 +38,8 @@ function Setting() {
         enableSound: true,
         enableVibration: false,
         quickSaleMode: false,
-        showCustomerDisplay: true
+        showCustomerDisplay: true,
+        stockCodeType: 'barcode'
     });
 
     const [systemSettings, setSystemSettings] = useState<SystemSettings>({
@@ -201,7 +202,8 @@ function Setting() {
                     enableSound: true,
                     enableVibration: false,
                     quickSaleMode: false,
-                    showCustomerDisplay: true
+                    showCustomerDisplay: true,
+                    stockCodeType: 'barcode'
                 });
 
                 toast.success('POS settings reset to default successfully!');
@@ -671,6 +673,21 @@ function Setting() {
                                     onChange={(e) => handlePOSSettingChange('lowStockAlert', parseInt(e.target.value))}
                                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-green-500 outline-none"
                                 />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    <Barcode className="w-4 h-4 inline mr-1" />
+                                    Stock Code Type
+                                </label>
+                                <select
+                                    value={posSettings.stockCodeType || 'barcode'}
+                                    onChange={(e) => handlePOSSettingChange('stockCodeType', e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-green-500 outline-none"
+                                >
+                                    <option value="barcode">Barcode (1D)</option>
+                                    <option value="qr">QR Code (2D)</option>
+                                </select>
                             </div>
                         </div>
 
