@@ -88,11 +88,13 @@ class Stock {
     /**
      * @desc Get all current stock with product and supplier details (grouped by product)
      */
-    static async getAllStock() {
-        return this.searchStock({});
+    static async getAllStock(page = 1, limit = 10) {
+        return this.searchStock({}, page, limit);
     }
 
-    static async searchStock(filters) {
+    static async searchStock(filters, page = 1, limit = 10) {
+        const offset = (page - 1) * limit;
+        
         // Fetch all stocks with relations using Prisma
         const stocks = await prisma.stock.findMany({
             where: {
@@ -104,11 +106,14 @@ class Stock {
                         product: {
                             include: {
                                 unit_id_product_unit_idTounit_id: true,
-                                category: true
+                                category: true,
+                                brand: true
                             }
-                        }
+                        },
+                        product_status: true
                     }
                 },
+                batch: true,
                 grn_items: {
                     include: {
                         grn: {
@@ -116,7 +121,8 @@ class Stock {
                                 supplier: true
                             }
                         }
-                    }
+                    },
+                    take: 1
                 }
             }
         });
@@ -145,15 +151,21 @@ class Stock {
             const query = filters.searchQuery.toLowerCase();
             filteredStocks = filteredStocks.filter(s => {
                 const product = s.product_variations.product;
-                const barcode = s.barcode || '';
+                const barcode = s.product_variations.barcode || '';
                 return product.product_name.toLowerCase().includes(query) ||
                     product.id.toString() === filters.searchQuery ||
                     barcode.toLowerCase().includes(query);
             });
         }
 
+        // Get total count after filtering
+        const totalCount = filteredStocks.length;
+
+        // Apply pagination to filtered results
+        const paginatedStocks = filteredStocks.slice(offset, offset + limit);
+
         // Map to individual items (no grouping)
-        const result = filteredStocks.map(s => {
+        const result = paginatedStocks.map(s => {
             const pv = s.product_variations;
             const p = pv.product;
             const supplier = s.grn_items[0]?.grn?.supplier;
@@ -192,7 +204,17 @@ class Stock {
             };
         });
 
-        return result;
+        return {
+            data: result,
+            pagination: {
+                currentPage: page,
+                itemsPerPage: limit,
+                totalItems: totalCount,
+                totalPages: Math.ceil(totalCount / limit),
+                hasNextPage: page < Math.ceil(totalCount / limit),
+                hasPrevPage: page > 1
+            }
+        };
     }
 
     static async getDashboardSummary() {
