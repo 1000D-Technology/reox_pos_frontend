@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
-import { X, Plus, Minus, Percent, DollarSign, Package } from 'lucide-react';
+import { X, Plus, Minus, Percent, DollarSign, Package, Calculator, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface Product {
@@ -40,12 +40,36 @@ export const ProductAddModal = ({
     const [quantity, setQuantity] = useState<number | string>(1);
     const [discount, setDiscount] = useState(0);
     const [discountType, setDiscountType] = useState<'percentage' | 'price'>('percentage');
+    const [subUnitValue, setSubUnitValue] = useState<number | string>('');
+
+    const currentUnitStr = (product?.category || '').toLowerCase().trim();
+    
+    const getUnitConfig = (unit: string, isBulkItem: boolean) => {
+        const u = unit.toLowerCase().trim();
+        // Weights: KG, Grams, Kilo, etc.
+        if (u.includes('kg') || u.includes('kilo') || u.includes('gram') || u.includes('weight') || (isBulkItem && u === '')) 
+            return { label: 'Weight', subLabel: 'Grams (g)', factor: 1000 };
+        // Volumes: L, ML, Liter, litre, etc.
+        if (u === 'l' || u.includes('ltr') || u.includes('liter') || u.includes('litre') || u.includes('vol') || u.includes('ml')) 
+            return { label: 'Volume', subLabel: 'Milliliters (ml)', factor: 1000 };
+        // Lengths: M, CM, Meter, metre, etc.
+        if (u === 'm' || (u.includes('meter') && !u.includes('centi')) || u.includes('metre') || u.includes('cm')) 
+            return { label: 'Length', subLabel: 'Centimeters (cm)', factor: 100 };
+        
+        // If it's explicitly marked as bulk but unit is unknown, assume weight as most common
+        if (isBulkItem) return { label: 'Bulk', subLabel: 'Units (/1000)', factor: 1000 };
+        
+        return null;
+    };
+
+    const unitConfig = getUnitConfig(currentUnitStr, product?.isBulk || false);
 
     useEffect(() => {
         if (isOpen && product) {
             setQuantity(1);
             setDiscount(0);
             setDiscountType('percentage');
+            setSubUnitValue('');
         }
     }, [isOpen, product]);
 
@@ -131,13 +155,16 @@ export const ProductAddModal = ({
         const currentQty = Number(quantity) || 0;
         if (currentQty < product.stock) {
             setQuantity(Math.min(product.stock, currentQty + 1));
+            setSubUnitValue('');
         }
     };
 
     const decrementQty = () => {
         const currentQty = Number(quantity) || 0;
-        if (currentQty > 1) {
-            setQuantity(currentQty - 1);
+        if (currentQty > 0) {
+            const nextQty = Math.max(0, currentQty - 1);
+            setQuantity(nextQty);
+            setSubUnitValue('');
         }
     };
 
@@ -161,6 +188,22 @@ export const ProductAddModal = ({
             setDiscount(Math.min(maxPercent, Math.max(0, value)));
         } else {
             setDiscount(Math.min(maxDiscountAmount, Math.max(0, value)));
+        }
+    };
+
+    const handleSubUnitChange = (val: string) => {
+        setSubUnitValue(val);
+        if (val === '' || !unitConfig) return;
+
+        const numVal = Number(val);
+        if (!isNaN(numVal)) {
+            const convertedQty = numVal / unitConfig.factor;
+            // Update quantity state
+            if (convertedQty > product!.stock) {
+                setQuantity(product!.stock);
+            } else {
+                setQuantity(Number(convertedQty.toFixed(3)));
+            }
         }
     };
 
@@ -232,47 +275,77 @@ export const ProductAddModal = ({
                                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                                     Quantity (Max: {product.stock})
                                 </label>
-                                <div className="flex items-center gap-3">
-                                    <button
-                                        onClick={decrementQty}
-                                        disabled={Number(quantity) <= 0}
-                                        className="w-12 h-12 bg-red-50 text-red-600 border-2 border-red-100 rounded-xl flex items-center justify-center transition-all hover:bg-red-500 hover:text-white active:scale-90 disabled:bg-gray-50 disabled:text-gray-300 disabled:border-gray-100"
-                                    >
-                                        <Minus className="w-5 h-5" strokeWidth={3} />
-                                    </button>
-                                    <div className="relative flex-1 group">
-                                        <input
-                                            type="number"
-                                            value={quantity}
-                                            onChange={(e) => {
-                                                const val = e.target.value;
-                                                if (val === '') {
-                                                    setQuantity('');
-                                                    return;
-                                                }
-                                                const numVal = Number(val);
-                                                if (numVal > product.stock) {
-                                                    setQuantity(product.stock);
-                                                } else {
-                                                    setQuantity(numVal);
-                                                }
-                                            }}
-                                            step="any"
-                                            className="w-full text-center text-2xl font-black py-2.5 bg-gray-50 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-emerald-500 focus:bg-white transition-all shadow-inner tabular-nums"
-                                            min={0}
-                                            max={product.stock}
-                                        />
-                                        <div className="absolute -top-2 left-4 px-1.5 bg-white text-[9px] font-black text-gray-400 uppercase tracking-tighter opacity-0 group-focus-within:opacity-100 transition-opacity">Quantity</div>
+                                    <div className="flex items-center gap-3">
+                                        <button
+                                            onClick={decrementQty}
+                                            disabled={Number(quantity) <= 0}
+                                            className="w-12 h-12 bg-red-50 text-red-600 border-2 border-red-100 rounded-xl flex items-center justify-center transition-all hover:bg-red-500 hover:text-white active:scale-90 disabled:bg-gray-50 disabled:text-gray-300 disabled:border-gray-100"
+                                        >
+                                            <Minus className="w-5 h-5" strokeWidth={3} />
+                                        </button>
+                                        <div className="relative flex-1 group">
+                                            <input
+                                                type="number"
+                                                value={quantity}
+                                                onChange={(e) => {
+                                                    const val = e.target.value;
+                                                    setSubUnitValue(''); // Clear sub-unit when manual qty change
+                                                    if (val === '') {
+                                                        setQuantity('');
+                                                        return;
+                                                    }
+                                                    const numVal = Number(val);
+                                                    if (numVal > product.stock) {
+                                                        setQuantity(product.stock);
+                                                    } else {
+                                                        setQuantity(numVal);
+                                                    }
+                                                }}
+                                                step="any"
+                                                autoFocus
+                                                onFocus={(e) => e.target.select()}
+                                                className="w-full text-center text-2xl font-black py-2.5 bg-gray-50 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-emerald-500 focus:bg-white transition-all shadow-inner tabular-nums"
+                                                min={0}
+                                                max={product.stock}
+                                            />
+                                            <div className="absolute -top-2 left-4 px-1.5 bg-white text-[9px] font-black text-gray-400 uppercase tracking-tighter opacity-0 group-focus-within:opacity-100 transition-opacity">Quantity ({product.category})</div>
+                                        </div>
+                                        <button
+                                            onClick={incrementQty}
+                                            disabled={Number(quantity) >= product.stock}
+                                            className="w-12 h-12 bg-emerald-50 text-emerald-600 border-2 border-emerald-100 rounded-xl flex items-center justify-center transition-all hover:bg-emerald-500 hover:text-white active:scale-90 disabled:bg-gray-50 disabled:text-gray-300 disabled:border-gray-100"
+                                        >
+                                            <Plus className="w-5 h-5" strokeWidth={3} />
+                                        </button>
                                     </div>
-                                    <button
-                                        onClick={incrementQty}
-                                        disabled={Number(quantity) >= product.stock}
-                                        className="w-12 h-12 bg-emerald-50 text-emerald-600 border-2 border-emerald-100 rounded-xl flex items-center justify-center transition-all hover:bg-emerald-500 hover:text-white active:scale-90 disabled:bg-gray-50 disabled:text-gray-300 disabled:border-gray-100"
-                                    >
-                                        <Plus className="w-5 h-5" strokeWidth={3} />
-                                    </button>
+
+                                    {/* Sub-Unit Quick Convert */}
+                                    {unitConfig && (
+                                        <div className="mt-3 p-3 bg-emerald-50 border border-emerald-100 rounded-xl animate-in fade-in slide-in-from-top-1">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <Calculator className="w-3.5 h-3.5 text-emerald-600" />
+                                                <span className="text-[11px] font-bold text-emerald-700 uppercase tracking-wider">Quick Convert: {unitConfig.subLabel}</span>
+                                            </div>
+                                            <div className="relative">
+                                                <input
+                                                    type="number"
+                                                    value={subUnitValue}
+                                                    onChange={(e) => handleSubUnitChange(e.target.value)}
+                                                    placeholder={`Enter amount in ${unitConfig.subLabel.split(' ')[0]}...`}
+                                                    step="any"
+                                                    className="w-full px-3 py-2 bg-white border-2 border-emerald-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500 transition-all font-semibold"
+                                                />
+                                                <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-emerald-500 flex items-center gap-1">
+                                                     <RefreshCw className="w-3 h-3 animate-spin-slow" />
+                                                     to {product.category}
+                                                </div>
+                                            </div>
+                                            <p className="mt-1.5 text-[10px] text-emerald-600 font-medium">
+                                                Tip: Entering <span className="font-bold">{unitConfig.factor}</span> will set quantity to <span className="font-bold">1 {product.category}</span>
+                                            </p>
+                                        </div>
+                                    )}
                                 </div>
-                            </div>
 
                             {/* Discount Section - Only in Retail Mode */}
                             {billingMode === 'retail' && (

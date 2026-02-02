@@ -442,6 +442,7 @@ router.post('/create', validateProduct, productController.addProduct);
 router.get('/', productController.getProducts);
 router.get('/dropdown', productController.getProductsForDropdown);
 router.get('/:productId/variants', productController.getProductVariants);
+router.post('/:productId/variants', productController.addProductVariation);
 router.get('/deactive', productController.getDeactiveProducts);
 
 router.put('/update/:pvId', validateUpdateMiddleware, productController.updateProduct);
@@ -449,5 +450,7 @@ router.patch('/status/:pvId', productController.changeProductStatus);
 
 router.get('/search' , productController.searchProducts);
 router.get('/search/deactive' , productController.searchDeactiveProducts);
+
+router.delete('/:pvId', productController.deleteProduct);
 
 module.exports = router;
