@@ -47,7 +47,8 @@ function createWindow() {
     },
     icon: path.join(__dirname, '../public/icon.png'),
     autoHideMenuBar: true,
-    show: false
+    show: false,
+    fullscreen: true
   });
 
   // Show window when ready to avoid flickering
@@ -58,7 +59,7 @@ function createWindow() {
   // Load the app
   if (isDev) {
     // Development mode - load from Vite dev server
-    mainWindow.loadURL('http://localhost:5173');
+    mainWindow.loadURL('http://127.0.0.1:5173');
     mainWindow.webContents.openDevTools();
   } else {
     // Production mode - load from built files
@@ -150,7 +151,7 @@ function startBackend() {
 
       // Try to connect to backend
       const http = require('http');
-      const req = http.get('http://localhost:3000/api/health', (res) => {
+      const req = http.get('http://127.0.0.1:3000/api/health', (res) => {
         if (res.statusCode === 200 || res.statusCode === 404) {
           clearInterval(checkBackend);
           console.log('Backend is ready!');

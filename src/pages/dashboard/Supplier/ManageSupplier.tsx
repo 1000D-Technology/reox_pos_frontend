@@ -9,7 +9,8 @@ import {
     ArrowUpRight,
     ArrowDownRight,
     Building2,
-    Loader2
+    Loader2,
+    Phone
 } from 'lucide-react';
 import TypeableSelect from '../../../components/TypeableSelect';
 
@@ -24,6 +25,7 @@ interface Category {
     email: string;
     contact: string;
     company: string;
+    companyContact: string;
     companyId: number;
     bank: string;
     bankId: number | null;
@@ -75,7 +77,7 @@ function ManageSupplier() {
             label: 'Total Suppliers',
             value: stats.totalSuppliers.toString(),
             trend: '+12%',
-            color: 'bg-gradient-to-br from-emerald-400 to-emerald-500',
+            color: 'bg-linear-to-br from-emerald-400 to-emerald-500',
             iconColor: 'text-white',
             bgGlow: ''
         },
@@ -84,7 +86,7 @@ function ManageSupplier() {
             label: 'Active Suppliers',
             value: stats.activeSuppliers.toString(),
             trend: '+8%',
-            color: 'bg-gradient-to-br from-blue-400 to-blue-500',
+            color: 'bg-linear-to-br from-blue-400 to-blue-500',
             iconColor: 'text-white',
             bgGlow: ''
         },
@@ -93,7 +95,7 @@ function ManageSupplier() {
             label: 'Total Companies',
             value: stats.totalCompanies.toString(),
             trend: '+5%',
-            color: 'bg-gradient-to-br from-purple-400 to-purple-500',
+            color: 'bg-linear-to-br from-purple-400 to-purple-500',
             iconColor: 'text-white',
             bgGlow: ''
         },
@@ -133,6 +135,7 @@ function ManageSupplier() {
                     email: supplier.email || '',
                     contact: supplier.contactNumber || '',
                     company: supplier.companyName || '',
+                    companyContact: supplier.companyContact || '',
                     companyId: supplier.companyId,
                     bank: supplier.bankName || '',
                     bankId: supplier.bankId,
@@ -346,7 +349,7 @@ function ManageSupplier() {
                         <span className="mx-2">›</span>
                         <span className="text-gray-700 font-medium">Manage Supplier</span>
                     </div>
-                    <h1 className="text-3xl font-semibold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
+                    <h1 className="text-3xl font-semibold bg-linear-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
                         Manage Supplier
                     </h1>
                 </div>
@@ -357,7 +360,7 @@ function ManageSupplier() {
                             key={i}
                             className={`flex items-center p-4 space-x-3 transition-all bg-white rounded-2xl border border-gray-200 cursor-pointer group relative overflow-hidden`}
                         >
-                            <div className="absolute inset-0 bg-gradient-to-br from-transparent via-gray-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                            <div className="absolute inset-0 bg-linear-to-br from-transparent via-gray-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
 
                             <div className={`p-3 rounded-full ${stat.color} relative z-10`}>
                                 <stat.icon className={`w-6 h-6 ${stat.iconColor}`} />
@@ -395,12 +398,12 @@ function ManageSupplier() {
                 </div>
 
                 <div
-                    className={'flex flex-col bg-white rounded-xl p-4 justify-between gap-8 border border-gray-200'}
+                    className={'flex flex-col bg-white rounded-xl p-4 justify-between gap-8 border border-gray-200 flex-1 overflow-hidden shadow-sm'}
                 >
                     <div
-                        className="overflow-y-auto max-h-md md:h-[320px] lg:h-[400px] rounded-lg scrollbar-thin scrollbar-thumb-emerald-300 scrollbar-track-gray-100">
+                        className="overflow-auto flex-1 rounded-lg scrollbar-thin scrollbar-thumb-emerald-300 scrollbar-track-gray-100">
                         <table className="min-w-full divide-y divide-gray-200">
-                            <thead className="bg-gradient-to-r from-emerald-500 to-emerald-600 sticky top-0 z-10">
+                            <thead className="bg-linear-to-r from-emerald-500 to-emerald-600 sticky top-0 z-10">
                                 <tr>
                                     {['#', 'Name', 'Email', 'Contact Number', 'Company Name', 'Bank', 'Account Number', 'Status', 'Actions'].map((header, i, arr) => (
                                         <th
@@ -455,12 +458,17 @@ function ManageSupplier() {
                                                 {category.contact}
                                             </td>
                                             <td className="px-6 py-2 whitespace-nowrap">
-                                                <span className="px-3 py-1 text-xs font-semibold rounded-full bg-gradient-to-r from-purple-100 to-purple-200 text-purple-800">
+                                                <span className="px-3 py-1 text-xs font-semibold rounded-full bg-linear-to-r from-purple-100 to-purple-200 text-purple-800">
                                                     {category.company}
                                                 </span>
+                                                {category.companyContact && (
+                                                    <div className="text-[10px] text-gray-400 mt-1 flex items-center gap-1">
+                                                        <Phone size={10} /> {category.companyContact}
+                                                    </div>
+                                                )}
                                             </td>
                                             <td className="px-6 py-2 whitespace-nowrap">
-                                                <span className="px-3 py-1 text-xs font-semibold rounded-full bg-gradient-to-r from-blue-100 to-blue-200 text-blue-800">
+                                                <span className="px-3 py-1 text-xs font-semibold rounded-full bg-linear-to-r from-blue-100 to-blue-200 text-blue-800">
                                                     {category.bank}
                                                 </span>
                                             </td>
@@ -474,8 +482,8 @@ function ManageSupplier() {
                                                         handleStatusToggle(category.id, category.statusId);
                                                     }}
                                                     className={`px-4 py-1.5 text-xs font-semibold rounded-full transition-all transform hover:scale-105 ${category.status === 'Active'
-                                                            ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white hover:from-emerald-600 hover:to-emerald-700'
-                                                            : 'bg-gradient-to-r from-gray-400 to-gray-500 text-white hover:from-gray-500 hover:to-gray-600'
+                                                            ? 'bg-linear-to-r from-emerald-500 to-emerald-600 text-white hover:from-emerald-600 hover:to-emerald-700'
+                                                            : 'bg-linear-to-r from-gray-400 to-gray-500 text-white hover:from-gray-500 hover:to-gray-600'
                                                         }`}
                                                 >
                                                     {category.status === 'Active' ? 'Active' : 'Inactive'}
@@ -487,7 +495,7 @@ function ManageSupplier() {
                                                         e.stopPropagation();
                                                         handleEditClick(category);
                                                     }}
-                                                    className="p-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg transition-all"
+                                                    className="p-2 bg-linear-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg transition-all"
                                                 >
                                                     <Pencil size={16} />
                                                 </button>
@@ -524,7 +532,7 @@ function ManageSupplier() {
                                         key={page}
                                         onClick={() => goToPage(page as number)}
                                         className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${currentPage === page
-                                                ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white'
+                                                ? 'bg-linear-to-r from-emerald-500 to-emerald-600 text-white'
                                                 : 'text-gray-600 hover:bg-emerald-50 hover:text-emerald-600'
                                             }`}
                                     >
@@ -559,7 +567,7 @@ function ManageSupplier() {
                         </button>
 
                         <div className="flex items-center gap-3 mb-6">
-                            <div className="p-3 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl">
+                            <div className="p-3 bg-linear-to-br from-emerald-500 to-emerald-600 rounded-xl">
                                 <Pencil className="w-6 h-6 text-white" />
                             </div>
                             <div>
@@ -633,7 +641,7 @@ function ManageSupplier() {
                             <button
                                 onClick={handleUpdateSupplier}
                                 disabled={isUpdatingSupplier}
-                                className={`px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-semibold rounded-lg transition-all flex items-center justify-center gap-2 ${isUpdatingSupplier ? 'opacity-50 cursor-not-allowed' : ''
+                                className={`px-6 py-2.5 bg-linear-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-semibold rounded-lg transition-all flex items-center justify-center gap-2 ${isUpdatingSupplier ? 'opacity-50 cursor-not-allowed' : ''
                                     }`}
                             >
                                 {isUpdatingSupplier ? (

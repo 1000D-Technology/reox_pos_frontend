@@ -77,6 +77,7 @@ const POSInterface = () => {
     const [showProductAddModal, setShowProductAddModal] = useState(false);
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
     const [currentSession, setCurrentSession] = useState<any>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
         const loadProducts = async () => {
@@ -477,10 +478,13 @@ const POSInterface = () => {
     
     const submitInvoice = async () => {
          try {
+            if (isSubmitting) return;
+
             if (!currentSession) {
                 toast.error('No active cash session found. Please restart the POS.');
                 return;
             }
+            setIsSubmitting(true);
             const sessionId = currentSession.id;
             const userId = currentSession.user_id || authService.getUserId() || 1;
              
@@ -533,6 +537,8 @@ const POSInterface = () => {
          } catch (error) {
              console.error(error);
              toast.error('Failed to create invoice');
+         } finally {
+             setIsSubmitting(false);
          }
     }
 
@@ -553,7 +559,7 @@ const POSInterface = () => {
     };
 
     return (
-        <div className="h-screen bg-linear-to-br from-gray-50 to-gray-100 p-4 flex flex-col overflow-hidden">
+        <div className="h-full bg-linear-to-br from-gray-50 to-gray-100 p-4 flex flex-col overflow-hidden">
             <POSHeader
                 billingMode={billingMode}
                 onBillingModeChange={setBillingMode}
@@ -627,6 +633,7 @@ const POSInterface = () => {
                 total={total}
                 paymentAmounts={paymentAmounts}
                 onComplete={submitInvoice}
+                isProcessing={isSubmitting}
             />
             <CustomerRegistrationModal
                 isOpen={showRegistrationModal}

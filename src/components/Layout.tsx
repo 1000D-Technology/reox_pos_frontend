@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import Sidebar from "./Sidebar";
-import { Bell, Calculator, ClipboardPlus, PanelLeft, Power, RotateCcw } from "lucide-react";
+import { Bell, Calculator, ClipboardPlus, Maximize, Minimize, PanelLeft, Power, RotateCcw } from "lucide-react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import InvoiceModal from "./models/InvoiceModal.tsx";
 import { AnimatePresence, motion } from "framer-motion";
@@ -10,6 +10,7 @@ import CalculatorModal from "./models/CalculatorModal.tsx";
 import ShutdownModal from "./ShutdownModal.tsx";
 import { authService } from "../services/authService";
 import { cashSessionService } from "../services/cashSessionService";
+import SubscriptionBanner from "./SubscriptionBanner";
 
 const OPEN_INVOICE_MODAL_EVENT = "openInvoiceModal";
 const OPEN_QUOTATION_MODAL_EVENT = "openQuotationModal";
@@ -32,6 +33,7 @@ export default function Layout() {
     const [isPosCashBalanceOpen, setIsPosCashBalanceOpen] = useState(false);
     const [isCalculatorOpen, setIsCalculatorOpen] = useState(false);
     const [isShutdownModalOpen, setIsShutdownModalOpen] = useState(false);
+    const [isFullscreen, setIsFullscreen] = useState(false);
     const [user, setUser] = useState<User | null>(null);
 
     useEffect(() => {
@@ -93,6 +95,26 @@ export default function Layout() {
         }
     };
 
+    const toggleFullscreen = () => {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen().catch((err) => {
+                console.error(`Error attempting to enable full-screen mode: ${err.message}`);
+            });
+        } else {
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            }
+        }
+    };
+
+    useEffect(() => {
+        const handleFullscreenChange = () => {
+            setIsFullscreen(!!document.fullscreenElement);
+        };
+        document.addEventListener('fullscreenchange', handleFullscreenChange);
+        return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    }, []);
+
 
 
     useEffect(() => {
@@ -136,12 +158,14 @@ export default function Layout() {
     }, []);
 
     return (
-        <div className="flex h-screen w-full  bg-gray-50">
+        <div className="flex h-screen w-full bg-gray-50 overflow-hidden">
             <Sidebar isOpen={isOpen} toggle={() => setIsOpen(!isOpen)} />
 
-            <div className="flex-1 flex flex-col pt-3 pe-1">
-                <header className={`h-16 flex items-center px-4 justify-between backdrop-blur-sm rounded-xl transition-colors duration-300 ${
-                    isScrolled ? 'bg-white/30' : 'bg-white/10'
+            <div className="flex-1 flex flex-col pt-0 pe-1 min-h-0 overflow-hidden">
+               
+
+                <header className={`h-16 flex items-center px-6 justify-between backdrop-blur-md rounded-2xl transition-all duration-300 border-b  mt-4 ${
+                    isScrolled ? 'bg-white/80 shadow-sm border-gray-200' : 'bg-white/40 border-transparent'
                 }`}>
                     <button
                         onClick={() => setIsOpen(!isOpen)}
@@ -159,6 +183,7 @@ export default function Layout() {
                         </button>
 
                         <div className={'flex items-center gap-3 text-gray-400'}>
+                            
                             <button onClick={() => setIsCalculatorOpen(true)} className={'cursor-pointer'}>
                                 <Calculator size={15} />
                             </button>
@@ -175,9 +200,17 @@ export default function Layout() {
                             >
                                 <RotateCcw size={15} />
                             </button>
-                            <Link to={'#'} className={'me-3'}>
+                            <Link to={'#'} >
                                 <Bell size={15} />
                             </Link>
+                            
+                            <button
+                                onClick={toggleFullscreen}
+                                className="p-2 rounded-full hover:bg-gray-100 transition cursor-pointer me-1"
+                                title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
+                            >
+                                {isFullscreen ? <Minimize size={15} /> : <Maximize size={15} />}
+                            </button>
                             {user && (
                                 <>
                                     <div className={'flex flex-col leading-1 items-end border-s-2 ps-5 border-gray-200'}>
@@ -190,11 +223,12 @@ export default function Layout() {
                                     </div>
                                 </>
                             )}
+                            
                         </div>
                     </div>
                 </header>
-
-                <main className="flex-1 overflow-y-auto ps-3 pe-1 my-3 me-3 h-full hide-scrollbar">
+                 <SubscriptionBanner />
+                <main className="flex-1 overflow-y-auto ps-3 pe-1 mb-3 me-3 flex flex-col min-h-0 hide-scrollbar">
                     <Outlet/>
                 </main>
 
@@ -272,7 +306,7 @@ export default function Layout() {
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm"
+                            className="fixed inset-0 z-60 flex items-center justify-center bg-black/50 backdrop-blur-sm"
                             onClick={() => setIsCalculatorOpen(false)}
                         >
                             <motion.div

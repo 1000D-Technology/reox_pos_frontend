@@ -178,14 +178,33 @@ async function main() {
   // 8. Invoice Types (Sales, Return)
   const invoiceTypes = ['Sales', 'Return'];
   for (const iType of invoiceTypes) {
-     // Check if existing by ID or Name. Since ID is auto-inc, check by name is safer for idempotency if ID logic varies.
-     // Schema has 'Invoice_type' (capital I? schema says 'Invoice_type' string field).
-     // Let's check schema again.
-     // model invoice_type { ... Invoice_type String ... }
      const exists = await prisma.invoice_type.findFirst({ where: { Invoice_type: iType } });
      if (!exists) {
        await prisma.invoice_type.create({ data: { Invoice_type: iType } });
        console.log(`Created invoice type: ${iType}`);
+     }
+  }
+
+  // 9. Exchange Types (Cash In, Cash Out)
+  const exchangeTypes = [
+    { id: 1, name: 'Cash In' },
+    { id: 2, name: 'Cash Out' }
+  ];
+  for (const item of exchangeTypes) {
+    const exists = await prisma.exchange_type.findUnique({ where: { id: item.id } });
+    if (!exists) {
+      await prisma.exchange_type.create({ data: { id: item.id, exchange_type: item.name } });
+      console.log(`Created exchange type: ${item.name}`);
+    }
+  }
+
+  // 10. Return Statuses (Pending, Completed, etc.)
+  const returnStatuses = ['Pending', 'Completed', 'Rejected'];
+  for (const rs of returnStatuses) {
+     const exists = await prisma.return_status.findFirst({ where: { return_status: rs } });
+     if (!exists) {
+       await prisma.return_status.create({ data: { return_status: rs } });
+       console.log(`Created return status: ${rs}`);
      }
   }
 

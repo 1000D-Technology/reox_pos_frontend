@@ -4,7 +4,7 @@ export const productService = {
     // Get all active products
     getProducts: () => axiosInstance.get('/api/products'),
 
-    getProductsForDropdown: () => axiosInstance.get('/api/products/dropdown'),
+    getProductsForDropdown: (params?: { searchTerm?: string; limit?: number }) => axiosInstance.get('/api/products/dropdown', { params }),
 
     // Get deactive/removed products
     getDeactiveProducts: () => axiosInstance.get('/api/products/deactive'),

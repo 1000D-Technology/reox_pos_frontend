@@ -284,7 +284,7 @@ function ManageSales() {
                             <span className="mx-2">›</span>
                             <span className="text-gray-700 font-medium">Sales Management</span>
                         </div>
-                        <h1 className="text-3xl font-semibold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent leading-tight">
+                        <h1 className="text-3xl font-semibold bg-linear-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent leading-tight">
                             Sales Management
                         </h1>
                     </div>
@@ -371,11 +371,11 @@ function ManageSales() {
                             />
                         </div>
                         <div className="grid grid-cols-2 gap-2 md:items-end">
-                            <button onClick={handleSearch} disabled={loading} className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white py-2 rounded-lg flex items-center justify-center font-medium hover:from-emerald-600 hover:to-emerald-700 transition-all disabled:opacity-50">
+                            <button onClick={handleSearch} disabled={loading} className="bg-linear-to-r from-emerald-500 to-emerald-600 text-white py-2 rounded-lg flex items-center justify-center font-medium hover:from-emerald-600 hover:to-emerald-700 transition-all disabled:opacity-50">
                                 {loading ? <Loader2 className="animate-spin" size={14} /> : <SearchCheck className="mr-2" size={14} />}
                                 Search
                             </button>
-                            <button onClick={handleReset} disabled={loading} className="bg-gradient-to-r from-gray-500 to-gray-600 text-white py-2 rounded-lg flex items-center justify-center font-medium hover:from-gray-600 hover:to-gray-700 transition-all disabled:opacity-50">
+                            <button onClick={handleReset} disabled={loading} className="bg-linear-to-r from-gray-500 to-gray-600 text-white py-2 rounded-lg flex items-center justify-center font-medium hover:from-gray-600 hover:to-gray-700 transition-all disabled:opacity-50">
                                 <RefreshCw className="mr-2" size={14} />
                                 Reset
                             </button>
@@ -384,10 +384,10 @@ function ManageSales() {
                 </div>
 
                 {/* Table Section */}
-                <div className="bg-white border border-gray-200 rounded-xl p-4 flex-1 flex flex-col justify-between overflow-hidden">
-                    <div className="overflow-x-auto overflow-y-auto max-h-[500px] rounded-lg scrollbar-thin scrollbar-thumb-emerald-300 scrollbar-track-gray-50">
+                <div className="bg-white border border-gray-200 rounded-xl p-4 flex-1 flex flex-col justify-between overflow-hidden shadow-sm">
+                    <div className="overflow-auto flex-1 rounded-lg scrollbar-thin scrollbar-thumb-emerald-300 scrollbar-track-gray-50">
                         <table className="min-w-full divide-y divide-gray-200">
-                            <thead className="bg-gradient-to-r from-emerald-500 to-emerald-600 sticky top-0 z-10">
+                            <thead className="bg-linear-to-r from-emerald-500 to-emerald-600 sticky top-0 z-10">
                                 <tr>
                                     {[
                                         'Invoice ID', 'Customer', 'Gross', 'Discount', 'Net', 'Profit', 'Cash Pay', 'Card Pay', 'Balance', 'Cashier', 'Issued At', 'Actions'
@@ -480,9 +480,9 @@ function ManageSales() {
 
                 {/* Detail Modal */}
                 {showDetailModal && (
-                    <div className="fixed inset-0 bg-gray-900/10 backdrop-blur-[4px] z-50 flex items-center justify-center p-4">
+                    <div className="fixed inset-0 bg-gray-900/10 backdrop-blur-xs z-50 flex items-center justify-center p-4">
                         <div className="bg-white rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden shadow-2xl flex flex-col">
-                            <div className="bg-gradient-to-r from-emerald-500 to-emerald-600 p-4 flex items-center justify-between text-white">
+                            <div className="bg-linear-to-r from-emerald-500 to-emerald-600 p-4 flex items-center justify-between text-white">
                                 <h3 className="text-lg font-bold">Sales Detail View</h3>
                                 <button onClick={() => setShowDetailModal(false)} className="hover:bg-white/20 p-1.5 rounded-lg transition-colors">
                                     <X size={20} />

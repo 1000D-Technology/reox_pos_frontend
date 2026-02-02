@@ -203,7 +203,7 @@ const BackUp = () => {
                 }}
             />
 
-            <div className="min-h-screen bg-white/25 rounded-md p-6">
+            <div className="min-h-full bg-white/25 rounded-md p-6">
                 <div className="w-full mx-auto space-y-6">
                     {/* Header */}
                     <div

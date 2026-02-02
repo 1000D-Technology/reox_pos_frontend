@@ -1,4 +1,5 @@
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 const express = require('express');
 const cors = require('cors');
 const { globalErrorHandler, AppError } = require('./middleware/errorHandler');
@@ -30,6 +31,7 @@ const cashSessionRoutes = require('./routes/cashSessionRoutes');
 const quotationRoutes = require('./routes/quotationRoutes');
 const reportRoutes = require('./routes/reportRoutes');
 const analyticsRoutes = require('./routes/reportRoutes'); // Using the same file for now
+const subscriptionRoutes = require('./routes/subscriptionRoutes');
 
 
 // Middleware
@@ -65,12 +67,12 @@ app.use('/api/setup', setupRoutes);
 app.use('/api/backup', backupRoutes);
 app.use('/api/pos', posRoutes);
 app.use('/api/customers', customerRoutes);
+app.use('/api/subscription', subscriptionRoutes);
+app.use('/api/money-exchange', moneyExchangeRoutes);
+app.use('/api/quotations', quotationRoutes);
 app.use('/api', cashSessionRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/roles', roleRoutes);
-
-app.use('/api/money-exchange', moneyExchangeRoutes);
-app.use('/api/quotations', quotationRoutes);
 
 // Handle undefined routes
 app.use((req, res, next) => {
@@ -80,7 +82,7 @@ app.use((req, res, next) => {
 // Global error handling middleware (MUST BE LAST)
 app.use(globalErrorHandler);
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 3000;
 
 seedDatabase().then(() => {
     app.listen(PORT, () => {

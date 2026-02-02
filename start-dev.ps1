@@ -15,8 +15,8 @@ Start-Sleep -Seconds 5
 
 Write-Host "[3/3] Starting Electron app..." -ForegroundColor Yellow
 Write-Host ""
-Write-Host "Backend is running on: http://localhost:3000" -ForegroundColor Green
-Write-Host "Frontend will run on: http://localhost:5173" -ForegroundColor Green
+Write-Host "Backend is running on: http://127.0.0.1:3000" -ForegroundColor Green
+Write-Host "Frontend will run on: http://127.0.0.1:5173" -ForegroundColor Green
 Write-Host ""
 Write-Host "Press Ctrl+C to stop" -ForegroundColor Yellow
 Write-Host ""

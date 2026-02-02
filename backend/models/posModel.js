@@ -54,7 +54,7 @@ class POS {
                 barcode: s.barcode,
                 unit: p.unit_id_product_unit_idTounit_id?.name,
                 price: s.rsp,
-                wholesalePrice: s.wsp || '',
+                wholesalePrice: s.wsp ?? 0,
                 productCode: p.product_code,
                 currentStock: s.qty,
                 batchName: s.batch.batch_name,
@@ -398,6 +398,7 @@ class POS {
             grossAmount: invoice.total + (invoice.discount || 0),
             profit: profit,
             creditBalance: creditBalance,
+            refundedAmount: invoice.refunded_amount || 0,
             items: invoice.invoice_items.map(item => ({
                 id: item.stock_id,
                 name: item.stock.product_variations.product.product_name,
@@ -703,6 +704,7 @@ class POS {
                 cashier: cashierName,
                 customerName: invoice.customer?.name || 'Guest',
                 itemCount: invoice.invoice_items.length,
+                refundedAmount: (invoice.refunded_amount || 0).toFixed(2),
                 paymentMethods: invoice.invoice_payments.map(p => p.payment_types.payment_types).join(', ')
             };
         }));

@@ -25,6 +25,7 @@ import ManageUnit from "./pages/dashboard/Products/ManageUnit.tsx";
 import ManageCategory from "./pages/dashboard/Products/ManageCategory.tsx";
 import RemovedProducts from "./pages/dashboard/Products/RemovedProducts.tsx";
 import CreateSupplier from "./pages/dashboard/Supplier/CreateSupplier.tsx";
+import ManageCompany from "./pages/dashboard/Supplier/ManageCompany.tsx";
 import SupplierGRN from "./pages/dashboard/Supplier/SupplierGRN.tsx";
 import ManageEmployee from "./pages/dashboard/Employee/ManageEmployee.tsx";
 import AttendanceMark from "./pages/dashboard/Employee/AttendanceMark.tsx";
@@ -40,258 +41,271 @@ import BackUp from "./pages/dashboard/BackUp.tsx";
 import DatabaseSetup from "./pages/setup/DatabaseSetup.tsx";
 import {PublicRoute} from "./components/PublicRoute.tsx";
 import {ProtectedRoute} from "./components/ProtectedRoute.tsx";
+import InternetStatusWrapper from "./components/InternetStatusWrapper";
 
 export default function App() {
     return (
         <Router>
-            <Routes>
-                {/* Auth */}
-                <Route path="/signin" element={
-                    <PublicRoute>
-                        <SignIn/>
-                    </PublicRoute>
-                }/>
-                <Route path="/" element={<DatabaseSetup/>}/>
-                {/* Dashboard layout */}
-                <Route element={<Layout/>}>
-                    {/* Dashboard - All authenticated users */}
-                    <Route path="/dashboard" element={
-                        <ProtectedRoute>
-                            <Dashboard/>
-                        </ProtectedRoute>
+            <InternetStatusWrapper>
+                <Routes>
+                    {/* Auth */}
+                    <Route path="/signin" element={
+                        <PublicRoute>
+                            <SignIn/>
+                        </PublicRoute>
                     }/>
+                    <Route path="/setup" element={<DatabaseSetup/>}/>
+                    <Route path="/" element={
+                        <PublicRoute>
+                            <SignIn/>
+                        </PublicRoute>
+                    }/>
+                    {/* Dashboard layout */}
+                    <Route element={<Layout/>}>
+                        {/* Dashboard - All authenticated users */}
+                        <Route path="/dashboard" element={
+                            <ProtectedRoute>
+                                <Dashboard/>
+                            </ProtectedRoute>
+                        }/>
 
-                    {/* POS - Cashier & Admin */}
-                    <Route path="/pos" element={
-                        <ProtectedRoute allowedRoles={['Admin', 'Cashier']}>
-                            <POS/>
-                        </ProtectedRoute>
-                    }/>
+                        {/* POS - Cashier & Admin */}
+                        <Route path="/pos" element={
+                            <ProtectedRoute allowedRoles={['Admin', 'Cashier']}>
+                                <POS/>
+                            </ProtectedRoute>
+                        }/>
 
-                    {/* Sales - Cashier & Admin */}
-                    <Route path="/sales" element={
-                        <ProtectedRoute allowedRoles={['Admin', 'Cashier']}>
-                            <ManageInvoice/>
-                        </ProtectedRoute>
-                    }/>
-                    <Route path="/sales/manage-invoice" element={
-                        <ProtectedRoute allowedRoles={['Admin', 'Cashier']}>
-                            <ManageInvoice/>
-                        </ProtectedRoute>
-                    }/>
-                    <Route path="/sales/manage-sales" element={
-                        <ProtectedRoute allowedRoles={['Admin', 'Cashier']}>
-                            <ManageSales/>
-                        </ProtectedRoute>
-                    }/>
-                    <Route path="/sales/manage-user-sales" element={
-                        <ProtectedRoute allowedRoles={['Admin']}>
-                            <ManageUserSales/>
-                        </ProtectedRoute>
-                    }/>
+                        {/* Sales - Cashier & Admin */}
+                        <Route path="/sales" element={
+                            <ProtectedRoute allowedRoles={['Admin', 'Cashier']}>
+                                <ManageInvoice/>
+                            </ProtectedRoute>
+                        }/>
+                        <Route path="/sales/manage-invoice" element={
+                            <ProtectedRoute allowedRoles={['Admin', 'Cashier']}>
+                                <ManageInvoice/>
+                            </ProtectedRoute>
+                        }/>
+                        <Route path="/sales/manage-sales" element={
+                            <ProtectedRoute allowedRoles={['Admin', 'Cashier']}>
+                                <ManageSales/>
+                            </ProtectedRoute>
+                        }/>
+                        <Route path="/sales/manage-user-sales" element={
+                            <ProtectedRoute allowedRoles={['Admin']}>
+                                <ManageUserSales/>
+                            </ProtectedRoute>
+                        }/>
 
-                    {/* Quotation - All roles */}
-                    <Route path="/quotation" element={
-                        <ProtectedRoute allowedRoles={['Admin', 'Cashier', 'Storekeeper']}>
-                            <CreateQuotation/>
-                        </ProtectedRoute>
-                    }/>
-                    <Route path="/quotation/create-quotation" element={
-                        <ProtectedRoute allowedRoles={['Admin', 'Cashier', 'Storekeeper']}>
-                            <CreateQuotation/>
-                        </ProtectedRoute>
-                    }/>
-                    <Route path="/quotation/quotation-list" element={
-                        <ProtectedRoute allowedRoles={['Admin', 'Cashier', 'Storekeeper']}>
-                            <QuotationList/>
-                        </ProtectedRoute>
-                    }/>
+                        {/* Quotation - All roles */}
+                        <Route path="/quotation" element={
+                            <ProtectedRoute allowedRoles={['Admin', 'Cashier', 'Storekeeper']}>
+                                <CreateQuotation/>
+                            </ProtectedRoute>
+                        }/>
+                        <Route path="/quotation/create-quotation" element={
+                            <ProtectedRoute allowedRoles={['Admin', 'Cashier', 'Storekeeper']}>
+                                <CreateQuotation/>
+                            </ProtectedRoute>
+                        }/>
+                        <Route path="/quotation/quotation-list" element={
+                            <ProtectedRoute allowedRoles={['Admin', 'Cashier', 'Storekeeper']}>
+                                <QuotationList/>
+                            </ProtectedRoute>
+                        }/>
 
-                    {/* Stock - Storekeeper & Admin */}
-                    <Route path="/stock" element={
-                        <ProtectedRoute allowedRoles={['Admin', 'Storekeeper']}>
-                            <StockList/>
-                        </ProtectedRoute>
-                    }/>
-                    <Route path="/stock/stock-list" element={
-                        <ProtectedRoute allowedRoles={['Admin', 'Storekeeper']}>
-                            <StockList/>
-                        </ProtectedRoute>
-                    }/>
-                    <Route path="/stock/out-of-stock" element={
-                        <ProtectedRoute allowedRoles={['Admin', 'Storekeeper']}>
-                            <OutOfStock/>
-                        </ProtectedRoute>
-                    }/>
-                    <Route path="/stock/damaged-stock" element={
-                        <ProtectedRoute allowedRoles={['Admin', 'Storekeeper']}>
-                            <DamagedStock/>
-                        </ProtectedRoute>
-                    }/>
-                    <Route path="/stock/low-stock" element={
-                        <ProtectedRoute allowedRoles={['Admin', 'Storekeeper']}>
-                            <LowStock/>
-                        </ProtectedRoute>
-                    }/>
+                        {/* Stock - Storekeeper & Admin */}
+                        <Route path="/stock" element={
+                            <ProtectedRoute allowedRoles={['Admin', 'Storekeeper']}>
+                                <StockList/>
+                            </ProtectedRoute>
+                        }/>
+                        <Route path="/stock/stock-list" element={
+                            <ProtectedRoute allowedRoles={['Admin', 'Storekeeper']}>
+                                <StockList/>
+                            </ProtectedRoute>
+                        }/>
+                        <Route path="/stock/out-of-stock" element={
+                            <ProtectedRoute allowedRoles={['Admin', 'Storekeeper']}>
+                                <OutOfStock/>
+                            </ProtectedRoute>
+                        }/>
+                        <Route path="/stock/damaged-stock" element={
+                            <ProtectedRoute allowedRoles={['Admin', 'Storekeeper']}>
+                                <DamagedStock/>
+                            </ProtectedRoute>
+                        }/>
+                        <Route path="/stock/low-stock" element={
+                            <ProtectedRoute allowedRoles={['Admin', 'Storekeeper']}>
+                                <LowStock/>
+                            </ProtectedRoute>
+                        }/>
 
-                    {/* GRN - Storekeeper & Admin */}
-                    <Route path="/grn" element={
-                        <ProtectedRoute allowedRoles={['Admin', 'Storekeeper']}>
-                            <CreateGrn/>
-                        </ProtectedRoute>
-                    }/>
-                    <Route path="/grn/create-grn" element={
-                        <ProtectedRoute allowedRoles={['Admin', 'Storekeeper']}>
-                            <CreateGrn/>
-                        </ProtectedRoute>
-                    }/>
-                    <Route path="/grn/grn-list" element={
-                        <ProtectedRoute allowedRoles={['Admin', 'Storekeeper']}>
-                            <GrnList/>
-                        </ProtectedRoute>
-                    }/>
+                        {/* GRN - Storekeeper & Admin */}
+                        <Route path="/grn" element={
+                            <ProtectedRoute allowedRoles={['Admin', 'Storekeeper']}>
+                                <CreateGrn/>
+                            </ProtectedRoute>
+                        }/>
+                        <Route path="/grn/create-grn" element={
+                            <ProtectedRoute allowedRoles={['Admin', 'Storekeeper']}>
+                                <CreateGrn/>
+                            </ProtectedRoute>
+                        }/>
+                        <Route path="/grn/grn-list" element={
+                            <ProtectedRoute allowedRoles={['Admin', 'Storekeeper']}>
+                                <GrnList/>
+                            </ProtectedRoute>
+                        }/>
 
-                    {/* Products - Storekeeper & Admin */}
-                    <Route path="/products" element={
-                        <ProtectedRoute allowedRoles={['Admin', 'Storekeeper']}>
-                            <CreateProducts/>
-                        </ProtectedRoute>
-                    }/>
-                    <Route path="/products/create-product" element={
-                        <ProtectedRoute allowedRoles={['Admin', 'Storekeeper']}>
-                            <CreateProducts/>
-                        </ProtectedRoute>
-                    }/>
-                    <Route path="/products/product-list" element={
-                        <ProtectedRoute allowedRoles={['Admin', 'Storekeeper']}>
-                            <ProductList/>
-                        </ProtectedRoute>
-                    }/>
-                    <Route path="/products/manage-product-type" element={
-                        <ProtectedRoute allowedRoles={['Admin', 'Storekeeper']}>
-                            <ManageProductType/>
-                        </ProtectedRoute>
-                    }/>
-                    <Route path="/products/manage-unit" element={
-                        <ProtectedRoute allowedRoles={['Admin', 'Storekeeper']}>
-                            <ManageUnit/>
-                        </ProtectedRoute>
-                    }/>
-                    <Route path="/products/manage-category" element={
-                        <ProtectedRoute allowedRoles={['Admin', 'Storekeeper']}>
-                            <ManageCategory/>
-                        </ProtectedRoute>
-                    }/>
-                    <Route path="/products/manage-brand" element={
-                        <ProtectedRoute allowedRoles={['Admin', 'Storekeeper']}>
-                            <ManageBrand/>
-                        </ProtectedRoute>
-                    }/>
-                    <Route path="/products/removed-products" element={
-                        <ProtectedRoute allowedRoles={['Admin']}>
-                            <RemovedProducts/>
-                        </ProtectedRoute>
-                    }/>
+                        {/* Products - Storekeeper & Admin */}
+                        <Route path="/products" element={
+                            <ProtectedRoute allowedRoles={['Admin', 'Storekeeper']}>
+                                <CreateProducts/>
+                            </ProtectedRoute>
+                        }/>
+                        <Route path="/products/create-product" element={
+                            <ProtectedRoute allowedRoles={['Admin', 'Storekeeper']}>
+                                <CreateProducts/>
+                            </ProtectedRoute>
+                        }/>
+                        <Route path="/products/product-list" element={
+                            <ProtectedRoute allowedRoles={['Admin', 'Storekeeper']}>
+                                <ProductList/>
+                            </ProtectedRoute>
+                        }/>
+                        <Route path="/products/manage-product-type" element={
+                            <ProtectedRoute allowedRoles={['Admin', 'Storekeeper']}>
+                                <ManageProductType/>
+                            </ProtectedRoute>
+                        }/>
+                        <Route path="/products/manage-unit" element={
+                            <ProtectedRoute allowedRoles={['Admin', 'Storekeeper']}>
+                                <ManageUnit/>
+                            </ProtectedRoute>
+                        }/>
+                        <Route path="/products/manage-category" element={
+                            <ProtectedRoute allowedRoles={['Admin', 'Storekeeper']}>
+                                <ManageCategory/>
+                            </ProtectedRoute>
+                        }/>
+                        <Route path="/products/manage-brand" element={
+                            <ProtectedRoute allowedRoles={['Admin', 'Storekeeper']}>
+                                <ManageBrand/>
+                            </ProtectedRoute>
+                        }/>
+                        <Route path="/products/removed-products" element={
+                            <ProtectedRoute allowedRoles={['Admin']}>
+                                <RemovedProducts/>
+                            </ProtectedRoute>
+                        }/>
 
-                    {/* Supplier - Admin only */}
-                    <Route path="/supplier" element={
-                        <ProtectedRoute allowedRoles={['Admin']}>
-                            <CreateSupplier/>
-                        </ProtectedRoute>
-                    }/>
-                    <Route path="/supplier/create-supplier" element={
-                        <ProtectedRoute allowedRoles={['Admin']}>
-                            <CreateSupplier/>
-                        </ProtectedRoute>
-                    }/>
-                    <Route path="/supplier/manage-supplier" element={
-                        <ProtectedRoute allowedRoles={['Admin']}>
-                            <ManageSupplier/>
-                        </ProtectedRoute>
-                    }/>
-                    <Route path="/supplier/supplier-grn" element={
-                        <ProtectedRoute allowedRoles={['Admin']}>
-                            <SupplierGRN/>
-                        </ProtectedRoute>
-                    }/>
-                    <Route path="/supplier/supplier-payments" element={
-                        <ProtectedRoute allowedRoles={['Admin']}>
-                            <SupplierPayment/>
-                        </ProtectedRoute>
-                    }/>
+                        {/* Supplier - Admin only */}
+                        <Route path="/supplier" element={
+                            <ProtectedRoute allowedRoles={['Admin']}>
+                                <CreateSupplier/>
+                            </ProtectedRoute>
+                        }/>
+                        <Route path="/supplier/create-supplier" element={
+                            <ProtectedRoute allowedRoles={['Admin']}>
+                                <CreateSupplier/>
+                            </ProtectedRoute>
+                        }/>
+                        <Route path="/supplier/manage-supplier" element={
+                            <ProtectedRoute allowedRoles={['Admin']}>
+                                <ManageSupplier/>
+                            </ProtectedRoute>
+                        }/>
+                        <Route path="/supplier/manage-company" element={
+                            <ProtectedRoute allowedRoles={['Admin']}>
+                                <ManageCompany/>
+                            </ProtectedRoute>
+                        }/>
+                        <Route path="/supplier/supplier-grn" element={
+                            <ProtectedRoute allowedRoles={['Admin']}>
+                                <SupplierGRN/>
+                            </ProtectedRoute>
+                        }/>
+                        <Route path="/supplier/supplier-payments" element={
+                            <ProtectedRoute allowedRoles={['Admin']}>
+                                <SupplierPayment/>
+                            </ProtectedRoute>
+                        }/>
 
-                    {/* Customer - Cashier & Admin */}
-                    <Route path="/customer" element={
-                        <ProtectedRoute allowedRoles={['Admin', 'Cashier']}>
-                            <ManageCustomer/>
-                        </ProtectedRoute>
-                    }/>
-                    <Route path="/customer/manage-customer" element={
-                        <ProtectedRoute allowedRoles={['Admin', 'Cashier']}>
-                            <ManageCustomer/>
-                        </ProtectedRoute>
-                    }/>
+                        {/* Customer - Cashier & Admin */}
+                        <Route path="/customer" element={
+                            <ProtectedRoute allowedRoles={['Admin', 'Cashier']}>
+                                <ManageCustomer/>
+                            </ProtectedRoute>
+                        }/>
+                        <Route path="/customer/manage-customer" element={
+                            <ProtectedRoute allowedRoles={['Admin', 'Cashier']}>
+                                <ManageCustomer/>
+                            </ProtectedRoute>
+                        }/>
 
-                    {/* Employee - Admin only */}
-                    <Route path="/employee" element={
-                        <ProtectedRoute allowedRoles={['Admin']}>
-                            <ManageEmployee/>
-                        </ProtectedRoute>
-                    }/>
-                    <Route path="/employee/manage-employee" element={
-                        <ProtectedRoute allowedRoles={['Admin']}>
-                            <ManageEmployee/>
-                        </ProtectedRoute>
-                    }/>
-                    <Route path="/employee/attendance-mark" element={
-                        <ProtectedRoute allowedRoles={['Admin']}>
-                            <AttendanceMark/>
-                        </ProtectedRoute>
-                    }/>
-                    <Route path="/employee/attendance-report" element={
-                        <ProtectedRoute allowedRoles={['Admin']}>
-                            <AttendanceReport/>
-                        </ProtectedRoute>
-                    }/>
-                    <Route path="/employee/employee-salary" element={
-                        <ProtectedRoute allowedRoles={['Admin']}>
-                            <EmployeeSalary/>
-                        </ProtectedRoute>
-                    }/>
+                        {/* Employee - Admin only */}
+                        <Route path="/employee" element={
+                            <ProtectedRoute allowedRoles={['Admin']}>
+                                <ManageEmployee/>
+                            </ProtectedRoute>
+                        }/>
+                        <Route path="/employee/manage-employee" element={
+                            <ProtectedRoute allowedRoles={['Admin']}>
+                                <ManageEmployee/>
+                            </ProtectedRoute>
+                        }/>
+                        <Route path="/employee/attendance-mark" element={
+                            <ProtectedRoute allowedRoles={['Admin']}>
+                                <AttendanceMark/>
+                            </ProtectedRoute>
+                        }/>
+                        <Route path="/employee/attendance-report" element={
+                            <ProtectedRoute allowedRoles={['Admin']}>
+                                <AttendanceReport/>
+                            </ProtectedRoute>
+                        }/>
+                        <Route path="/employee/employee-salary" element={
+                            <ProtectedRoute allowedRoles={['Admin']}>
+                                <EmployeeSalary/>
+                            </ProtectedRoute>
+                        }/>
 
-                    {/* User Management - Admin only */}
-                    <Route path="/manage-users" element={
-                        <ProtectedRoute allowedRoles={['Admin']}>
-                            <ManageUser/>
-                        </ProtectedRoute>
-                    }/>
+                        {/* User Management - Admin only */}
+                        <Route path="/manage-users" element={
+                            <ProtectedRoute allowedRoles={['Admin']}>
+                                <ManageUser/>
+                            </ProtectedRoute>
+                        }/>
 
-                    {/* Accounts & Reports - Admin only */}
-                    <Route path="/accounts" element={
-                        <ProtectedRoute allowedRoles={['Admin']}>
-                            <Accounts/>
-                        </ProtectedRoute>
-                    }/>
-                    <Route path="/reports" element={
-                        <ProtectedRoute allowedRoles={['Admin']}>
-                            <Reports/>
-                        </ProtectedRoute>
-                    }/>
+                        {/* Accounts & Reports - Admin only */}
+                        <Route path="/accounts" element={
+                            <ProtectedRoute allowedRoles={['Admin']}>
+                                <Accounts/>
+                            </ProtectedRoute>
+                        }/>
+                        <Route path="/reports" element={
+                            <ProtectedRoute allowedRoles={['Admin']}>
+                                <Reports/>
+                            </ProtectedRoute>
+                        }/>
 
-                    {/* Settings & Backup - Admin only */}
-                    <Route path="/setting" element={
-                        <ProtectedRoute allowedRoles={['Admin']}>
-                            <Setting/>
-                        </ProtectedRoute>
-                    }/>
-                    <Route path="/back-up" element={
-                        <ProtectedRoute allowedRoles={['Admin']}>
-                            <BackUp/>
-                        </ProtectedRoute>
-                    }/>
+                        {/* Settings & Backup - Admin only */}
+                        <Route path="/setting" element={
+                            <ProtectedRoute allowedRoles={['Admin']}>
+                                <Setting/>
+                            </ProtectedRoute>
+                        }/>
+                        <Route path="/back-up" element={
+                            <ProtectedRoute allowedRoles={['Admin']}>
+                                <BackUp/>
+                            </ProtectedRoute>
+                        }/>
 
-                </Route>
-            </Routes>
+                    </Route>
+                </Routes>
+            </InternetStatusWrapper>
         </Router>
     );
 }
