@@ -18,13 +18,8 @@ export const userService = {
     },
 
     updateUser: async (userId: number, userData: any) => {
-        try {
-            const response = await axiosInstance.put(`/api/users/${userId}`, userData);
-            return response.data;
-        } catch (error) {
-            throw error;
-        }
+        const response = await axiosInstance.put(`/api/users/${userId}`, userData);
+        return response.data;
     }
-    
-}
+};
 

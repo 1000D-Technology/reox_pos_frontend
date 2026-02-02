@@ -538,39 +538,50 @@ class Stock {
         });
     }
 
-    // Get all stock items where quantity is less than 15
-    static async getLowStockRecords() {
-        const stocks = await prisma.stock.findMany({
-            where: {
-                qty: { lt: 15, gte: 0 }
-            },
-            include: {
-                product_variations: {
-                    include: {
-                        product: {
-                            include: {
-                                unit_id_product_unit_idTounit_id: true
-                            }
-                        }
-                    }
-                },
-                grn_items: {
-                    include: {
-                        grn: {
-                            include: {
-                                supplier: true
+    // Get all stock items where quantity is less than 15 with pagination
+    static async getLowStockRecords(page = 1, limit = 10) {
+        const skip = (page - 1) * limit;
+
+        // Build WHERE condition
+        const whereCondition = {
+            qty: { lt: 15, gte: 0 }
+        };
+
+        // Fetch data with pagination and count in parallel
+        const [stocks, totalCount] = await Promise.all([
+            prisma.stock.findMany({
+                where: whereCondition,
+                skip: skip,
+                take: limit,
+                include: {
+                    product_variations: {
+                        include: {
+                            product: {
+                                include: {
+                                    unit_id_product_unit_idTounit_id: true
+                                }
                             }
                         }
                     },
-                    take: 1
+                    grn_items: {
+                        include: {
+                            grn: {
+                                include: {
+                                    supplier: true
+                                }
+                            }
+                        },
+                        take: 1
+                    }
+                },
+                orderBy: {
+                    qty: 'asc'
                 }
-            },
-            orderBy: {
-                qty: 'asc'
-            }
-        });
+            }),
+            prisma.stock.count({ where: whereCondition })
+        ]);
 
-        return stocks.map(s => {
+        const data = stocks.map(s => {
             const product = s.product_variations.product;
             const supplier = s.grn_items[0]?.grn?.supplier;
 
@@ -585,68 +596,95 @@ class Stock {
                 supplier: supplier?.supplier_name
             };
         });
+
+        return {
+            data,
+            pagination: {
+                currentPage: page,
+                totalPages: Math.ceil(totalCount / limit),
+                totalItems: totalCount,
+                itemsPerPage: limit,
+                hasNextPage: page < Math.ceil(totalCount / limit),
+                hasPrevPage: page > 1
+            }
+        };
     }
 
-    // Search low stock records based on provided filter IDs
-    static async searchLowStock(filters) {
-        const stocks = await prisma.stock.findMany({
-            where: {
-                qty: { lt: 15, gte: 0 }
-            },
-            include: {
-                product_variations: {
-                    include: {
-                        product: {
-                            include: {
-                                unit_id_product_unit_idTounit_id: true
-                            }
-                        }
+    // Search low stock records based on provided filter IDs with pagination
+    static async searchLowStock(filters, page = 1, limit = 10) {
+        const skip = (page - 1) * limit;
+
+        // Build WHERE condition with all filters at database level
+        const whereCondition = {
+            qty: { lt: 15, gte: 0 }
+        };
+
+        // Product filters
+        const productFilters = {};
+        if (filters.category_id) {
+            productFilters.category_id = parseInt(filters.category_id);
+        }
+        if (filters.unit_id) {
+            productFilters.unit_id = parseInt(filters.unit_id);
+        }
+        if (filters.product_id) {
+            productFilters.id = parseInt(filters.product_id);
+        }
+
+        // Add product filters to WHERE condition if any exist
+        if (Object.keys(productFilters).length > 0) {
+            whereCondition.product_variations = {
+                product: productFilters
+            };
+        }
+
+        // Supplier filter at database level using nested relation
+        if (filters.supplier_id) {
+            whereCondition.grn_items = {
+                some: {
+                    grn: {
+                        supplier_id: parseInt(filters.supplier_id)
                     }
-                },
-                grn_items: {
-                    include: {
-                        grn: {
-                            include: {
-                                supplier: true
+                }
+            };
+        }
+
+        // Fetch data with pagination and count in parallel
+        const [stocks, totalCount] = await Promise.all([
+            prisma.stock.findMany({
+                where: whereCondition,
+                skip: skip,
+                take: limit,
+                include: {
+                    product_variations: {
+                        include: {
+                            product: {
+                                include: {
+                                    unit_id_product_unit_idTounit_id: true
+                                }
                             }
                         }
                     },
-                    take: 1
+                    grn_items: {
+                        include: {
+                            grn: {
+                                include: {
+                                    supplier: true
+                                }
+                            }
+                        },
+                        take: 1
+                    }
+                },
+                orderBy: {
+                    qty: 'asc'
                 }
-            },
-            orderBy: {
-                qty: 'asc'
-            }
-        });
+            }),
+            prisma.stock.count({ where: whereCondition })
+        ]);
 
-        // Filter in JavaScript
-        let filteredStocks = stocks;
-
-        if (filters.supplier_id) {
-            filteredStocks = filteredStocks.filter(s => 
-                s.grn_items.some(gi => gi.grn?.supplier_id === parseInt(filters.supplier_id))
-            );
-        }
-
-        if (filters.category_id) {
-            filteredStocks = filteredStocks.filter(s => 
-                s.product_variations.product.category_id === parseInt(filters.category_id)
-            );
-        }
-
-        if (filters.unit_id) {
-            filteredStocks = filteredStocks.filter(s => 
-                s.product_variations.product.unit_id === parseInt(filters.unit_id)
-            );
-        }
-
-        if (filters.product_id) {
-            filteredStocks = filteredStocks.filter(s => 
-                s.product_variations.product.id === parseInt(filters.product_id)
-            );
-        }
-
-        return filteredStocks.map(s => {
+        // Map data
+        const data = stocks.map(s => {
             const product = s.product_variations.product;
             const supplier = s.grn_items[0]?.grn?.supplier;
 
@@ -661,6 +699,18 @@ class Stock {
                 supplier: supplier?.supplier_name
             };
         });
+
+        return {
+            data,
+            pagination: {
+                currentPage: page,
+                totalPages: Math.ceil(totalCount / limit),
+                totalItems: totalCount,
+                itemsPerPage: limit,
+                hasNextPage: page < Math.ceil(totalCount / limit),
+                hasPrevPage: page > 1
+            }
+        };
     }
 
     // Get summary data for Out of Stock dashboard
