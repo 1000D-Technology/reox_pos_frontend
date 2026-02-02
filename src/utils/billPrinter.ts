@@ -29,12 +29,87 @@ interface POSSettings {
     showCustomerDisplay: boolean;
 }
 
+interface SystemSettings {
+    language: string;
+    timezone: string;
+    dateFormat: string;
+    timeFormat: string;
+    theme: string;
+    notifications: boolean;
+    autoBackup: boolean;
+    backupFrequency: string;
+}
+
+const translations: { [key: string]: { [key: string]: string } } = {
+    english: {
+        invoice: "Invoice",
+        refInvoice: "Ref Invoice",
+        date: "Date",
+        time: "Time",
+        customer: "Customer",
+        tel: "Tel",
+        item: "Item",
+        qty: "Qty",
+        price: "Price",
+        total: "Total",
+        subtotal: "Subtotal",
+        discount: "Discount",
+        grandTotal: "TOTAL",
+        change: "Change",
+        balanceDue: "Balance Due",
+        returnReceipt: "RETURN RECEIPT",
+        returnTransaction: "Return Transaction",
+        saleTransaction: "Sale Transaction",
+        originalPayments: "Original Payments",
+        cash: "Cash",
+        card: "Card",
+        credit: "Credit",
+        paid: "Paid",
+        oldDebt: "Old Outstanding Debt",
+        debtReduction: "Debt Reduced By",
+        newDebt: "New Outstanding Debt",
+        cashRefunded: "CASH REFUNDED",
+        thankYou: "Thank you for your purchase!"
+    },
+    sinhala: {
+        invoice: "ඉන්වොයිසිය",
+        refInvoice: "යොමු ඉන්වොයිසිය",
+        date: "දිනය",
+        time: "වේලාව",
+        customer: "පාරිභෝගිකයා",
+        tel: "දුරකථන",
+        item: "විස්තරය",
+        qty: "ප්‍රමාණය",
+        price: "මිල",
+        total: "එකතුව",
+        subtotal: "උප එකතුව",
+        discount: "වට්ටම",
+        grandTotal: "මුළු එකතුව",
+        change: "ඉතිරි මුදල",
+        balanceDue: "ගෙවිය යුතු ශේෂය",
+        returnReceipt: "ආපසු ලබාගත් රිසිට්පත",
+        returnTransaction: "ආපසු ගනුදෙනුව",
+        saleTransaction: "විකුණුම් ගනුදෙනුව",
+        originalPayments: "මුල් ගෙවීම්",
+        cash: "මුදල්",
+        card: "කාඩ්පත",
+        credit: "ණය",
+        paid: "ගෙවූ මුදල",
+        oldDebt: "පැරණි ණය ශේෂය",
+        debtReduction: "ණය අඩු කිරීම",
+        newDebt: "නව ණය ශේෂය",
+        cashRefunded: "ආපසු ගෙවූ මුදල",
+        thankYou: "ඔබගේ මිලදී ගැනීමට ස්තූතියි!"
+    }
+};
+
 interface CartItem {
     id: number;
     name: string;
     price: number;
     quantity: number;
     discount: number;
+    category?: string;
 }
 
 interface Customer {
@@ -74,7 +149,16 @@ export const generateBillHTML = (data: BillData): string => {
     // Fetch settings from localStorage
     const savedPrintSettings = localStorage.getItem('printSettings');
     const savedPOSSettings = localStorage.getItem('posSettings');
+    const savedSystemSettings = localStorage.getItem('systemSettings');
     const savedLogoPath = localStorage.getItem('logoPath');
+
+    const systemSettings: SystemSettings = savedSystemSettings ? JSON.parse(savedSystemSettings) : {
+        language: 'english'
+    };
+
+    // Translation helper
+    const lang = systemSettings.language?.toLowerCase() || 'english';
+    const t = (key: string) => translations[lang]?.[key] || translations['english'][key] || key;
 
     const printSettings: PrintSettings = savedPrintSettings ? JSON.parse(savedPrintSettings) : {
         headerText: 'WELCOME',
@@ -118,10 +202,10 @@ export const generateBillHTML = (data: BillData): string => {
         return `
             <tr>
                 <td class="item-name">
-                    ${item.name}
+                    ${item.name.replace(/ - (N\/A|NA|N\.A\.|None|Default|Not Applicable)/gi, '')}
                     ${item.discount > 0 ? `<div class="item-discount">Desc: ${item.discount}%</div>` : ''}
                 </td>
-                <td class="text-right">${item.quantity}</td>
+                <td class="text-right">${item.quantity} <span style="font-size: 12px; font-weight: normal;">${item.category || ''}</span></td>
                 <td class="text-right">${item.price.toFixed(2)}</td>
                 <td class="text-right">${finalItemTotal.toFixed(2)}</td>
             </tr>
@@ -146,31 +230,33 @@ export const generateBillHTML = (data: BillData): string => {
                         <span>Return Value:</span>
                         <span style="font-weight: bold;">Rs ${total.toFixed(2)}</span>
                     </div>
+                <div style="margin-top: 10px; padding: 10px; background: #fef2f2; border: 1px solid #fee2e2; border-radius: 6px;">
                     <div class="summary-row" style="font-size: 12px; color: #7f1d1d;">
-                        <span>Old Outstanding Debt:</span>
+                        <span>${t('oldDebt')}:</span>
                         <span style="font-weight: bold;">Rs ${(oldDebt || 0).toFixed(2)}</span>
                     </div>
                     <div class="summary-row" style="font-size: 12px; color: #16a34a; font-weight: bold;">
-                        <span>Debt Reduced By:</span>
+                        <span>${t('debtReduction')}:</span>
                         <span>Rs ${debtReduction.toFixed(2)}</span>
                     </div>
                     <div style="border-top: 2px solid #dc2626; margin: 6px 0; padding-top: 6px;">
                         <div class="summary-row" style="font-size: 13px; font-weight: 900; color: #991b1b;">
-                            <span>New Outstanding Debt:</span>
+                            <span>${t('newDebt')}:</span>
                             <span>Rs ${(newDebt || 0).toFixed(2)}</span>
                         </div>
                     </div>
                     <div class="summary-row" style="font-size: 13px; font-weight: 900; color: #047857; margin-top: 8px; border-top: 1px dashed #dc2626; padding-top: 6px;">
-                        <span>CASH REFUNDED:</span>
+                        <span>${t('cashRefunded')}:</span>
                         <span>Rs ${actualCashRefund.toFixed(2)}</span>
                     </div>
+                </div>
                 </div>
             `;
         } else {
             // No debt, just cash refund
             paymentRows += `
                 <div class="summary-row" style="font-weight: bold; margin-bottom: 8px; font-size: 16px; color: #047857;">
-                    <span>CASH REFUNDED:</span>
+                    <span>${t('cashRefunded')}:</span>
                     <span>Rs ${actualCashRefund.toFixed(2)}</span>
                 </div>
             `;
@@ -179,7 +265,7 @@ export const generateBillHTML = (data: BillData): string => {
         if (originalPayments && originalPayments.length > 0) {
             paymentRows += `
                 <div style="border-top: 1px dashed #ccc; margin: 8px 0; padding-top: 5px;">
-                    <div style="font-size: 12px; font-weight: 600; text-align: center; margin-bottom: 4px;">Original Payments</div>
+                    <div style="font-size: 12px; font-weight: 600; text-align: center; margin-bottom: 4px;">${t('originalPayments')}</div>
                     ${originalPayments.map(p => `
                         <div class="summary-row" style="font-size: 12px; color: #555;">
                             <span>${p.method}:</span>
@@ -195,7 +281,7 @@ export const generateBillHTML = (data: BillData): string => {
             .filter(p => p.amount > 0)
             .map(p => `
                 <div class="summary-row">
-                    <span>Paid (${p.methodId === 'cash' ? 'Cash' : p.methodId === 'card' ? 'Card' : 'Credit'}):</span>
+                    <span>${t('paid')} (${p.methodId === 'cash' ? t('cash') : p.methodId === 'card' ? t('card') : t('credit')}):</span>
                     <span>${p.amount.toFixed(2)}</span>
                 </div>
             `).join('');
@@ -211,8 +297,8 @@ export const generateBillHTML = (data: BillData): string => {
             <style>
                 body {
                     font-family: 'Arial', 'Helvetica', sans-serif;
-                    font-size: 12px;
-                    line-height: 1.2;
+                    font-size: 14px;
+                    line-height: 1.4;
                     width: 78mm;
                     margin: 0;
                     padding: 4px 15px;
@@ -234,19 +320,19 @@ export const generateBillHTML = (data: BillData): string => {
                     margin-right: auto;
                 }
                 .shop-name {
-                    font-size: 16px;
-                    font-weight: 800;
+                    font-size: 22px;
+                    font-weight: 900;
                     margin-bottom: 2px;
                     text-transform: uppercase;
                 }
                 .header-text {
-                    font-size: 11px;
+                    font-size: 13px;
                     margin-bottom: 2px;
                     font-weight: 600;
                 }
                 .meta-info {
                     margin-bottom: 6px;
-                    font-size: 11px;
+                    font-size: 13px;
                 }
                 .customer-info {
                     margin-bottom: 6px;
@@ -263,7 +349,7 @@ export const generateBillHTML = (data: BillData): string => {
                     border-bottom: 1px solid #000;
                     padding: 2px 0;
                     font-weight: 800;
-                    font-size: 12px;
+                    font-size: 14px;
                 }
                 td {
                     padding: 2px 0;
@@ -274,9 +360,11 @@ export const generateBillHTML = (data: BillData): string => {
                 }
                 .item-name {
                     width: 45%;
+                    font-size: 16px;
+                    font-weight: 600;
                 }
                 .item-discount {
-                    font-size: 10px;
+                    font-size: 12px;
                     font-style: italic;
                     color: #444;
                 }
@@ -292,9 +380,9 @@ export const generateBillHTML = (data: BillData): string => {
                 }
                 .grand-total {
                     font-weight: 900;
-                    font-size: 15px;
+                    font-size: 20px;
                     margin-top: 4px;
-                    border-top: 1px solid #000;
+                    border-top: 2px solid #000;
                     padding-top: 4px;
                 }
                 .footer {
@@ -336,37 +424,37 @@ export const generateBillHTML = (data: BillData): string => {
             <div class="header">
                 <div class="shop-name">${posSettings.storeName}</div>
                 ${printSettings.showLogo && savedLogoPath ? `<img src="${savedLogoPath}" class="logo" alt="Logo" />` : ''}
-                ${isReturn ? '<div style="font-weight:900; font-size:16px; margin: 5px 0; border: 2px solid black; padding: 2px;">RETURN RECEIPT</div>' : ''}
+                ${isReturn ? `<div style="font-weight:900; font-size:16px; margin: 5px 0; border: 2px solid black; padding: 2px;">${t('returnReceipt')}</div>` : ''}
                 ${printSettings.headerText ? `<div class="header-text">${printSettings.headerText}</div>` : ''}
                 <div>${posSettings.storeAddress}</div>
-                <div>Tel: ${posSettings.storePhone}</div>
+                <div>${t('tel')}: ${posSettings.storePhone}</div>
                 ${posSettings.storeEmail ? `<div>Email: ${posSettings.storeEmail}</div>` : ''}
             </div>
 
             <div class="meta-info">
                 <div class="summary-row">
-                    <span>${isReturn ? 'Ref Invoice' : 'Invoice'}: ${invoiceNumber}</span>
+                    <span>${isReturn ? t('refInvoice') : t('invoice')}: ${invoiceNumber}</span>
                 </div>
                 <div class="summary-row">
-                    <span>Date: ${dateStr}</span>
-                    <span>Time: ${timeStr}</span>
+                    <span>${t('date')}: ${dateStr}</span>
+                    <span>${t('time')}: ${timeStr}</span>
                 </div>
             </div>
 
             ${customer ? `
             <div class="customer-info">
-                <strong>Customer:</strong> ${customer.name}<br/>
-                Tel: ${customer.contact}
+                <strong>${t('customer')}:</strong> ${customer.name}<br/>
+                ${t('tel')}: ${customer.contact}
             </div>
             ` : ''}
 
             <table>
                 <thead>
                     <tr>
-                        <th class="item-name">Item</th>
-                        <th class="text-right">Qty</th>
-                        <th class="text-right">Price</th>
-                        <th class="text-right">Total</th>
+                        <th class="item-name">${t('item')}</th>
+                        <th class="text-right">${t('qty')}</th>
+                        <th class="text-right">${t('price')}</th>
+                        <th class="text-right">${t('total')}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -376,17 +464,17 @@ export const generateBillHTML = (data: BillData): string => {
 
             <div class="totals">
                 <div class="summary-row">
-                    <span>Subtotal:</span>
+                    <span>${t('subtotal')}:</span>
                     <span>${subtotal.toFixed(2)}</span>
                 </div>
                 ${discount > 0 ? `
                 <div class="summary-row">
-                    <span>Discount (${discount}%):</span>
+                    <span>${t('discount')} (${discount}%):</span>
                     <span>-${discountAmount.toFixed(2)}</span>
                 </div>
                 ` : ''}
                 <div class="summary-row grand-total">
-                    <span>TOTAL:</span>
+                    <span>${t('grandTotal')}:</span>
                     <span>${total.toFixed(2)}</span>
                 </div>
             </div>
@@ -394,7 +482,7 @@ export const generateBillHTML = (data: BillData): string => {
             <div class="totals">
                 ${paymentRows}
                 <div class="summary-row" style="margin-top: 5px; font-weight: bold;">
-                    <span>${balance >= 0 ? 'Change' : 'Balance Due'}:</span>
+                    <span>${balance >= 0 ? t('change') : t('balanceDue')}:</span>
                     <span>${Math.abs(balance).toFixed(2)}</span>
                 </div>
             </div>
@@ -406,13 +494,15 @@ export const generateBillHTML = (data: BillData): string => {
                 </div>
                 ` : ''}
 
-                <div style="margin-bottom: 10px;">
-                    ${printSettings.footerText}
+                <div style="margin-bottom: 10px; font-weight: 600;">
+                    ${(printSettings.footerText === 'Thank you for your purchase!' || printSettings.footerText === 'Thank you!') 
+                        ? t('thankYou') 
+                        : printSettings.footerText}
                 </div>
                 
                 <div style="margin-top: 15px; padding-top: 10px; border-top: 1px dashed #000; text-align: center;">
                     <div style="font-size: 10px; font-weight: 800; margin-bottom: 2px; text-transform: uppercase; color: #333;">
-                        ${isReturn ? 'Return' : 'Sale'} Transaction
+                        ${isReturn ? t('returnTransaction') : t('saleTransaction')}
                     </div>
                     <div style="font-size: 14px; font-weight: 900; margin-bottom: 5px;">
                         ${invoiceNumber}

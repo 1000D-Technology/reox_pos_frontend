@@ -42,7 +42,8 @@ class Stock {
                 { product_variations: { product: { product_name: 'asc' } } },
                 { product_variations: { id: 'asc' } },
                 { id: 'asc' }
-            ]
+            ],
+            take: filters.limit ? parseInt(filters.limit) : undefined
         });
 
         return stocks.map(s => {
@@ -50,11 +51,14 @@ class Stock {
             const p = pv.product;
             const supplier = s.grn_items[0]?.grn?.supplier;
 
-            // Build full product name
+            // Build full product name - Only include meaningful variants
+            const variations = [pv.color, pv.size, pv.storage_capacity]
+                .filter(v => v && !['n/a', 'na', 'n.a.', 'none', 'default', 'not applicable'].includes(v.toLowerCase().trim()) && v.trim() !== '');
+            
             let fullProductName = p.product_name;
-            if (pv.color) fullProductName += ` - ${pv.color}`;
-            if (pv.size) fullProductName += ` - ${pv.size}`;
-            if (pv.storage_capacity) fullProductName += ` - ${pv.storage_capacity}`;
+            if (variations.length > 0) {
+                fullProductName += ` - ${variations.join(' - ')}`;
+            }
 
             return {
                 stock_id: s.id,
@@ -93,20 +97,77 @@ class Stock {
     }
 
     static async searchStock(filters) {
+        const whereClause = {
+            qty: { gt: 0 }
+        };
+
+        if (filters.category) {
+            whereClause.product_variations = {
+                product: {
+                    category_id: parseInt(filters.category)
+                }
+            };
+        }
+
+        if (filters.unit) {
+            if (!whereClause.product_variations) whereClause.product_variations = { product: {} };
+            whereClause.product_variations.product.unit_id = parseInt(filters.unit);
+        }
+
+        if (filters.supplier) {
+            whereClause.grn_items = {
+                some: {
+                    grn: {
+                        supplier_id: parseInt(filters.supplier)
+                    }
+                }
+            };
+        }
+
+        if (filters.searchQuery) {
+            const query = filters.searchQuery.toLowerCase();
+            whereClause.OR = [
+                {
+                    product_variations: {
+                        product: {
+                            OR: [
+                                { product_name: { contains: query } },
+                                { product_code: { contains: query } }
+                            ]
+                        }
+                    }
+                },
+                { barcode: { contains: query } },
+                { product_variations: { barcode: { contains: query } } }
+            ];
+
+            // If query is a number, also check ID
+            const numericId = parseInt(query);
+            if (!isNaN(numericId)) {
+                whereClause.OR.push({
+                    product_variations: {
+                        product: {
+                            id: numericId
+                        }
+                    }
+                });
+            }
+        }
+
         // Fetch all stocks with relations using Prisma
         const stocks = await prisma.stock.findMany({
-            where: {
-                qty: { gt: 0 }
-            },
+            where: whereClause,
             include: {
                 product_variations: {
                     include: {
                         product: {
                             include: {
                                 unit_id_product_unit_idTounit_id: true,
-                                category: true
+                                category: true,
+                                brand: true
                             }
-                        }
+                        },
+                        product_status: true
                     }
                 },
                 grn_items: {
@@ -118,51 +179,31 @@ class Stock {
                         }
                     }
                 }
+            },
+            take: filters.limit ? parseInt(filters.limit) : undefined,
+            orderBy: {
+                product_variations: {
+                    product: {
+                        product_name: 'asc'
+                    }
+                }
             }
         });
 
-        let filteredStocks = stocks;
-
-        if (filters.category) {
-            filteredStocks = filteredStocks.filter(s =>
-                s.product_variations.product.category_id === parseInt(filters.category)
-            );
-        }
-
-        if (filters.unit) {
-            filteredStocks = filteredStocks.filter(s =>
-                s.product_variations.product.unit_id === parseInt(filters.unit)
-            );
-        }
-
-        if (filters.supplier) {
-            filteredStocks = filteredStocks.filter(s =>
-                s.grn_items.some(gi => gi.grn?.supplier_id === parseInt(filters.supplier))
-            );
-        }
-
-        if (filters.searchQuery) {
-            const query = filters.searchQuery.toLowerCase();
-            filteredStocks = filteredStocks.filter(s => {
-                const product = s.product_variations.product;
-                const barcode = s.barcode || '';
-                return product.product_name.toLowerCase().includes(query) ||
-                    product.id.toString() === filters.searchQuery ||
-                    barcode.toLowerCase().includes(query);
-            });
-        }
-
         // Map to individual items (no grouping)
-        const result = filteredStocks.map(s => {
+        const result = stocks.map(s => {
             const pv = s.product_variations;
             const p = pv.product;
             const supplier = s.grn_items[0]?.grn?.supplier;
 
-            // Build full product name
+            // Build full product name - Only include meaningful variants
+            const variations = [pv.color, pv.size, pv.storage_capacity]
+                .filter(v => v && !['n/a', 'na', 'n.a.', 'none', 'default', 'not applicable'].includes(v.toLowerCase().trim()) && v.trim() !== '');
+            
             let fullProductName = p.product_name;
-            if (pv.color) fullProductName += ` - ${pv.color}`;
-            if (pv.size) fullProductName += ` - ${pv.size}`;
-            if (pv.storage_capacity) fullProductName += ` - ${pv.storage_capacity}`;
+            if (variations.length > 0) {
+                fullProductName += ` - ${variations.join(' - ')}`;
+            }
 
             return {
                 stock_id: s.id,
@@ -360,6 +401,7 @@ class Stock {
             filteredStocks = filteredStocks.filter(s => {
                 const product = s.product_variations.product;
                 return product.product_name.toLowerCase().includes(query) || 
+                       product.product_code.toLowerCase().includes(query) ||
                        product.id.toString() === filters.searchQuery;
             });
         }
@@ -392,11 +434,14 @@ class Stock {
             const p = pv.product;
             const supplier = s.grn_items[0]?.grn?.supplier;
 
-            // Build full product name
+            // Build full product name - Only include meaningful variants
+            const variations = [pv.color, pv.size, pv.storage_capacity]
+                .filter(v => v && !['n/a', 'na', 'n.a.', 'none', 'default', 'not applicable'].includes(v.toLowerCase().trim()) && v.trim() !== '');
+            
             let fullProductName = p.product_name;
-            if (pv.color) fullProductName += ` - ${pv.color}`;
-            if (pv.size) fullProductName += ` - ${pv.size}`;
-            if (pv.storage_capacity) fullProductName += ` - ${pv.storage_capacity}`;
+            if (variations.length > 0) {
+                fullProductName += ` - ${variations.join(' - ')}`;
+            }
 
             return {
                 stock_id: s.id,
@@ -454,9 +499,14 @@ class Stock {
             const pv = s.product_variations;
             const p = pv.product;
             
+            // Build full product name - Only include meaningful variants
+            const variations = [pv.color, pv.size]
+                .filter(v => v && !['n/a', 'na', 'n.a.', 'none', 'default', 'not applicable'].includes(v.toLowerCase().trim()) && v.trim() !== '');
+            
             let fullStockDisplay = p.product_name;
-            if (pv.color) fullStockDisplay += ` - ${pv.color}`;
-            if (pv.size) fullStockDisplay += ` - ${pv.size}`;
+            if (variations.length > 0) {
+                fullStockDisplay += ` - ${variations.join(' - ')}`;
+            }
             fullStockDisplay += ` (${s.batch.batch_name})`;
 
             return {

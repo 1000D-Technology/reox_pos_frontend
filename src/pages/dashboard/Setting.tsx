@@ -727,10 +727,7 @@ function Setting() {
                                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-purple-500 outline-none"
                                 >
                                     <option value={Language.ENGLISH}>English</option>
-                                    <option value={Language.SPANISH}>Spanish</option>
-                                    <option value={Language.FRENCH}>French</option>
-                                    <option value={Language.GERMAN}>German</option>
-                                    <option value={Language.CHINESE}>Chinese</option>
+                                    <option value={Language.SINHALA}>Sinhala (සිංහල)</option>
                                 </select>
                             </div>
 

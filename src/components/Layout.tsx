@@ -163,10 +163,7 @@ export default function Layout() {
 
             <div className="flex-1 flex flex-col pt-0 pe-1 min-h-0 overflow-hidden">
                
-
-                <header className={`h-16 flex items-center px-6 justify-between backdrop-blur-md rounded-2xl transition-all duration-300 border-b  mt-4 ${
-                    isScrolled ? 'bg-white/80 shadow-sm border-gray-200' : 'bg-white/40 border-transparent'
-                }`}>
+                <header className={`h-16 flex items-center px-6 justify-between backdrop-blur-md transition-all duration-300  mt-4 `}>
                     <button
                         onClick={() => setIsOpen(!isOpen)}
                         className="text-gray-400 hover:text-emerald-600 transition hover:cursor-pointer"

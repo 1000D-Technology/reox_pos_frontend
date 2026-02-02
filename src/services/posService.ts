@@ -3,8 +3,8 @@ import axiosInstance from '../api/axiosInstance';
 export const posService = {
     //get available products for POS (Using standard stock variations API)
     // Get products with stock (Source stock for POS/Conversion)
-    getPOSProductsList : ()=> 
-        axiosInstance.get('/api/stock/all-variations', { params: { hasStock: true } }),
+    getPOSProductsList : (limit?: number)=> 
+        axiosInstance.get('/api/stock/all-variations', { params: { hasStock: true, limit } }),
 
     //get all products (Using standard products API)
     getAllProductsList : ()=> 
@@ -15,8 +15,8 @@ export const posService = {
         axiosInstance.get(`/api/pos/products/barcode/${barcode}`),
 
     // search products (Using standard stock search API for results)
-    searchProducts: (query: string) =>
-        axiosInstance.get('/api/stock/search', { params: { q: query } }),
+    searchProducts: (query: string, limit?: number) =>
+        axiosInstance.get('/api/stock/search', { params: { q: query, limit } }),
 
     //create invoice
     createInvoice: (data: any) =>

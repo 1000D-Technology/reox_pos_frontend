@@ -192,7 +192,8 @@ exports.getProductVariants = catchAsync(async (req, res, next) => {
         return next(new AppError("Product not found", 404));
     }
 
-    const variants = await Product.getProductVariantsByProductId(productId);
+    const { statusId } = req.query;
+    const variants = await Product.getProductVariantsByProductId(productId, statusId || 1);
     
     res.status(200).json({
         success: true,
@@ -212,6 +213,20 @@ exports.updateProduct = catchAsync(async (req, res, next) => {
     const productExists = await Product.checkIdExists('product_variations', 'id', pvId);
     if (!productExists) {
         return next(new AppError("Product variation not found", 404));
+    }
+
+    // Generate unique barcode if not provided
+    if (variationData && !variationData.barcode) {
+        let isUnique = false;
+        let newBarcode = "";
+        while (!isUnique) {
+            newBarcode = Math.floor(Math.random() * 1000000000000).toString().padStart(13, '0');
+            const exists = await Product.checkIdExists('product_variations', 'barcode', newBarcode);
+            if (!exists) {
+                isUnique = true;
+            }
+        }
+        variationData.barcode = newBarcode;
     }
 
     await Product.updateProductVariation(pvId, productData, variationData);
@@ -287,5 +302,75 @@ exports.getDeactiveProducts = catchAsync(async (req, res, next) => {
     res.status(200).json({
         success: true,
         data: products
+    });
+});
+
+/**
+ * @desc    Permanently delete a product variation
+ * @route   DELETE /api/products/:pvId
+ */
+exports.deleteProduct = catchAsync(async (req, res, next) => {
+    const { pvId } = req.params;
+
+    // Check if product variation exists
+    const productExists = await Product.checkIdExists('product_variations', 'id', pvId);
+    if (!productExists) {
+        return next(new AppError("Product variation not found", 404));
+    }
+
+    const result = await Product.deleteProductVariation(pvId);
+    
+    if (result.affectedRows === 0) {
+        return next(new AppError("Product variation not found", 404));
+    }
+    
+    res.status(200).json({
+        success: true,
+        message: "Product permanently deleted!"
+    });
+});
+
+/**
+ * @desc    Add a new variation to an existing product
+ * @route   POST /api/products/:productId/variants
+ */
+exports.addProductVariation = catchAsync(async (req, res, next) => {
+    const { productId } = req.params;
+    const variationData = req.body;
+
+    // Check if product exists
+    const productExists = await Product.checkIdExists('product', 'id', productId);
+    if (!productExists) {
+        return next(new AppError("Product not found", 404));
+    }
+
+    // Generate unique barcode if not provided
+    if (!variationData.barcode) {
+        let isUnique = false;
+        let newBarcode = "";
+        while (!isUnique) {
+            newBarcode = Math.floor(Math.random() * 1000000000000).toString().padStart(13, '0');
+            const exists = await Product.checkIdExists('product_variations', 'barcode', newBarcode);
+            if (!exists) {
+                isUnique = true;
+            }
+        }
+        variationData.barcode = newBarcode;
+    }
+
+    // Check if provided barcode already exists (only if it was provided by user)
+    else {
+        const barcodeExists = await Product.checkIdExists('product_variations', 'barcode', variationData.barcode);
+        if (barcodeExists) {
+            return next(new AppError("Barcode already exists!", 400));
+        }
+    }
+
+    const variation = await Product.addVariation(productId, variationData);
+
+    res.status(201).json({
+        success: true,
+        message: "Variation added successfully!",
+        data: variation
     });
 });

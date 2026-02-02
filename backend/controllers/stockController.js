@@ -10,8 +10,11 @@ const catchAsync = require('../utils/catchAsync');
  * @route   GET /api/stock/all-variations
  */
 exports.getAllStockWithVariations = catchAsync(async (req, res, next) => {
-    const { hasStock } = req.query;
-    const stockData = await Stock.getAllStockWithVariations({ hasStock: hasStock === 'true' });
+    const { hasStock, limit } = req.query;
+    const stockData = await Stock.getAllStockWithVariations({ 
+        hasStock: hasStock === 'true',
+        limit: limit
+    });
 
     // Transform data for variation list (e.g. POS, Stock List)
     const transformedData = stockData.map(item => {
@@ -85,7 +88,8 @@ exports.getSearchStock = catchAsync(async (req, res, next) => {
             category: req.query.category,
             unit: req.query.unit,
             supplier: req.query.supplier,
-            searchQuery: req.query.q
+            searchQuery: req.query.q,
+            limit: req.query.limit
         };
 
         console.log('Searching stock with filters:', filters);

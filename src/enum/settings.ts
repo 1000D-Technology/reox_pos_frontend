@@ -19,7 +19,8 @@ export const Language = {
     SPANISH: 'spanish',
     FRENCH: 'french',
     GERMAN: 'german',
-    CHINESE: 'chinese'
+    CHINESE: 'chinese',
+    SINHALA: 'sinhala'
 } as const;
 
 export const Timezone = {
