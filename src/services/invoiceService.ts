@@ -1,6 +1,4 @@
-import axios from 'axios';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+import api from '../api/axiosConfig';
 
 export interface InvoiceFilters {
     invoiceNumber?: string;
@@ -25,6 +23,7 @@ export interface Invoice {
     cashier: string;
     customerName?: string;
     itemCount?: number;
+    refundedAmount?: string;
     paymentMethods?: string;
 }
 
@@ -65,6 +64,7 @@ export interface InvoiceDetail {
     grossAmount?: number;
     profit?: number;
     creditBalance?: number;
+    refundedAmount?: number;
     items: Array<{
         id: number;
         name: string;
@@ -99,7 +99,7 @@ export const invoiceService = {
         if (filters.page) params.append('page', filters.page.toString());
         if (filters.limit) params.append('limit', filters.limit.toString());
 
-        const response = await axios.get(`${API_URL}/pos/invoices?${params.toString()}`);
+        const response = await api.get(`/pos/invoices?${params.toString()}`);
         return response.data;
     },
 
@@ -113,7 +113,7 @@ export const invoiceService = {
         if (filters?.toDate) params.append('toDate', filters.toDate);
         if (filters?.cashierName) params.append('cashierName', filters.cashierName);
 
-        const response = await axios.get(`${API_URL}/pos/invoices/stats?${params.toString()}`);
+        const response = await api.get(`/pos/invoices/stats?${params.toString()}`);
         return response.data;
     },
 
@@ -121,7 +121,7 @@ export const invoiceService = {
      * Get single invoice details by invoice number
      */
     getInvoiceDetails: async (invoiceNo: string): Promise<InvoiceDetailResponse> => {
-        const response = await axios.get(`${API_URL}/pos/invoice/${invoiceNo}`);
+        const response = await api.get(`/pos/invoice/${invoiceNo}`);
         return response.data;
     },
 
@@ -133,7 +133,7 @@ export const invoiceService = {
         payment_amount: number;
         payment_type_id: number;
     }) => {
-        const response = await axios.post(`${API_URL}/pos/invoice/payment`, paymentData);
+        const response = await api.post(`/pos/invoice/payment`, paymentData);
         return response.data;
     }
 };

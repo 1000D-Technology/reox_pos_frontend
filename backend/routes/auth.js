@@ -2,11 +2,21 @@ const express = require('express');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const prisma = require('../config/prismaClient');
+const Subscription = require('../models/subscriptionModel');
 
 const router = express.Router();
 
 router.post('/login', async (req, res) => {
     try {
+        // Double check subscription status
+        const hasAccess = await Subscription.checkAccess();
+        if (!hasAccess) {
+            return res.status(403).json({
+                success: false,
+                message: 'Your local license has expired or been suspended. Please pay the monthly subscription fee to continue.'
+            });
+        }
+
         const { username, password } = req.body;
 
         // Validate input

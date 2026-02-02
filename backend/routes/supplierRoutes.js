@@ -5,7 +5,9 @@ const { validateCompany, validateSupplier } = require('../middleware/supplierMid
 const upload = require('../middleware/fileUpload');
 
 router.post('/companies', validateCompany, supplierController.addCompany);
-router.get('/companies', supplierController.searchCompany);
+router.get('/companies/search', supplierController.searchCompany);
+router.get('/companies', supplierController.getCompanies);
+router.put('/companies/:id', validateCompany, supplierController.updateCompany);
 router.get('/banks', supplierController.searchBank);
 
 router.post('/import', upload.single('file'), supplierController.importSuppliers);

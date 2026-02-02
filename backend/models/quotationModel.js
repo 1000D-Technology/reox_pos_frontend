@@ -9,10 +9,38 @@ class Quotation {
         const year = date.getFullYear();
         const month = String(date.getMonth() + 1).padStart(2, '0');
         const day = String(date.getDate()).padStart(2, '0');
-        
-        // Count for generating ID
-        const count = await prisma.quotation.count();
-        const quotationNumber = `QT-${year}${month}${day}-${String(count + 1).padStart(4, '0')}`;
+        const dateString = `${year}${month}${day}`;
+
+        // Find the last quotation created today to get the next sequence number
+        const startOfToday = new Date(date);
+        startOfToday.setHours(0, 0, 0, 0);
+
+        const lastQuotationToday = await prisma.quotation.findFirst({
+            where: {
+                created_at: {
+                    gte: startOfToday
+                }
+            },
+            orderBy: {
+                id: 'desc'
+            },
+            select: {
+                quotation_number: true
+            }
+        });
+
+        let nextSequence = 1;
+        if (lastQuotationToday) {
+            const lastNumber = lastQuotationToday.quotation_number;
+            const parts = lastNumber.split('-');
+            const lastSeqStr = parts[parts.length - 1];
+            const lastSeq = parseInt(lastSeqStr);
+            if (!isNaN(lastSeq)) {
+                nextSequence = lastSeq + 1;
+            }
+        }
+
+        const quotationNumber = `QT-${dateString}-${String(nextSequence).padStart(4, '0')}`;
         
         const validUntil = new Date(date);
         validUntil.setDate(validUntil.getDate() + 7); // Default +7 days

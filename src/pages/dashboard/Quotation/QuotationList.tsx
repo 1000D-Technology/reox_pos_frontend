@@ -202,14 +202,23 @@ function QuotationList() {
                 contact: quotation.customer.contact,
                 email: quotation.customer.email
             } : null,
-            items: quotation.quotation_items.map((item: any) => ({
-                name: item.stock?.product_variations?.product?.name || 'Unknown Item',
-                description: `${item.stock?.product_variations?.variation_name || ''}`,
-                quantity: item.qty,
-                unitPrice: item.price,
-                discount: item.discount_amount,
-                total: item.total
-            })),
+            items: quotation.quotation_items.map((item: any) => {
+                const pv = item.stock?.product_variations;
+                const vName = pv ? [
+                    pv.color && pv.color !== 'Default' ? pv.color : null,
+                    pv.size && pv.size !== 'Default' ? pv.size : null,
+                    pv.storage_capacity && pv.storage_capacity !== 'N/A' ? pv.storage_capacity : null
+                ].filter(Boolean).join(' - ') : '';
+                
+                return {
+                    name: pv?.product?.product_name || 'Unknown Item',
+                    description: vName,
+                    quantity: item.qty,
+                    unitPrice: item.price,
+                    discount: item.discount_amount,
+                    total: item.total
+                };
+            }),
             subtotal: quotation.sub_total,
             discount: quotation.discount,
             total: quotation.total,
@@ -461,8 +470,14 @@ function QuotationList() {
                                                     {selectedQuotationDetails.quotation_items?.map((item: any, i: number) => (
                                                         <tr key={i} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
                                                             <td className="py-3 px-2 text-sm font-medium text-gray-700">
-                                                                {item.stock?.product_variations?.product?.name}
-                                                                <span className="text-xs text-gray-400 block">{item.stock?.product_variations?.variation_name}</span>
+                                                                {item.stock?.product_variations?.product?.product_name}
+                                                                <span className="text-xs text-gray-400 block">
+                                                                    {[
+                                                                        item.stock?.product_variations?.color && item.stock?.product_variations?.color !== 'Default' ? item.stock?.product_variations?.color : null,
+                                                                        item.stock?.product_variations?.size && item.stock?.product_variations?.size !== 'Default' ? item.stock?.product_variations?.size : null,
+                                                                        item.stock?.product_variations?.storage_capacity && item.stock?.product_variations?.storage_capacity !== 'N/A' ? item.stock?.product_variations?.storage_capacity : null
+                                                                    ].filter(Boolean).join(' - ')}
+                                                                </span>
                                                             </td>
                                                             <td className="py-3 px-2 text-sm text-right text-gray-600 font-mono">{formatCurrency(item.price)}</td>
                                                             <td className="py-3 px-2 text-sm text-center text-gray-600 font-bold">{item.qty}</td>

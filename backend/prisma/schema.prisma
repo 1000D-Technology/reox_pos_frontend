@@ -455,3 +455,14 @@ model quotation_items {
   @@index([quotation_id])
   @@index([stock_id])
 }
+
+model subscription {
+  id                Int       @id @default(autoincrement())
+  amount            Float
+  due_date          DateTime  @db.DateTime(0)
+  status            String    @db.VarChar(45)
+  is_paid           Boolean   @default(false)
+  last_payment_date DateTime? @db.DateTime(0)
+  created_at        DateTime  @default(now()) @db.DateTime(0)
+  updated_at        DateTime  @default(now()) @db.DateTime(0)
+}

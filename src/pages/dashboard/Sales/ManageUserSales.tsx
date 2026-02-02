@@ -439,8 +439,8 @@ function ManageUserSales() {
                 </div>
 
                 {/* Sales Table */}
-                <div className="bg-white rounded-xl border border-gray-200 p-4 flex flex-col justify-between h-full shadow-sm">
-                    <div className="overflow-y-auto max-h-md md:h-[300px] lg:h-[300px] rounded-lg scrollbar-thin scrollbar-thumb-emerald-300 scrollbar-track-gray-100">
+                <div className="bg-white rounded-xl border border-gray-200 p-4 flex flex-col justify-between flex-1 overflow-hidden shadow-sm">
+                    <div className="overflow-auto flex-1 rounded-lg scrollbar-thin scrollbar-thumb-emerald-300 scrollbar-track-gray-100">
                         <table className="min-w-full divide-y divide-gray-200 relative">
                             <thead className="sticky top-0 z-10 bg-emerald-500 text-white shadow-sm">
                                 <tr>

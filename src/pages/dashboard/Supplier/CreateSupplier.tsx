@@ -8,7 +8,8 @@ import {
     Users,
     Upload,
     Download,
-    Loader2
+    Loader2,
+    Phone
 } from 'lucide-react';
 
 import { useEffect, useState } from 'react';
@@ -24,6 +25,7 @@ interface Category {
     email: string;
     contact: string;
     company: string;
+    companyContact: string;
     companyId: number;
     bank: string;
     bankId: number | null;
@@ -215,6 +217,7 @@ function CreateSupplier() {
                             email: supplier.email || '',
                             contact: supplier.contactNumber || '',
                             company: supplier.companyName || '',
+                            companyContact: supplier.companyContact || '',
                             bank: supplier.bankName || '',
                             account: supplier.accountNumber || '',
                         }));
@@ -283,6 +286,7 @@ function CreateSupplier() {
                         email: supplier.email || '',
                         contact: supplier.contactNumber || '',
                         company: supplier.companyName || '',
+                        companyContact: supplier.companyContact || '',
                         bank: supplier.bankName || '',
                         account: supplier.accountNumber || '',
                     }));
@@ -405,6 +409,7 @@ function CreateSupplier() {
                                     email: supplier.email || '',
                                     contact: supplier.contactNumber || '',
                                     company: supplier.companyName || '',
+                                    companyContact: supplier.companyContact || '',
                                     bank: supplier.bankName || '',
                                     account: supplier.accountNumber || '',
                                 }));
@@ -517,6 +522,7 @@ function CreateSupplier() {
                                     email: supplier.email || '',
                                     contact: supplier.contactNumber || '',
                                     company: supplier.companyName || '',
+                                    companyContact: supplier.companyContact || '',
                                     bank: supplier.bankName || '',
                                     account: supplier.accountNumber || '',
                                 }));
@@ -600,7 +606,7 @@ function CreateSupplier() {
                         <div className="flex gap-2">
                             <button
                                 onClick={handleDownloadTemplate}
-                                className="flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 hover:text-emerald-600 text-xs font-semibold rounded-lg transition-all shadow-sm"
+                                className="flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 hover:text-emerald-600 text-xs font-semibold rounded-lg transition-all"
                                 title="Download CSV Template"
                             >
                                 <Download size={14} />
@@ -615,28 +621,28 @@ function CreateSupplier() {
                             />
                             <label
                                 htmlFor="supplier-import"
-                                className={`flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 hover:text-emerald-600 text-xs font-semibold rounded-lg transition-all shadow-sm cursor-pointer ${isImporting ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                className={`flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 hover:text-emerald-600 text-xs font-semibold rounded-lg transition-all cursor-pointer ${isImporting ? 'opacity-50 cursor-not-allowed' : ''}`}
                             >
                                 {isImporting ? <Loader2 size={14} className="animate-spin text-emerald-600" /> : <Upload size={14} />}
                                 <span>{isImporting ? 'Importing...' : 'Import'}</span>
                             </label>
                         </div>
                         {/* Shortcuts Hint Style */}
-                        <div className="hidden lg:flex items-center gap-2 bg-white px-4 py-2 rounded-xl border border-gray-100 shadow-sm border-b-2">
+                        <div className="hidden lg:flex items-center gap-2 bg-white px-4 py-2 rounded-xl border border-gray-100 border-b-2">
                             <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg border border-gray-100">
-                                <span className="text-[10px] font-black text-gray-500 bg-white px-1.5 py-0.5 rounded shadow-sm border border-gray-200">↑↓</span>
+                                <span className="text-[10px] font-black text-gray-500 bg-white px-1.5 py-0.5 rounded border border-gray-200">↑↓</span>
                                 <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Navigate</span>
                             </div>
                             <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg border border-gray-100">
-                                <span className="text-[10px] font-black text-gray-500 bg-white px-1.5 py-0.5 rounded shadow-sm border border-gray-200">ALT+F</span>
+                                <span className="text-[10px] font-black text-gray-500 bg-white px-1.5 py-0.5 rounded border border-gray-200">ALT+F</span>
                                 <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Focus</span>
                             </div>
                             <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg border border-gray-100">
-                                <span className="text-[10px] font-black text-gray-500 bg-white px-1.5 py-0.5 rounded shadow-sm border border-gray-200">ALT+N</span>
+                                <span className="text-[10px] font-black text-gray-500 bg-white px-1.5 py-0.5 rounded border border-gray-200">ALT+N</span>
                                 <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Company</span>
                             </div>
                             <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg border border-gray-100">
-                                <span className="text-[10px] font-black text-gray-500 bg-white px-1.5 py-0.5 rounded shadow-sm border border-gray-200">ALT+E</span>
+                                <span className="text-[10px] font-black text-gray-500 bg-white px-1.5 py-0.5 rounded border border-gray-200">ALT+E</span>
                                 <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Edit</span>
                             </div>
                         </div>
@@ -644,7 +650,7 @@ function CreateSupplier() {
                 </div>
 
                 <div
-                    className={"bg-white rounded-xl p-4 flex flex-col border border-gray-200 shadow-sm"}
+                    className={"bg-white rounded-xl p-4 flex flex-col border border-gray-200"}
                 >
                     <div className="flex items-center gap-2 mb-3">
                         <Users className="text-emerald-600" size={20} />
@@ -739,7 +745,7 @@ function CreateSupplier() {
                               <button
                                     onClick={handleSubmitSupplier}
                                     disabled={isSubmittingSupplier}
-                                    className={`px-4 py-1.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white text-sm font-bold rounded-lg transition-all shadow-md shadow-emerald-100 ${isSubmittingSupplier ? 'opacity-50 cursor-not-allowed' : ''
+                                         className={`px-4 py-1.5 bg-linear-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white text-sm font-bold rounded-lg transition-all ${isSubmittingSupplier ? 'opacity-50 cursor-not-allowed' : ''
                                         }`}
                                 >
                                     {isSubmittingSupplier ? '...' : 'Add'}
@@ -750,7 +756,7 @@ function CreateSupplier() {
                 </div>
 
                 <div
-                    className={"flex flex-col bg-white rounded-xl h-full p-4 justify-between border border-gray-200 shadow-sm"}
+                    className={"flex flex-col bg-white rounded-xl h-full p-4 justify-between border border-gray-200"}
                 >
                     <div className="flex items-center gap-2 mb-3">
                         <Users className="text-blue-600" size={20} />
@@ -758,7 +764,7 @@ function CreateSupplier() {
                     </div>
                     <div className="overflow-y-auto max-h-md md:h-[320px] lg:h-[300px] rounded-lg scrollbar-thin scrollbar-thumb-emerald-300 scrollbar-track-gray-100">
                         <table className="min-w-full divide-y divide-gray-200">
-                            <thead className="bg-gradient-to-r from-emerald-600 to-emerald-700 sticky top-0 z-10">
+                            <thead className="bg-linear-to-r from-emerald-600 to-emerald-700 sticky top-0 z-10">
                                 <tr>
                                     {['No', 'Name', 'Email', 'Contact', 'Company', 'Bank', 'Account', 'Actions'].map((header, i, arr) => (
                                         <th
@@ -799,7 +805,14 @@ function CreateSupplier() {
                                             <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">{supplier.name}</td>
                                             <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">{supplier.email}</td>
                                             <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">{supplier.contact}</td>
-                                            <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">{supplier.company}</td>
+                                            <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
+                                                <span>{supplier.company}</span>
+                                                {supplier.companyContact && (
+                                                    <div className="text-[10px] text-gray-400 mt-0.5 flex items-center gap-1">
+                                                        <Phone size={10} /> {supplier.companyContact}
+                                                    </div>
+                                                )}
+                                            </td>
                                             <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">{supplier.bank}</td>
                                             <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">{supplier.account}</td>
                                             <td className="px-6 py-2 whitespace-nowrap text-sm">
@@ -842,7 +855,7 @@ function CreateSupplier() {
                                         key={idx}
                                         onClick={() => goToPage(page)}
                                         className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${currentPage === page
-                                            ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white'
+                                            ? 'bg-linear-to-r from-emerald-500 to-emerald-600 text-white'
                                             : 'text-gray-600 hover:bg-emerald-50'
                                             }`}
                                     >
@@ -882,7 +895,7 @@ function CreateSupplier() {
                         </button>
 
                         <div className="flex items-center gap-3 mb-6">
-                            <div className="p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl">
+                            <div className="p-3 bg-linear-to-br from-blue-500 to-blue-600 rounded-xl">
                                 <Building2 className="text-white" size={24} />
                             </div>
                             <div>
@@ -940,7 +953,7 @@ function CreateSupplier() {
                             <button
                                 onClick={handleSubmitCompany}
                                 disabled={isSubmitting}
-                                className={`px-6 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-medium rounded-lg shadow-lg shadow-blue-200 transition-all ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''
+                                className={`px-6 py-2 bg-linear-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-medium rounded-lg transition-all ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''
                                     }`}
                             >
                                 {isSubmitting ? 'Creating...' : 'Create Company'}
@@ -954,7 +967,7 @@ function CreateSupplier() {
             {isModalOpen && selectedCategory && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
                     <div
-                        className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md relative"
+                        className="bg-white rounded-2xl p-8 w-full max-w-md relative"
                     >
                         <button
                             onClick={handleCloseModal}
@@ -964,7 +977,7 @@ function CreateSupplier() {
                         </button>
 
                         <div className="flex items-center gap-3 mb-6">
-                            <div className="p-3 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl">
+                            <div className="p-3 bg-linear-to-br from-emerald-500 to-emerald-600 rounded-xl">
                                 <Pencil className="text-white" size={24} />
                             </div>
                             <div>
@@ -998,7 +1011,7 @@ function CreateSupplier() {
                             <button
                                 onClick={handleUpdateContact}
                                 disabled={isUpdatingContact}
-                                className={`px-6 py-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-medium rounded-lg shadow-lg shadow-emerald-200 transition-all ${isUpdatingContact ? 'opacity-50 cursor-not-allowed' : ''
+                                className={`px-6 py-2 bg-linear-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-medium rounded-lg transition-all ${isUpdatingContact ? 'opacity-50 cursor-not-allowed' : ''
                                     }`}
                             >
                                 {isUpdatingContact ? 'Updating...' : 'Update Contact'}

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Plus, Trash2, ShoppingCart, Package, Calendar, DollarSign, Barcode } from 'lucide-react';
+import { Plus, Trash2, ShoppingCart, Package, Calendar, DollarSign, Barcode, Loader2 } from 'lucide-react';
 import TypeableSelect from "../../../components/TypeableSelect.tsx";
 import { productService } from "../../../services/productService.ts";
 import { supplierService } from "../../../services/supplierService.ts";
@@ -64,6 +64,7 @@ function CreateGrn() {
     const [freeQty, setFreeQty] = useState<string>('');
     const [paidAmount, setPaidAmount] = useState<string>('');
     const [formKey, setFormKey] = useState<number>(0);
+    const [isProcessing, setIsProcessing] = useState(false);
 
     // Barcode Modal State
     const [isBarcodeModalOpen, setIsBarcodeModalOpen] = useState(false);
@@ -124,19 +125,35 @@ function CreateGrn() {
                 return;
             }
             if (!costPrice || parseFloat(costPrice) <= 0) {
-                toast.error('Please enter a valid cost price');
+                toast.error('Cost price must be a positive number');
                 return;
             }
             if (!mrp || parseFloat(mrp) <= 0) {
-                toast.error('Please enter a valid MRP');
+                toast.error('MRP must be a positive number');
+                return;
+            }
+            if (parseFloat(mrp) < parseFloat(costPrice)) {
+                toast.error('MRP cannot be less than cost price');
                 return;
             }
             if (!rsp || parseFloat(rsp) <= 0) {
-                toast.error('Please enter a valid retail selling price');
+                toast.error('Retail selling price must be a positive number');
+                return;
+            }
+            if (parseFloat(rsp) < parseFloat(costPrice)) {
+                toast.error('Retail price cannot be less than cost price');
+                return;
+            }
+            if (wsp && parseFloat(wsp) < 0) {
+                toast.error('Wholesale price cannot be negative');
                 return;
             }
             if (!qty || parseInt(qty) <= 0) {
-                toast.error('Please enter a valid quantity');
+                toast.error('Quantity must be a positive number');
+                return;
+            }
+            if (freeQty && parseInt(freeQty) < 0) {
+                toast.error('Free quantity cannot be negative');
                 return;
             }
 
@@ -195,30 +212,39 @@ function CreateGrn() {
         toast.success('Item removed from GRN');
     };
 
-    // Fetch all initial data using Promise.all
-    const fetchInitialData = async () => {
-        setIsLoadingPaymentTypes(true);
-
+    // Load products with search
+    const loadProducts = async (query?: string) => {
         try {
-            const [productsResponse, suppliersResponse, paymentTypesResponse] = await Promise.all([
-                productService.getProductsForDropdown(),
-                supplierService.getSuppliers(),
-                paymentTypeService.getPaymentType()
-            ]);
-
-            // Handle products response
-            if (productsResponse.data.success && productsResponse.data.data) {
-                const productOptions = productsResponse.data.data
+            const response = await productService.getProductsForDropdown({ searchTerm: query || '', limit: 10 });
+            if (response.data.success && response.data.data) {
+                const productOptions = response.data.data
                     .filter((product: any) => product && product.id && product.product_name)
                     .map((product: any) => ({
                         value: product.id.toString(),
                         label: product.product_name
                     }));
                 setProducts(productOptions);
-            } else {
-                console.error('Invalid products response structure:', productsResponse.data);
-                toast.error('Invalid response from products server');
+                // If this was an initial load (no query), we might want to keep these as defaults
             }
+        } catch (error) {
+            console.error('Error searching products:', error);
+            // Don't toast on every search error to avoid spamming user while typing
+        }
+    };
+
+    // Fetch all initial data using Promise.all
+    const fetchInitialData = async () => {
+        setIsLoadingPaymentTypes(true);
+
+        try {
+            // Load initial limited products, suppliers, payment types
+            const [suppliersResponse, paymentTypesResponse] = await Promise.all([
+                supplierService.getSuppliers(),
+                paymentTypeService.getPaymentType()
+            ]);
+
+            // Load products separately to handle its specific logic/error without failing everything
+            loadProducts();
 
             // Handle suppliers response
             if (suppliersResponse.data.success) {
@@ -284,6 +310,8 @@ function CreateGrn() {
     // Create GRN function
     const createGrn = async () => {
         try {
+            if (isProcessing) return;
+            
             if (!selectedSupplier) {
                 toast.error('Please select a supplier');
                 return;
@@ -300,6 +328,8 @@ function CreateGrn() {
                 toast.error('Please enter a valid paid amount');
                 return;
             }
+
+            setIsProcessing(true);
 
             const grnPayload = {
                 billNumber: billNumber,
@@ -351,6 +381,8 @@ function CreateGrn() {
                 // Handle network errors or other issues
                 toast.error('Failed to create GRN. Please check your connection and try again.');
             }
+        } finally {
+            setIsProcessing(false);
         }
     };
 
@@ -459,7 +491,7 @@ function CreateGrn() {
                             <span className="mx-2">›</span>
                             <span className="text-gray-700 font-medium">Create GRN</span>
                         </div>
-                        <h1 className="text-3xl font-semibold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
+                        <h1 className="text-3xl font-semibold bg-linear-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
                             Create Goods Received Note
                         </h1>
                     </div>
@@ -549,6 +581,7 @@ function CreateGrn() {
                                         : setSelectedProduct(null)
                                 }
                                 placeholder="Type to search Product"
+                                onSearch={loadProducts}
                             />
                         </div>
                         <div>
@@ -641,6 +674,8 @@ function CreateGrn() {
                             </label>
                             <input
                                 type="number"
+                                min="0"
+                                step="0.01"
                                 value={costPrice}
                                 onChange={(e) => setCostPrice(e.target.value)}
                                 placeholder="0.00"
@@ -653,6 +688,8 @@ function CreateGrn() {
                             </label>
                             <input
                                 type="number"
+                                min="0"
+                                step="0.01"
                                 value={mrp}
                                 onChange={(e) => setMrp(e.target.value)}
                                 placeholder="0.00"
@@ -665,6 +702,8 @@ function CreateGrn() {
                             </label>
                             <input
                                 type="number"
+                                min="0"
+                                step="0.01"
                                 value={rsp}
                                 onChange={(e) => setRsp(e.target.value)}
                                 placeholder="0.00"
@@ -677,6 +716,8 @@ function CreateGrn() {
                             </label>
                             <input
                                 type="number"
+                                min="0"
+                                step="0.01"
                                 value={wsp}
                                 onChange={(e) => setWsp(e.target.value)}
                                 placeholder="0.00"
@@ -689,6 +730,7 @@ function CreateGrn() {
                             </label>
                             <input
                                 type="number"
+                                min="1"
                                 value={qty}
                                 onChange={(e) => setQty(e.target.value)}
                                 placeholder="0"
@@ -701,6 +743,7 @@ function CreateGrn() {
                             </label>
                             <input
                                 type="number"
+                                min="0"
                                 value={freeQty}
                                 onChange={(e) => setFreeQty(e.target.value)}
                                 placeholder="0"
@@ -710,7 +753,7 @@ function CreateGrn() {
                         <div className={'flex justify-center items-end'}>
                             <button
                                 onClick={addToGrn}
-                                className={'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 w-full rounded-lg p-2 text-white font-semibold shadow-lg shadow-emerald-200 hover:shadow-xl transition-all flex items-center justify-center gap-2'}
+                                className={'bg-linear-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 w-full rounded-lg p-2 text-white font-semibold shadow-lg shadow-emerald-200 hover:shadow-xl transition-all flex items-center justify-center gap-2'}
                             >
                                 <Plus size={18} /> Add to GRN
                             </button>
@@ -725,7 +768,7 @@ function CreateGrn() {
                     <span className="text-lg font-semibold text-gray-800 block mb-4">GRN Items</span>
                     <div className="overflow-y-auto max-h-md md:h-[320px] lg:h-[320px] rounded-lg scrollbar-thin scrollbar-thumb-emerald-300 scrollbar-track-gray-100">
                         <table className="min-w-full divide-y divide-gray-200">
-                            <thead className="bg-gradient-to-r from-emerald-500 to-emerald-600 sticky top-0 z-10">
+                            <thead className="bg-linear-to-r from-emerald-500 to-emerald-600 sticky top-0 z-10">
                                 <tr>
                                     {[
                                         "Product Name",
@@ -820,7 +863,7 @@ function CreateGrn() {
                                                                 });
                                                                 setIsBarcodeModalOpen(true);
                                                             }}
-                                                            className="p-2 bg-gradient-to-r from-yellow-100 to-yellow-200 rounded-lg text-yellow-700 hover:from-yellow-200 hover:to-yellow-300 transition-all shadow-sm"
+                                                            className="p-2 bg-linear-to-r from-yellow-100 to-yellow-200 rounded-lg text-yellow-700 hover:from-yellow-200 hover:to-yellow-300 transition-all shadow-sm"
                                                         >
                                                             <Barcode size={16} />
                                                         </button>
@@ -834,7 +877,7 @@ function CreateGrn() {
                                                             e.stopPropagation();
                                                             removeItem(index);
                                                         }}
-                                                        className="p-2 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all"
+                                                        className="p-2 bg-linear-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all"
                                                     >
                                                         <Trash2 size={16} />
                                                     </button>
@@ -928,9 +971,17 @@ function CreateGrn() {
                                 </div>
                                 <button
                                     onClick={createGrn}
-                                    className={'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 w-full rounded-lg p-3 mt-2 text-white font-bold shadow-lg shadow-emerald-200 hover:shadow-xl transition-all'}
+                                    disabled={isProcessing}
+                                    className={'bg-linear-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 w-full rounded-lg p-3 mt-2 text-white font-bold shadow-lg shadow-emerald-200 hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2'}
                                 >
-                                    CREATE GRN (Shift+Enter)
+                                    {isProcessing ? (
+                                        <>
+                                            <Loader2 size={20} className="animate-spin" />
+                                            PROCESSING...
+                                        </>
+                                    ) : (
+                                        'CREATE GRN (Shift+Enter)'
+                                    )}
                                 </button>
                             </div>
                         </div>

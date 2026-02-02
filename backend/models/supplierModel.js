@@ -60,11 +60,41 @@ class Supplier {
             },
             select: {
                 id: true,
-                company_name: true
+                company_name: true,
+                company_email: true,
+                company_contact: true,
+                created_at: true
             },
             take: 100
         });
         return companies;
+    }
+
+    static async getAllCompanies() {
+        return await prisma.company.findMany({
+            orderBy: {
+                created_at: 'desc'
+            }
+        });
+    }
+
+    static async updateCompany(id, data) {
+        try {
+            await prisma.company.update({
+                where: { id: parseInt(id) },
+                data: {
+                    company_name: data.name,
+                    company_email: data.email || null,
+                    company_contact: data.contact
+                }
+            });
+            return { affectedRows: 1 };
+        } catch (error) {
+            if (error.code === 'P2025') {
+                return { affectedRows: 0 };
+            }
+            throw error;
+        }
     }
 
     static async searchBanks(searchTerm) {
@@ -103,7 +133,8 @@ class Supplier {
             include: {
                 company: {
                     select: {
-                        company_name: true
+                        company_name: true,
+                        company_contact: true
                     }
                 },
                 bank: {
@@ -128,6 +159,7 @@ class Supplier {
             email: s.email,
             contactNumber: s.contact_number,
             companyName: s.company?.company_name,
+            companyContact: s.company?.company_contact,
             companyId: s.company_id,
             bankName: s.bank?.bank_name,
             bankId: s.bank_id,

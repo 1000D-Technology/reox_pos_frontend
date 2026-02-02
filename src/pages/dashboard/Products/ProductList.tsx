@@ -8,6 +8,7 @@ import {
     SearchCheck,
     Trash,
     X,
+    Eye,
 } from "lucide-react";
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
@@ -50,6 +51,7 @@ type SelectOption = {
 
 function ProductList() {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [isViewModalOpen, setIsViewModalOpen] = useState(false);
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
     const [salesData, setSalesData] = useState<Product[]>([]);
@@ -881,9 +883,9 @@ function ProductList() {
                 </div>
 
                 <div
-                    className="flex flex-col bg-white rounded-xl p-6 justify-between gap-6 border border-gray-200"
+                    className="flex flex-col bg-white rounded-xl p-4 md:p-6 justify-between gap-6 border border-gray-200 flex-1 overflow-hidden min-w-0 shadow-sm min-h-[400px]"
                 >
-                    <div className="overflow-y-auto max-h-md md:h-[320px] lg:h-[520px] rounded-lg scrollbar-thin scrollbar-thumb-emerald-300 scrollbar-track-gray-100">
+                    <div className="overflow-auto flex-1 rounded-lg scrollbar-thin scrollbar-thumb-emerald-300 scrollbar-track-gray-100">
                         <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-linear-to-r from-emerald-600 to-emerald-700 sticky top-0 z-10">
                                 <tr>
@@ -895,11 +897,6 @@ function ProductList() {
                                         "Category",
                                         "Brand",
                                         "Unit",
-                                        "Product Type",
-                                        "Color",
-                                        "Size",
-                                        "Storage/Capacity",
-                                        "Created On",
                                         "Actions",
                                     ].map((header, i, arr) => (
                                         <th
@@ -917,13 +914,13 @@ function ProductList() {
                             <tbody className="bg-white divide-y divide-gray-200">
                                 {isLoadingProducts ? (
                                     <tr>
-                                        <td colSpan={13} className="px-6 py-8 text-center text-gray-500">
+                                        <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
                                             Loading products...
                                         </td>
                                     </tr>
                                 ) : currentPageData.length === 0 ? (
                                     <tr>
-                                        <td colSpan={13} className="px-6 py-8 text-center text-gray-500">
+                                        <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
                                             No products found
                                         </td>
                                     </tr>
@@ -940,43 +937,44 @@ function ProductList() {
                                             : "hover:bg-emerald-50/50"
                                             }`}
                                     >
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
+                                        <td className="px-6 py-2 text-sm font-medium">
                                             {sale.productID}
                                         </td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
+                                        <td className="px-6 py-2 text-sm font-medium">
                                             {sale.productName}
                                         </td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
+                                        <td className="px-6 py-2 text-sm font-medium">
                                             {sale.productCode}
                                         </td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
+                                        <td className="px-6 py-2 text-sm font-medium">
                                             {sale.barcode}
                                         </td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
+                                        <td className="px-6 py-2 text-sm font-medium">
                                             {sale.category}
                                         </td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
+                                        <td className="px-6 py-2 text-sm font-medium">
                                             {sale.brand}
                                         </td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
+                                        <td className="px-6 py-2 text-sm font-medium">
                                             {sale.unit}
                                         </td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
-                                            {sale.productType}
-                                        </td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
-                                            {sale.color}
-                                        </td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
-                                            {sale.size}
-                                        </td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
-                                            {sale.storage}
-                                        </td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium">
-                                            {sale.createdOn}
-                                        </td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium flex gap-2">
+                                        <td className="px-6 py-2 text-sm font-medium flex gap-2">
+                                            <div className="relative group">
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setSelectedProduct(sale);
+                                                        setIsViewModalOpen(true);
+                                                    }}
+                                                    className="p-2 bg-linear-to-r from-emerald-100 to-emerald-200 rounded-lg text-emerald-700 hover:from-emerald-200 hover:to-emerald-300 transition-all shadow-sm"
+                                                >
+                                                    <Eye size={15} />
+                                                </button>
+                                                <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max px-2 py-1 text-xs text-white bg-gray-900 rounded-md invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    View Details
+                                                </span>
+                                            </div>
+
                                             <div className="relative group">
                                                 <button
                                                     onClick={(e) => {
@@ -992,8 +990,6 @@ function ProductList() {
                                                     Edit Product
                                                 </span>
                                             </div>
-
-
 
                                             <div className="relative group">
                                                 <button
@@ -1091,6 +1087,104 @@ function ProductList() {
 
                 </div>
             </div>
+            {isViewModalOpen && selectedProduct && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
+                        <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+                            <div>
+                                <h2 className="text-xl font-bold text-gray-800">Product Details</h2>
+                                <p className="text-sm text-gray-500 mt-1">Full information for {selectedProduct.productName}</p>
+                            </div>
+                            <button
+                                onClick={() => setIsViewModalOpen(false)}
+                                className="p-2 hover:bg-gray-200 rounded-full transition-colors text-gray-500 hover:text-gray-700"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        <div className="p-6 max-h-[70vh] overflow-y-auto">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Product Name</label>
+                                        <p className="text-gray-900 font-medium mt-1">{selectedProduct.productName}</p>
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Product ID</label>
+                                        <p className="text-gray-900 font-medium mt-1">{selectedProduct.productID}</p>
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Barcode</label>
+                                        <p className="text-gray-900 font-medium mt-1 font-mono">{selectedProduct.barcode}</p>
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Category</label>
+                                        <p className="text-gray-900 font-medium mt-1">{selectedProduct.category}</p>
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Brand</label>
+                                        <p className="text-gray-900 font-medium mt-1">{selectedProduct.brand}</p>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Product Code</label>
+                                        <p className="text-gray-900 font-medium mt-1 font-mono">{selectedProduct.productCode}</p>
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Unit</label>
+                                        <p className="text-gray-900 font-medium mt-1">{selectedProduct.unit}</p>
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Product Type</label>
+                                        <p className="text-gray-900 font-medium mt-1">{selectedProduct.productType}</p>
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Color & Size</label>
+                                        <div className="flex gap-2 mt-1">
+                                            <span className="px-2 py-1 bg-gray-100 rounded text-sm font-medium">{selectedProduct.color}</span>
+                                            <span className="px-2 py-1 bg-gray-100 rounded text-sm font-medium">{selectedProduct.size}</span>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Storage</label>
+                                        <p className="text-gray-900 font-medium mt-1">{selectedProduct.storage}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="mt-6 pt-6 border-t border-gray-100">
+                                <div className="flex justify-between items-center">
+                                    <div>
+                                        <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Created On</label>
+                                        <p className="text-gray-900 font-medium mt-1">{selectedProduct.createdOn}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="p-6 border-t border-gray-100 bg-gray-50/50 flex justify-end gap-3">
+                            <button
+                                onClick={() => setIsViewModalOpen(false)}
+                                className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors shadow-sm"
+                            >
+                                Close
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setIsViewModalOpen(false);
+                                    setIsEditModalOpen(true);
+                                }}
+                                className="px-4 py-2 bg-emerald-600 text-white rounded-lg font-medium hover:bg-emerald-700 transition-colors shadow-sm hover:shadow-md flex items-center gap-2"
+                            >
+                                <Pencil size={16} />
+                                Edit Product
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </>
     );
 }

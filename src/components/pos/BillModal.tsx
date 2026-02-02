@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, FileText, Check, Banknote, CreditCard, Landmark } from 'lucide-react';
+import { X, FileText, Check, Banknote, CreditCard, Landmark, Loader2 } from 'lucide-react';
 import { useEffect } from 'react';
 
 
@@ -32,6 +32,7 @@ interface BillModalProps {
     total: number;
     paymentAmounts: PaymentAmount[];
     onComplete: () => void;
+    isProcessing?: boolean;
 }
 
 const paymentMethods = [
@@ -49,7 +50,8 @@ export const BillModal = ({
     discount,
     total,
     paymentAmounts,
-    onComplete
+    onComplete,
+    isProcessing = false
 }: BillModalProps) => {
     const calculateItemTotal = (item: CartItem) => {
         const itemTotal = item.price * item.quantity;
@@ -64,7 +66,7 @@ export const BillModal = ({
     // Handle Enter key to complete invoice
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            if (isOpen && e.key === 'Enter') {
+            if (isOpen && e.key === 'Enter' && !isProcessing) {
                 e.preventDefault();
                 onComplete();
             }
@@ -197,10 +199,20 @@ export const BillModal = ({
                         <div className="flex gap-3">
                             <button
                                 onClick={onComplete}
-                                className="flex-1 flex items-center justify-center gap-2 py-3 bg-linear-to-r from-emerald-500 to-emerald-600 text-white rounded-xl font-semibold hover:shadow-lg transition-all"
+                                disabled={isProcessing}
+                                className={`flex-1 flex items-center justify-center gap-2 py-3 ${isProcessing ? 'bg-gray-400 cursor-not-allowed' : 'bg-linear-to-r from-emerald-500 to-emerald-600 hover:shadow-lg hover:scale-[1.02]'} text-white rounded-xl font-semibold transition-all`}
                             >
-                                <Check className="w-4 h-4" />
-                                Complete (Enter)
+                                {isProcessing ? (
+                                    <>
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                        Processing...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Check className="w-4 h-4" />
+                                        Complete (Enter)
+                                    </>
+                                )}
                             </button>
                         </div>
                     </motion.div>

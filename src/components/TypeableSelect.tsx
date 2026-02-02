@@ -199,7 +199,7 @@ export default function TypeableSelect({
                         <li className="px-3 py-2 text-gray-500 text-center">No results found</li>
                     )}
 
-                    {filtered.map((opt, i) => (
+                    {filtered.slice(0, 10).map((opt, i) => (
                         <li
                             key={`${opt.value}_${i}`}
                             onMouseDown={(e) => {

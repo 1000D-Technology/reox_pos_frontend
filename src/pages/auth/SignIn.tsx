@@ -3,6 +3,7 @@ import { User, Lock, ArrowRight, Phone, Mail, Globe, HelpCircle, ChevronDown } f
 import { useState, type FormEvent, useEffect } from "react";
 import { authService } from "../../services/authService";
 import { motion, AnimatePresence } from "framer-motion";
+import logo from "/logo.png";
 
 function SignIn() {
     const navigate = useNavigate();
@@ -51,7 +52,7 @@ function SignIn() {
             <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-cyan-500/10 rounded-full blur-[120px] pointer-events-none" />
             
             {/* Grid Pattern Overlay */}
-            <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 pointer-events-none mix-blend-soft-light" />
+            <div className="absolute inset-0 opacity-20 pointer-events-none mix-blend-soft-light" />
 
             <motion.div 
                 initial={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -60,11 +61,11 @@ function SignIn() {
                 className="w-full max-w-lg bg-white relative z-10 rounded-3xl shadow-2xl overflow-hidden"
             >
                 {/* Decorative Top Bar */}
-                <div className="h-2 w-full bg-gradient-to-r from-emerald-400 via-teal-500 to-cyan-500" />
+                <div className="h-2 w-full bg-linear-to-r from-emerald-400 via-teal-500 to-cyan-500" />
 
                 <div className="p-8 md:p-12">
                     <div className="flex flex-col items-center text-center mb-10">
-                        <img src="/logo.png" alt="ReoxPOS" className="h-12 w-auto mb-6" />
+                        <img src={logo} alt="ReoxPOS" className="h-12 w-auto mb-6" />
                         <h2 className="text-3xl font-bold text-gray-900 tracking-tight">Welcome Back</h2>
                         <p className="text-gray-500 mt-2 text-sm">Sign in to access your dashboard</p>
                     </div>
