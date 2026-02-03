@@ -10,10 +10,10 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "electron:dev": "concurrently --kill-others \"cd backend && node index.js\" \"vite\" \"wait-on http://127.0.0.1:5173 && wait-on http://127.0.0.1:3000/api/health && electron .\"",
-    "electron:build": "npm run build && cd backend && npm install --production && cd .. && electron-builder",
-    "electron:build:win": "npm run build && cd backend && npm install --production && cd .. && electron-builder --win",
-    "pack": "npm run build && cd backend && npm install --production && cd .. && electron-builder --dir",
-    "dist": "npm run build && cd backend && npm install --production && cd .. && electron-builder"
+    "electron:build": "npm run build && cd backend && npm install && npx prisma generate && npm prune --production && cd .. && electron-builder",
+    "electron:build:win": "npm run build && cd backend && npm install && npx prisma generate && npm prune --production && cd .. && electron-builder --win",
+    "pack": "npm run build && cd backend && npm install && npx prisma generate && npm prune --production && cd .. && electron-builder --dir",
+    "dist": "npm run build && cd backend && npm install && npx prisma generate && npm prune --production && cd .. && electron-builder"
   },
   "dependencies": {
     "@heroui/breadcrumbs": "^2.2.21",

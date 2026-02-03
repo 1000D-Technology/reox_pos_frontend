@@ -4,7 +4,8 @@ const path = require('path');
 
 class BackupService {
     constructor() {
-        this.backupDir = path.join(process.cwd(), 'backups');
+        const baseDataDir = process.env.APP_DATA_PATH || process.cwd();
+        this.backupDir = path.join(baseDataDir, 'backups');
         this.connection = null;
 
         if (!fs.existsSync(this.backupDir)) {
