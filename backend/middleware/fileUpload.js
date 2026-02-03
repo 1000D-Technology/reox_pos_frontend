@@ -2,15 +2,17 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
-// Create upload directory if it doesn't exist
-const uploadDir = 'uploads';
+// Create upload directory in a writable location
+const baseDataDir = process.env.APP_DATA_PATH || process.cwd();
+const uploadDir = path.join(baseDataDir, 'uploads');
+
 if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir);
+    fs.mkdirSync(uploadDir, { recursive: true });
 }
 
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
-        cb(null, 'uploads/');
+        cb(null, uploadDir);
     },
     filename: function (req, file, cb) {
         cb(null, Date.now() + '-' + file.originalname);

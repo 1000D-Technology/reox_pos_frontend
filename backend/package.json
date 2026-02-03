@@ -28,11 +28,11 @@
     "react-hot-toast": "^2.6.0",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",
-    "xlsx": "^0.18.5"
+    "xlsx": "^0.18.5",
+    "prisma": "^5.22.0"
   },
   "devDependencies": {
-    "@types/node-cron": "^3.0.11",
-    "prisma": "^5.22.0"
+    "@types/node-cron": "^3.0.11"
   },
   "prisma": {
     "seed": "node prisma/seed.js"

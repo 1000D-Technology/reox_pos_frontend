@@ -666,7 +666,7 @@ function LowStock() {
                     </div>
                     <div className={'grid grid-cols-2 md:items-end items-start gap-2 text-white font-medium'}>
                         <button
-                            onClick={handleSearch}
+                            onClick={() => handleSearch(1)}
                             disabled={isSearching || loadingDropdowns}
                             className={'bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 py-2 rounded-lg flex items-center justify-center shadow-lg shadow-orange-200 hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed'}
                         >

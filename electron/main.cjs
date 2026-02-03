@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, Notification } = require('electron');
+const { app, BrowserWindow, ipcMain, Notification, dialog } = require('electron');
 const path = require('path');
 const { spawn } = require('child_process');
 const fs = require('fs');
@@ -53,12 +53,12 @@ function createWindow() {
     height: 900,
     minWidth: 1024,
     minHeight: 768,
+    icon: path.join(__dirname, isPackaged ? '../dist/icon.png' : '../public/icon.png'),
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
       preload: path.join(__dirname, 'preload.cjs')
     },
-    icon: path.join(__dirname, '../public/icon.png'),
     autoHideMenuBar: true,
     show: false,
     fullscreen: false
@@ -109,43 +109,58 @@ function startBackend() {
     }
 
     // Determine node executable path
-    let nodePath = 'node'; // Default to system node
+    // In production, we use Electron's own executable but set ELECTRON_RUN_AS_NODE to act like node
+    let nodePath = 'node'; 
+    
+    // Define a writable directory for uploads, backups, logs, etc.
+    const appDataPath = path.join(app.getPath('userData'), 'data');
+    if (!fs.existsSync(appDataPath)) {
+      fs.mkdirSync(appDataPath, { recursive: true });
+    }
+
+    let spawnEnv = {
+      ...process.env,
+      NODE_ENV: isPackaged ? 'production' : 'development',
+      APP_DATA_PATH: appDataPath
+    };
     
     if (isPackaged) {
-      console.log('App is packaged, checking for bundled node...');
-      // If we had bundled node, we would check for it here. 
-      // For now, we rely on system node or user can bundle it in extraResources.
+      console.log('App is packaged, using Electron as Node environment...');
+      nodePath = process.execPath;
+      spawnEnv.ELECTRON_RUN_AS_NODE = '1';
     }
 
     console.log('Using Node.js at:', nodePath);
+    console.log('Writable Data Path:', appDataPath);
 
     // Start the backend process
     backendProcess = spawn(nodePath, [backendIndexPath], {
       cwd: backendPath,
-      env: {
-        ...process.env,
-        NODE_ENV: isPackaged ? 'production' : 'development'
-      },
+      env: spawnEnv,
       stdio: ['pipe', 'pipe', 'pipe']
     });
+
+    let lastError = '';
 
     backendProcess.stdout.on('data', (data) => {
       console.log(`[Backend]: ${data.toString()}`);
     });
 
     backendProcess.stderr.on('data', (data) => {
-      console.error(`[Backend Error]: ${data.toString()}`);
+      const msg = data.toString();
+      console.error(`[Backend Error]: ${msg}`);
+      lastError += msg;
     });
 
     backendProcess.on('error', (error) => {
       console.error('Failed to start backend:', error);
-      reject(error);
+      reject(new Error(`Spawn error: ${error.message}`));
     });
 
     backendProcess.on('exit', (code, signal) => {
       console.log(`Backend process exited with code ${code} and signal ${signal}`);
       if (code !== 0 && code !== null) {
-        reject(new Error(`Backend exited with code ${code}`));
+        reject(new Error(`Backend exited with code ${code}.\nError: ${lastError.slice(-200) || 'None'}`));
       }
     });
 
@@ -209,7 +224,14 @@ app.whenReady().then(async () => {
       }
     });
   } catch (error) {
-    console.error('Failed to start application:', error);
+    log.error('Failed to start application:', error);
+    
+    // Show a visual error box to the user so they know WHY it failed
+    dialog.showErrorBox(
+      'Application Startup Error',
+      `Reox POS failed to start.\n\nError details: ${error.message}\n\nPlease ensure:\n1. MySQL is installed and running.\n2. You have a stable database connection.\n3. The application was installed correctly.`
+    );
+    
     app.quit();
   }
 });
@@ -320,7 +342,8 @@ autoUpdater.on('update-not-available', (info) => {
 
 autoUpdater.on('error', (error) => {
   log.error('Auto-updater error:', error);
-  if (mainWindow) {
+  // Only notify renderer about errors if we're in production
+  if (mainWindow && !isDev) {
     mainWindow.webContents.send('update-error', error.message);
   }
 });
@@ -343,7 +366,7 @@ autoUpdater.on('update-downloaded', (info) => {
     const notification = new Notification({
       title: 'Update Ready',
       body: 'Update has been downloaded. Restart to install.',
-      icon: path.join(__dirname, '../public/icon.png')
+      icon: path.join(__dirname, isPackaged ? '../dist/icon.png' : '../public/icon.png')
     });
     
     notification.on('click', () => {
