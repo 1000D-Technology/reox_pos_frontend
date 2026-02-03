@@ -22,6 +22,7 @@ import DamagedStock from "./pages/dashboard/Stock/DamagedStock.tsx";
 import LowStock from "./pages/dashboard/Stock/LowStock.tsx";
 import ProductList from "./pages/dashboard/Products/ProductList.tsx";
 import ManageUnit from "./pages/dashboard/Products/ManageUnit.tsx";
+import ManageUnitConversions from "./pages/dashboard/Products/ManageUnitConversions.tsx";
 import ManageCategory from "./pages/dashboard/Products/ManageCategory.tsx";
 import DeactivatedProducts from "./pages/dashboard/Products/DeactivatedProducts.tsx";
 import CreateSupplier from "./pages/dashboard/Supplier/CreateSupplier.tsx";
@@ -186,6 +187,11 @@ export default function App() {
                         <Route path="/products/manage-unit" element={
                             <ProtectedRoute allowedRoles={['Admin', 'Storekeeper']}>
                                 <ManageUnit/>
+                            </ProtectedRoute>
+                        }/>
+                        <Route path="/products/manage-unit-conversions" element={
+                            <ProtectedRoute allowedRoles={['Admin', 'Storekeeper']}>
+                                <ManageUnitConversions/>
                             </ProtectedRoute>
                         }/>
                         <Route path="/products/manage-category" element={

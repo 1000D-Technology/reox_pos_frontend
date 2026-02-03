@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
-import { X, Plus, Minus, Percent, DollarSign, Package, Calculator, RefreshCw } from 'lucide-react';
+import { X, Plus, Minus, Percent, DollarSign, Package, Calculator, RefreshCw, ArrowRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { unitConversionService, type UnitConversion } from '../../services/unitConversionService';
 
 interface Product {
     id: number;
@@ -12,7 +13,9 @@ interface Product {
     stock: number;
     category: string;
     productCode: string;
-    isBulk: boolean; batch?: string;
+    isBulk: boolean; 
+    batch?: string;
+    unitId?: number; // Add unit ID to product interface
 }
 
 interface ProductAddModalProps {
@@ -26,7 +29,8 @@ interface ProductAddModalProps {
         discount: number,
         discountType: 'percentage' | 'price',
         discountAmount: number,
-        discountedPrice: number
+        discountedPrice: number,
+        selectedUnitConversion?: { unitName: string; conversionFactor: number } | null
     ) => void;
 }
 
@@ -41,6 +45,13 @@ export const ProductAddModal = ({
     const [discount, setDiscount] = useState(0);
     const [discountType, setDiscountType] = useState<'percentage' | 'price'>('percentage');
     const [subUnitValue, setSubUnitValue] = useState<number | string>('');
+    
+    // Unit conversion states
+    const [unitConversions, setUnitConversions] = useState<UnitConversion[]>([]);
+    const [loadingConversions, setLoadingConversions] = useState(false);
+    const [selectedConversion, setSelectedConversion] = useState<UnitConversion | null>(null);
+    const [subUnitQuantity, setSubUnitQuantity] = useState<number | string>('');
+    const [useSubUnit, setUseSubUnit] = useState(false);
 
     const currentUnitStr = (product?.category || '').toLowerCase().trim();
     
@@ -64,12 +75,48 @@ export const ProductAddModal = ({
 
     const unitConfig = getUnitConfig(currentUnitStr, product?.isBulk || false);
 
+    // Fetch unit conversions when product changes
+    useEffect(() => {
+        const fetchUnitConversions = async () => {
+            if (!product?.unitId) {
+                setUnitConversions([]);
+                return;
+            }
+
+            try {
+                setLoadingConversions(true);
+                const response = await unitConversionService.getConversionsForUnit(product.unitId);
+                if (response.data?.success) {
+                    const conversions = response.data.data || [];
+                    setUnitConversions(conversions);
+                    
+                    // Auto-select first conversion if available
+                    if (conversions.length > 0) {
+                        setSelectedConversion(conversions[0]);
+                    }
+                }
+            } catch (error) {
+                console.error('Error fetching unit conversions:', error);
+                setUnitConversions([]);
+            } finally {
+                setLoadingConversions(false);
+            }
+        };
+
+        if (isOpen && product) {
+            fetchUnitConversions();
+        }
+    }, [isOpen, product?.unitId]);
+
     useEffect(() => {
         if (isOpen && product) {
             setQuantity(1);
             setDiscount(0);
             setDiscountType('percentage');
             setSubUnitValue('');
+            setSubUnitQuantity('');
+            setUseSubUnit(false);
+            setSelectedConversion(null);
         }
     }, [isOpen, product]);
 
@@ -143,7 +190,13 @@ export const ProductAddModal = ({
         const finalDiscountAmount = billingMode === 'wholesale' ? 0 : discountAmount;
         const finalDiscountedPrice = billingMode === 'wholesale' ? subtotal : discountedPrice;
 
-        onAddToCart(product, qty, finalDiscount, discountType, finalDiscountAmount, finalDiscountedPrice);
+        // Pass unit conversion info if using sub-unit
+        const conversionInfo = (useSubUnit && selectedConversion) ? {
+            unitName: selectedConversion.child_unit_name || '',
+            conversionFactor: selectedConversion.conversion_factor
+        } : null;
+
+        onAddToCart(product, qty, finalDiscount, discountType, finalDiscountAmount, finalDiscountedPrice, conversionInfo);
         onClose();
     };
 
@@ -156,6 +209,8 @@ export const ProductAddModal = ({
         if (currentQty < product.stock) {
             setQuantity(Math.min(product.stock, currentQty + 1));
             setSubUnitValue('');
+            setSubUnitQuantity('');
+            setUseSubUnit(false);
         }
     };
 
@@ -165,6 +220,34 @@ export const ProductAddModal = ({
             const nextQty = Math.max(0, currentQty - 1);
             setQuantity(nextQty);
             setSubUnitValue('');
+            setSubUnitQuantity('');
+            setUseSubUnit(false);
+        }
+    };
+
+    // Handle sub-unit quantity change with unit conversions
+    const handleSubUnitQuantityChange = (val: string) => {
+        setSubUnitQuantity(val);
+        
+        if (val === '' || !selectedConversion) {
+            setUseSubUnit(false);
+            return;
+        }
+
+        const numVal = Number(val);
+        if (!isNaN(numVal) && numVal > 0) {
+            // Convert sub-unit to base unit quantity
+            // Example: If conversion is 1 Box = 12 Pieces, and user enters 24 Pieces
+            // Then quantity = 24 / 12 = 2 Boxes
+            const convertedQty = numVal / selectedConversion.conversion_factor;
+            
+            if (convertedQty > product!.stock) {
+                setQuantity(product!.stock);
+                toast.error(`Maximum available: ${product!.stock} ${product!.category}`);
+            } else {
+                setQuantity(Number(convertedQty.toFixed(3)));
+                setUseSubUnit(true);
+            }
         }
     };
 
@@ -193,7 +276,12 @@ export const ProductAddModal = ({
 
     const handleSubUnitChange = (val: string) => {
         setSubUnitValue(val);
-        if (val === '' || !unitConfig) return;
+        
+        // Reset quantity to 1 when input is cleared
+        if (val === '' || !unitConfig) {
+            setQuantity(1);
+            return;
+        }
 
         const numVal = Number(val);
         if (!isNaN(numVal)) {

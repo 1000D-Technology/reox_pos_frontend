@@ -130,6 +130,7 @@ export default function Sidebar({ isOpen }: SidebarProps) {
                 { label: "Product List", path: "/products/product-list" },
                 { label: "Manage Product Type", path: "/products/manage-product-type" },
                 { label: "Manage Unit", path: "/products/manage-unit" },
+                { label: "Unit Conversions", path: "/products/manage-unit-conversions" },
                 { label: "Manage Category", path: "/products/manage-category" },
                 { label: "Manage Brand", path: "/products/manage-brand" },
                 { label: "Deactivated Products", path: "/products/deactivated-products" },
