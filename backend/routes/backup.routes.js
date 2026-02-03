@@ -113,5 +113,14 @@ router.post('/schedule/trigger', async (req, res) => {
     }
 });
 
+router.delete('/:filename', async (req, res) => {
+    try {
+        const filename = req.params.filename;
+        const result = await backupService.deleteBackup(filename);
+        res.json(result);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
 
 module.exports = router;

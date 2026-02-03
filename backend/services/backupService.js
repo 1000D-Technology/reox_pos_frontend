@@ -221,6 +221,26 @@ class BackupService {
         }
     }
 
+    async deleteBackup(filename) {
+        try {
+            const filepath = this.getBackupPath(filename);
+            
+            // Validate filename to prevent directory traversal
+            if (!filename || filename.includes('..') || !filename.endsWith('.sql')) {
+                throw new Error('Invalid filename');
+            }
+
+            if (!fs.existsSync(filepath)) {
+                throw new Error('Backup file not found');
+            }
+
+            fs.unlinkSync(filepath);
+            return { success: true, message: 'Backup deleted successfully' };
+        } catch (err) {
+            throw new Error(`Delete failed: ${err.message}`);
+        }
+    }
+
     async close() {
         if (this.connection) {
             await this.connection.end();
