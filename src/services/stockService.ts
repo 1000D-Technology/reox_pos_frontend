@@ -19,8 +19,8 @@ export const stockService = {
     getStockList: (page: number = 1, limit: number = 10) => 
         axiosInstance.get(`/api/stock?page=${page}&limit=${limit}`),
 
-    getOutOfStockList: () =>
-        axiosInstance.get('/api/stock/out-of-stock'),
+    getOutOfStockList: (page: number = 1, limit: number = 10) =>
+        axiosInstance.get(`/api/stock/out-of-stock?page=${page}&limit=${limit}`),
 
     // Get out-of-stock summary data
     getOutOfStockSummary: () =>
@@ -33,13 +33,15 @@ export const stockService = {
         supplier?: string;
         fromDate?: string;
         toDate?: string;
-    }) => {
+    }, page: number = 1, limit: number = 10) => {
         const params = new URLSearchParams();
         if (filters.product) params.append('product', filters.product);
         if (filters.category) params.append('category', filters.category);
         if (filters.supplier) params.append('supplier', filters.supplier);
         if (filters.fromDate) params.append('fromDate', filters.fromDate);
         if (filters.toDate) params.append('toDate', filters.toDate);
+        params.append('page', page.toString());
+        params.append('limit', limit.toString());
         
         return axiosInstance.get(`/api/stock/out-of-stock/search?${params.toString()}`);
     },
