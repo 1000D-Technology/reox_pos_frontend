@@ -122,8 +122,8 @@ export const stockService = {
         }),
 
     // Get damaged stock table data
-    getDamagedTableData: () => 
-        axiosInstance.get('/api/damaged/table-data'),
+    getDamagedTableData: (page: number = 1, limit: number = 10) => 
+        axiosInstance.get(`/api/damaged/table-data?page=${page}&limit=${limit}`),
 
     // Get damaged stock summary data
     getDamagedSummary: () =>
@@ -131,20 +131,16 @@ export const stockService = {
 
     // Search damaged stock records with filters
     searchDamagedRecords: (filters: {
-        product_id?: string;
-        category_id?: string;
-        supplier_id?: string;
-        unit_id?: string;
+        productName?: string;
         fromDate?: string;
         toDate?: string;
-    }) => {
+    }, page: number = 1, limit: number = 10) => {
         const params = new URLSearchParams();
-        if (filters.product_id) params.append('product_id', filters.product_id);
-        if (filters.category_id) params.append('category_id', filters.category_id);
-        if (filters.supplier_id) params.append('supplier_id', filters.supplier_id);
-        if (filters.unit_id) params.append('unit_id', filters.unit_id);
+        if (filters.productName) params.append('productName', filters.productName);
         if (filters.fromDate) params.append('fromDate', filters.fromDate);
         if (filters.toDate) params.append('toDate', filters.toDate);
+        params.append('page', page.toString());
+        params.append('limit', limit.toString());
         
         return axiosInstance.get(`/api/damaged/search?${params.toString()}`);
     },
