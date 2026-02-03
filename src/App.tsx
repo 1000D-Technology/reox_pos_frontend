@@ -47,8 +47,6 @@ import { UpdateNotification } from "./components/UpdateNotification";
 
 import { ThemeProvider } from "./context/ThemeContext";
 
-import { ThemeProvider } from "./context/ThemeContext";
-
 export default function App() {
     return (
         <ThemeProvider>

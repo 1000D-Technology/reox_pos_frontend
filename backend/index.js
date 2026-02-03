@@ -87,7 +87,7 @@ app.use(globalErrorHandler);
 const PORT = process.env.PORT || 3000;
 
 seedDatabase().then(() => {
-    app.listen(PORT, () => {
+    const server = app.listen(PORT, () => {
         console.log(`✅ Server is running on port ${PORT}`);
 
         // Initialize backup scheduler
@@ -106,8 +106,19 @@ seedDatabase().then(() => {
             console.error('❌ Failed to start session auto-close scheduler:', error.message);
         }
     });
+
+    server.on('error', (error) => {
+        if (error.code === 'EADDRINUSE') {
+            console.error(`❌ Port ${PORT} is already in use. Please close the other process or change the PORT in .env.`);
+        } else {
+            console.error('❌ Server startup error:', error.message);
+        }
+        process.exit(1);
+    });
 }).catch(err => {
-    console.error("❌ Failed to seed database, server not started:", err);
+    console.error("❌ Failed to seed database or initialize server:", err);
+    // Important: Exit with code 1 so Electron knows start failed
+    process.exit(1);
 });
 
 // Swagger definition

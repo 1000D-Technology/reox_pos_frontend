@@ -4,7 +4,8 @@ const path = require('path');
 
 class BackupService {
     constructor() {
-        this.backupDir = path.join(process.cwd(), 'backups');
+        const baseDataDir = process.env.APP_DATA_PATH || process.cwd();
+        this.backupDir = path.join(baseDataDir, 'backups');
         this.connection = null;
 
         if (!fs.existsSync(this.backupDir)) {
@@ -218,6 +219,26 @@ class BackupService {
             return { deleted: toDelete.length };
         } catch (err) {
             throw new Error(`Cleanup failed: ${err.message}`);
+        }
+    }
+
+    async deleteBackup(filename) {
+        try {
+            const filepath = this.getBackupPath(filename);
+            
+            // Validate filename to prevent directory traversal
+            if (!filename || filename.includes('..') || !filename.endsWith('.sql')) {
+                throw new Error('Invalid filename');
+            }
+
+            if (!fs.existsSync(filepath)) {
+                throw new Error('Backup file not found');
+            }
+
+            fs.unlinkSync(filepath);
+            return { success: true, message: 'Backup deleted successfully' };
+        } catch (err) {
+            throw new Error(`Delete failed: ${err.message}`);
         }
     }
 

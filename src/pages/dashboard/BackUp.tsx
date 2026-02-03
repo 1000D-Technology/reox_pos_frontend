@@ -11,7 +11,8 @@ import {
     AlertTriangle,
     Download,
     FileText,
-    Database
+    Database,
+    Trash2
 } from 'lucide-react';
 
 const BackUp = () => {
@@ -132,6 +133,34 @@ const BackUp = () => {
                 duration: 4000
             });
             console.error('Download failed:', error);
+        }
+    };
+    
+    const handleDelete = async (filename: string) => {
+        if (!window.confirm(`Are you sure you want to delete the backup "${filename}"?`)) {
+            return;
+        }
+
+        const deleteToast = toast.loading('Deleting backup...');
+
+        try {
+            const response = await backupService.deleteBackup(filename);
+
+            if (response.success) {
+                await fetchBackupStats();
+                await fetchBackupList();
+                toast.success('Backup deleted successfully!', {
+                    id: deleteToast,
+                    duration: 3000,
+                    icon: '🗑️'
+                });
+            }
+        } catch (error) {
+            toast.error('Failed to delete backup', {
+                id: deleteToast,
+                duration: 4000
+            });
+            console.error('Delete failed:', error);
         }
     };
 
@@ -372,13 +401,23 @@ const BackUp = () => {
                                                 </div>
                                             </div>
 
-                                            <button
-                                                onClick={() => handleDownload(file.filename)}
-                                                className="ml-3 p-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg shrink-0"
-                                                title="Download backup"
-                                            >
-                                                <Download className="w-5 h-5" />
-                                            </button>
+                                            <div className="flex items-center gap-2 ml-3">
+                                                <button
+                                                    onClick={() => handleDownload(file.filename)}
+                                                    className="p-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg transition-colors shadow-sm"
+                                                    title="Download backup"
+                                                >
+                                                    <Download className="w-5 h-5" />
+                                                </button>
+
+                                                <button
+                                                    onClick={() => handleDelete(file.filename)}
+                                                    className="p-2.5 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors shadow-sm"
+                                                    title="Delete backup"
+                                                >
+                                                    <Trash2 className="w-5 h-5" />
+                                                </button>
+                                            </div>
                                         </div>
                                     ))
                                 )}
