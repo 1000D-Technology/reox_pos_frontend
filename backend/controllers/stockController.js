@@ -243,9 +243,12 @@ exports.getStockForProduct = catchAsync(async (req, res, next) => {
 });
 
 exports.getLowStockList = catchAsync(async (req, res, next) => {
-    const lowStockItems = await Stock.getLowStockRecords();
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    
+    const result = await Stock.getLowStockRecords(page, limit);
 
-    const formattedData = lowStockItems.map(item => {
+    const formattedData = result.data.map(item => {
         // Determine status label based on quantity
         let statusLabel = item.available_qty <= 5 ? 'Critical' : 'Low';
 
@@ -263,24 +266,26 @@ exports.getLowStockList = catchAsync(async (req, res, next) => {
 
     res.status(200).json({
         success: true,
-        count: formattedData.length,
-        data: formattedData
+        data: formattedData,
+        pagination: result.pagination
     });
 });
 
 exports.getFilteredLowStock = catchAsync(async (req, res, next) => {
     // Extracting IDs from the request query object
     const { category_id, unit_id, supplier_id, product_id } = req.query;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
 
-    const items = await Stock.searchLowStock({
+    const result = await Stock.searchLowStock({
         category_id,
         unit_id,
         supplier_id,
         product_id
-    });
+    }, page, limit);
 
     //Formats data to match the UI table requirements
-    const tableData = items.map(item => ({
+    const tableData = result.data.map(item => ({
         productID: item.product_id_code,
         productName: item.product_name,
         unit: item.unit,
@@ -295,8 +300,8 @@ exports.getFilteredLowStock = catchAsync(async (req, res, next) => {
 
     res.status(200).json({
         success: true,
-        count: tableData.length,
-        data: tableData
+        data: tableData,
+        pagination: result.pagination
     });
 });
 
