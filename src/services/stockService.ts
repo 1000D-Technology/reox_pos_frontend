@@ -71,8 +71,8 @@ export const stockService = {
         axiosInstance.get(`/api/stock/get-stock-by-variant/${variationId}`),
 
     // Get low stock list
-    getLowStockList: () => 
-        axiosInstance.get('/api/stock/low-stock'),
+    getLowStockList: (page: number = 1, limit: number = 10) => 
+        axiosInstance.get(`/api/stock/low-stock?page=${page}&limit=${limit}`),
 
     // Get low stock summary data
     getLowStockSummary: () =>
@@ -84,12 +84,14 @@ export const stockService = {
         unit_id?: string;
         supplier_id?: string;
         product_id?: string;
-    }) => {
+    }, page: number = 1, limit: number = 10) => {
         const params = new URLSearchParams();
         if (filters.category_id) params.append('category_id', filters.category_id);
         if (filters.unit_id) params.append('unit_id', filters.unit_id);
         if (filters.supplier_id) params.append('supplier_id', filters.supplier_id);
         if (filters.product_id) params.append('product_id', filters.product_id);
+        params.append('page', page.toString());
+        params.append('limit', limit.toString());
         
         return axiosInstance.get(`/api/stock/low-stock/search?${params.toString()}`);
     },
