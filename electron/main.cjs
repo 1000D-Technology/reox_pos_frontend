@@ -53,6 +53,7 @@ function createWindow() {
     height: 900,
     minWidth: 1024,
     minHeight: 768,
+    icon: path.join(__dirname, isPackaged ? '../dist/icon.png' : '../public/icon.png'),
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -320,7 +321,8 @@ autoUpdater.on('update-not-available', (info) => {
 
 autoUpdater.on('error', (error) => {
   log.error('Auto-updater error:', error);
-  if (mainWindow) {
+  // Only notify renderer about errors if we're in production
+  if (mainWindow && !isDev) {
     mainWindow.webContents.send('update-error', error.message);
   }
 });
@@ -343,7 +345,7 @@ autoUpdater.on('update-downloaded', (info) => {
     const notification = new Notification({
       title: 'Update Ready',
       body: 'Update has been downloaded. Restart to install.',
-      icon: path.join(__dirname, '../public/icon.png')
+      icon: path.join(__dirname, isPackaged ? '../dist/icon.png' : '../public/icon.png')
     });
     
     notification.on('click', () => {

@@ -67,9 +67,12 @@ export const UpdateNotification = () => {
       setChecking(false);
       setDownloading(false);
       
-      toast.error('Update check failed', {
-        duration: 4000,
-      });
+      // Don't show toast error in development mode
+      if (import.meta.env.PROD) {
+        toast.error('Update check failed', {
+          duration: 4000,
+        });
+      }
     });
 
     const removeProgressListener = electronAPI.onDownloadProgress((progress: DownloadProgress) => {
