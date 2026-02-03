@@ -9,6 +9,8 @@ import {
     Trash,
     X,
     Eye,
+    Boxes,
+    Loader2,
 } from "lucide-react";
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
@@ -22,10 +24,12 @@ import { categoryService } from "../../../services/categoryService";
 import { brandService } from "../../../services/brandService";
 import { unitService } from "../../../services/unitService";
 import { productTypeService } from "../../../services/productTypeService";
+import { productService } from "../../../services/productService";
 
 
 interface Product {
     productID: number;
+    pvId: number;
     productName: string;
     productCode: string;
     barcode: string;
@@ -53,6 +57,8 @@ function ProductList() {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isViewModalOpen, setIsViewModalOpen] = useState(false);
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+    const [productVariants, setProductVariants] = useState<Product[]>([]);
+    const [isLoadingVariants, setIsLoadingVariants] = useState(false);
 
     const [salesData, setSalesData] = useState<Product[]>([]);
     const [currentPage, setCurrentPage] = useState(1);
@@ -95,7 +101,19 @@ function ProductList() {
         { value: "green", label: "Green" },
     ];
 
+    const [editingVariantId, setEditingVariantId] = useState<number | null>(null);
+    const [variantEditData, setVariantEditData] = useState<any>(null);
+    const [isAddingVariant, setIsAddingVariant] = useState(false);
+    const [newVariantData, setNewVariantData] = useState({
+        barcode: '',
+        color: '',
+        size: '',
+        storage: ''
+    });
+
     const [selectedIndex, setSelectedIndex] = useState(0);
+
+    const [variantToDeactivate, setVariantToDeactivate] = useState<any>(null);
 
     useEffect(() => {
         const fetchDropdownData = async () => {
@@ -160,6 +178,82 @@ function ProductList() {
             toast.error('Failed to load products');
         } finally {
             setIsLoadingProducts(false);
+        }
+    };
+
+    const handleViewProduct = async (product: Product) => {
+        setSelectedProduct(product);
+        setIsViewModalOpen(true);
+        setIsLoadingVariants(true);
+        setProductVariants([]);
+        try {
+            const response = await productService.getProductVariants(product.productID);
+            if (response.data.success) {
+                // Map id to pvId if needed to ensure display consistency
+                const mapped = response.data.data.map((v: any) => ({
+                    ...v,
+                    pvId: v.pvId || v.id || 0
+                }));
+                setProductVariants(mapped);
+            }
+        } catch (error) {
+            console.error('Error fetching product variants:', error);
+            toast.error('Failed to load product variants');
+        } finally {
+            setIsLoadingVariants(false);
+        }
+    };
+
+    const handleEditProduct = async (product: Product) => {
+        setSelectedProduct(product);
+        setIsEditModalOpen(true);
+        setIsLoadingVariants(true);
+        setProductVariants([]);
+        try {
+            const response = await productService.getProductVariants(product.productID);
+            if (response.data.success) {
+                const mapped = response.data.data.map((v: any) => ({
+                    ...v,
+                    pvId: v.pvId || v.id || 0
+                }));
+                setProductVariants(mapped);
+            }
+        } catch (error) {
+            console.error('Error fetching variants for edit:', error);
+            toast.error('Failed to load variations');
+        } finally {
+            setIsLoadingVariants(false);
+        }
+    };
+
+    const handleDeactivateVariant = (variant: any) => {
+        setVariantToDeactivate(variant);
+        setIsConfirmModalOpen(true);
+    };
+
+    const handleDeactivateConfirm = async () => {
+        if (!variantToDeactivate) return;
+
+        setIsDeactivating(true);
+        try {
+            const response = await productService.changeProductStatus(variantToDeactivate.pvId, 2);
+            if (response.data.success) {
+                toast.success('Variation deactivated successfully');
+                // Refresh variants
+                if (selectedProduct) {
+                    const res = await productService.getProductVariants(selectedProduct.productID);
+                    if (res.data.success) setProductVariants(res.data.data || []);
+                }
+                // Also refresh main list if needed
+                fetchProducts();
+                setIsConfirmModalOpen(false);
+            }
+        } catch (error) {
+            console.error('Error deactivating variant:', error);
+            toast.error('Failed to deactivate variation');
+        } finally {
+            setIsDeactivating(false);
+            setVariantToDeactivate(null);
         }
     };
 
@@ -303,7 +397,7 @@ function ProductList() {
     const handleUpdateProduct = async () => {
         setIsUpdating(true);
 
-        const updatePromise = axiosInstance.put(`/api/products/update/${selectedProduct?.productID}`, {
+        const updateData = {
             productData: {
                 name: editFormData.productName,
                 code: editFormData.productCode,
@@ -318,23 +412,78 @@ function ProductList() {
                 size: editFormData.size,
                 storage: editFormData.storage
             }
-        });
+        };
+
+        const updatePromise = productService.updateProduct(selectedProduct?.pvId || 0, updateData);
 
         try {
             await toast.promise(updatePromise, {
-                loading: 'Updating product...',
+                loading: 'Updating main product details...',
                 success: (res) => {
-                    setIsEditModalOpen(false);
+                    // Update main list
                     fetchProducts();
-                    return res.data.message || 'Product updated successfully!';
+                    return 'Product details updated successfully!';
                 },
-                error: (err) => err.response?.data?.message || 'Failed to update product'
+                error: (err) => err.response?.data?.message || 'Failed to update product details'
             });
         } catch (error) {
             console.error('Error updating product:', error);
         } finally {
             setIsUpdating(false);
         }
+    };
+
+    const handleUpdateVariant = async (variantId: number) => {
+        if (!variantEditData) return;
+
+        const updatePromise = productService.updateProduct(variantId, {
+            productData: {
+                name: editFormData.productName,
+                code: editFormData.productCode,
+                categoryId: parseInt(editFormData.categoryId) || 0,
+                brandId: parseInt(editFormData.brandId) || 0,
+                unitId: parseInt(editFormData.unitId) || 0,
+                typeId: parseInt(editFormData.typeId) || 0
+            },
+            variationData: {
+                barcode: variantEditData.barcode,
+                color: variantEditData.color,
+                size: variantEditData.size,
+                storage: variantEditData.storage
+            }
+        });
+
+        toast.promise(updatePromise, {
+            loading: 'Updating variation...',
+            success: (res) => {
+                setEditingVariantId(null);
+                setVariantEditData(null);
+                // Refresh variants
+                if (selectedProduct) handleEditProduct(selectedProduct);
+                return 'Variation updated successfully!';
+            },
+            error: (err) => err.response?.data?.message || 'Failed to update variation'
+        });
+    };
+
+    const handleAddNewVariant = async () => {
+        if (!selectedProduct) {
+            return;
+        }
+
+        const addPromise = productService.addProductVariation(selectedProduct.productID, newVariantData);
+
+        toast.promise(addPromise, {
+            loading: 'Adding new variation...',
+            success: (res) => {
+                setIsAddingVariant(false);
+                setNewVariantData({ barcode: '', color: '', size: '', storage: '' });
+                // Refresh variants
+                handleEditProduct(selectedProduct);
+                return 'New variation added successfully!';
+            },
+            error: (err) => err.response?.data?.message || 'Failed to add variation'
+        });
     };
 
     const handleDeactivateProduct = (product: Product, e: React.MouseEvent) => {
@@ -349,7 +498,7 @@ function ProductList() {
         setIsDeactivating(true);
 
         const deactivatePromise = axiosInstance.patch(
-            `/api/products/status/${productToDeactivate.productID}`,
+            `/api/products/status/${productToDeactivate.pvId}`,
             { statusId: 2 }
         );
 
@@ -714,70 +863,224 @@ function ProductList() {
                                 />
                             </div>
                         </div>
+                    </div>
 
-                        <h3 className="text-lg font-semibold text-gray-700 my-4">Product Variations (Optional)</h3>
-
-                        <div className="grid md:grid-cols-3 gap-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Color
-                                </label>
-                                <TypeableSelect
-                                    options={color}
-                                    value={editFormData.color || null}
-                                    onChange={(opt) =>
-                                        setEditFormData({ ...editFormData, color: opt?.label || "" })
-                                    }
-                                    placeholder="Type to search Color"
-
-                                />
+                        {/* Variants Section */}
+                        <div className="mt-8">
+                            <div className="flex justify-between items-center mb-4">
+                                <h3 className="text-lg font-semibold text-gray-700 flex items-center gap-2">
+                                    <Boxes size={20} className="text-emerald-600" />
+                                    Product Variations
+                                </h3>
+                                {!isAddingVariant && (
+                                    <button
+                                        onClick={() => setIsAddingVariant(true)}
+                                        className="px-4 py-2 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded-lg transition-colors text-sm font-bold flex items-center gap-2"
+                                    >
+                                        + Add New Variation
+                                    </button>
+                                )}
                             </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Size
-                                </label>
-                                <input
-                                    type="number"
-                                    value={editFormData.size}
-                                    onChange={(e) => setEditFormData({ ...editFormData, size: e.target.value })}
-                                    placeholder="Enter Size"
-                                    className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all outline-none"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Storage/Capacity
-                                </label>
-                                <input
-                                    type="number"
-                                    value={editFormData.storage}
-                                    onChange={(e) => setEditFormData({ ...editFormData, storage: e.target.value })}
-                                    placeholder="Enter Storage/Capacity"
-                                    className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all outline-none"
-                                />
+
+                            <div className="border border-gray-100 rounded-xl overflow-hidden shadow-sm">
+                                <table className="min-w-full divide-y divide-gray-200">
+                                    <thead className="bg-gray-50">
+                                        <tr>
+                                            <th className="px-4 py-3 text-left text-xs font-bold text-gray-400 uppercase">PV ID</th>
+                                            <th className="px-4 py-3 text-left text-xs font-bold text-gray-400 uppercase">Barcode</th>
+                                            <th className="px-4 py-3 text-left text-xs font-bold text-gray-400 uppercase">Color</th>
+                                            <th className="px-4 py-3 text-left text-xs font-bold text-gray-400 uppercase">Size</th>
+                                            <th className="px-4 py-3 text-left text-xs font-bold text-gray-400 uppercase">Storage</th>
+                                            <th className="px-4 py-3 text-right text-xs font-bold text-gray-400 uppercase">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="bg-white divide-y divide-gray-200">
+                                        {isLoadingVariants ? (
+                                            <tr>
+                                                <td colSpan={6} className="px-4 py-8 text-center text-gray-400">
+                                                    <Loader2 className="animate-spin inline-block mr-2" size={16} />
+                                                    Loading variations...
+                                                </td>
+                                            </tr>
+                                        ) : (
+                                            <>
+                                                {productVariants.map((variant) => (
+                                                    <tr key={variant.pvId} className="hover:bg-gray-50/50 transition-colors">
+                                                        <td className="px-4 py-3 text-sm text-gray-500 font-medium">#{variant.pvId}</td>
+                                                        <td className="px-4 py-3 text-sm">
+                                                            {editingVariantId === variant.pvId ? (
+                                                                <input
+                                                                    type="text"
+                                                                    value={variantEditData.barcode}
+                                                                    onChange={(e) => setVariantEditData({ ...variantEditData, barcode: e.target.value })}
+                                                                    className="w-full text-xs border rounded px-2 py-1 outline-none focus:border-emerald-500"
+                                                                />
+                                                            ) : (
+                                                                <span className="font-mono text-gray-900">{variant.barcode}</span>
+                                                            )}
+                                                        </td>
+                                                        <td className="px-4 py-3 text-sm">
+                                                            {editingVariantId === variant.pvId ? (
+                                                                <input
+                                                                    type="text"
+                                                                    value={variantEditData.color}
+                                                                    onChange={(e) => setVariantEditData({ ...variantEditData, color: e.target.value })}
+                                                                    className="w-full text-xs border rounded px-2 py-1 outline-none focus:border-emerald-500"
+                                                                />
+                                                            ) : (
+                                                                <span className="px-2 py-1 bg-gray-100 rounded text-[10px] font-medium text-gray-600">{variant.color || 'Default'}</span>
+                                                            )}
+                                                        </td>
+                                                        <td className="px-4 py-3 text-sm">
+                                                            {editingVariantId === variant.pvId ? (
+                                                                <input
+                                                                    type="text"
+                                                                    value={variantEditData.size}
+                                                                    onChange={(e) => setVariantEditData({ ...variantEditData, size: e.target.value })}
+                                                                    className="w-full text-xs border rounded px-2 py-1 outline-none focus:border-emerald-500"
+                                                                />
+                                                            ) : (
+                                                                <span className="text-gray-700">{variant.size || 'N/A'}</span>
+                                                            )}
+                                                        </td>
+                                                        <td className="px-4 py-3 text-sm">
+                                                            {editingVariantId === variant.pvId ? (
+                                                                <input
+                                                                    type="text"
+                                                                    value={variantEditData.storage}
+                                                                    onChange={(e) => setVariantEditData({ ...variantEditData, storage: e.target.value })}
+                                                                    className="w-full text-xs border rounded px-2 py-1 outline-none focus:border-emerald-500"
+                                                                />
+                                                            ) : (
+                                                                <span className="text-gray-700">{variant.storage || 'N/A'}</span>
+                                                            )}
+                                                        </td>
+                                                        <td className="px-4 py-3 text-right">
+                                                            <div className="flex justify-end gap-2">
+                                                                {editingVariantId === variant.pvId ? (
+                                                                    <>
+                                                                        <button
+                                                                            onClick={() => handleUpdateVariant(variant.pvId)}
+                                                                            className="p-1 px-3 bg-emerald-500 text-white rounded text-[10px] font-bold hover:bg-emerald-600 transition-colors"
+                                                                        >
+                                                                            Save
+                                                                        </button>
+                                                                        <button
+                                                                            onClick={() => { setEditingVariantId(null); setVariantEditData(null); }}
+                                                                            className="p-1 px-3 bg-gray-200 text-gray-600 rounded text-[10px] font-bold hover:bg-gray-300 transition-colors"
+                                                                        >
+                                                                            Cancel
+                                                                        </button>
+                                                                    </>
+                                                                ) : (
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            setEditingVariantId(variant.pvId);
+                                                                            setVariantEditData({
+                                                                                barcode: variant.barcode,
+                                                                                color: variant.color,
+                                                                                size: variant.size,
+                                                                                storage: variant.storage
+                                                                            });
+                                                                        }}
+                                                                        className="p-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors flex items-center gap-1 text-[10px] font-bold"
+                                                                    >
+                                                                        <Pencil size={12} />
+                                                                        Edit
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+
+                                                {isAddingVariant && (
+                                                    <tr className="bg-emerald-50/50">
+                                                        <td className="px-4 py-3 text-sm text-gray-400 font-medium">NEW</td>
+                                                        <td className="px-4 py-3 text-sm">
+                                                            <input
+                                                                type="text"
+                                                                placeholder="Enter Barcode"
+                                                                value={newVariantData.barcode}
+                                                                onChange={(e) => setNewVariantData({ ...newVariantData, barcode: e.target.value })}
+                                                                className="w-full text-xs border border-emerald-300 rounded px-2 py-1 outline-none focus:ring-1 focus:ring-emerald-500"
+                                                            />
+                                                        </td>
+                                                        <td className="px-4 py-3 text-sm">
+                                                            <input
+                                                                type="text"
+                                                                placeholder="Color"
+                                                                value={newVariantData.color}
+                                                                onChange={(e) => setNewVariantData({ ...newVariantData, color: e.target.value })}
+                                                                className="w-full text-xs border border-emerald-300 rounded px-2 py-1 outline-none"
+                                                            />
+                                                        </td>
+                                                        <td className="px-4 py-3 text-sm">
+                                                            <input
+                                                                type="text"
+                                                                placeholder="Size"
+                                                                value={newVariantData.size}
+                                                                onChange={(e) => setNewVariantData({ ...newVariantData, size: e.target.value })}
+                                                                className="w-full text-xs border border-emerald-300 rounded px-2 py-1 outline-none"
+                                                            />
+                                                        </td>
+                                                        <td className="px-4 py-3 text-sm">
+                                                            <input
+                                                                type="text"
+                                                                placeholder="Storage"
+                                                                value={newVariantData.storage}
+                                                                onChange={(e) => setNewVariantData({ ...newVariantData, storage: e.target.value })}
+                                                                className="w-full text-xs border border-emerald-300 rounded px-2 py-1 outline-none"
+                                                            />
+                                                        </td>
+                                                        <td className="px-4 py-3 text-right">
+                                                            <div className="flex justify-end gap-2">
+                                                                <button
+                                                                    onClick={handleAddNewVariant}
+                                                                    className="p-1 px-3 bg-emerald-600 text-white rounded text-[10px] font-bold hover:bg-emerald-700 shadow-sm"
+                                                                >
+                                                                    Add
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => setIsAddingVariant(false)}
+                                                                    className="p-1 px-3 bg-white text-gray-500 border border-gray-200 rounded text-[10px] font-bold hover:bg-gray-50"
+                                                                >
+                                                                    Cancel
+                                                                </button>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                            </>
+                                        )}
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
 
-                        <div className="flex justify-end gap-3 mt-6">
-                            <button
-                                onClick={() => setIsEditModalOpen(false)}
-                                className="px-6 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg transition-all"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={handleUpdateProduct}
-                                disabled={isUpdating}
-                                className={`flex items-center gap-2 px-6 py-2.5 bg-linear-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-medium rounded-lg shadow-lg shadow-emerald-200 transition-all ${isUpdating ? 'opacity-50 cursor-not-allowed' : ''
-                                    }`}
-                            >
-                                {isUpdating ? 'Updating...' : 'Update Product'}
-                                <span className="text-xs text-emerald-100">(Shift + Enter)</span>
-                            </button>
+                        <div className="flex justify-between items-center mt-8 pt-6 border-t border-gray-100">
+                             <p className="text-[10px] text-gray-400 font-medium italic">
+                                * Basic information updates apply to all variations. Variations are managed individually below.
+                            </p>
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => setIsEditModalOpen(false)}
+                                    className="px-6 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg transition-all"
+                                >
+                                    Close
+                                </button>
+                                <button
+                                    onClick={handleUpdateProduct}
+                                    disabled={isUpdating}
+                                    className={`flex items-center gap-2 px-8 py-2.5 bg-linear-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-bold rounded-lg shadow-lg shadow-emerald-200 transition-all ${isUpdating ? 'opacity-50 cursor-not-allowed' : ''
+                                        }`}
+                                >
+                                    {isUpdating ? 'Saving...' : 'Save Product Details'}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
             )}
 
 
@@ -890,7 +1193,7 @@ function ProductList() {
                             <thead className="bg-linear-to-r from-emerald-600 to-emerald-700 sticky top-0 z-10">
                                 <tr>
                                     {[
-                                        "Product ID",
+                                        "PV ID",
                                         "Product Name",
                                         "Product Code",
                                         "Barcode",
@@ -938,7 +1241,7 @@ function ProductList() {
                                             }`}
                                     >
                                         <td className="px-6 py-2 text-sm font-medium">
-                                            {sale.productID}
+                                            {sale.pvId}
                                         </td>
                                         <td className="px-6 py-2 text-sm font-medium">
                                             {sale.productName}
@@ -963,8 +1266,7 @@ function ProductList() {
                                                 <button
                                                     onClick={(e) => {
                                                         e.stopPropagation();
-                                                        setSelectedProduct(sale);
-                                                        setIsViewModalOpen(true);
+                                                        handleViewProduct(sale);
                                                     }}
                                                     className="p-2 bg-linear-to-r from-emerald-100 to-emerald-200 rounded-lg text-emerald-700 hover:from-emerald-200 hover:to-emerald-300 transition-all shadow-sm"
                                                 >
@@ -979,8 +1281,7 @@ function ProductList() {
                                                 <button
                                                     onClick={(e) => {
                                                         e.stopPropagation();
-                                                        setSelectedProduct(sale);
-                                                        setIsEditModalOpen(true);
+                                                        handleEditProduct(sale);
                                                     }}
                                                     className="p-2 bg-linear-to-r from-blue-100 to-blue-200 rounded-lg text-blue-700 hover:from-blue-200 hover:to-blue-300 transition-all shadow-sm"
                                                 >
@@ -991,17 +1292,7 @@ function ProductList() {
                                                 </span>
                                             </div>
 
-                                            <div className="relative group">
-                                                <button
-                                                    onClick={(e) => handleDeactivateProduct(sale, e)}
-                                                    className="p-2 bg-linear-to-r from-red-100 to-red-200 rounded-lg text-red-700 hover:from-red-200 hover:to-red-300 transition-all shadow-sm"
-                                                >
-                                                    <Trash size={15} />
-                                                </button>
-                                                <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max px-2 py-1 text-xs text-white bg-gray-900 rounded-md invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    Delete Product
-                                                </span>
-                                            </div>
+                                            {/* Deactivate Button Removed From Main List Row */}
                                         </td>
                                     </tr>
                                 ))}
@@ -1154,12 +1445,71 @@ function ProductList() {
                                     </div>
                                 </div>
                             </div>
+                             <div className="mt-8">
+                                <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                                    <Boxes size={20} className="text-emerald-600" />
+                                    Product Variations
+                                </h3>
+                                
+                                <div className="border border-gray-100 rounded-xl overflow-hidden">
+                                    <table className="min-w-full divide-y divide-gray-200">
+                                        <thead className="bg-gray-50">
+                                            <tr>
+                                                <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">PV ID</th>
+                                                <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Barcode</th>
+                                                <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Color</th>
+                                                <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Size</th>
+                                                <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Storage</th>
+                                                <th className="px-4 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="bg-white divide-y divide-gray-200">
+                                            {isLoadingVariants ? (
+                                                <tr>
+                                                    <td colSpan={6} className="px-4 py-8 text-center text-gray-400">
+                                                        <Loader2 className="animate-spin inline-block mr-2" size={16} />
+                                                        Loading variants...
+                                                    </td>
+                                                </tr>
+                                            ) : productVariants.length === 0 ? (
+                                                <tr>
+                                                    <td colSpan={6} className="px-4 py-8 text-center text-gray-400 italic">
+                                                        No variations found for this product.
+                                                    </td>
+                                                </tr>
+                                            ) : (
+                                                productVariants.map((variant) => (
+                                                    <tr key={variant.pvId} className="hover:bg-gray-50 transition-colors">
+                                                        <td className="px-4 py-3 text-sm text-gray-600 font-medium">{variant.pvId}</td>
+                                                        <td className="px-4 py-3 text-sm font-mono text-gray-900">{variant.barcode || '-'}</td>
+                                                        <td className="px-4 py-3 text-sm">
+                                                            <span className="px-2 py-1 bg-gray-100 rounded text-gray-600">{variant.color || '-'}</span>
+                                                        </td>
+                                                        <td className="px-4 py-3 text-sm">
+                                                            <span className="px-2 py-1 bg-gray-100 rounded text-gray-600">{variant.size || '-'}</span>
+                                                        </td>
+                                                        <td className="px-4 py-3 text-sm font-medium text-gray-900">{variant.storage || '-'}</td>
+                                                        <td className="px-4 py-3 text-right">
+                                                            <button
+                                                                onClick={() => handleDeactivateVariant(variant)}
+                                                                className="p-1.5 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg transition-colors"
+                                                                title="Deactivate Variation"
+                                                            >
+                                                                <Trash size={14} />
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                ))
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
                             <div className="mt-6 pt-6 border-t border-gray-100">
-                                <div className="flex justify-between items-center">
-                                    <div>
-                                        <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Created On</label>
-                                        <p className="text-gray-900 font-medium mt-1">{selectedProduct.createdOn}</p>
-                                    </div>
+                                <div className="flex justify-between items-center text-xs text-gray-500">
+                                    <span>Main Product ID: <span className="font-semibold">{selectedProduct.productID}</span></span>
+                                    <span>Created On: <span className="font-semibold">{new Date(selectedProduct.createdOn).toLocaleDateString()}</span></span>
                                 </div>
                             </div>
                         </div>
@@ -1185,6 +1535,19 @@ function ProductList() {
                     </div>
                 </div>
             )}
+            <ConfirmationModal
+                isOpen={isConfirmModalOpen}
+                title="Deactivate Variation"
+                message="Are you sure you want to deactivate variation"
+                itemName={variantToDeactivate?.variant_name || variantToDeactivate?.barcode || "unnamed"}
+                itemType="variation"
+                onConfirm={handleDeactivateConfirm}
+                onCancel={() => setIsConfirmModalOpen(false)}
+                isLoading={isDeactivating}
+                confirmButtonText="Deactivate"
+                loadingText="Deactivating..."
+                isDanger={true}
+            />
         </>
     );
 }

@@ -62,7 +62,7 @@ export const CartPanel = ({
                 (cartElements[currentIndex + 1] as HTMLElement).focus();
             }
 
-            if (e.key === 'e' || e.key === 'E') {
+            if (e.key === 'e' || e.key === 'E' || e.key === 'Enter' || e.key === ' ') {
                 if (currentIndex >= 0) {
                     e.preventDefault();
                     const itemId = Number(cartElements[currentIndex].getAttribute('data-cart-item-id'));

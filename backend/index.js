@@ -9,6 +9,7 @@ const grnRoutes = require('./routes/grnRouters');
 const brandRoutes = require('./routes/brandRoutes');
 const categoryRoutes = require('./routes/categoryRoutes');
 const unitRoutes = require('./routes/unitRoutes');
+const unitConversionRoutes = require('./routes/unitConversionRoutes');
 const productTypeRoutes = require('./routes/productTypeRoutes');
 const paymentTypeRoutes = require('./routes/paymentTypeRoutes');
 const stockRoutes = require('./routes/stockRoutes');
@@ -57,6 +58,7 @@ app.use('/api/grn', grnRoutes);
 app.use('/api/brands', brandRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/units', unitRoutes);
+app.use('/api/unit-conversions', unitConversionRoutes);
 app.use('/api/product-types', productTypeRoutes);
 app.use('/api/payment-types', paymentTypeRoutes);
 app.use('/api/stock', stockRoutes);
@@ -82,7 +84,7 @@ app.use((req, res, next) => {
 // Global error handling middleware (MUST BE LAST)
 app.use(globalErrorHandler);
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 3000;
 
 seedDatabase().then(() => {
     app.listen(PORT, () => {

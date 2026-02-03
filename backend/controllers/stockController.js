@@ -10,8 +10,11 @@ const catchAsync = require('../utils/catchAsync');
  * @route   GET /api/stock/all-variations
  */
 exports.getAllStockWithVariations = catchAsync(async (req, res, next) => {
-    const { hasStock } = req.query;
-    const stockData = await Stock.getAllStockWithVariations({ hasStock: hasStock === 'true' });
+    const { hasStock, limit } = req.query;
+    const stockData = await Stock.getAllStockWithVariations({ 
+        hasStock: hasStock === 'true',
+        limit: limit
+    });
 
     // Transform data for variation list (e.g. POS, Stock List)
     const transformedData = stockData.map(item => {
@@ -55,14 +58,17 @@ exports.getAllStockWithVariations = catchAsync(async (req, res, next) => {
  * @route   GET /api/stock
  */
 exports.getStockList = catchAsync(async (req, res, next) => {
-    const stockData = await Stock.getAllStock();
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    
+    const result = await Stock.getAllStock(page, limit);
 
     // Transform data to match frontend expectations
-    const transformedData = stockData.map(item => ({
+    const transformedData = result.data.map(item => ({
         stockID: item.stock_id,
         variationID: item.product_variations_id,
         productID: item.product_code || item.product_id.toString(),
-        productName: item.full_product_name, // Updated to use full name with variants
+        productName: item.full_product_name,
         barcode: item.barcode || 'N/A',
         unit: item.unit,
         costPrice: typeof item.cost_price === 'number' ? item.cost_price.toFixed(2) : parseFloat(item.cost_price).toFixed(2),
@@ -74,8 +80,8 @@ exports.getStockList = catchAsync(async (req, res, next) => {
 
     res.status(200).json({
         success: true,
-        count: transformedData.length,
-        data: transformedData
+        data: transformedData,
+        pagination: result.pagination
     });
 });
 
@@ -85,18 +91,16 @@ exports.getSearchStock = catchAsync(async (req, res, next) => {
             category: req.query.category,
             unit: req.query.unit,
             supplier: req.query.supplier,
-            searchQuery: req.query.q
+            searchQuery: req.query.q,
+            limit: req.query.limit
         };
+        
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
 
-        console.log('Searching stock with filters:', filters);
-
-        const stockData = await Stock.searchStock(filters);
-        console.log('Stock search result count:', stockData.length);
-        if (stockData.length > 0) {
-           console.log('First raw stock item from searchStock:', JSON.stringify(stockData[0], null, 2));
-        }
-
-        const transformedData = stockData.map(item => {
+        const result = await Stock.searchStock(filters, page, limit);
+       
+        const transformedData = result.data.map(item => {
             const unitLabel = (item.unit || '').toLowerCase();
             const isBulk = unitLabel.includes('kg') || 
                           unitLabel.includes('bag') || 
@@ -121,15 +125,11 @@ exports.getSearchStock = catchAsync(async (req, res, next) => {
                 stockQty: item.stock_qty ? item.stock_qty.toString() : (item.qty || 0).toString()
             };
         });
-        
-        if (transformedData.length > 0) {
-           console.log('First transformed item:', JSON.stringify(transformedData[0], null, 2));
-        }
 
         res.status(200).json({
             success: true,
-            count: transformedData.length,
-            data: transformedData
+            data: transformedData,
+            pagination: result.pagination
         });
     } catch (error) {
         console.error('Error in getSearchStock:', error);

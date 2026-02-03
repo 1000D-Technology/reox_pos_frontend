@@ -105,13 +105,17 @@ function StockList() {
     const [isBarcodeModalOpen, setIsBarcodeModalOpen] = useState(false);
     const [selectedProductForBarcode, setSelectedProductForBarcode] = useState<any>(null);
 
-    // Load stock data
-    const loadStockData = async () => {
+    // Load stock data with pagination
+    const loadStockData = async (page: number = 1) => {
         setIsLoadingStock(true);
         try {
-            const response = await stockService.getAllStockWithVariations();
+            const response = await stockService.getStockList(page, itemsPerPage);
             if (response.data?.success) {
                 setStockData(response.data.data);
+                if (response.data.pagination) {
+                    setPagination(response.data.pagination);
+                    setCurrentPage(response.data.pagination.currentPage);
+                }
             } else {
                 toast.error('Failed to load stock data');
             }
@@ -199,16 +203,19 @@ function StockList() {
 
             let response;
             if (Object.keys(filters).length > 0) {
-                response = await stockService.searchStock(filters);
+                response = await stockService.searchStock(filters, 1, itemsPerPage);
                 toast.success('Search completed successfully');
             } else {
-                response = await stockService.getStockList();
+                response = await stockService.getStockList(1, itemsPerPage);
                 toast.success('Showing all stock data');
             }
 
             if (response.data?.success) {
                 setStockData(response.data.data);
-                setCurrentPage(1); // Reset to first page
+                if (response.data.pagination) {
+                    setPagination(response.data.pagination);
+                    setCurrentPage(1);
+                }
             } else {
                 toast.error('Failed to search stock data');
             }
@@ -226,8 +233,47 @@ function StockList() {
         setSelectedUnit(null);
         setSelectedSupplier(null);
         setSearchQuery('');
-        await Promise.all([loadStockData(), loadSummaryData()]);
+        await Promise.all([loadStockData(1), loadSummaryData()]);
         toast.success('Filters cleared');
+    };
+
+    // Load specific page with current filters
+    const loadPage = async (page: number) => {
+        setIsLoadingStock(true);
+        try {
+            const filters = {
+                category: selectedCategory || undefined,
+                unit: selectedUnit || undefined,
+                supplier: selectedSupplier || undefined,
+                q: searchQuery.trim() || undefined
+            };
+
+            // Remove undefined values
+            Object.keys(filters).forEach(key =>
+                filters[key as keyof typeof filters] === undefined && delete filters[key as keyof typeof filters]
+            );
+
+            let response;
+            if (Object.keys(filters).length > 0) {
+                response = await stockService.searchStock(filters, page, itemsPerPage);
+            } else {
+                response = await stockService.getStockList(page, itemsPerPage);
+            }
+
+            if (response.data?.success) {
+                setStockData(response.data.data);
+                if (response.data.pagination) {
+                    setPagination(response.data.pagination);
+                    setCurrentPage(page);
+                }
+                setSelectedIndex(0);
+            }
+        } catch (error) {
+            console.error('Error loading page:', error);
+            toast.error('Failed to load page');
+        } finally {
+            setIsLoadingStock(false);
+        }
     };
 
     // Export to Excel
@@ -382,15 +428,23 @@ function StockList() {
     const [selectedIndex, setSelectedIndex] = useState(0);
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage] = useState(10);
+    
+    // Backend pagination state
+    const [pagination, setPagination] = useState({
+        currentPage: 1,
+        totalPages: 1,
+        totalItems: 0,
+        itemsPerPage: 10,
+        hasNextPage: false,
+        hasPrevPage: false
+    });
 
-    const totalPages = Math.ceil(stockData.length / itemsPerPage);
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    const currentStockData = stockData.slice(startIndex, endIndex);
+    const totalPages = pagination.totalPages;
+    const currentStockData = stockData; // Use data directly from backend
 
     useEffect(() => {
         loadDropdownData();
-        loadStockData();
+        loadStockData(1);
         loadSummaryData();
     }, []);
 
@@ -471,23 +525,20 @@ function StockList() {
     }, [currentStockData, selectedIndex, currentPage, totalPages]);
 
     const goToPage = (page: number) => {
-        if (page >= 1 && page <= totalPages) {
-            setCurrentPage(page);
-            setSelectedIndex(0);
+        if (page >= 1 && page <= totalPages && page !== currentPage) {
+            loadPage(page);
         }
     };
 
     const goToPreviousPage = () => {
-        if (currentPage > 1) {
-            setCurrentPage(currentPage - 1);
-            setSelectedIndex(0);
+        if (pagination.hasPrevPage) {
+            loadPage(currentPage - 1);
         }
     };
 
     const goToNextPage = () => {
-        if (currentPage < totalPages) {
-            setCurrentPage(currentPage + 1);
-            setSelectedIndex(0);
+        if (pagination.hasNextPage) {
+            loadPage(currentPage + 1);
         }
     };
 
@@ -767,9 +818,9 @@ function StockList() {
 
                     <nav className="bg-white flex items-center justify-between sm:px-6 pt-4 border-t-2 border-gray-100">
                         <div className="text-sm text-gray-600">
-                            Showing <span className="font-semibold text-gray-800">{startIndex + 1}</span> to{' '}
-                            <span className="font-semibold text-gray-800">{Math.min(endIndex, stockData.length)}</span> of{' '}
-                            <span className="font-semibold text-gray-800">{stockData.length}</span> results
+                            Showing <span className="font-semibold text-gray-800">{((currentPage - 1) * itemsPerPage) + 1}</span> to{' '}
+                            <span className="font-semibold text-gray-800">{Math.min(currentPage * itemsPerPage, pagination.totalItems)}</span> of{' '}
+                            <span className="font-semibold text-gray-800">{pagination.totalItems}</span> results
                         </div>
                         <div className="flex items-center space-x-2">
                             <button

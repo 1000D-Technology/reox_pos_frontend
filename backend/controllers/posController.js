@@ -23,10 +23,8 @@ exports.searchProductByBarcode = catchAsync(async (req, res, next) => {
 
     // Format all matching products
     const formattedProducts = products.map(item => {
-        let variations = [];
-        if (item.color) variations.push(item.color);
-        if (item.size) variations.push(item.size);
-        if (item.storage_capacity) variations.push(item.storage_capacity);
+        let variations = [item.color, item.size, item.storage_capacity]
+            .filter(v => v && !['n/a', 'na', 'n.a.', 'none', 'default', 'not applicable'].includes(v.toLowerCase().trim()) && v.trim() !== '');
 
         let fullDisplayName = item.productName;
         if (variations.length > 0) {

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
-import { X, Plus, Minus, Percent, DollarSign } from 'lucide-react';
+import { X, Plus, Minus, Percent, DollarSign, Calculator, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { CartItem } from '../../types';
 
@@ -29,6 +29,29 @@ export const CartItemEditModal = ({
     const [price, setPrice] = useState(0);
     const [discount, setDiscount] = useState(0);
     const [discountType, setDiscountType] = useState<'percentage' | 'price'>('percentage');
+    const [subUnitValue, setSubUnitValue] = useState<number | string>('');
+
+    const currentUnitStr = (item?.category || '').toLowerCase().trim();
+    
+    const getUnitConfig = (unit: string, isBulkItem: boolean) => {
+        const u = unit.toLowerCase().trim();
+        // Weights: KG, Grams, Kilo, etc.
+        if (u.includes('kg') || u.includes('kilo') || u.includes('gram') || u.includes('weight') || (isBulkItem && (u === '' || u === 'pcs'))) 
+            return { label: 'Weight', subLabel: 'Grams (g)', factor: 1000 };
+        // Volumes: L, ML, Liter, litre, etc.
+        if (u === 'l' || u.includes('ltr') || u.includes('liter') || u.includes('litre') || u.includes('vol') || u.includes('ml')) 
+            return { label: 'Volume', subLabel: 'Milliliters (ml)', factor: 1000 };
+        // Lengths: M, CM, Meter, metre, etc.
+        if (u === 'm' || (u.includes('meter') && !u.includes('centi')) || u.includes('metre') || u.includes('cm')) 
+            return { label: 'Length', subLabel: 'Centimeters (cm)', factor: 100 };
+        
+        // Final fallback for bulk items
+        if (isBulkItem) return { label: 'Bulk', subLabel: 'Units (/1000)', factor: 1000 };
+        
+        return null;
+    };
+
+    const unitConfig = getUnitConfig(currentUnitStr, item?.isBulk || false);
 
     useEffect(() => {
         if (item) {
@@ -117,13 +140,15 @@ export const CartItemEditModal = ({
         const currentQty = Number(quantity) || 0;
         if (currentQty < item.stock) {
             setQuantity(currentQty + 1);
+            setSubUnitValue('');
         }
     };
 
     const decrementQty = () => {
         const currentQty = Number(quantity) || 0;
-        if (currentQty > 1) {
-            setQuantity(currentQty - 1);
+        if (currentQty > 0) {
+            setQuantity(Math.max(0, currentQty - 1));
+            setSubUnitValue('');
         }
     };
 
@@ -147,6 +172,22 @@ export const CartItemEditModal = ({
             setDiscount(Math.min(maxPercent, Math.max(0, value)));
         } else {
             setDiscount(Math.min(maxDiscountAmount, Math.max(0, value)));
+        }
+    };
+
+    const handleSubUnitChange = (val: string) => {
+        setSubUnitValue(val);
+        if (val === '' || !unitConfig) return;
+
+        const numVal = Number(val);
+        if (!isNaN(numVal)) {
+            const convertedQty = numVal / unitConfig.factor;
+            // Update quantity state
+            if (convertedQty > item!.stock) {
+                setQuantity(item!.stock);
+            } else {
+                setQuantity(Number(convertedQty.toFixed(3)));
+            }
         }
     };
 
@@ -218,6 +259,7 @@ export const CartItemEditModal = ({
                                                 value={quantity}
                                                 onChange={(e) => {
                                                     const val = e.target.value;
+                                                    setSubUnitValue(''); // Clear sub-unit when manual qty change
                                                     if (val === '') {
                                                         setQuantity('');
                                                         return;
@@ -234,7 +276,7 @@ export const CartItemEditModal = ({
                                                 min={0}
                                                 max={item.stock}
                                             />
-                                            <div className="absolute -top-2 left-4 px-1.5 bg-white text-[9px] font-black text-gray-400 uppercase tracking-tighter opacity-0 group-focus-within:opacity-100 transition-opacity">Quantity</div>
+                                            <div className="absolute -top-2 left-4 px-1.5 bg-white text-[9px] font-black text-gray-400 uppercase tracking-tighter opacity-0 group-focus-within:opacity-100 transition-opacity">Quantity ({item.category})</div>
                                         </div>
                                         <button
                                             onClick={incrementQty}
@@ -261,6 +303,33 @@ export const CartItemEditModal = ({
                                     />
                                 </div>
                             </div>
+
+                            {/* Sub-Unit Quick Convert - Full Width */}
+                            {unitConfig && (
+                                <div className="p-4 bg-emerald-50 border-2 border-emerald-200 rounded-xl">
+                                    <div className="flex items-center gap-2 mb-3">
+                                        <Calculator className="w-4 h-4 text-emerald-600" />
+                                        <span className="text-sm font-bold text-emerald-700 uppercase tracking-wide">Quick Convert: {unitConfig.subLabel}</span>
+                                    </div>
+                                    <div className="relative">
+                                        <input
+                                            type="number"
+                                            value={subUnitValue}
+                                            onChange={(e) => handleSubUnitChange(e.target.value)}
+                                            placeholder={`Enter amount in ${unitConfig.subLabel.split(' ')[0]}...`}
+                                            step="any"
+                                            className="w-full px-4 py-3 bg-white border-2 border-emerald-200 rounded-lg text-base focus:outline-none focus:border-emerald-500 transition-all font-semibold"
+                                        />
+                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-emerald-500 flex items-center gap-1.5">
+                                             <RefreshCw className="w-3.5 h-3.5 animate-spin-slow" />
+                                             to {item.category}
+                                        </div>
+                                    </div>
+                                    <p className="mt-2 text-xs text-emerald-600 font-medium">
+                                        💡 Tip: Entering <span className="font-bold">{unitConfig.factor}</span> will set quantity to <span className="font-bold">1 {item.category}</span>
+                                    </p>
+                                </div>
+                            )}
 
                             {/* Discount Section - Only in Retail Mode */}
                             {billingMode === 'retail' && (

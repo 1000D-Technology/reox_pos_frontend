@@ -22,8 +22,9 @@ import DamagedStock from "./pages/dashboard/Stock/DamagedStock.tsx";
 import LowStock from "./pages/dashboard/Stock/LowStock.tsx";
 import ProductList from "./pages/dashboard/Products/ProductList.tsx";
 import ManageUnit from "./pages/dashboard/Products/ManageUnit.tsx";
+import ManageUnitConversions from "./pages/dashboard/Products/ManageUnitConversions.tsx";
 import ManageCategory from "./pages/dashboard/Products/ManageCategory.tsx";
-import RemovedProducts from "./pages/dashboard/Products/RemovedProducts.tsx";
+import DeactivatedProducts from "./pages/dashboard/Products/DeactivatedProducts.tsx";
 import CreateSupplier from "./pages/dashboard/Supplier/CreateSupplier.tsx";
 import ManageCompany from "./pages/dashboard/Supplier/ManageCompany.tsx";
 import SupplierGRN from "./pages/dashboard/Supplier/SupplierGRN.tsx";
@@ -42,11 +43,16 @@ import DatabaseSetup from "./pages/setup/DatabaseSetup.tsx";
 import {PublicRoute} from "./components/PublicRoute.tsx";
 import {ProtectedRoute} from "./components/ProtectedRoute.tsx";
 import InternetStatusWrapper from "./components/InternetStatusWrapper";
+import { UpdateNotification } from "./components/UpdateNotification";
+
+import { ThemeProvider } from "./context/ThemeContext";
 
 export default function App() {
     return (
-        <Router>
+        <ThemeProvider>
+            <Router>
             <InternetStatusWrapper>
+                <UpdateNotification />
                 <Routes>
                     {/* Auth */}
                     <Route path="/signin" element={
@@ -185,6 +191,11 @@ export default function App() {
                                 <ManageUnit/>
                             </ProtectedRoute>
                         }/>
+                        <Route path="/products/manage-unit-conversions" element={
+                            <ProtectedRoute allowedRoles={['Admin', 'Storekeeper']}>
+                                <ManageUnitConversions/>
+                            </ProtectedRoute>
+                        }/>
                         <Route path="/products/manage-category" element={
                             <ProtectedRoute allowedRoles={['Admin', 'Storekeeper']}>
                                 <ManageCategory/>
@@ -195,9 +206,9 @@ export default function App() {
                                 <ManageBrand/>
                             </ProtectedRoute>
                         }/>
-                        <Route path="/products/removed-products" element={
+                        <Route path="/products/deactivated-products" element={
                             <ProtectedRoute allowedRoles={['Admin']}>
-                                <RemovedProducts/>
+                                <DeactivatedProducts/>
                             </ProtectedRoute>
                         }/>
 
@@ -307,5 +318,6 @@ export default function App() {
                 </Routes>
             </InternetStatusWrapper>
         </Router>
+        </ThemeProvider>
     );
 }

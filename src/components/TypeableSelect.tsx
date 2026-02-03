@@ -37,19 +37,25 @@ export default function TypeableSelect({
     const wrapperRef = useRef<HTMLDivElement>(null);
     const dropdownId = useRef(`typeable-select-${Math.random().toString(36).substr(2, 9)}`);
 
-    // Sync with external value changes
+    // Sync with external value changes (only when value changes, not options)
     useEffect(() => {
         if (value == null || value === '') {
-            setSelected(null);
-            setQuery('');
+            // Only clear if we actually have a selected value to clear
+            if (selected !== null) {
+                setSelected(null);
+                setQuery('');
+            }
             return;
         }
         const opt = options.find(o => o.value === value);
         if (opt) {
-            setSelected(opt);
-            setQuery(opt.label);
+            // Only update if the selected value is actually different
+            if (!selected || selected.value !== opt.value) {
+                setSelected(opt);
+                setQuery(opt.label);
+            }
         }
-    }, [value, options]);
+    }, [value]); // Removed 'options' from dependencies to prevent clearing during search
 
     // Handle clicks outside
     useEffect(() => {
