@@ -154,7 +154,7 @@ class Product {
 
   static async getProductsForDropdown(statusId = 1, searchTerm = '', limit = 10) {
     console.log(`Model getProductsForDropdown - Search: '${searchTerm}', Limit: '${limit}'`);
-    const take = 10;
+    const take = parseInt(limit) || 10;
     const where = {
       product_variations: {
         some: {

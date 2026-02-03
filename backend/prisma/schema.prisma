@@ -413,10 +413,27 @@ model supplier {
 }
 
 model unit_id {
-  idunit_id                        Int       @id @default(autoincrement())
-  name                             String    @db.VarChar(255)
-  created_at                       DateTime? @default(now()) @db.DateTime(0)
-  product_product_unit_idTounit_id product[] @relation("product_unit_idTounit_id")
+  idunit_id                                 Int                 @id @default(autoincrement())
+  name                                      String              @db.VarChar(255)
+  created_at                                DateTime?           @default(now()) @db.DateTime(0)
+  product_product_unit_idTounit_id          product[]           @relation("product_unit_idTounit_id")
+  unit_conversions_as_parent                unit_conversions[]  @relation("parent_unit")
+  unit_conversions_as_child                 unit_conversions[]  @relation("child_unit")
+}
+
+model unit_conversions {
+  id                 Int       @id @default(autoincrement())
+  parent_unit_id     Int
+  child_unit_id      Int
+  conversion_factor  Float     @db.Float
+  created_at         DateTime? @default(now()) @db.DateTime(0)
+  updated_at         DateTime? @default(now()) @updatedAt @db.DateTime(0)
+  parent_unit        unit_id   @relation("parent_unit", fields: [parent_unit_id], references: [idunit_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_unit_conversions_parent")
+  child_unit         unit_id   @relation("child_unit", fields: [child_unit_id], references: [idunit_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_unit_conversions_child")
+
+  @@unique([parent_unit_id, child_unit_id], map: "unique_parent_child")
+  @@index([parent_unit_id], map: "fk_unit_conversions_parent_idx")
+  @@index([child_unit_id], map: "fk_unit_conversions_child_idx")
 }
 
 model user {

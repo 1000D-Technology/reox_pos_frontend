@@ -286,33 +286,6 @@ export const CartItemEditModal = ({
                                             <Plus className="w-5 h-5" strokeWidth={3} />
                                         </button>
                                     </div>
-
-                                    {/* Sub-Unit Quick Convert */}
-                                    {unitConfig && (
-                                        <div className="mt-3 p-3 bg-emerald-50 border border-emerald-100 rounded-xl animate-in fade-in slide-in-from-top-1">
-                                            <div className="flex items-center gap-2 mb-2">
-                                                <Calculator className="w-3.5 h-3.5 text-emerald-600" />
-                                                <span className="text-[11px] font-bold text-emerald-700 uppercase tracking-wider">Quick Convert: {unitConfig.subLabel}</span>
-                                            </div>
-                                            <div className="relative">
-                                                <input
-                                                    type="number"
-                                                    value={subUnitValue}
-                                                    onChange={(e) => handleSubUnitChange(e.target.value)}
-                                                    placeholder={`Enter amount in ${unitConfig.subLabel.split(' ')[0]}...`}
-                                                    step="any"
-                                                    className="w-full px-3 py-2 bg-white border-2 border-emerald-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500 transition-all font-semibold"
-                                                />
-                                                <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-emerald-500 flex items-center gap-1">
-                                                     <RefreshCw className="w-3 h-3 animate-spin-slow" />
-                                                     to {item.category}
-                                                </div>
-                                            </div>
-                                            <p className="mt-1.5 text-[10px] text-emerald-600 font-medium">
-                                                Tip: Entering <span className="font-bold">{unitConfig.factor}</span> will set quantity to <span className="font-bold">1 {item.category}</span>
-                                            </p>
-                                        </div>
-                                    )}
                                 </div>
 
                                 {/* Price Edit */}
@@ -330,6 +303,33 @@ export const CartItemEditModal = ({
                                     />
                                 </div>
                             </div>
+
+                            {/* Sub-Unit Quick Convert - Full Width */}
+                            {unitConfig && (
+                                <div className="p-4 bg-emerald-50 border-2 border-emerald-200 rounded-xl">
+                                    <div className="flex items-center gap-2 mb-3">
+                                        <Calculator className="w-4 h-4 text-emerald-600" />
+                                        <span className="text-sm font-bold text-emerald-700 uppercase tracking-wide">Quick Convert: {unitConfig.subLabel}</span>
+                                    </div>
+                                    <div className="relative">
+                                        <input
+                                            type="number"
+                                            value={subUnitValue}
+                                            onChange={(e) => handleSubUnitChange(e.target.value)}
+                                            placeholder={`Enter amount in ${unitConfig.subLabel.split(' ')[0]}...`}
+                                            step="any"
+                                            className="w-full px-4 py-3 bg-white border-2 border-emerald-200 rounded-lg text-base focus:outline-none focus:border-emerald-500 transition-all font-semibold"
+                                        />
+                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-emerald-500 flex items-center gap-1.5">
+                                             <RefreshCw className="w-3.5 h-3.5 animate-spin-slow" />
+                                             to {item.category}
+                                        </div>
+                                    </div>
+                                    <p className="mt-2 text-xs text-emerald-600 font-medium">
+                                        💡 Tip: Entering <span className="font-bold">{unitConfig.factor}</span> will set quantity to <span className="font-bold">1 {item.category}</span>
+                                    </p>
+                                </div>
+                            )}
 
                             {/* Discount Section - Only in Retail Mode */}
                             {billingMode === 'retail' && (
