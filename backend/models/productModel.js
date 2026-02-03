@@ -437,6 +437,60 @@ class Product {
       }
     });
   }
+
+  static async getAllVariations(statusId = 1) {
+    const products = await prisma.product.findMany({
+      where: {
+        product_variations: {
+          some: {
+            product_status_id: statusId,
+          },
+        },
+      },
+      include: {
+        category: true,
+        brand: true,
+        unit_id_product_unit_idTounit_id: true,
+        product_type: true,
+        product_variations: {
+          where: {
+            product_status_id: statusId,
+          },
+        },
+      },
+      orderBy: { created_at: "desc" },
+    });
+
+    return products.flatMap((p) => {
+      const categoryName = p.category ? p.category.name : null;
+      const brandName = p.brand ? p.brand.name : null;
+      const unitName = p.unit_id_product_unit_idTounit_id ? p.unit_id_product_unit_idTounit_id.name : null;
+      const typeName = p.product_type ? p.product_type.name : null;
+
+      return p.product_variations.map(pv => ({
+        productID: p.id,
+        pvId: pv.id,
+        productName: pv.color !== 'Default' || pv.size !== 'Default' 
+          ? `${p.product_name} (${pv.color || ''} ${pv.size || ''})`
+          : p.product_name,
+        baseProductName: p.product_name,
+        productCode: p.product_code,
+        barcode: pv.barcode || '',
+        category: categoryName,
+        categoryId: p.category_id,
+        brand: brandName,
+        brandId: p.brand_id,
+        unit: unitName,
+        unitId: p.unit_id,
+        productType: typeName,
+        productTypeId: p.product_type_id,
+        color: pv.color || 'Default',
+        size: pv.size || 'Default',
+        storage: pv.storage_capacity || 'N/A',
+        createdOn: p.created_at ? p.created_at.toISOString().split("T")[0] : null,
+      }));
+    });
+  }
 }
 
 module.exports = Product;

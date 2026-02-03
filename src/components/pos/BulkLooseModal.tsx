@@ -17,6 +17,9 @@ interface Product {
     category: string;
     productCode: string;
     isBulk: boolean;
+    color?: string;
+    size?: string;
+    storage?: string;
 }
 
 interface BulkLooseModalProps {
@@ -74,10 +77,10 @@ export const BulkLooseModal = ({ isOpen, onClose }: BulkLooseModalProps) => {
         const isFromStock = !!(p.stockID || p.stock_id);
         
         return {
-            id: p.stockID || p.stock_id || p.id,
-            stockID: p.stockID || p.stock_id || p.id,
-            // If from stock table, use variationID. If from product table, productID IS the variation ID.
-            variationID: isFromStock ? (p.variationID || p.product_variations_id) : p.productID,
+            id: p.stockID || p.stock_id || p.pvId || p.id,
+            stockID: p.stockID || p.stock_id,
+            // Prioritize specific variation/pv IDs from the API
+            variationID: isFromStock ? (p.variationID || p.product_variations_id) : (p.pvId || p.variationID || p.productID),
             name: p.productName || p.displayName || p.name,
             barcode: p.barcode,
             price: parseFloat(p.Price || p.price || p.selling_price || 0),
@@ -87,7 +90,10 @@ export const BulkLooseModal = ({ isOpen, onClose }: BulkLooseModalProps) => {
             productCode: isFromStock ? p.productID : (p.productCode || p.product_code),
             isBulk: p.isBulk === true || 
                     String(p.unit || '').toLowerCase().includes('kg') || 
-                    String(p.unit || '').toLowerCase().includes('bag')
+                    String(p.unit || '').toLowerCase().includes('bag'),
+            color: p.color,
+            size: p.size,
+            storage: p.storage
         };
     };
 
@@ -125,7 +131,8 @@ export const BulkLooseModal = ({ isOpen, onClose }: BulkLooseModalProps) => {
     const filteredLoose = useMemo(() => {
         return allProductVariants.filter(p => 
             (p.name.toLowerCase().includes(looseSearch.toLowerCase()) || 
-             p.productCode.toLowerCase().includes(looseSearch.toLowerCase()))
+             p.productCode.toLowerCase().includes(looseSearch.toLowerCase()) ||
+             (p.barcode || '').toLowerCase().includes(looseSearch.toLowerCase()))
         ).slice(0, 10);
     }, [allProductVariants, looseSearch]);
 
@@ -277,6 +284,11 @@ export const BulkLooseModal = ({ isOpen, onClose }: BulkLooseModalProps) => {
                                                                             <span className="text-[10px] px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded-md font-black uppercase">Bulk</span>
                                                                         )}
                                                                     </div>
+                                                                    <div className="text-[10px] text-indigo-600 font-bold uppercase tracking-wider flex gap-2">
+                                                                        {p.color && p.color !== 'Default' && <span>{p.color}</span>}
+                                                                        {p.size && p.size !== 'Default' && <span>{p.size}</span>}
+                                                                        {p.storage && p.storage !== 'N/A' && <span>{p.storage}</span>}
+                                                                    </div>
                                                                     <div className="text-xs text-gray-400 font-mono">{p.productCode} {p.barcode && `| ${p.barcode}`}</div>
                                                                 </div>
                                                                 <div className="text-right">
@@ -299,9 +311,20 @@ export const BulkLooseModal = ({ isOpen, onClose }: BulkLooseModalProps) => {
                                                     </div>
                                                     <div className="flex-1">
                                                         <h3 className="font-black text-indigo-900 leading-tight">{selectedBulkProduct.name}</h3>
-                                                        <p className="text-xs text-indigo-600 font-bold uppercase tracking-tighter">{selectedBulkProduct.productCode}</p>
+                                                        <div className="flex flex-wrap gap-2 mt-0.5">
+                                                            <span className="text-xs text-indigo-600 font-bold uppercase tracking-tighter">{selectedBulkProduct.productCode}</span>
+                                                            {(selectedBulkProduct.color && selectedBulkProduct.color !== 'Default') && (
+                                                                <span className="text-[10px] bg-white px-1.5 py-0.5 rounded border border-indigo-100 text-indigo-600 font-black uppercase">{selectedBulkProduct.color}</span>
+                                                            )}
+                                                            {(selectedBulkProduct.size && selectedBulkProduct.size !== 'Default') && (
+                                                                <span className="text-[10px] bg-white px-1.5 py-0.5 rounded border border-indigo-100 text-indigo-600 font-black uppercase">{selectedBulkProduct.size}</span>
+                                                            )}
+                                                            {(selectedBulkProduct.storage && selectedBulkProduct.storage !== 'N/A') && (
+                                                                <span className="text-[10px] bg-white px-1.5 py-0.5 rounded border border-indigo-100 text-indigo-600 font-black uppercase">{selectedBulkProduct.storage}</span>
+                                                            )}
+                                                        </div>
                                                     </div>
-                                                    <button 
+                                                      <button 
                                                         onClick={() => setSelectedBulkProduct(null)}
                                                         className="p-1.5 hover:bg-indigo-200 rounded-lg text-indigo-400 hover:text-indigo-600 transition-colors"
                                                     >
@@ -405,7 +428,14 @@ export const BulkLooseModal = ({ isOpen, onClose }: BulkLooseModalProps) => {
                                                             >
                                                                 <div>
                                                                     <div className="font-bold text-gray-800">{p.name}</div>
-                                                                    <div className="text-xs text-gray-400 font-mono">{p.productCode}</div>
+                                                                    <div className="text-[10px] text-emerald-600 font-bold uppercase tracking-wider flex gap-2">
+                                                                        {p.color && p.color !== 'Default' && <span>{p.color}</span>}
+                                                                        {p.size && p.size !== 'Default' && <span>{p.size}</span>}
+                                                                        {p.storage && p.storage !== 'N/A' && <span>{p.storage}</span>}
+                                                                    </div>
+                                                                    <div className="text-xs text-gray-400 font-mono">
+                                                                        {p.productCode} {p.barcode && `| ${p.barcode}`}
+                                                                    </div>
                                                                 </div>
                                                                 <div className="text-right">
                                                                     <div className="text-xs font-black text-emerald-600">{p.stock} units</div>
@@ -426,7 +456,18 @@ export const BulkLooseModal = ({ isOpen, onClose }: BulkLooseModalProps) => {
                                                     </div>
                                                     <div className="flex-1">
                                                         <h3 className="font-black text-emerald-900 leading-tight">{selectedLooseProduct.name}</h3>
-                                                        <p className="text-xs text-emerald-600 font-bold uppercase tracking-tighter">{selectedLooseProduct.productCode}</p>
+                                                        <div className="flex flex-wrap gap-2 mt-0.5">
+                                                            <span className="text-xs text-emerald-600 font-bold uppercase tracking-tighter">{selectedLooseProduct.productCode}</span>
+                                                            {(selectedLooseProduct.color && selectedLooseProduct.color !== 'Default') && (
+                                                                <span className="text-[10px] bg-white px-1.5 py-0.5 rounded border border-emerald-100 text-emerald-600 font-black uppercase">{selectedLooseProduct.color}</span>
+                                                            )}
+                                                            {(selectedLooseProduct.size && selectedLooseProduct.size !== 'Default') && (
+                                                                <span className="text-[10px] bg-white px-1.5 py-0.5 rounded border border-emerald-100 text-emerald-600 font-black uppercase">{selectedLooseProduct.size}</span>
+                                                            )}
+                                                            {(selectedLooseProduct.storage && selectedLooseProduct.storage !== 'N/A') && (
+                                                                <span className="text-[10px] bg-white px-1.5 py-0.5 rounded border border-emerald-100 text-emerald-600 font-black uppercase">{selectedLooseProduct.storage}</span>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                     <button 
                                                         onClick={() => setSelectedLooseProduct(null)}

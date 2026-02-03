@@ -8,7 +8,7 @@ export const posService = {
 
     //get all products (Using standard products API)
     getAllProductsList : ()=> 
-        axiosInstance.get('/api/products'),
+        axiosInstance.get('/api/products/variations'),
     
     //search product by barcode
     searchByBarcode : (barcode: string)=> 
