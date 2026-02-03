@@ -1,12 +1,25 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, Notification } = require('electron');
 const path = require('path');
 const { spawn } = require('child_process');
 const fs = require('fs');
+const { autoUpdater } = require('electron-updater');
+const log = require('electron-log');
 
 let mainWindow;
 let backendProcess;
 const isDev = !app.isPackaged;
 const isPackaged = app.isPackaged;
+
+// Configure logging
+log.transports.file.level = 'info';
+autoUpdater.logger = log;
+
+// Auto-updater configuration
+autoUpdater.autoDownload = false; // Don't auto-download, let user choose
+autoUpdater.autoInstallOnAppQuit = true;
+
+// Update check interval (4 hours)
+const UPDATE_CHECK_INTERVAL = 4 * 60 * 60 * 1000;
 
 // Prevent multiple instances - CRITICAL for preventing window loops
 const gotTheLock = app.requestSingleInstanceLock();
@@ -231,4 +244,141 @@ ipcMain.handle('get-backend-status', () => {
     running: backendProcess !== null,
     pid: backendProcess ? backendProcess.pid : null
   };
+});
+
+// ============================================
+// AUTO-UPDATER EVENT HANDLERS
+// ============================================
+
+// Check for updates manually
+ipcMain.handle('check-for-updates', async () => {
+  if (isDev) {
+    log.info('Skipping update check in development mode');
+    return { available: false, message: 'Development mode' };
+  }
+  
+  try {
+    const result = await autoUpdater.checkForUpdates();
+    return { available: true, info: result.updateInfo };
+  } catch (error) {
+    log.error('Update check failed:', error);
+    return { available: false, error: error.message };
+  }
+});
+
+// Download update
+ipcMain.handle('download-update', async () => {
+  try {
+    await autoUpdater.downloadUpdate();
+    return { success: true };
+  } catch (error) {
+    log.error('Update download failed:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Install update and restart
+ipcMain.handle('install-update', () => {
+  autoUpdater.quitAndInstall(false, true);
+});
+
+// Get current app version
+ipcMain.handle('get-app-version', () => {
+  return app.getVersion();
+});
+
+// Auto-updater events
+autoUpdater.on('checking-for-update', () => {
+  log.info('Checking for updates...');
+  if (mainWindow) {
+    mainWindow.webContents.send('update-checking');
+  }
+});
+
+autoUpdater.on('update-available', (info) => {
+  log.info('Update available:', info.version);
+  if (mainWindow) {
+    mainWindow.webContents.send('update-available', info);
+  }
+  
+  // Show system notification
+  if (Notification.isSupported()) {
+    new Notification({
+      title: 'Update Available',
+      body: `Reox POS v${info.version} is available. Click to download.`,
+      icon: path.join(__dirname, '../public/icon.png')
+    }).show();
+  }
+});
+
+autoUpdater.on('update-not-available', (info) => {
+  log.info('No updates available');
+  if (mainWindow) {
+    mainWindow.webContents.send('update-not-available', info);
+  }
+});
+
+autoUpdater.on('error', (error) => {
+  log.error('Auto-updater error:', error);
+  if (mainWindow) {
+    mainWindow.webContents.send('update-error', error.message);
+  }
+});
+
+autoUpdater.on('download-progress', (progressObj) => {
+  log.info(`Download progress: ${progressObj.percent}%`);
+  if (mainWindow) {
+    mainWindow.webContents.send('download-progress', progressObj);
+  }
+});
+
+autoUpdater.on('update-downloaded', (info) => {
+  log.info('Update downloaded:', info.version);
+  if (mainWindow) {
+    mainWindow.webContents.send('update-downloaded', info);
+  }
+  
+  // Show system notification
+  if (Notification.isSupported()) {
+    const notification = new Notification({
+      title: 'Update Ready',
+      body: 'Update has been downloaded. Restart to install.',
+      icon: path.join(__dirname, '../public/icon.png')
+    });
+    
+    notification.on('click', () => {
+      autoUpdater.quitAndInstall(false, true);
+    });
+    
+    notification.show();
+  }
+});
+
+// Schedule periodic update checks
+function checkForUpdatesScheduled() {
+  if (isDev) {
+    log.info('Auto-update disabled in development mode');
+    return;
+  }
+  
+  // Check on app start (after 10 seconds)
+  setTimeout(() => {
+    log.info('Initial update check...');
+    autoUpdater.checkForUpdates().catch(err => {
+      log.error('Initial update check failed:', err);
+    });
+  }, 10000);
+  
+  // Check periodically
+  setInterval(() => {
+    log.info('Scheduled update check...');
+    autoUpdater.checkForUpdates().catch(err => {
+      log.error('Scheduled update check failed:', err);
+    });
+  }, UPDATE_CHECK_INTERVAL);
+}
+
+// Start scheduled checks when app is ready
+app.once('ready', () => {
+  checkForUpdatesScheduled();
 });

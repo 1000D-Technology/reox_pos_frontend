@@ -21,6 +21,14 @@
   "asarUnpack": [
     "backend/**/*"
   ],
+  "publish": [
+    {
+      "provider": "github",
+      "owner": "1000D-Technology",
+      "repo": "reox_pos_frontend",
+      "releaseType": "release"
+    }
+  ],
   "win": {
     "icon": "build/icon.png",
     "target": [
@@ -29,14 +37,17 @@
         "arch": ["x64"]
       }
     ],
-    "artifactName": "${productName}-Setup-${version}.${ext}"
+    "artifactName": "${productName}-Setup-${version}.${ext}",
+    "publisherName": "1000D Technology"
   },
   "nsis": {
     "oneClick": false,
     "allowToChangeInstallationDirectory": true,
     "createDesktopShortcut": true,
     "createStartMenuShortcut": true,
-    "shortcutName": "Reox POS"
+    "shortcutName": "Reox POS",
+    "perMachine": false,
+    "allowElevation": true
   },
   "extraMetadata": {
     "main": "electron/main.cjs"

@@ -43,6 +43,9 @@ import DatabaseSetup from "./pages/setup/DatabaseSetup.tsx";
 import {PublicRoute} from "./components/PublicRoute.tsx";
 import {ProtectedRoute} from "./components/ProtectedRoute.tsx";
 import InternetStatusWrapper from "./components/InternetStatusWrapper";
+import { UpdateNotification } from "./components/UpdateNotification";
+
+import { ThemeProvider } from "./context/ThemeContext";
 
 import { ThemeProvider } from "./context/ThemeContext";
 
@@ -51,6 +54,7 @@ export default function App() {
         <ThemeProvider>
             <Router>
             <InternetStatusWrapper>
+                <UpdateNotification />
                 <Routes>
                     {/* Auth */}
                     <Route path="/signin" element={
