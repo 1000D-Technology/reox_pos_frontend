@@ -440,6 +440,7 @@ const upload = require('../middleware/fileUpload');
 router.post('/import', upload.single('file'), productController.importProducts);
 router.post('/create', validateProduct, productController.addProduct);
 router.get('/', productController.getProducts);
+router.get('/variations', productController.getAllVariations);
 router.get('/dropdown', productController.getProductsForDropdown);
 router.get('/:productId/variants', productController.getProductVariants);
 router.post('/:productId/variants', productController.addProductVariation);

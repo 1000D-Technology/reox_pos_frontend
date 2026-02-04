@@ -86,6 +86,7 @@ export default function Sidebar({ isOpen }: SidebarProps) {
                 { label: "Manage Invoice", path: "/sales/manage-invoice" },
                 { label: "Manage Sales", path: "/sales/manage-sales" },
                 { label: "User Sales", path: "/sales/manage-user-sales" },
+                { label: "Return History", path: "/sales/return-history" },
             ],
         },
         {

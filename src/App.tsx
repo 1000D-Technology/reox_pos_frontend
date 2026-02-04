@@ -7,6 +7,7 @@ import Dashboard from "./pages/dashboard/Dashboard";
 import ManageInvoice from "./pages/dashboard/Sales/ManageInvoice";
 import ManageSales from "./pages/dashboard/Sales/ManageSales";
 import ManageUserSales from "./pages/dashboard/Sales/ManageUserSales";
+import ReturnList from "./pages/dashboard/Sales/ReturnList";
 import CreateProducts from "./pages/dashboard/Products/CreateProducts.tsx";
 import StockList from "./pages/dashboard/Stock/StockList.tsx";
 import CreateQuotation from "./pages/dashboard/Quotation/CreateQuotation.tsx";
@@ -101,6 +102,11 @@ export default function App() {
                         <Route path="/sales/manage-user-sales" element={
                             <ProtectedRoute allowedRoles={['Admin']}>
                                 <ManageUserSales/>
+                            </ProtectedRoute>
+                        }/>
+                        <Route path="/sales/return-history" element={
+                            <ProtectedRoute allowedRoles={['Admin', 'Cashier']}>
+                                <ReturnList/>
                             </ProtectedRoute>
                         }/>
 
