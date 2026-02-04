@@ -1,4 +1,5 @@
 const prisma = require("../config/prismaClient");
+const PaginationHelper = require('../utils/paginationHelper');
 
 class Quotation {
     static async create(data) {
@@ -116,7 +117,7 @@ class Quotation {
         });
     }
     static async getAll({ quotationNumber, fromDate, toDate, customerId, page = 1, limit = 10 }) {
-        const offset = (page - 1) * limit;
+        const skip = PaginationHelper.getSkip(page, limit);
         const where = {};
 
         if (quotationNumber) {
@@ -137,13 +138,12 @@ class Quotation {
             where.customer_id = parseInt(customerId);
         }
 
-        console.log('Fetching quotations with where:', JSON.stringify(where, null, 2));
-
-        const [total, quotations] = await Promise.all([
+        // Run count and findMany in parallel for better performance
+        const [totalCount, quotations] = await Promise.all([
             prisma.quotation.count({ where }),
             prisma.quotation.findMany({
                 where,
-                skip: offset,
+                skip: skip,
                 take: parseInt(limit),
                 orderBy: { created_at: 'desc' },
                 include: {
@@ -167,8 +167,8 @@ class Quotation {
         ]);
 
         return {
-            total,
-            quotations
+            data: quotations,
+            pagination: PaginationHelper.getPaginationMetadata(page, limit, totalCount)
         };
     }
 }

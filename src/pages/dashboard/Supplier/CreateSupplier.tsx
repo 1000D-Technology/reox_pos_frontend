@@ -71,6 +71,7 @@ function CreateSupplier() {
     const [selectedUpdateBank, setSelectedUpdateBank] = useState<{ value: string | number, label: string } | null>(null);
     const [newAccountNumber, setNewAccountNumber] = useState('');
     const [newContactNumber, setNewContactNumber] = useState('');
+    const [newEmail, setNewEmail] = useState('');
     const [isUpdatingSupplier, setIsUpdatingSupplier] = useState(false);
     const [isUpdatingContact, setIsUpdatingContact] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -132,7 +133,7 @@ function CreateSupplier() {
             if (e.key === "Enter" && e.shiftKey) {
                 e.preventDefault();
                 if (isModalOpen) {
-                    handleUpdateContact();
+                    handleUpdateSupplier();
                 } else if (isCompanyModalOpen) {
                     handleSubmitCompany();
                 } else if (!isSubmittingSupplier) {
@@ -287,7 +288,9 @@ function CreateSupplier() {
                         contact: supplier.contactNumber || '',
                         company: supplier.companyName || '',
                         companyContact: supplier.companyContact || '',
+                        companyId: supplier.companyId,
                         bank: supplier.bankName || '',
+                        bankId: supplier.bankId || null,
                         account: supplier.accountNumber || '',
                     }));
                     setSalesData(transformedData);
@@ -493,24 +496,30 @@ function CreateSupplier() {
         }
     };
 
-    const handleUpdateContact = async () => {
+    const handleUpdateSupplier = async () => {
         if (!selectedCategory || !newContactNumber.trim()) {
             toast.error('Contact number is required');
             return;
         }
 
-        setIsUpdatingContact(true);
+        setIsUpdatingSupplier(true);
 
         try {
-            const updatePromise = supplierService.updateSupplierContact(
+            const updatePromise = supplierService.updateSupplier(
                 parseInt(selectedCategory.id),
-                newContactNumber
+                {
+                    contactNumber: newContactNumber,
+                    email: newEmail,
+                    companyId: selectedCategory.companyId,
+                    bankId: typeof selectedUpdateBank?.value === 'number' ? selectedUpdateBank.value : parseInt(selectedUpdateBank?.value as string) || undefined,
+                    accountNumber: newAccountNumber
+                }
             );
 
             await toast.promise(
                 updatePromise,
                 {
-                    loading: 'Updating contact...',
+                    loading: 'Updating supplier...',
                     success: (res) => {
                         const response = supplierService.getSuppliers();
                         response.then(result => {
@@ -523,7 +532,9 @@ function CreateSupplier() {
                                     contact: supplier.contactNumber || '',
                                     company: supplier.companyName || '',
                                     companyContact: supplier.companyContact || '',
+                                    companyId: supplier.companyId,
                                     bank: supplier.bankName || '',
+                                    bankId: supplier.bankId || null,
                                     account: supplier.accountNumber || '',
                                 }));
                                 setSalesData(transformedData);
@@ -531,22 +542,29 @@ function CreateSupplier() {
                             }
                         });
                         handleCloseModal();
-                        return res.data.message || 'Contact updated successfully!';
+                        return res.data.message || 'Supplier updated successfully!';
                     },
-                    error: (err) => err.response?.data?.message || 'Failed to update contact'
+                    error: (err) => err.response?.data?.message || 'Failed to update supplier'
                 }
             );
 
         } catch (error) {
-            console.error('Error updating contact:', error);
+            console.error('Error updating supplier:', error);
         } finally {
-            setIsUpdatingContact(false);
+            setIsUpdatingSupplier(false);
         }
     };
 
     const handleEditClick = (category: Category) => {
         setSelectedCategory(category);
         setNewContactNumber(category.contact);
+        setNewEmail(category.email);
+        setNewAccountNumber(category.account);
+        if (category.bankId && category.bank) {
+            setSelectedUpdateBank({ value: category.bankId.toString(), label: category.bank });
+        } else {
+            setSelectedUpdateBank(null);
+        }
         setIsModalOpen(true);
     };
 
@@ -554,7 +572,10 @@ function CreateSupplier() {
         setIsModalOpen(false);
         setSelectedCategory(null);
         setNewContactNumber('');
-        setIsUpdatingContact(false);
+        setNewEmail('');
+        setNewAccountNumber('');
+        setSelectedUpdateBank(null);
+        setIsUpdatingSupplier(false);
     };
 
     const handleCloseCompanyModal = () => {
@@ -982,7 +1003,7 @@ function CreateSupplier() {
                             </div>
                             <div>
                                 <h3 className="text-xl font-semibold text-gray-800">Update Supplier</h3>
-                                <p className="text-sm text-gray-500">Update contact for {selectedCategory.name}</p>
+                                <p className="text-sm text-gray-500">Update details for {selectedCategory.name}</p>
                             </div>
                         </div>
 
@@ -999,6 +1020,29 @@ function CreateSupplier() {
                                     className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all outline-none"
                                 />
                             </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Bank
+                                </label>
+                                <TypeableSelect
+                                    options={banks}
+                                    value={selectedUpdateBank?.value || null}
+                                    onChange={(option) => setSelectedUpdateBank(option)}
+                                    placeholder="Select Bank..."
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Account Number
+                                </label>
+                                <input
+                                    type="text"
+                                    value={newAccountNumber}
+                                    onChange={(e) => setNewAccountNumber(e.target.value)}
+                                    placeholder="Enter account number"
+                                    className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all outline-none"
+                                />
+                            </div>
                         </div>
 
                         <div className="mt-8 flex justify-end gap-3">
@@ -1009,12 +1053,12 @@ function CreateSupplier() {
                                 Cancel
                             </button>
                             <button
-                                onClick={handleUpdateContact}
-                                disabled={isUpdatingContact}
-                                className={`px-6 py-2 bg-linear-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-medium rounded-lg transition-all ${isUpdatingContact ? 'opacity-50 cursor-not-allowed' : ''
+                                onClick={handleUpdateSupplier}
+                                disabled={isUpdatingSupplier}
+                                className={`px-6 py-2 bg-linear-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-medium rounded-lg transition-all ${isUpdatingSupplier ? 'opacity-50 cursor-not-allowed' : ''
                                     }`}
                             >
-                                {isUpdatingContact ? 'Updating...' : 'Update Contact'}
+                                {isUpdatingSupplier ? 'Updating...' : 'Update Supplier'}
                             </button>
                         </div>
                     </div>

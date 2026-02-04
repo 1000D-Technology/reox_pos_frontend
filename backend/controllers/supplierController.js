@@ -166,8 +166,16 @@ exports.addSupplier = catchAsync(async (req, res, next) => {
 });
 
 exports.getSuppliers = catchAsync(async (req, res, next) => {
-    const suppliers = await Supplier.getAllSuppliers();
-    res.status(200).json({ success: true, data: suppliers });
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    
+    const result = await Supplier.getAllSuppliers(page, limit);
+    
+    res.status(200).json({ 
+        success: true, 
+        data: result.data,
+        pagination: result.pagination
+    });
 });
 
 exports.getSupplierDropdownList = catchAsync(async (req, res, next) => {
@@ -177,7 +185,7 @@ exports.getSupplierDropdownList = catchAsync(async (req, res, next) => {
 
 exports.updateSupplier = catchAsync(async (req, res, next) => {
     const { id } = req.params;
-    const { contactNumber, companyId, bankId, accountNumber } = req.body;
+    const { contactNumber, companyId, bankId, accountNumber, email } = req.body;
 
     if (!contactNumber || !companyId) {
         return next(new AppError("Contact number and company are required.", 400));
@@ -185,6 +193,7 @@ exports.updateSupplier = catchAsync(async (req, res, next) => {
 
     const result = await Supplier.updateSupplier(id, {
         contactNumber,
+        email,
         companyId,
         bankId,
         accountNumber

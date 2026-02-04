@@ -22,6 +22,7 @@ import toast, { Toaster } from 'react-hot-toast';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import ExportModal from "../../../components/modals/ExportModal.tsx";
 
 function OutOfStock() {
 
@@ -75,14 +76,29 @@ function OutOfStock() {
     const [stockData, setStockData] = useState<any[]>([]);
     const [isLoadingStock, setIsLoadingStock] = useState(false);
 
+    // Pagination state
+    const [pagination, setPagination] = useState({
+        currentPage: 1,
+        itemsPerPage: 10,
+        totalItems: 0,
+        totalPages: 0,
+        hasNextPage: false,
+        hasPrevPage: false
+    });
+
     // Load out-of-stock data
-    const loadOutOfStockData = async () => {
+    const loadOutOfStockData = async (page: number = 1, limit: number = 10) => {
         setIsLoadingStock(true);
         try {
-            const response = await stockService.getOutOfStockList();
+            const response = await stockService.getOutOfStockList(page, limit);
             if (response.data?.success) {
                 setStockData(response.data.data);
-                setOutOfStockCount(response.data.count || response.data.data.length);
+                setOutOfStockCount(response.data.pagination?.totalItems || response.data.data.length);
+                
+                // Update pagination metadata
+                if (response.data.pagination) {
+                    setPagination(response.data.pagination);
+                }
             } else {
                 toast.error('Failed to load out-of-stock data');
             }
@@ -110,6 +126,10 @@ function OutOfStock() {
             // Keep default values on error
         }
     };
+
+    const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+    const [exportType, setExportType] = useState<'excel' | 'csv' | 'pdf'>('excel');
+    const [isExporting, setIsExporting] = useState(false);
 
     type SelectOption = {
         value: string | number;
@@ -177,12 +197,17 @@ function OutOfStock() {
         try {
             // If no filters selected, load all data
             if (!selectedProduct && !selectedCategory && !selectedSupplier) {
-                const response = await stockService.getOutOfStockList();
+                const response = await stockService.getOutOfStockList(1, pagination.itemsPerPage);
                 if (response.data?.success) {
                     setStockData(response.data.data);
-                    setCurrentPage(1);
                     setSelectedIndex(0);
-                    const count = response.data.count || response.data.data.length;
+                    
+                    // Update pagination metadata
+                    if (response.data.pagination) {
+                        setPagination(response.data.pagination);
+                    }
+                    
+                    const count = response.data.pagination?.totalItems || response.data.data.length;
                     toast.success(`Found ${count} out-of-stock items`);
                 } else {
                     toast.error('Failed to load out-of-stock data');
@@ -195,14 +220,19 @@ function OutOfStock() {
                     supplier: selectedSupplier || undefined
                 };
 
-                const response = await stockService.searchOutOfStock(filters);
+                const response = await stockService.searchOutOfStock(filters, 1, pagination.itemsPerPage);
                 console.log(response);
 
                 if (response.data?.success) {
                     setStockData(response.data.data || []);
-                    setCurrentPage(1);
                     setSelectedIndex(0);
-                    const count = response.data.count || response.data.data.length;
+                    
+                    // Update pagination metadata
+                    if (response.data.pagination) {
+                        setPagination(response.data.pagination);
+                    }
+                    
+                    const count = response.data.pagination?.totalItems || response.data.data.length;
                     toast.success(`Found ${count} out-of-stock items`);
                 } else {
                     toast.error('Search failed');
@@ -223,15 +253,20 @@ function OutOfStock() {
         setSelectedProduct(null);
         setSelectedCategory(null);
         setSelectedSupplier(null);
-        setCurrentPage(1);
-        loadOutOfStockData();
+        loadOutOfStockData(1, pagination.itemsPerPage);
         toast.success('Filters cleared');
     };
 
-    // Export to Excel
-    const handleExportExcel = () => {
+    // Open Export Modal
+    const openExportModal = (type: 'excel' | 'csv' | 'pdf') => {
+        setExportType(type);
+        setIsExportModalOpen(true);
+    };
+
+    // Actual Export Functions
+    const generateExcel = (data: any[]) => {
         try {
-            const exportData = stockData.map((item, index) => ({
+            const exportData = data.map((item, index) => ({
                 'No': index + 1,
                 'Product ID': item.productID,
                 'Product Name': item.productName,
@@ -251,16 +286,15 @@ function OutOfStock() {
             XLSX.writeFile(wb, `Out_Of_Stock_${timestamp}.xlsx`);
             toast.success('Excel file exported successfully');
         } catch (error) {
-            console.error('Error exporting Excel:', error);
-            toast.error('Failed to export Excel file');
+            console.error('Error generating Excel:', error);
+            toast.error('Failed to generate Excel file');
         }
     };
 
-    // Export to CSV
-    const handleExportCSV = () => {
+    const generateCSV = (data: any[]) => {
         try {
             const headers = ['No', 'Product ID', 'Product Name', 'Unit', 'Cost Price', 'MRP', 'Price', 'Supplier', 'Stock'];
-            const csvData = stockData.map((item, index) => [
+            const csvData = data.map((item, index) => [
                 index + 1,
                 item.productID,
                 item.productName,
@@ -291,21 +325,17 @@ function OutOfStock() {
 
             toast.success('CSV file exported successfully');
         } catch (error) {
-            console.error('Error exporting CSV:', error);
-            toast.error('Failed to export CSV file');
+            console.error('Error generating CSV:', error);
+            toast.error('Failed to generate CSV file');
         }
     };
 
-    // Export to PDF
-    const handleExportPDF = () => {
+    const generatePDF = (data: any[]) => {
         try {
             const doc = new jsPDF();
-
-            // Add title
             doc.setFontSize(18);
             doc.text('Out of Stock Report', 14, 22);
 
-            // Add date
             doc.setFontSize(10);
             doc.text(`Generated on: ${new Date().toLocaleDateString('en-US', {
                 year: 'numeric',
@@ -313,8 +343,7 @@ function OutOfStock() {
                 day: 'numeric'
             })}`, 14, 30);
 
-            // Prepare table data
-            const tableData = stockData.map((item, index) => [
+            const tableData = data.map((item, index) => [
                 index + 1,
                 item.productID,
                 item.productName,
@@ -326,51 +355,66 @@ function OutOfStock() {
                 item.stockQty
             ]);
 
-            // Add table
             autoTable(doc, {
                 startY: 35,
                 head: [['No', 'Product ID', 'Product Name', 'Unit', 'Cost Price', 'MRP', 'Price', 'Supplier', 'Stock']],
                 body: tableData,
                 theme: 'grid',
-                headStyles: {
-                    fillColor: [239, 68, 68],
-                    textColor: 255,
-                    fontStyle: 'bold'
-                },
-                styles: {
-                    fontSize: 8,
-                    cellPadding: 2
-                },
-                columnStyles: {
-                    0: { cellWidth: 10 },
-                    1: { cellWidth: 20 },
-                    2: { cellWidth: 35 },
-                    3: { cellWidth: 15 },
-                    4: { cellWidth: 20 },
-                    5: { cellWidth: 20 },
-                    6: { cellWidth: 20 },
-                    7: { cellWidth: 30 },
-                    8: { cellWidth: 15 }
-                }
+                headStyles: { fillColor: [239, 68, 68], textColor: 255, fontStyle: 'bold' },
+                styles: { fontSize: 8, cellPadding: 2 },
+                columnStyles: { 0: { cellWidth: 10 }, 1: { cellWidth: 20 }, 2: { cellWidth: 35 } }
             });
 
             const timestamp = new Date().toISOString().split('T')[0];
             doc.save(`Out_Of_Stock_${timestamp}.pdf`);
             toast.success('PDF file exported successfully');
         } catch (error) {
-            console.error('Error exporting PDF:', error);
-            toast.error('Failed to export PDF file');
+            console.error('Error generating PDF:', error);
+            toast.error('Failed to generate PDF file');
+        }
+    };
+
+    // Handle Export Confirmation
+    const handleExportConfirm = async (scope: 'all' | 'current') => {
+        setIsExporting(true);
+        try {
+            let dataToExport = [];
+
+            if (scope === 'all') {
+                // Fetch all data from API (using large limit)
+                const response = await stockService.getOutOfStockList(1, 100000);
+                if (response.data?.success) {
+                    dataToExport = response.data.data;
+                } else {
+                    toast.error('Failed to fetch all data');
+                    setIsExporting(false);
+                    return;
+                }
+            } else {
+                // Use current table data
+                dataToExport = stockData;
+            }
+
+            if (dataToExport.length === 0) {
+                toast.error('No data to export');
+                setIsExporting(false);
+                return;
+            }
+
+            if (exportType === 'excel') generateExcel(dataToExport);
+            if (exportType === 'csv') generateCSV(dataToExport);
+            if (exportType === 'pdf') generatePDF(dataToExport);
+
+            setIsExportModalOpen(false);
+        } catch (error) {
+            console.error('Export error:', error);
+            toast.error('An error occurred during export');
+        } finally {
+            setIsExporting(false);
         }
     };
 
     const [selectedIndex, setSelectedIndex] = useState(0);
-    const [currentPage, setCurrentPage] = useState(1);
-    const [itemsPerPage] = useState(10);
-
-    const totalPages = Math.ceil(stockData.length / itemsPerPage);
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    const currentStockData = stockData.slice(startIndex, endIndex);
 
     useEffect(() => {
         loadDropdownData();
@@ -397,18 +441,18 @@ function OutOfStock() {
 
             if (e.key === "ArrowDown") {
                 e.preventDefault();
-                setSelectedIndex((prev) => (prev < currentStockData.length - 1 ? prev + 1 : prev));
+                setSelectedIndex((prev) => (prev < stockData.length - 1 ? prev + 1 : prev));
             } else if (e.key === "ArrowUp") {
                 e.preventDefault();
                 setSelectedIndex((prev) => (prev > 0 ? prev - 1 : prev));
             } else if (e.key === "PageDown") {
                 e.preventDefault();
-                if (currentPage < totalPages) {
+                if (pagination.hasNextPage) {
                     goToNextPage();
                 }
             } else if (e.key === "PageUp") {
                 e.preventDefault();
-                if (currentPage > 1) {
+                if (pagination.hasPrevPage) {
                     goToPreviousPage();
                 }
             } else if (e.key === "Home") {
@@ -416,10 +460,10 @@ function OutOfStock() {
                 setSelectedIndex(0);
             } else if (e.key === "End") {
                 e.preventDefault();
-                setSelectedIndex(currentStockData.length - 1);
-            } else if (e.key === "Enter" && currentStockData.length > 0) {
+                setSelectedIndex(stockData.length - 1);
+            } else if (e.key === "Enter" && stockData.length > 0) {
                 e.preventDefault();
-                const selectedItem = currentStockData[selectedIndex];
+                const selectedItem = stockData[selectedIndex];
                 if (selectedItem) {
                     toast.success(`Selected: ${selectedItem.productName} (ID: ${selectedItem.productID})`);
                 }
@@ -431,55 +475,47 @@ function OutOfStock() {
 
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [currentStockData.length, selectedIndex, currentStockData, currentPage, totalPages]);
+    }, [stockData.length, selectedIndex, stockData, pagination]);
 
     const goToPage = (page: number) => {
-        if (page >= 1 && page <= totalPages) {
-            setCurrentPage(page);
+        if (page >= 1 && page <= pagination.totalPages) {
+            loadOutOfStockData(page, pagination.itemsPerPage);
             setSelectedIndex(0);
         }
     };
 
     const goToPreviousPage = () => {
-        if (currentPage > 1) {
-            setCurrentPage(currentPage - 1);
-            setSelectedIndex(0);
+        if (pagination.hasPrevPage) {
+            goToPage(pagination.currentPage - 1);
         }
     };
 
     const goToNextPage = () => {
-        if (currentPage < totalPages) {
-            setCurrentPage(currentPage + 1);
-            setSelectedIndex(0);
+        if (pagination.hasNextPage) {
+            goToPage(pagination.currentPage + 1);
         }
     };
 
     const getPageNumbers = () => {
         const pages: (number | string)[] = [];
         const maxPagesToShow = 5;
-
-        if (totalPages <= maxPagesToShow) {
-            for (let i = 1; i <= totalPages; i++) {
-                pages.push(i);
-            }
-        } else {
-            if (currentPage <= 3) {
-                for (let i = 1; i <= 4; i++) pages.push(i);
-                pages.push('...');
-                pages.push(totalPages);
-            } else if (currentPage >= totalPages - 2) {
-                pages.push(1);
-                pages.push('...');
-                for (let i = totalPages - 3; i <= totalPages; i++) pages.push(i);
-            } else {
-                pages.push(1);
-                pages.push('...');
-                for (let i = currentPage - 1; i <= currentPage + 1; i++) pages.push(i);
-                pages.push('...');
-                pages.push(totalPages);
-            }
+        const halfRange = Math.floor(maxPagesToShow / 2);
+        
+        let startPage = Math.max(1, pagination.currentPage - halfRange);
+        let endPage = Math.min(pagination.totalPages, pagination.currentPage + halfRange);
+        
+        // Adjust if we're near the start or end
+        if (pagination.currentPage <= halfRange) {
+            endPage = Math.min(maxPagesToShow, pagination.totalPages);
         }
-
+        if (pagination.currentPage + halfRange >= pagination.totalPages) {
+            startPage = Math.max(1, pagination.totalPages - maxPagesToShow + 1);
+        }
+        
+        for (let i = startPage; i <= endPage; i++) {
+            pages.push(i);
+        }
+        
         return pages;
     };
 
@@ -637,16 +673,16 @@ function OutOfStock() {
                                             Loading out-of-stock items...
                                         </td>
                                     </tr>
-                                ) : currentStockData.length === 0 ? (
+                                ) : stockData.length === 0 ? (
                                     <tr>
                                         <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
                                             No out of stock items found
                                         </td>
                                     </tr>
                                 ) : (
-                                    currentStockData.map((item, index) => (
+                                    stockData.map((item, index) => (
                                         <tr
-                                            key={`${item.productID}-${currentPage}-${index}`}
+                                            key={`${item.productID}-${pagination.currentPage}-${index}`}
                                             onClick={() => setSelectedIndex(index)}
                                             className={`cursor-pointer transition-all ${selectedIndex === index
                                                 ? 'bg-red-50 border-l-4 border-l-red-500'
@@ -689,15 +725,15 @@ function OutOfStock() {
 
                     <nav className="bg-white flex items-center justify-between sm:px-6 pt-4 border-t-2 border-gray-100">
                         <div className="text-sm text-gray-600">
-                            Showing <span className="font-semibold text-gray-800">{startIndex + 1}</span> to{' '}
-                            <span className="font-semibold text-gray-800">{Math.min(endIndex, stockData.length)}</span> of{' '}
-                            <span className="font-semibold text-gray-800">{stockData.length}</span> results
+                            Showing <span className="font-semibold text-gray-800">{pagination.totalItems > 0 ? (pagination.currentPage - 1) * pagination.itemsPerPage + 1 : 0}</span> to{' '}
+                            <span className="font-semibold text-gray-800">{Math.min(pagination.currentPage * pagination.itemsPerPage, pagination.totalItems)}</span> of{' '}
+                            <span className="font-semibold text-gray-800">{pagination.totalItems}</span> results
                         </div>
                         <div className="flex items-center space-x-2">
                             <button
                                 onClick={goToPreviousPage}
-                                disabled={currentPage === 1}
-                                className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${currentPage === 1
+                                disabled={!pagination.hasPrevPage}
+                                className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${!pagination.hasPrevPage
                                     ? 'text-gray-400 cursor-not-allowed'
                                     : 'text-gray-600 hover:text-red-600 hover:bg-red-50'
                                     }`}
@@ -706,28 +742,22 @@ function OutOfStock() {
                             </button>
 
                             {getPageNumbers().map((page, index) =>
-                                typeof page === 'number' ? (
-                                    <button
-                                        key={index}
-                                        onClick={() => goToPage(page)}
-                                        className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${currentPage === page
-                                            ? 'bg-gradient-to-r from-red-500 to-red-600 text-white shadow-md'
-                                            : 'text-gray-600 hover:bg-red-50 hover:text-red-600'
-                                            }`}
-                                    >
-                                        {page}
-                                    </button>
-                                ) : (
-                                    <span key={index} className="text-gray-400 px-2">
-                                        {page}
-                                    </span>
-                                )
+                                <button
+                                    key={index}
+                                    onClick={() => goToPage(Number(page))}
+                                    className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${pagination.currentPage === Number(page)
+                                        ? 'bg-gradient-to-r from-red-500 to-red-600 text-white shadow-md'
+                                        : 'text-gray-600 hover:bg-red-50 hover:text-red-600'
+                                        }`}
+                                >
+                                    {page}
+                                </button>
                             )}
 
                             <button
                                 onClick={goToNextPage}
-                                disabled={currentPage === totalPages}
-                                className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${currentPage === totalPages
+                                disabled={!pagination.hasNextPage}
+                                className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${!pagination.hasNextPage
                                     ? 'text-gray-400 cursor-not-allowed'
                                     : 'text-gray-600 hover:text-red-600 hover:bg-red-50'
                                     }`}
@@ -740,22 +770,28 @@ function OutOfStock() {
 
                 {/* Export Buttons */}
                 <div
-                    className={'bg-white flex justify-center p-4 gap-4 rounded-xl border border-gray-200'}
+                    className="bg-white flex justify-center p-4 gap-4 rounded-xl shadow-lg"
                 >
                     <button
-                        onClick={handleExportExcel}
-                        className={'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 px-6 py-2 font-medium text-white rounded-lg flex gap-2 items-center shadow-lg shadow-emerald-200 hover:shadow-xl transition-all'}>
-                        <FileText size={15} />Excel
+                        onClick={() => openExportModal('excel')}
+                        className="flex items-center gap-2 px-6 py-3 bg-linear-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-medium rounded-lg shadow-lg shadow-emerald-200 hover:shadow-xl transition-all"
+                    >
+                        <FileText size={20} />
+                        Excel
                     </button>
                     <button
-                        onClick={handleExportCSV}
-                        className={'bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 px-6 py-2 font-medium text-white rounded-lg flex gap-2 items-center shadow-lg shadow-yellow-200 hover:shadow-xl transition-all'}>
-                        <FileText size={15} />CSV
+                        onClick={() => openExportModal('csv')}
+                        className="flex items-center gap-2 px-6 py-3 bg-linear-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-medium rounded-lg shadow-lg shadow-blue-200 hover:shadow-xl transition-all"
+                    >
+                        <FileText size={20} />
+                        CSV
                     </button>
                     <button
-                        onClick={handleExportPDF}
-                        className={'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 px-6 py-2 font-medium text-white rounded-lg flex gap-2 items-center shadow-lg shadow-red-200 hover:shadow-xl transition-all'}>
-                        <FileText size={15} />PDF
+                        onClick={() => openExportModal('pdf')}
+                        className="flex items-center gap-2 px-6 py-3 bg-linear-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-medium rounded-lg shadow-lg shadow-red-200 hover:shadow-xl transition-all"
+                    >
+                        <FileText size={20} />
+                        PDF
                     </button>
                 </div>
             </div>
@@ -780,6 +816,13 @@ function OutOfStock() {
                         },
                     },
                 }}
+            />
+            <ExportModal
+                isOpen={isExportModalOpen}
+                onClose={() => setIsExportModalOpen(false)}
+                onExport={handleExportConfirm}
+                type={exportType}
+                isLoading={isExporting}
             />
         </>
     );

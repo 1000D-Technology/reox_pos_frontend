@@ -33,6 +33,7 @@ exports.getAllStockWithVariations = catchAsync(async (req, res, next) => {
             productName: item.full_product_name,
             barcode: item.barcode || 'N/A',
             unit: item.unit,
+            unit_conversion: item.unit_conversion,
             isBulk: isBulk,
             costPrice: parseFloat(item.cost_price || 0).toFixed(2),
             MRP: parseFloat(item.mrp || 0).toFixed(2),
@@ -45,7 +46,9 @@ exports.getAllStockWithVariations = catchAsync(async (req, res, next) => {
             exp: item.exp,
             color: item.color,
             size: item.size,
-            storage: item.storage_capacity
+            storage: item.storage_capacity,
+            category: item.category,
+            brand: item.brand
         };
     });
 
@@ -78,7 +81,12 @@ exports.getStockList = catchAsync(async (req, res, next) => {
         MRP: typeof item.mrp === 'number' ? item.mrp.toFixed(2) : parseFloat(item.mrp).toFixed(2),
         Price: typeof item.selling_price === 'number' ? item.selling_price.toFixed(2) : parseFloat(item.selling_price).toFixed(2),
         supplier: item.supplier || 'N/A',
-        stockQty: item.stock_qty ? item.stock_qty.toString() : item.qty.toString()
+        stockQty: item.stock_qty ? item.stock_qty.toString() : item.qty.toString(),
+        category: item.category,
+        brand: item.brand,
+        mfd: item.mfd,
+        exp: item.exp,
+        batch_name: item.batch_name
     }));
 
     res.status(200).json({
@@ -128,7 +136,12 @@ exports.getSearchStock = catchAsync(async (req, res, next) => {
                 stockQty: item.stock_qty ? item.stock_qty.toString() : (item.qty || 0).toString(),
                 color: item.color,
                 size: item.size,
-                storage: item.storage_capacity
+                storage: item.storage_capacity,
+                category: item.category,
+                brand: item.brand,
+                mfd: item.mfd,
+                exp: item.exp,
+                batch_name: item.batch_name
             };
         });
 
@@ -174,9 +187,12 @@ exports.getSummaryCards = catchAsync(async (req, res, next) => {
 });
 
 exports.getOutOfStockList = catchAsync(async (req, res, next) => {
-    const stockData = await Stock.getOutOfStock();
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    
+    const result = await Stock.getOutOfStock(page, limit);
 
-    const transformedData = stockData.map(item => ({
+    const transformedData = result.data.map(item => ({
         productID: item.product_code || (item.product_id ? item.product_id.toString() : 'N/A'),
         productName: item.product_name,
         unit: item.unit,
@@ -189,8 +205,8 @@ exports.getOutOfStockList = catchAsync(async (req, res, next) => {
 
     res.status(200).json({
         success: true,
-        count: transformedData.length,
-        data: transformedData
+        data: transformedData,
+        pagination: result.pagination
     });
 });
 
@@ -203,9 +219,12 @@ exports.getSearchOutOfStock = catchAsync(async (req, res, next) => {
         toDate: req.query.toDate
     };
 
-    const stockData = await Stock.searchOutOfStock(filters);
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
 
-    const transformedData = stockData.map(item => ({
+    const result = await Stock.searchOutOfStock(filters, page, limit);
+
+    const transformedData = result.data.map(item => ({
         productID: item.product_code || (item.product_id ? item.product_id.toString() : 'N/A'),
         productName: item.product_name,
         unit: item.unit,
@@ -218,8 +237,8 @@ exports.getSearchOutOfStock = catchAsync(async (req, res, next) => {
 
     res.status(200).json({
         success: true,
-        count: transformedData.length,
         data: transformedData,
+        pagination: result.pagination,
         message: transformedData.length === 0 
             ? 'No out-of-stock items found' 
             : `Found ${transformedData.length} items`

@@ -9,6 +9,16 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     emptyOutDir: true,
+    chunkSizeWarningLimit: 1000,
+    rollupOptions: {
+        output: {
+            manualChunks: {
+                vendor: ['react', 'react-dom'],
+                ui: ['lucide-react', 'framer-motion'],
+                utils: ['xlsx', 'jspdf', 'html2canvas']
+            }
+        }
+    }
   },
   server: {
     port: 5173,

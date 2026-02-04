@@ -32,7 +32,15 @@ class POS {
                     include: {
                         product: {
                             include: {
-                                unit_id_product_unit_idTounit_id: true
+                                unit_id_product_unit_idTounit_id: {
+                                    include: {
+                                        unit_conversions_as_parent: {
+                                            include: {
+                                                child_unit: true
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
@@ -54,6 +62,10 @@ class POS {
                 productName: p.product_name,
                 barcode: s.barcode,
                 unit: p.unit_id_product_unit_idTounit_id?.name,
+                unit_conversion: p.unit_id_product_unit_idTounit_id?.unit_conversions_as_parent?.[0] ? {
+                    factor: p.unit_id_product_unit_idTounit_id.unit_conversions_as_parent[0].conversion_factor,
+                    subUnit: p.unit_id_product_unit_idTounit_id.unit_conversions_as_parent[0].child_unit.name
+                } : null,
                 price: s.rsp,
                 wholesalePrice: s.wsp ?? 0,
                 productCode: p.product_code,

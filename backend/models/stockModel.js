@@ -6,7 +6,7 @@ class Stock {
      */
     static async getAllStockWithVariations(filters = {}) {
         const whereClause = {};
-        
+
         if (filters.hasStock) {
             whereClause.qty = { gt: 0 };
         }
@@ -18,7 +18,15 @@ class Stock {
                     include: {
                         product: {
                             include: {
-                                unit_id_product_unit_idTounit_id: true,
+                                unit_id_product_unit_idTounit_id: {
+                                    include: {
+                                        unit_conversions_as_parent: {
+                                            include: {
+                                                child_unit: true
+                                            }
+                                        }
+                                    }
+                                },
                                 category: true,
                                 brand: true
                             }
@@ -54,7 +62,7 @@ class Stock {
             // Build full product name - Only include meaningful variants
             const variations = [pv.color, pv.size, pv.storage_capacity]
                 .filter(v => v && !['n/a', 'na', 'n.a.', 'none', 'default', 'not applicable'].includes(v.toLowerCase().trim()) && v.trim() !== '');
-            
+
             let fullProductName = p.product_name;
             if (variations.length > 0) {
                 fullProductName += ` - ${variations.join(' - ')}`;
@@ -80,6 +88,10 @@ class Stock {
                 storage_capacity: pv.storage_capacity,
                 full_product_name: fullProductName,
                 unit: p.unit_id_product_unit_idTounit_id?.name,
+                unit_conversion: p.unit_id_product_unit_idTounit_id?.unit_conversions_as_parent?.[0] ? {
+                    factor: p.unit_id_product_unit_idTounit_id.unit_conversions_as_parent[0].conversion_factor,
+                    subUnit: p.unit_id_product_unit_idTounit_id.unit_conversions_as_parent[0].child_unit.name
+                } : null,
                 category: p.category?.name,
                 brand: p.brand?.name,
                 batch_name: s.batch?.batch_name,
@@ -209,7 +221,7 @@ class Stock {
             // Build full product name - Only include meaningful variants
             const variations = [pv.color, pv.size, pv.storage_capacity]
                 .filter(v => v && !['n/a', 'na', 'n.a.', 'none', 'default', 'not applicable'].includes(v.toLowerCase().trim()) && v.trim() !== '');
-            
+
             let fullProductName = p.product_name;
             if (variations.length > 0) {
                 fullProductName += ` - ${variations.join(' - ')}`;
@@ -309,188 +321,185 @@ class Stock {
         };
     }
 
-    static async getOutOfStock() {
-        // Get all out of stock items using pure Prisma
-        const stocks = await prisma.stock.findMany({
-            where: {
-                qty: 0
-            },
+   static async getOutOfStock(page = 1, limit = 10) {
+    const skip = (page - 1) * limit;
+
+    const variationsWithZeroStock = await prisma.stock.groupBy({
+        by: ['product_variations_id'],
+        _sum: {
+            qty: true
+        },
+        _avg: {
+            cost_price: true,
+            mrp: true,
+            rsp: true
+        },
+        having: {
+            qty: {
+                _sum: {
+                    lte: 0
+                }
+            }
+        },
+        orderBy: {
+            product_variations_id: 'asc'
+        }
+    });
+
+    const totalCount = variationsWithZeroStock.length;
+    const paginatedGroups = variationsWithZeroStock.slice(skip, skip + limit);
+
+    const results = await Promise.all(paginatedGroups.map(async (group) => {
+        const pv = await prisma.product_variations.findUnique({
+            where: { id: group.product_variations_id },
             include: {
-                product_variations: {
-                    include: {
-                        product: {
-                            include: {
-                                unit_id_product_unit_idTounit_id: true
-                            }
-                        }
-                    }
-                },
-                grn_items: {
-                    include: {
-                        grn: {
-                            include: {
-                                supplier: true
-                            }
-                        }
-                    }
+                product: {
+                    include: { unit_id_product_unit_idTounit_id: true }
                 }
             }
         });
 
-        // Group by product and aggregate
-        const productMap = new Map();
+        const vParts = [pv.color, pv.size, pv.storage_capacity]
+            .filter(v => v && !['n/a', 'none', 'default', 'na'].includes(v.toLowerCase().trim()));
 
-        stocks.forEach(stock => {
-            const product = stock.product_variations.product;
-            const productId = product.id;
+        return {
+            product_id: pv.product.product_code || pv.product.id.toString(),
+            product_name: vParts.length > 0 ? `${pv.product.product_name} - ${vParts.join(' - ')}` : pv.product.product_name,
+            unit: pv.product.unit_id_product_unit_idTounit_id?.name,
+            cost_price: group._avg.cost_price || 0,
+            mrp: group._avg.mrp || 0,
+            selling_price: group._avg.rsp || 0,
+            stock_qty: group._sum.qty || 0
+        };
+    }));
 
-            if (!productMap.has(productId)) {
-                productMap.set(productId, {
-                    product_id: productId,
-                    product_name: product.product_name,
-                    unit: product.unit_id_product_unit_idTounit_id?.name,
-                    cost_prices: [],
-                    mrps: [],
-                    rsps: [],
-                    suppliers: new Set(),
-                    total_qty: 0
-                });
-            }
+    return {
+        data: results,
+        pagination: {
+            currentPage: page,
+            itemsPerPage: limit,
+            totalItems: totalCount,
+            totalPages: Math.ceil(totalCount / limit),
+            hasNextPage: page < Math.ceil(totalCount / limit),
+            hasPrevPage: page > 1
+        }
+    };
+}
 
-            const data = productMap.get(productId);
-            data.cost_prices.push(stock.cost_price);
-            data.mrps.push(stock.mrp);
-            data.rsps.push(stock.rsp);
-            data.total_qty += stock.qty;
+    static async searchOutOfStock(filters, page = 1, limit = 10) {
+        const skip = (page - 1) * limit;
 
-            stock.grn_items.forEach(grnItem => {
-                if (grnItem.grn?.supplier?.supplier_name) {
-                    data.suppliers.add(grnItem.grn.supplier.supplier_name);
-                }
-            });
-        });
+        // 1. Build Database-level where clause
+        const whereClause = {
+            qty: 0 // Out of stock items පමණක්
+        };
 
-        // Calculate averages and format result
-        const result = Array.from(productMap.values()).map(data => ({
-            product_id: data.product_id,
-            product_name: data.product_name,
-            unit: data.unit,
-            cost_price: data.cost_prices.length > 0 ? data.cost_prices.reduce((a, b) => a + b, 0) / data.cost_prices.length : 0,
-            mrp: data.mrps.length > 0 ? data.mrps.reduce((a, b) => a + b, 0) / data.mrps.length : 0,
-            selling_price: data.rsps.length > 0 ? data.rsps.reduce((a, b) => a + b, 0) / data.rsps.length : 0,
-            supplier: Array.from(data.suppliers).join(', '),
-            stock_qty: data.total_qty
-        }));
-
-        return result.sort((a, b) => a.product_name.localeCompare(b.product_name));
-    }
-
-    static async searchOutOfStock(filters) {
-        // Get all out of stock items using pure Prisma
-        const stocks = await prisma.stock.findMany({
-            where: {
-                qty: 0
-            },
-            include: {
-                product_variations: {
-                    include: {
-                        product: {
-                            include: {
-                                unit_id_product_unit_idTounit_id: true
-                            }
-                        }
-                    }
-                },
-                grn_items: {
-                    include: {
-                        grn: {
-                            include: {
-                                supplier: true
-                            }
-                        }
-                    }
-                }
-            }
-        });
-
-        // Filter in JavaScript
-        let filteredStocks = stocks;
-
+        // Search query (Name, Code, or ID)
         if (filters.searchQuery) {
-            const query = filters.searchQuery.toLowerCase();
-            filteredStocks = filteredStocks.filter(s => {
-                const product = s.product_variations.product;
-                return product.product_name.toLowerCase().includes(query) || 
-                       product.product_code.toLowerCase().includes(query) ||
-                       product.id.toString() === filters.searchQuery;
-            });
+            const query = filters.searchQuery.trim();
+            whereClause.product_variations = {
+                product: {
+                    OR: [
+                        { product_name: { contains: query } },
+                        { product_code: { contains: query } },
+                        { id: !isNaN(query) ? parseInt(query) : undefined }
+                    ].filter(Boolean)
+                }
+            };
         }
 
+        // Category filter
         if (filters.category) {
-            filteredStocks = filteredStocks.filter(s => 
-                s.product_variations.product.category_id === parseInt(filters.category)
-            );
+            if (!whereClause.product_variations) whereClause.product_variations = { product: {} };
+            whereClause.product_variations.product.category_id = parseInt(filters.category);
         }
 
+        // Supplier filter
         if (filters.supplier) {
-            filteredStocks = filteredStocks.filter(s => 
-                s.grn_items.some(gi => gi.grn?.supplier_id === parseInt(filters.supplier))
-            );
+            whereClause.grn_items = {
+                some: {
+                    grn: { supplier_id: parseInt(filters.supplier) }
+                }
+            };
         }
 
+        // Date range filter (MFD base කරගෙන)
         if (filters.fromDate && filters.toDate) {
-            const fromDate = new Date(filters.fromDate);
-            const toDate = new Date(filters.toDate);
-            filteredStocks = filteredStocks.filter(s => {
-                if (!s.mfd) return false;
-                const mfd = new Date(s.mfd);
-                return mfd >= fromDate && mfd <= toDate;
-            });
+            whereClause.mfd = {
+                gte: new Date(filters.fromDate),
+                lte: new Date(new Date(filters.toDate).setHours(23, 59, 59, 999))
+            };
         }
 
-        // Map to individual items (no grouping)
-        const result = filteredStocks.map(s => {
+        // 2. Execute parallel queries for performance
+        const [totalCount, stocks] = await Promise.all([
+            prisma.stock.count({ where: whereClause }),
+            prisma.stock.findMany({
+                where: whereClause,
+                skip: skip,
+                take: limit,
+                include: {
+                    product_variations: {
+                        include: {
+                            product: {
+                                include: {
+                                    unit_id_product_unit_idTounit_id: true,
+                                    category: true,
+                                    brand: true
+                                }
+                            },
+                            product_status: true
+                        }
+                    },
+                    batch: true,
+                    grn_items: {
+                        include: {
+                            grn: { include: { supplier: true } }
+                        },
+                        take: 1
+                    }
+                },
+                orderBy: { id: 'desc' }
+            })
+        ]);
+
+        // 3. Map result to your desired format
+        const data = stocks.map(s => {
             const pv = s.product_variations;
             const p = pv.product;
             const supplier = s.grn_items[0]?.grn?.supplier;
 
-            // Build full product name - Only include meaningful variants
             const variations = [pv.color, pv.size, pv.storage_capacity]
-                .filter(v => v && !['n/a', 'na', 'n.a.', 'none', 'default', 'not applicable'].includes(v.toLowerCase().trim()) && v.trim() !== '');
-            
-            let fullProductName = p.product_name;
-            if (variations.length > 0) {
-                fullProductName += ` - ${variations.join(' - ')}`;
-            }
+                .filter(v => v && !['n/a', 'none', 'default'].includes(v.toLowerCase().trim()));
+
+            const fullProductName = variations.length > 0
+                ? `${p.product_name} - ${variations.join(' - ')}`
+                : p.product_name;
 
             return {
                 stock_id: s.id,
-                product_variations_id: s.product_variations_id,
-                batch_id: s.batch_id,
                 qty: s.qty,
                 cost_price: s.cost_price,
                 mrp: s.mrp,
                 selling_price: s.rsp,
-                mfd: s.mfd,
-                exp: s.exp,
-                product_id: p.id,
-                product_name: p.product_name,
-                full_product_name: fullProductName,
+                product_name: fullProductName,
                 product_code: p.product_code,
                 barcode: pv.barcode,
-                color: pv.color,
-                size: pv.size,
-                storage_capacity: pv.storage_capacity,
                 unit: p.unit_id_product_unit_idTounit_id?.name,
-                category: p.category?.name,
-                brand: p.brand?.name,
-                batch_name: s.batch?.batch_name,
                 supplier: supplier?.supplier_name,
-                product_status: pv.product_status?.status_name
+                batch_name: s.batch?.batch_name
             };
         });
 
-        return result;
+        return {
+            data,
+            pagination: {
+                currentPage: page,
+                itemsPerPage: limit,
+                totalItems: totalCount,
+                totalPages: Math.ceil(totalCount / limit)
+            }
+        };
     }
 
     static async getStockByProductVariation(productId) {
@@ -518,11 +527,11 @@ class Stock {
         return stocks.map(s => {
             const pv = s.product_variations;
             const p = pv.product;
-            
+
             // Build full product name - Only include meaningful variants
             const variations = [pv.color, pv.size]
                 .filter(v => v && !['n/a', 'na', 'n.a.', 'none', 'default', 'not applicable'].includes(v.toLowerCase().trim()) && v.trim() !== '');
-            
+
             let fullStockDisplay = p.product_name;
             if (variations.length > 0) {
                 fullStockDisplay += ` - ${variations.join(' - ')}`;
@@ -756,7 +765,7 @@ class Stock {
             }
         });
 
-        const avgDaysOut = daysOutArray.length > 0 
+        const avgDaysOut = daysOutArray.length > 0
             ? Math.round((daysOutArray.reduce((a, b) => a + b, 0) / daysOutArray.length) * 10) / 10
             : 0;
 

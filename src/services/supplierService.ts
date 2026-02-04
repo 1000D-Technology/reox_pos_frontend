@@ -27,8 +27,9 @@ export const supplierService = {
         bankService.getBanks()
     ]),
 
-    // Get all suppliers
-    getSuppliers: () => axiosInstance.get('/api/suppliers/list'),
+    // Get all suppliers with pagination
+    getSuppliers: (page: number = 1, limit: number = 10) => 
+        axiosInstance.get(`/api/suppliers/list?page=${page}&limit=${limit}`),
 
     // Get suppliers dropdown list (only id and name)
     getSupplierDropdownList: () => axiosInstance.get('/api/suppliers/dropdown-list'),
@@ -36,6 +37,7 @@ export const supplierService = {
     // Update supplier
     updateSupplier: (id: number, supplierData: {
         contactNumber: string;
+        email?: string;
         companyId: number;
         bankId?: number;
         accountNumber?: string;

@@ -9,13 +9,13 @@ export const grnService = {
     getStats: () =>
         axiosInstance.get('/api/grn/summary'),
 
-    // Get all GRN list
-    getGRNList: () =>
-        axiosInstance.get('/api/grn/list'),
+    // Get all GRN list with pagination
+    getGRNList: (page: number = 1, limit: number = 10) =>
+        axiosInstance.get(`/api/grn/list?page=${page}&limit=${limit}`),
 
-    // Search GRN list with filters
-    searchGRNList: (queryParams: string = '') =>
-        axiosInstance.get(`/api/grn/search?${queryParams}`),
+    // Search GRN list with filters and pagination
+    searchGRNList: (queryParams: string = '', page: number = 1, limit: number = 10) =>
+        axiosInstance.get(`/api/grn/search?${queryParams}&page=${page}&limit=${limit}`),
 
     // Get bills by supplier ID
     getBillsBySupplier: (supplierId: string | number) =>

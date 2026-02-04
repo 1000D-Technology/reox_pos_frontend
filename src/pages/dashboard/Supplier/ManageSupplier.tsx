@@ -42,18 +42,23 @@ function ManageSupplier() {
 
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage] = useState(10);
+    const [totalPages, setTotalPages] = useState(1);
+    const [totalRecords, setTotalRecords] = useState(0);
 
-    const totalPages = Math.ceil(filteredSuppliers.length / itemsPerPage);
+    // For search results, slice the filtered data for client-side pagination
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
-    const currentSuppliers = filteredSuppliers.slice(startIndex, endIndex);
+    const currentSuppliers = searchQuery.trim() 
+        ? filteredSuppliers.slice(startIndex, endIndex)
+        : filteredSuppliers;
 
     const salesData: Category[] = currentSuppliers.map((supplier, index) => ({
         ...supplier,
-        no: (startIndex + index + 1).toString()
+        no: (((currentPage - 1) * itemsPerPage) + index + 1).toString()
     }));
 
     const [newContactNumber, setNewContactNumber] = useState('');
+    const [newEmail, setNewEmail] = useState('');
     const [companies, setCompanies] = useState<{ value: string | number, label: string }[]>([]);
     const [selectedCompany, setSelectedCompany] = useState<{ value: string | number, label: string } | null>(null);
     const [banks, setBanks] = useState<{ value: string | number, label: string }[]>([]);
@@ -106,7 +111,7 @@ function ManageSupplier() {
         setCurrentPage(1);
 
         if (!query.trim()) {
-            setFilteredSuppliers(suppliers);
+            fetchSuppliers(1);
             return;
         }
 
@@ -119,15 +124,17 @@ function ManageSupplier() {
         );
 
         setFilteredSuppliers(filtered);
+        setTotalPages(Math.ceil(filtered.length / itemsPerPage));
+        setTotalRecords(filtered.length);
     };
 
-    const fetchSuppliers = async () => {
+    const fetchSuppliers = async (page: number = currentPage) => {
         try {
             setIsLoading(true);
-            const response = await supplierService.getSuppliers();
+            const response = await supplierService.getSuppliers(page, itemsPerPage);
             const result = response.data;
 
-            if (result.success) {
+            if (result.success && result.data) {
                 const transformedData = result.data.map((supplier: any) => ({
                     id: supplier.id.toString(),
                     no: '',
@@ -145,6 +152,18 @@ function ManageSupplier() {
                 }));
                 setSuppliers(transformedData);
                 setFilteredSuppliers(transformedData);
+                
+                // Handle pagination data with fallbacks
+                if (result.pagination) {
+                    setTotalPages(result.pagination.totalPages || 1);
+                    setTotalRecords(result.pagination.totalRecords || transformedData.length);
+                    setCurrentPage(result.pagination.currentPage || 1);
+                } else {
+                    // Fallback if pagination data is missing
+                    setTotalPages(1);
+                    setTotalRecords(transformedData.length);
+                    setCurrentPage(1);
+                }
             } else {
                 toast.error('Failed to load suppliers');
             }
@@ -201,8 +220,9 @@ function ManageSupplier() {
     const handleEditClick = (category: Category) => {
         setSelectedCategory(category);
         setNewContactNumber(category.contact);
-        setSelectedCompany({ value: category.companyId, label: category.company });
-        setSelectedBank(category.bankId ? { value: category.bankId, label: category.bank } : null);
+        setNewEmail(category.email);
+        setSelectedCompany({ value: category.companyId.toString(), label: category.company });
+        setSelectedBank(category.bankId ? { value: category.bankId.toString(), label: category.bank } : null);
         setNewAccountNumber(category.account);
         setIsModalOpen(true);
     };
@@ -211,6 +231,7 @@ function ManageSupplier() {
         setIsModalOpen(false);
         setSelectedCategory(null);
         setNewContactNumber('');
+        setNewEmail('');
         setSelectedCompany(null);
         setSelectedBank(null);
         setNewAccountNumber('');
@@ -238,8 +259,9 @@ function ManageSupplier() {
             parseInt(selectedCategory.id),
             {
                 contactNumber: newContactNumber.trim(),
-                companyId: typeof selectedCompany.value === 'number' ? selectedCompany.value : parseInt(selectedCompany.value),
-                bankId: selectedBank ? (typeof selectedBank.value === 'number' ? selectedBank.value : parseInt(selectedBank.value)) : undefined,
+                email: newEmail,
+                companyId: typeof selectedCompany.value === 'number' ? selectedCompany.value : parseInt(selectedCompany.value as string),
+                bankId: selectedBank ? (typeof selectedBank.value === 'number' ? selectedBank.value : parseInt(selectedBank.value as string)) : undefined,
                 accountNumber: newAccountNumber.trim()
             }
         );
@@ -263,8 +285,14 @@ function ManageSupplier() {
 
     const goToPage = (page: number) => {
         if (page >= 1 && page <= totalPages) {
-            setCurrentPage(page);
             setSelectedIndex(0);
+            if (searchQuery.trim()) {
+                // Client-side pagination for search results
+                setCurrentPage(page);
+            } else {
+                // Server-side pagination for full list
+                fetchSuppliers(page);
+            }
         }
     };
 
@@ -510,8 +538,8 @@ function ManageSupplier() {
 
                     <nav className="bg-white flex items-center justify-between sm:px-6 pt-4 border-t-2 border-gray-100">
                         <div className="text-sm text-gray-600">
-                            Showing <span className="font-bold text-gray-800">{salesData.length === 0 ? 0 : startIndex + 1}-{Math.min(endIndex, filteredSuppliers.length)}</span> of{' '}
-                            <span className="font-bold text-gray-800">{filteredSuppliers.length}</span> suppliers
+                            Showing <span className="font-bold text-gray-800">{salesData.length === 0 ? 0 : ((currentPage - 1) * itemsPerPage) + 1}-{searchQuery.trim() ? Math.min(currentPage * itemsPerPage, filteredSuppliers.length) : Math.min(currentPage * itemsPerPage, totalRecords)}</span> of{' '}
+                            <span className="font-bold text-gray-800">{searchQuery.trim() ? filteredSuppliers.length : totalRecords}</span> suppliers
                         </div>
                         <div className="flex items-center space-x-2">
                             <button
@@ -589,6 +617,20 @@ function ManageSupplier() {
                                     placeholder="Enter Contact Number"
                                     className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-500 transition-all outline-none"
                                     maxLength={10}
+                                />
+                            </div>
+
+                            <div>
+                                <label htmlFor="update-email" className="block text-sm font-bold text-gray-700 mb-1">
+                                    Email
+                                </label>
+                                <input
+                                    type="email"
+                                    id="update-email"
+                                    value={newEmail}
+                                    onChange={(e) => setNewEmail(e.target.value)}
+                                    placeholder="Enter Email"
+                                    className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-500 transition-all outline-none"
                                 />
                             </div>
 
