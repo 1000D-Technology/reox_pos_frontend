@@ -27,29 +27,36 @@ exports.getStats = catchAsync(async (req, res, next) => {
 });
 
 exports.getGRNList = catchAsync(async (req, res, next) => {
-    const grns = await Grn.getAllGRNs();
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    
+    const result = await Grn.getAllGRNs(page, limit);
     
     res.status(200).json({
         success: true,
-        data: grns
+        data: result.data,
+        pagination: result.pagination
     });
 });
 
 
 exports.searchGRNList = catchAsync(async (req, res, next) => {
-    const { supplierName, fromDate, toDate, billNumber } = req.query;
+    const { supplierName, fromDate, toDate, billNumber, page, limit } = req.query;
+    
+    const pageNum = parseInt(page) || 1;
+    const limitNum = parseInt(limit) || 10;
 
-    const grns = await Grn.searchGRNs({
+    const result = await Grn.searchGRNs({
         supplierName,
         fromDate,
         toDate,
         billNumber
-    });
+    }, pageNum, limitNum);
 
     res.status(200).json({
         success: true,
-        data: grns,
-        count: grns.length
+        data: result.data,
+        pagination: result.pagination
     });
 });
 

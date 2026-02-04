@@ -56,8 +56,15 @@ class Damaged {
     }
 
     // Get all damaged records for the table display
-    static async getAllDamagedRecords() {
+    static async getAllDamagedRecords(page = 1, limit = 10) {
+        const skip = (page - 1) * limit;
+
+        // Get total count for pagination
+        const totalCount = await prisma.damaged.count();
+
         const damagedRecords = await prisma.damaged.findMany({
+            skip: skip,
+            take: limit,
             include: {
                 stock: {
                     include: {
@@ -91,7 +98,7 @@ class Damaged {
             }
         });
 
-        return damagedRecords.map(d => {
+        const data = damagedRecords.map(d => {
             const stock = d.stock;
             const product = stock.product_variations.product;
             const supplier = stock.grn_items[0]?.grn?.supplier;
@@ -113,82 +120,100 @@ class Damaged {
                 date: d.date
             };
         });
+
+        return {
+            data: data,
+            pagination: {
+                currentPage: page,
+                itemsPerPage: limit,
+                totalItems: totalCount,
+                totalPages: Math.ceil(totalCount / limit),
+                hasNextPage: page < Math.ceil(totalCount / limit),
+                hasPrevPage: page > 1
+            }
+        };
     }
 
     // Fetch filtered records from the damaged table
-    static async searchDamagedRecords(filters) {
-        const damagedRecords = await prisma.damaged.findMany({
-            include: {
-                stock: {
-                    include: {
-                        product_variations: {
-                            include: {
-                                product: {
-                                    include: {
-                                        unit_id_product_unit_idTounit_id: true
-                                    }
+    static async searchDamagedRecords(filters, page = 1, limit = 10) {
+        const skip = (page - 1) * limit;
+
+        // Build where clause for database-level filtering
+        const whereClause = {};
+
+        // Build nested conditions
+        if (filters.productName && filters.productName.trim()) {
+            whereClause.stock = {
+                product_variations: {
+                    is: {
+                        product: {
+                            is: {
+                                product_name: {
+                                    contains: filters.productName.trim()
                                 }
                             }
-                        },
-                        batch: true,
-                        grn_items: {
-                            include: {
-                                grn: {
-                                    include: {
-                                        supplier: true
-                                    }
-                                }
-                            },
-                            take: 1
                         }
                     }
-                },
-                reason: true,
-                return_status: true
-            },
-            orderBy: {
-                id: 'desc'
-            }
-        });
-
-        // Filter in JavaScript
-        let filteredRecords = damagedRecords;
-
-        if (filters.category_id) {
-            filteredRecords = filteredRecords.filter(d => 
-                d.stock.product_variations.product.category_id === parseInt(filters.category_id)
-            );
+                }
+            };
         }
 
-        if (filters.supplier_id) {
-            filteredRecords = filteredRecords.filter(d => 
-                d.stock.grn_items.some(gi => gi.grn?.supplier_id === parseInt(filters.supplier_id))
-            );
-        }
-
-        if (filters.product_id) {
-            filteredRecords = filteredRecords.filter(d => 
-                d.stock.product_variations.product.id === parseInt(filters.product_id)
-            );
-        }
-
-        if (filters.unit_id) {
-            filteredRecords = filteredRecords.filter(d => 
-                d.stock.product_variations.product.unit_id === parseInt(filters.unit_id)
-            );
-        }
-
+        // Date range filter
         if (filters.fromDate && filters.toDate) {
             const fromDate = new Date(filters.fromDate);
             const toDate = new Date(filters.toDate);
             toDate.setHours(23, 59, 59, 999);
-            filteredRecords = filteredRecords.filter(d => {
-                const damageDate = new Date(d.date);
-                return damageDate >= fromDate && damageDate <= toDate;
-            });
+            
+            whereClause.date = {
+                gte: fromDate,
+                lte: toDate
+            };
         }
 
-        return filteredRecords.map(d => {
+        // Get total count with filters
+        const totalCount = await prisma.damaged.count({
+            where: whereClause
+        });
+
+        // Fetch paginated records with filters
+        const damagedRecords = await prisma.damaged.findMany({
+            where: whereClause,
+            skip: skip,
+            take: limit,
+            include: {
+                stock: {
+                    include: {
+                        product_variations: {
+                            include: {
+                                product: {
+                                    include: {
+                                        unit_id_product_unit_idTounit_id: true
+                                    }
+                                }
+                            }
+                        },
+                        batch: true,
+                        grn_items: {
+                            include: {
+                                grn: {
+                                    include: {
+                                        supplier: true
+                                    }
+                                }
+                            },
+                            take: 1
+                        }
+                    }
+                },
+                reason: true,
+                return_status: true
+            },
+            orderBy: {
+                id: 'desc'
+            }
+        });
+
+        const data = damagedRecords.map(d => {
             const stock = d.stock;
             const product = stock.product_variations.product;
             const supplier = stock.grn_items[0]?.grn?.supplier;
@@ -210,6 +235,18 @@ class Damaged {
                 date: d.date
             };
         });
+
+        return {
+            data: data,
+            pagination: {
+                currentPage: page,
+                itemsPerPage: limit,
+                totalItems: totalCount,
+                totalPages: Math.ceil(totalCount / limit),
+                hasNextPage: page < Math.ceil(totalCount / limit),
+                hasPrevPage: page > 1
+            }
+        };
     }
 
     // Get summary statistics for the Damaged Stock dashboard

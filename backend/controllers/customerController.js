@@ -1,6 +1,7 @@
 const prisma = require('../config/prismaClient');
 const catchAsync = require("../utils/catchAsync");
 const { AppError } = require("../middleware/errorHandler");
+const PaginationHelper = require('../utils/paginationHelper');
 
 const customerController = {
     // Add a new customer
@@ -42,45 +43,72 @@ const customerController = {
         });
     }),
 
-    // Get all customers
+    // Get all customers with pagination
     getAllCustomers: catchAsync(async (req, res, next) => {
-        const customers = await prisma.customer.findMany({
-            include: {
-                status: {
-                    select: {
-                        ststus: true
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = PaginationHelper.getSkip(page, limit);
+
+        // 1. Get total count and customers in parallel
+        const [totalCount, customers] = await Promise.all([
+            prisma.customer.count(),
+            prisma.customer.findMany({
+                skip: skip,
+                take: limit,
+                include: {
+                    status: {
+                        select: {
+                            ststus: true
+                        }
                     }
                 },
-                invoice: {
-                    include: {
-                        creadit_book: true
+                orderBy: {
+                    id: 'desc'
+                }
+            })
+        ]);
+
+        // 2. Optimized: Get all credit balances for these customers in a single query
+        const customerIds = customers.map(c => c.id);
+        
+        const creditData = await prisma.invoice.findMany({
+            where: {
+                customer_id: { in: customerIds }
+            },
+            select: {
+                customer_id: true,
+                creadit_book: {
+                    select: {
+                        balance: true
                     }
                 }
-            },
-            orderBy: {
-                id: 'desc'
             }
         });
 
-        // Calculate credit balance for each customer from creadit_book
-        const formattedCustomers = customers.map(c => {
-            // Sum all credit book balances for this customer's invoices
-            const creditBalance = c.invoice.reduce((total, inv) => {
-                const invoiceCredit = inv.creadit_book.reduce((sum, cb) => sum + cb.balance, 0);
-                return total + invoiceCredit;
-            }, 0);
-
-            return {
-                ...c,
-                credit_balance: creditBalance,
-                status_name: c.status.ststus,
-                invoice: undefined // Remove invoice details from response
-            };
+        // 3. Calculate total credit balance per customer
+        const creditBalanceMap = new Map();
+        creditData.forEach(invoice => {
+            const currentBalance = creditBalanceMap.get(invoice.customer_id) || 0;
+            const invoiceBalance = invoice.creadit_book.reduce((sum, cb) => sum + cb.balance, 0);
+            creditBalanceMap.set(invoice.customer_id, currentBalance + invoiceBalance);
         });
+
+        // 4. Map everything together in memory
+        const formattedCustomers = customers.map(c => ({
+            id: c.id,
+            name: c.name,
+            email: c.email,
+            contact: c.contact,
+            credit_balance: creditBalanceMap.get(c.id) || 0,
+            status_name: c.status?.ststus,
+            status_id: c.status_id,
+            joinedDate: c.created_at?.toISOString().split('T')[0]
+        }));
         
         res.status(200).json({
             success: true,
-            data: formattedCustomers
+            data: formattedCustomers,
+            pagination: PaginationHelper.getPaginationMetadata(page, limit, totalCount)
         });
     }),
 

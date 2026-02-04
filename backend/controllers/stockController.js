@@ -174,9 +174,12 @@ exports.getSummaryCards = catchAsync(async (req, res, next) => {
 });
 
 exports.getOutOfStockList = catchAsync(async (req, res, next) => {
-    const stockData = await Stock.getOutOfStock();
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    
+    const result = await Stock.getOutOfStock(page, limit);
 
-    const transformedData = stockData.map(item => ({
+    const transformedData = result.data.map(item => ({
         productID: item.product_code || (item.product_id ? item.product_id.toString() : 'N/A'),
         productName: item.product_name,
         unit: item.unit,
@@ -189,8 +192,8 @@ exports.getOutOfStockList = catchAsync(async (req, res, next) => {
 
     res.status(200).json({
         success: true,
-        count: transformedData.length,
-        data: transformedData
+        data: transformedData,
+        pagination: result.pagination
     });
 });
 
@@ -203,9 +206,12 @@ exports.getSearchOutOfStock = catchAsync(async (req, res, next) => {
         toDate: req.query.toDate
     };
 
-    const stockData = await Stock.searchOutOfStock(filters);
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
 
-    const transformedData = stockData.map(item => ({
+    const result = await Stock.searchOutOfStock(filters, page, limit);
+
+    const transformedData = result.data.map(item => ({
         productID: item.product_code || (item.product_id ? item.product_id.toString() : 'N/A'),
         productName: item.product_name,
         unit: item.unit,
@@ -218,8 +224,8 @@ exports.getSearchOutOfStock = catchAsync(async (req, res, next) => {
 
     res.status(200).json({
         success: true,
-        count: transformedData.length,
         data: transformedData,
+        pagination: result.pagination,
         message: transformedData.length === 0 
             ? 'No out-of-stock items found' 
             : `Found ${transformedData.length} items`

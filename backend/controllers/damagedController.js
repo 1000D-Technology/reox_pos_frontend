@@ -36,11 +36,14 @@ exports.createDamagedRecord = catchAsync(async (req, res, next) => {
 });
 
 exports.getDamagedTableData = catchAsync(async (req, res, next) => {
-    // Fetch data from model
-    const records = await Damaged.getAllDamagedRecords();
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+
+    // Fetch data from model with pagination
+    const result = await Damaged.getAllDamagedRecords(page, limit);
 
     // Map data to match your UI table columns
-    const tableData = records.map(record => ({
+    const tableData = result.data.map(record => ({
         productID: record.product_id_code,
         productName: record.product_name,
         unit: record.unit,
@@ -59,24 +62,24 @@ exports.getDamagedTableData = catchAsync(async (req, res, next) => {
 
     res.status(200).json({
         success: true,
-        data: tableData
+        data: tableData,
+        pagination: result.pagination
     });
 });
 
 exports.searchDamaged = catchAsync(async (req, res, next) => {
-    //Get ID values and dates from the request query string
-    const { product_id, category_id, supplier_id, unit_id, fromDate, toDate } = req.query;
+    //Get product name and dates from the request query string
+    const { productName, fromDate, toDate } = req.query;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
 
-    const results = await Damaged.searchDamagedRecords({
-        product_id,
-        category_id,
-        supplier_id,
-        unit_id,
+    const result = await Damaged.searchDamagedRecords({
+        productName,
         fromDate,
         toDate
-    });
+    }, page, limit);
 
-    const transformedResults = results.map(record => ({
+    const transformedResults = result.data.map(record => ({
         productID: record.product_id_code,
         productName: record.product_name,
         unit: record.unit,
@@ -95,8 +98,9 @@ exports.searchDamaged = catchAsync(async (req, res, next) => {
 
     res.status(200).json({
         success: true,
-        count: results.length,
-        data: transformedResults
+        count: result.pagination.totalItems,
+        data: transformedResults,
+        pagination: result.pagination
     });
 });
 

@@ -19,9 +19,7 @@ import toast, { Toaster } from 'react-hot-toast';
 import TypeableSelect from '../../../components/TypeableSelect.tsx';
 import { stockService } from '../../../services/stockService';
 import { productService } from '../../../services/productService';
-import * as XLSX from 'xlsx';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+
 
 function DamagedStock() {
     // State for summary data
@@ -87,10 +85,6 @@ function DamagedStock() {
     };
 
     // Dropdown data states
-    const [category, setCategory] = useState<SelectOption[]>([]);
-    const [unit, setUnit] = useState<SelectOption[]>([]);
-    const [supplier, setSupplier] = useState<SelectOption[]>([]);
-    const [productSearch, setProductSearch] = useState<SelectOption[]>([]);
     const [productAdd, setProductAdd] = useState<SelectOption[]>([]);
     const [stock, setStock] = useState<SelectOption[]>([]);
     const [reason, setReason] = useState<SelectOption[]>([]);
@@ -98,10 +92,7 @@ function DamagedStock() {
     const [loading, setLoading] = useState<boolean>(true);
     const [loadingStock, setLoadingStock] = useState<boolean>(false);
 
-    const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-    const [selectedUnit, setSelectedUnit] = useState<string | null>(null);
-    const [selectedSupplier, setSelectedSupplier] = useState<string | null>(null);
-    const [selectedProduct, setSelectedProduct] = useState<string | null>(null);
+    const [selectedProduct, setSelectedProduct] = useState<string>(''); // Changed to string for text input
     const [selectedProductAdd, setSelectedProductAdd] = useState<string | null>(null);
     const [selectedStock, setSelectedStock] = useState<string | null>(null);
     const [selectedReason, setSelectedReason] = useState<string | null>(null);
@@ -119,18 +110,21 @@ function DamagedStock() {
     const [salesData, setSalesData] = useState<any[]>([]);
     const [loadingTable, setLoadingTable] = useState<boolean>(true);
 
+    // Pagination state
+    const [pagination, setPagination] = useState({
+        currentPage: 1,
+        itemsPerPage: 10,
+        totalItems: 0,
+        totalPages: 0,
+        hasNextPage: false,
+        hasPrevPage: false
+    });
+
     // Detail modal state
     const [isDetailModalOpen, setIsDetailModalOpen] = useState<boolean>(false);
     const [selectedDetailRecord, setSelectedDetailRecord] = useState<any>(null);
 
     const [selectedIndex, setSelectedIndex] = useState(0);
-    const [currentPage, setCurrentPage] = useState(1);
-    const [itemsPerPage] = useState(10);
-
-    const totalPages = Math.ceil(salesData.length / itemsPerPage);
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    const currentSalesData = salesData.slice(startIndex, endIndex);
 
     // Load dropdown data on component mount
     // Load product data with optional search
@@ -149,13 +143,6 @@ function DamagedStock() {
                     
                     // We update the productAdd list which is used in the "Add Damaged Stock" section
                     setProductAdd(productOptions);
-                    
-                    // Note: We might also want to update 'productSearch' if that dropdown should also be searchable server-side,
-                    // but usually filter inputs behave differently. For now targeting the Add section as requested.
-                     if (!query) {
-                        // Initial load populates both
-                        setProductSearch(productOptions); 
-                     }
                 }
             } catch (error) {
                 console.error('Error loading product data:', error);
@@ -166,35 +153,6 @@ function DamagedStock() {
             const loadDropdownData = async () => {
                 try {
                     setLoading(true);
-    
-                    const [categoriesResponse, unitsResponse, suppliersResponse] = await stockService.getStockFilterData();
-    
-                    // Transform categories
-                    if (categoriesResponse.data?.success) {
-                        const categoryOptions = categoriesResponse.data.data.map((category: any) => ({
-                            value: category.id.toString(),
-                            label: category.name
-                        }));
-                        setCategory(categoryOptions);
-                    }
-    
-                    // Transform units
-                    if (unitsResponse.data?.success) {
-                        const unitOptions = unitsResponse.data.data.map((unit: any) => ({
-                            value: unit.id.toString(),
-                            label: unit.name
-                        }));
-                        setUnit(unitOptions);
-                    }
-    
-                    // Transform suppliers
-                    if (suppliersResponse.data?.success) {
-                        const supplierOptions = suppliersResponse.data.data.map((supplier: any) => ({
-                            value: supplier.id.toString(),
-                            label: supplier.supplierName
-                        }));
-                        setSupplier(supplierOptions);
-                    }
     
                     // Initialize reason and return status from API
                     const reasonResponse = await stockService.getReasons();
@@ -279,10 +237,10 @@ function DamagedStock() {
     }, [selectedProductAdd]);
 
     // Load damaged table data
-    const loadDamagedTableData = async () => {
+    const loadDamagedTableData = async (page: number = 1, limit: number = 10) => {
         try {
             setLoadingTable(true);
-            const response = await stockService.getDamagedTableData();
+            const response = await stockService.getDamagedTableData(page, limit);
 
             if (response.data?.success) {
                 const mappedData = response.data.data.map((item: any) => ({
@@ -302,6 +260,11 @@ function DamagedStock() {
                     date: item.date
                 }));
                 setSalesData(mappedData);
+                
+                // Update pagination metadata
+                if (response.data.pagination) {
+                    setPagination(response.data.pagination);
+                }
             } else {
                 setSalesData([]);
             }
@@ -331,43 +294,66 @@ function DamagedStock() {
 
             if (e.key === "ArrowDown") {
                 e.preventDefault();
-                setSelectedIndex((prev) => Math.min(prev + 1, currentSalesData.length - 1));
+                setSelectedIndex((prev) => Math.min(prev + 1, salesData.length - 1));
             } else if (e.key === "ArrowUp") {
                 e.preventDefault();
                 setSelectedIndex((prev) => Math.max(prev - 1, 0));
-            } else if (e.key === "Enter" && !isInput && currentSalesData[selectedIndex]) {
-                handleRowDoubleClick(currentSalesData[selectedIndex]);
+            } else if (e.key === "Enter" && !isInput && salesData[selectedIndex]) {
+                handleRowDoubleClick(salesData[selectedIndex]);
             }
         };
 
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [currentSalesData, selectedIndex]);
+    }, [salesData, selectedIndex]);
 
     const goToPage = (page: number) => {
-        if (page >= 1 && page <= totalPages) {
-            setCurrentPage(page);
+        if (page >= 1 && page <= pagination.totalPages) {
+            loadDamagedTableData(page, pagination.itemsPerPage);
             setSelectedIndex(0);
         }
     };
 
-    const goToPreviousPage = () => goToPage(currentPage - 1);
-    const goToNextPage = () => goToPage(currentPage + 1);
+    const goToPreviousPage = () => {
+        if (pagination.hasPrevPage) {
+            goToPage(pagination.currentPage - 1);
+        }
+    };
+    
+    const goToNextPage = () => {
+        if (pagination.hasNextPage) {
+            goToPage(pagination.currentPage + 1);
+        }
+    };
 
     const getPageNumbers = () => {
         const pages: (number | string)[] = [];
-        for (let i = 1; i <= totalPages; i++) pages.push(i);
-        return pages.slice(0, 5); // Simple pagination for brevity
+        const maxPagesToShow = 5;
+        const halfRange = Math.floor(maxPagesToShow / 2);
+        
+        let startPage = Math.max(1, pagination.currentPage - halfRange);
+        let endPage = Math.min(pagination.totalPages, pagination.currentPage + halfRange);
+        
+        // Adjust if we're near the start or end
+        if (pagination.currentPage <= halfRange) {
+            endPage = Math.min(maxPagesToShow, pagination.totalPages);
+        }
+        if (pagination.currentPage + halfRange >= pagination.totalPages) {
+            startPage = Math.max(1, pagination.totalPages - maxPagesToShow + 1);
+        }
+        
+        for (let i = startPage; i <= endPage; i++) {
+            pages.push(i);
+        }
+        
+        return pages;
     };
 
     const handleClearFilters = () => {
-        setSelectedCategory(null);
-        setSelectedUnit(null);
-        setSelectedSupplier(null);
-        setSelectedProduct(null);
+        setSelectedProduct('');
         setFromDate('');
         setToDate('');
-        loadDamagedTableData();
+        loadDamagedTableData(1, pagination.itemsPerPage);
     };
 
     const handleSearch = async () => {
@@ -375,14 +361,11 @@ function DamagedStock() {
             setIsSearching(true);
             setLoadingTable(true);
             const filters = { 
-                category_id: selectedCategory || undefined, 
-                unit_id: selectedUnit || undefined, 
-                supplier_id: selectedSupplier || undefined, 
-                product_id: selectedProduct || undefined, 
+                productName: selectedProduct.trim() || undefined, 
                 fromDate: fromDate || undefined, 
                 toDate: toDate || undefined 
             };
-            const response = await stockService.searchDamagedRecords(filters);
+            const response = await stockService.searchDamagedRecords(filters, 1, pagination.itemsPerPage);
 
             if (response.data?.success) {
                 const mappedData = response.data.data.map((item: any) => ({
@@ -402,7 +385,12 @@ function DamagedStock() {
                     date: item.date
                 }));
                 setSalesData(mappedData);
-                setCurrentPage(1);
+                
+                // Update pagination metadata
+                if (response.data.pagination) {
+                    setPagination(response.data.pagination);
+                }
+                
                 setSelectedIndex(0);
             }
         } catch (error) {
@@ -442,7 +430,7 @@ function DamagedStock() {
             if (response.data?.success) {
                 toast.success('Damaged stock record created!');
                 handleClearAdd();
-                loadDamagedTableData();
+                loadDamagedTableData(pagination.currentPage, pagination.itemsPerPage);
                 loadSummaryData();
             }
         } catch (error) {
@@ -457,7 +445,7 @@ function DamagedStock() {
             const response = await stockService.updateDamagedStatus(recordId, newStatusId);
             if (response.data?.success) {
                 toast.success('Status updated');
-                loadDamagedTableData();
+                loadDamagedTableData(pagination.currentPage, pagination.itemsPerPage);
                 loadSummaryData();
             }
         } catch (error) {
@@ -533,34 +521,51 @@ function DamagedStock() {
             <div className="bg-white rounded-xl p-4 border border-gray-200 flex flex-col">
                 <h2 className="text-xl font-semibold text-gray-700 mb-3">Filter Results</h2>
                 <div className="grid md:grid-cols-4 gap-4">
-                    <div className="relative col-span-2">
-                        <SearchCheck className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-                        <input
-                            type="text"
-                            id="filter-product-main"
-                            placeholder="Quick search damaged records by product name, reason or ID... (F2)"
-                            className="w-full pl-10 pr-4 py-2.5 text-sm border-2 border-gray-200 rounded-lg focus:border-emerald-500 transition-all outline-none"
-                            onChange={(e) => {
-                                const val = e.target.value.toLowerCase();
-                                // Handle client-side search or state update
-                            }}
-                        />
+                    <div className="col-span-1 flex flex-col gap-1">
+                        <label className="text-xs font-semibold text-gray-600">Product Name</label>
+                        <div className="relative">
+                            <SearchCheck className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                            <input
+                                type="text"
+                                id="filter-product-main"
+                                value={selectedProduct}
+                                onChange={(e) => setSelectedProduct(e.target.value)}
+                                placeholder="Search by product name..."
+                                className="w-full pl-10 pr-4 py-2 text-sm border-2 border-gray-200 rounded-lg focus:border-emerald-400 transition-all outline-none"
+                            />
+                        </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
-                        <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-400 outline-none transition-all" />
-                        <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-400 outline-none transition-all" />
+                    <div className="grid grid-cols-2 gap-3 col-span-2">
+                        <div className="flex flex-col gap-1">
+                            <label className="text-xs font-semibold text-gray-600">From Date</label>
+                            <input 
+                                type="date" 
+                                value={fromDate} 
+                                onChange={(e) => setFromDate(e.target.value)} 
+                                className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-400 outline-none transition-all" 
+                            />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                            <label className="text-xs font-semibold text-gray-600">To Date</label>
+                            <input 
+                                type="date" 
+                                value={toDate} 
+                                onChange={(e) => setToDate(e.target.value)} 
+                                className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-400 outline-none transition-all" 
+                            />
+                        </div>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                         <button
                             onClick={handleSearch}
                             disabled={isSearching}
-                            className="bg-linear-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white py-2 rounded-lg flex items-center justify-center transition-all disabled:opacity-50"
+                            className="bg-linear-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white py-2 rounded-lg flex items-center justify-center transition-all disabled:opacity-50 font-semibold text-sm"
                         >
                             <SearchCheck className="mr-2" size={16} /> Filter
                         </button>
                         <button
                             onClick={handleClearFilters}
-                            className="bg-linear-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white py-2 rounded-lg flex items-center justify-center transition-all"
+                            className="bg-linear-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white py-2 rounded-lg flex items-center justify-center transition-all font-semibold text-sm"
                         >
                             <RefreshCw className="mr-2" size={16} /> Reset
                         </button>
@@ -683,7 +688,7 @@ function DamagedStock() {
                                         <td colSpan={7} className="px-6 py-8"><div className="h-4 bg-gray-100 rounded w-full"></div></td>
                                     </tr>
                                 ))
-                            ) : currentSalesData.length === 0 ? (
+                            ) : salesData.length === 0 ? (
                                 <tr>
                                     <td colSpan={7} className="px-6 py-20 text-center">
                                         <div className="flex flex-col items-center gap-3 text-gray-300">
@@ -693,7 +698,7 @@ function DamagedStock() {
                                     </td>
                                 </tr>
                             ) : (
-                                currentSalesData.map((sale, index) => (
+                                salesData.map((sale, index) => (
                                     <tr
                                         key={index}
                                         onClick={() => setSelectedIndex(index)}
@@ -780,18 +785,19 @@ function DamagedStock() {
 
                 <nav className="bg-white flex items-center justify-between sm:px-6 pt-4 border-t-2 border-gray-200">
                     <div className="text-sm text-gray-600">
-                        Showing <span className="font-semibold text-gray-800">{startIndex + 1}</span> to{' '}
-                        <span className="font-semibold text-gray-800">{Math.min(endIndex, salesData.length)}</span> of{' '}
-                        <span className="font-semibold text-gray-800">{salesData.length}</span> results
+                        Showing <span className="font-semibold text-gray-800">{pagination.totalItems > 0 ? (pagination.currentPage - 1) * pagination.itemsPerPage + 1 : 0}</span> to{' '}
+                        <span className="font-semibold text-gray-800">{Math.min(pagination.currentPage * pagination.itemsPerPage, pagination.totalItems)}</span> of{' '}
+                        <span className="font-semibold text-gray-800">{pagination.totalItems}</span> results
                     </div>
                     <div className="flex items-center space-x-2">
                         <button
                             onClick={goToPreviousPage}
-                            disabled={currentPage === 1}
-                            className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${currentPage === 1
-                                ? 'text-gray-400 cursor-not-allowed'
-                                : 'text-gray-600 hover:text-emerald-600 hover:bg-emerald-50'
-                                }`}
+                            disabled={!pagination.hasPrevPage}
+                            className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${
+                                !pagination.hasPrevPage
+                                    ? 'text-gray-400 cursor-not-allowed'
+                                    : 'text-gray-600 hover:text-emerald-600 hover:bg-emerald-50'
+                            }`}
                         >
                             <ChevronLeft className="mr-2 h-5 w-5" /> Previous
                         </button>
@@ -800,10 +806,11 @@ function DamagedStock() {
                             <button
                                 key={index}
                                 onClick={() => goToPage(Number(page))}
-                                className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${currentPage === Number(page)
-                                    ? 'bg-linear-to-r from-emerald-500 to-emerald-600 text-white'
-                                    : 'text-gray-600 hover:bg-emerald-50 hover:text-emerald-600'
-                                    }`}
+                                className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${
+                                    pagination.currentPage === Number(page)
+                                        ? 'bg-linear-to-r from-emerald-500 to-emerald-600 text-white'
+                                        : 'text-gray-600 hover:bg-emerald-50 hover:text-emerald-600'
+                                }`}
                             >
                                 {page}
                             </button>
@@ -811,11 +818,12 @@ function DamagedStock() {
 
                         <button
                             onClick={goToNextPage}
-                            disabled={currentPage === totalPages}
-                            className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${currentPage === totalPages
-                                ? 'text-gray-400 cursor-not-allowed'
-                                : 'text-gray-600 hover:text-emerald-600 hover:bg-emerald-50'
-                                }`}
+                            disabled={!pagination.hasNextPage}
+                            className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${
+                                !pagination.hasNextPage
+                                    ? 'text-gray-400 cursor-not-allowed'
+                                    : 'text-gray-600 hover:text-emerald-600 hover:bg-emerald-50'
+                            }`}
                         >
                             Next <ChevronRight className="ml-2 h-5 w-5" />
                         </button>

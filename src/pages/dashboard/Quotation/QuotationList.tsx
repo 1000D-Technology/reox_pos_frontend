@@ -58,8 +58,16 @@ function QuotationList() {
 
             if (response.data.success) {
                 setQuotations(response.data.data);
-                setTotalPages(response.data.pagination.totalPages);
-                setTotalRecords(response.data.pagination.totalRecords);
+                
+                // Handle pagination data with fallbacks
+                if (response.data.pagination) {
+                    setTotalPages(response.data.pagination.totalPages || 1);
+                    setTotalRecords(response.data.pagination.totalRecords || 0);
+                    setCurrentPage(response.data.pagination.currentPage || 1);
+                } else {
+                    setTotalPages(1);
+                    setTotalRecords(response.data.data.length);
+                }
                 setSelectedIndex(0);
             }
         } catch (error) {
@@ -74,7 +82,7 @@ function QuotationList() {
     // Fetch Customers for Filter
     const fetchCustomers = async () => {
         try {
-            const response = await customerService.getCustomers();
+            const response = await customerService.getCustomers(1, 1000);
             if (response.data.success) {
                 const options = response.data.data.map((c: any) => ({
                     value: c.id,

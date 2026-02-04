@@ -110,11 +110,10 @@ function GrnList() {
     const [selectedIndex, setSelectedIndex] = useState(0);
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage] = useState(10);
+    const [totalPages, setTotalPages] = useState(1);
+    const [totalRecords, setTotalRecords] = useState(0);
 
-    const totalPages = Math.ceil(grnListData.length / itemsPerPage);
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    const currentPageData = grnListData.slice(startIndex, endIndex);
+    const currentPageData = grnListData;
 
 
     // Add these state variables after existing states
@@ -159,12 +158,15 @@ function GrnList() {
         }
     };
 
-    const fetchGrnList = async () => {
+    const fetchGrnList = async (page: number = currentPage) => {
         setIsLoadingGrnList(true);
         try {
-            const response = await grnService.getGRNList();
+            const response = await grnService.getGRNList(page, itemsPerPage);
             if (response.data.success) {
                 setGrnListData(response.data.data);
+                setTotalPages(response.data.pagination.totalPages);
+                setTotalRecords(response.data.pagination.totalRecords);
+                setCurrentPage(response.data.pagination.currentPage);
             } else {
                 toast.error('Failed to load GRN list');
             }
@@ -201,7 +203,7 @@ function GrnList() {
         }
     };
 
-    const searchGRNs = async () => {
+    const searchGRNs = async (page: number = 1) => {
         setIsSearching(true);
         try {
             const params = new URLSearchParams();
@@ -216,11 +218,14 @@ function GrnList() {
             if (toDate) params.append('toDate', toDate);
             if (billNumber.trim()) params.append('billNumber', billNumber.trim());
 
-            const response = await grnService.searchGRNList(params.toString());
+            const response = await grnService.searchGRNList(params.toString(), page, itemsPerPage);
 
             if (response.data.success) {
                 setGrnListData(response.data.data);
-                toast.success(`Found ${response.data.data.length} GRN records`);
+                setTotalPages(response.data.pagination.totalPages);
+                setTotalRecords(response.data.pagination.totalRecords);
+                setCurrentPage(response.data.pagination.currentPage);
+                toast.success(`Found ${response.data.pagination.totalRecords} GRN records`);
             } else {
                 toast.error('Search failed');
             }
@@ -238,14 +243,20 @@ function GrnList() {
         setFromDate('');
         setToDate('');
         setBillNumber('');
-        fetchGrnList();
+        setCurrentPage(1);
+        fetchGrnList(1);
         toast.success('Search filters cleared');
     };
 
     const goToPage = (page: number) => {
         if (page >= 1 && page <= totalPages) {
-            setCurrentPage(page);
             setSelectedIndex(0);
+            // Check if it's a search or normal list
+            if (selected || fromDate || toDate || billNumber.trim()) {
+                searchGRNs(page);
+            } else {
+                fetchGrnList(page);
+            }
         }
     };
 
@@ -290,10 +301,7 @@ function GrnList() {
         fetchSuppliers();
     }, []);
 
-    useEffect(() => {
-        setCurrentPage(1);
-        setSelectedIndex(0);
-    }, [grnListData.length]);
+
 
     // src/pages/dashboard/grn/GrnList.tsx
     // Update the keyboard event handler useEffect
@@ -315,7 +323,7 @@ function GrnList() {
             // Enter key - Search
             else if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
-                searchGRNs();
+                searchGRNs(1);
             }
 
             // Shift + Enter - View selected GRN
@@ -486,7 +494,7 @@ function GrnList() {
 
                         <div className={'grid grid-cols-2 md:items-end items-start gap-2 text-white font-medium'}>
                             <button
-                                onClick={searchGRNs}
+                                onClick={() => searchGRNs(1)}
                                 disabled={isSearching}
                                 className={`bg-linear-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 rounded-lg py-2 px-4 flex items-center justify-center gap-2 shadow-lg shadow-emerald-200 hover:shadow-xl transition-all ${isSearching ? 'opacity-50 cursor-not-allowed' : ''
                                     }`}
@@ -550,7 +558,7 @@ function GrnList() {
                                             className={`hover:bg-emerald-50 transition-colors ${selectedIndex === index ? 'bg-emerald-100' : ''
                                                 }`}
                                         >
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{startIndex + index + 1}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{((currentPage - 1) * itemsPerPage) + index + 1}</td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{grn.supplierName}</td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{grn.billNumber}</td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">LKR {grn.totalAmount.toFixed(2)}</td>
@@ -594,7 +602,7 @@ function GrnList() {
 
                     <nav className="bg-white flex items-center justify-between sm:px-6 pt-4 border-t-2 border-gray-100">
                         <div className="text-sm text-gray-600">
-                            Showing {startIndex + 1} to {Math.min(endIndex, grnListData.length)} of {grnListData.length} records
+                            Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, totalRecords)} of {totalRecords} records
                         </div>
                         <div className="flex items-center space-x-2">
                             <button

@@ -1,8 +1,9 @@
 import axiosInstance from '../api/axiosInstance';
 
 export const customerService = {
-    // Get all customers
-    getCustomers: () => axiosInstance.get('/api/customers/all'),
+    // Get all customers with pagination
+    getCustomers: (page: number = 1, limit: number = 10) => 
+        axiosInstance.get('/api/customers/all', { params: { page, limit } }),
     
     // Add new customer
     addCustomer: (customerData: { name: string; contact: string; email?: string }) => 
