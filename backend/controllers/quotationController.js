@@ -52,12 +52,7 @@ exports.getAllQuotations = catchAsync(async (req, res, next) => {
 
     res.status(200).json({
         success: true,
-        data: result.quotations,
-        pagination: {
-            totalRecords: result.total,
-            totalPages: Math.ceil(result.total / (parseInt(limit) || 10)),
-            currentPage: parseInt(page) || 1,
-            limit: parseInt(limit) || 10
-        }
+        data: result.data,
+        pagination: result.pagination
     });
 });
