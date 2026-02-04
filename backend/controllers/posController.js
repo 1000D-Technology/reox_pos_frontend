@@ -244,3 +244,32 @@ exports.processInvoicePayment = catchAsync(async (req, res, next) => {
         data: result
     });
 });
+
+exports.getReturnHistory = catchAsync(async (req, res, next) => {
+    const { invoiceNumber, fromDate, toDate, page = 1, limit = 10 } = req.query;
+
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const offset = (pageNum - 1) * limitNum;
+
+    const result = await POS.getReturnHistory({ invoiceNumber, fromDate, toDate }, limitNum, offset);
+
+    res.status(200).json({
+        success: true,
+        data: result.returns.map(r => ({
+            id: r.id,
+            invoiceNo: r.invoice.invoice_number,
+            customer: r.invoice.customer?.name || 'Guest',
+            date: r.cash_sessions.opening_date_time,
+            returnValue: r.balance,
+            refundedAmount: r.invoice.refunded_amount,
+            user: r.invoice.cash_sessions.user.name
+        })),
+        pagination: {
+            currentPage: pageNum,
+            totalPages: Math.ceil(result.totalRecords / limitNum),
+            totalRecords: result.totalRecords,
+            itemsPerPage: limitNum
+        }
+    });
+});

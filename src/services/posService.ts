@@ -31,6 +31,10 @@ export const posService = {
         axiosInstance.get(`/api/pos/invoice/${invoiceNo}`),
 
     // process return
-    processReturn: (data: { invoiceNo: string, items: { id: number, returnQuantity: number }[] }) =>
+    processReturn: (data: { invoiceNo: string, items: { id: number, returnQuantity: number }[], user_id?: number }) =>
         axiosInstance.post('/api/pos/return', data),
+
+    // get return history
+    getReturnHistory: (params?: { invoiceNumber?: string, fromDate?: string, toDate?: string, page?: number, limit?: number }) =>
+        axiosInstance.get('/api/pos/returns', { params }),
 }

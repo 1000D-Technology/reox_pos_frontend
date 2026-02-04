@@ -395,7 +395,6 @@ export const BulkLooseModal = ({ isOpen, onClose }: BulkLooseModalProps) => {
                                             </div>
                                         </div>
                                     </div>
-
                                     {/* DESTINATION (ALL PRODUCTS) */}
                                     <div className="space-y-4">
                                         <div className="flex justify-between items-end">
@@ -403,6 +402,11 @@ export const BulkLooseModal = ({ isOpen, onClose }: BulkLooseModalProps) => {
                                                 <div className="w-2 h-2 rounded-full bg-emerald-500" />
                                                 Destination Product
                                             </label>
+                                            {selectedLooseProduct && (
+                                                <span className="text-[10px] font-bold px-2 py-0.5 bg-emerald-50 text-emerald-600 rounded-full border border-emerald-100">
+                                                    Current Stock: {selectedLooseProduct.stock}
+                                                </span>
+                                            )}
                                         </div>
                                         
                                         {!selectedLooseProduct ? (

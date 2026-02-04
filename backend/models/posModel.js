@@ -575,6 +575,26 @@ class POS {
                 }
              }
              
+             // 4. Log in return_goods
+             const userIdToUse = user_id || 1; 
+             const activeSessionForLog = await tx.cash_sessions.findFirst({
+                 where: {
+                     user_id: parseInt(userIdToUse),
+                     cash_status_id: 1 // Active
+                 },
+                 orderBy: { id: 'desc' }
+             });
+
+             if (activeSessionForLog) {
+                 await tx.return_goods.create({
+                     data: {
+                         invoice_id: invoice.id,
+                         cash_sessions_id: activeSessionForLog.id,
+                         balance: currentReturnValue
+                     }
+                 });
+             }
+             
              // Calculate old debt (before this return)
              const oldDebt = invoice.creadit_book?.reduce((sum, cb) => sum + cb.balance, 0) || 0;
              const debtReduction = Math.max(0, oldDebt - Math.max(0, debt));
@@ -896,6 +916,52 @@ class POS {
                 remainingBalance: newBalance
             };
         });
+    }
+
+    // Get return history
+    static async getReturnHistory(filters, limit, offset) {
+        const { invoiceNumber, fromDate, toDate } = filters;
+        
+        const where = {};
+        if (invoiceNumber) {
+            where.invoice = {
+                invoice_number: { contains: invoiceNumber }
+            };
+        }
+        
+        if (fromDate || toDate) {
+            const dateFilter = {};
+            if (fromDate) dateFilter.gte = new Date(fromDate);
+            if (toDate) dateFilter.lte = new Date(toDate);
+            
+            where.cash_sessions = {
+                opening_date_time: dateFilter
+            };
+        }
+
+        const [returns, totalRecords] = await Promise.all([
+            prisma.return_goods.findMany({
+                where,
+                include: {
+                    invoice: {
+                        include: {
+                            customer: true,
+                            cash_sessions: {
+                                include: {
+                                    user: true
+                                }
+                            }
+                        }
+                    }
+                },
+                orderBy: { id: 'desc' },
+                take: limit,
+                skip: offset
+            }),
+            prisma.return_goods.count({ where })
+        ]);
+
+        return { returns, totalRecords };
     }
 }
 
