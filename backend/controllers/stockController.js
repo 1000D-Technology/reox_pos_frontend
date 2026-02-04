@@ -42,7 +42,10 @@ exports.getAllStockWithVariations = catchAsync(async (req, res, next) => {
             stockQty: (item.qty || 0).toString(),
             batch: item.batch_name,
             mfd: item.mfd,
-            exp: item.exp
+            exp: item.exp,
+            color: item.color,
+            size: item.size,
+            storage: item.storage_capacity
         };
     });
 
@@ -122,7 +125,10 @@ exports.getSearchStock = catchAsync(async (req, res, next) => {
                 Price: typeof item.selling_price === 'number' ? item.selling_price.toFixed(2) : parseFloat(item.selling_price || 0).toFixed(2),
                 wholesalePrice: typeof item.wsp === 'number' ? item.wsp.toFixed(2) : parseFloat(item.wsp || 0).toFixed(2),
                 supplier: item.supplier || 'N/A',
-                stockQty: item.stock_qty ? item.stock_qty.toString() : (item.qty || 0).toString()
+                stockQty: item.stock_qty ? item.stock_qty.toString() : (item.qty || 0).toString(),
+                color: item.color,
+                size: item.size,
+                storage: item.storage_capacity
             };
         });
 

@@ -165,6 +165,19 @@ exports.getProducts = catchAsync(async (req, res, next) => {
 });
 
 /**
+ * @desc    Get all active product variations
+ * @route   GET /api/products/variations
+ */
+exports.getAllVariations = catchAsync(async (req, res, next) => {
+    const variations = await Product.getAllVariations(1);
+    
+    res.status(200).json({
+        success: true,
+        data: variations
+    });
+});
+
+/**
  * @desc    Get active products list for selection dropdowns
  * @route   GET /api/products/dropdown
  */

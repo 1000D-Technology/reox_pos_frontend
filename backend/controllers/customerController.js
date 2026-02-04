@@ -172,9 +172,10 @@ const customerController = {
 
         const customers = await prisma.customer.findMany({
             where: {
-                name: {
-                    contains: query
-                }
+                OR: [
+                    { name: { contains: query } },
+                    { contact: { contains: query } }
+                ]
             },
             include: {
                 status: {
