@@ -323,7 +323,7 @@ function GrnList() {
             // Enter key - Search
             else if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
-                searchGRNs();
+                searchGRNs(1);
             }
 
             // Shift + Enter - View selected GRN
@@ -494,7 +494,7 @@ function GrnList() {
 
                         <div className={'grid grid-cols-2 md:items-end items-start gap-2 text-white font-medium'}>
                             <button
-                                onClick={searchGRNs}
+                                onClick={() => searchGRNs(1)}
                                 disabled={isSearching}
                                 className={`bg-linear-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 rounded-lg py-2 px-4 flex items-center justify-center gap-2 shadow-lg shadow-emerald-200 hover:shadow-xl transition-all ${isSearching ? 'opacity-50 cursor-not-allowed' : ''
                                     }`}

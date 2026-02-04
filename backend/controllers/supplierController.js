@@ -166,8 +166,16 @@ exports.addSupplier = catchAsync(async (req, res, next) => {
 });
 
 exports.getSuppliers = catchAsync(async (req, res, next) => {
-    const suppliers = await Supplier.getAllSuppliers();
-    res.status(200).json({ success: true, data: suppliers });
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    
+    const result = await Supplier.getAllSuppliers(page, limit);
+    
+    res.status(200).json({ 
+        success: true, 
+        data: result.data,
+        pagination: result.pagination
+    });
 });
 
 exports.getSupplierDropdownList = catchAsync(async (req, res, next) => {
