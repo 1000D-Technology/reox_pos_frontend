@@ -45,7 +45,9 @@ exports.getAllStockWithVariations = catchAsync(async (req, res, next) => {
             exp: item.exp,
             color: item.color,
             size: item.size,
-            storage: item.storage_capacity
+            storage: item.storage_capacity,
+            category: item.category,
+            brand: item.brand
         };
     });
 
@@ -78,7 +80,12 @@ exports.getStockList = catchAsync(async (req, res, next) => {
         MRP: typeof item.mrp === 'number' ? item.mrp.toFixed(2) : parseFloat(item.mrp).toFixed(2),
         Price: typeof item.selling_price === 'number' ? item.selling_price.toFixed(2) : parseFloat(item.selling_price).toFixed(2),
         supplier: item.supplier || 'N/A',
-        stockQty: item.stock_qty ? item.stock_qty.toString() : item.qty.toString()
+        stockQty: item.stock_qty ? item.stock_qty.toString() : item.qty.toString(),
+        category: item.category,
+        brand: item.brand,
+        mfd: item.mfd,
+        exp: item.exp,
+        batch_name: item.batch_name
     }));
 
     res.status(200).json({
@@ -128,7 +135,12 @@ exports.getSearchStock = catchAsync(async (req, res, next) => {
                 stockQty: item.stock_qty ? item.stock_qty.toString() : (item.qty || 0).toString(),
                 color: item.color,
                 size: item.size,
-                storage: item.storage_capacity
+                storage: item.storage_capacity,
+                category: item.category,
+                brand: item.brand,
+                mfd: item.mfd,
+                exp: item.exp,
+                batch_name: item.batch_name
             };
         });
 

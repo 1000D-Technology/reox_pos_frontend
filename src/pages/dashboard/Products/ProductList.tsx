@@ -25,6 +25,7 @@ import { brandService } from "../../../services/brandService";
 import { unitService } from "../../../services/unitService";
 import { productTypeService } from "../../../services/productTypeService";
 import { productService } from "../../../services/productService";
+import ExportModal from "../../../components/modals/ExportModal";
 
 
 interface Product {
@@ -89,6 +90,11 @@ function ProductList() {
     const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
     const [productToDeactivate, setProductToDeactivate] = useState<Product | null>(null);
     const [isDeactivating, setIsDeactivating] = useState(false);
+
+    // Export Modal State
+    const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+    const [exportType, setExportType] = useState<'excel' | 'csv' | 'pdf'>('excel');
+    const [isExporting, setIsExporting] = useState(false);
 
 
 
@@ -629,12 +635,12 @@ function ProductList() {
         }));
     };
 
-    const handleExportExcel = () => {
-        if (salesData.length === 0) {
+    const generateExcel = (data: Product[]) => {
+        if (data.length === 0) {
             toast.error('No data to export');
             return;
         }
-        const formattedData = formatDataForExport(salesData);
+        const formattedData = formatDataForExport(data);
         const ws = XLSX.utils.json_to_sheet(formattedData);
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "Products");
@@ -642,12 +648,12 @@ function ProductList() {
         toast.success('Exported to Excel successfully');
     };
 
-    const handleExportCSV = () => {
-        if (salesData.length === 0) {
+    const generateCSV = (data: Product[]) => {
+        if (data.length === 0) {
             toast.error('No data to export');
             return;
         }
-        const formattedData = formatDataForExport(salesData);
+        const formattedData = formatDataForExport(data);
         const ws = XLSX.utils.json_to_sheet(formattedData);
         const csv = XLSX.utils.sheet_to_csv(ws);
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -662,8 +668,8 @@ function ProductList() {
         toast.success('Exported to CSV successfully');
     };
 
-    const handleExportPDF = () => {
-        if (salesData.length === 0) {
+    const generatePDF = (data: Product[]) => {
+        if (data.length === 0) {
             toast.error('No data to export');
             return;
         }
@@ -682,7 +688,7 @@ function ProductList() {
             "Unit", "Type", "Color", "Size", "Storage", "Created On"
         ];
 
-        const tableRows = salesData.map(item => [
+        const tableRows = data.map(item => [
             item.productID,
             item.productName,
             item.productCode,
@@ -709,6 +715,55 @@ function ProductList() {
 
         doc.save("products_list.pdf");
         toast.success('Exported to PDF successfully');
+    };
+
+    const openExportModal = (type: 'excel' | 'csv' | 'pdf') => {
+        setExportType(type);
+        setIsExportModalOpen(true);
+    };
+
+    const handleExportConfirm = async (scope: 'all' | 'current') => {
+        setIsExporting(true);
+        try {
+            let dataToExport: Product[] = [];
+
+            if (scope === 'all') {
+                if (searchTerm || selected) {
+                     // If filtered, fetch fresh all data
+                    const response = await axiosInstance.get('/api/products');
+                    if (response.data.success) {
+                        dataToExport = response.data.data;
+                    } else {
+                         toast.error('Failed to fetch full product list');
+                         setIsExporting(false);
+                         return;
+                    }
+                } else {
+                    // Not filtered, salesData is already all
+                    dataToExport = salesData;
+                }
+            } else {
+                // Current table view (only visible rows)
+                dataToExport = currentPageData;
+            }
+
+            if (dataToExport.length === 0) {
+                toast.error('No data to export');
+                setIsExporting(false);
+                return;
+            }
+
+            if (exportType === 'excel') generateExcel(dataToExport);
+            if (exportType === 'csv') generateCSV(dataToExport);
+            if (exportType === 'pdf') generatePDF(dataToExport);
+
+            setIsExportModalOpen(false);
+        } catch (error) {
+            console.error('Export error:', error);
+            toast.error('An error occurred during export');
+        } finally {
+            setIsExporting(false);
+        }
     };
 
     return (
@@ -1355,21 +1410,21 @@ function ProductList() {
                     className="bg-white flex justify-center p-4 gap-4 rounded-xl shadow-lg"
                 >
                     <button
-                        onClick={handleExportExcel}
+                        onClick={() => openExportModal('excel')}
                         className="flex items-center gap-2 px-6 py-3 bg-linear-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-medium rounded-lg shadow-lg shadow-emerald-200 hover:shadow-xl transition-all"
                     >
                         <FileText size={20} />
                         Excel
                     </button>
                     <button
-                        onClick={handleExportCSV}
+                        onClick={() => openExportModal('csv')}
                         className="flex items-center gap-2 px-6 py-3 bg-linear-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-medium rounded-lg shadow-lg shadow-blue-200 hover:shadow-xl transition-all"
                     >
                         <FileText size={20} />
                         CSV
                     </button>
                     <button
-                        onClick={handleExportPDF}
+                        onClick={() => openExportModal('pdf')}
                         className="flex items-center gap-2 px-6 py-3 bg-linear-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-medium rounded-lg shadow-lg shadow-red-200 hover:shadow-xl transition-all"
                     >
                         <FileText size={20} />
@@ -1547,6 +1602,14 @@ function ProductList() {
                 confirmButtonText="Deactivate"
                 loadingText="Deactivating..."
                 isDanger={true}
+            />
+            <ExportModal
+                isOpen={isExportModalOpen}
+                onClose={() => setIsExportModalOpen(false)}
+                onExport={handleExportConfirm}
+                type={exportType}
+                isLoading={isExporting}
+                entityName="Products"
             />
         </>
     );
