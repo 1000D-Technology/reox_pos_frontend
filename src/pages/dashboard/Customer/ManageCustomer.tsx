@@ -67,11 +67,15 @@ function ManageCustomer() {
 
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage] = useState(10);
+    const [totalPages, setTotalPages] = useState(1);
+    const [totalRecords, setTotalRecords] = useState(0);
 
-    const totalPages = Math.ceil(filteredCustomers.length / itemsPerPage);
+    // For search results, slice the filtered data for client-side pagination
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
-    const currentCustomers = filteredCustomers.slice(startIndex, endIndex);
+    const currentCustomers = searchQuery.trim() 
+        ? filteredCustomers.slice(startIndex, endIndex)
+        : filteredCustomers;
 
     const customerData: Customer[] = currentCustomers.map((customer, index) => ({
         ...customer,
@@ -144,7 +148,7 @@ function ManageCustomer() {
         setCurrentPage(1);
 
         if (!query.trim()) {
-            setFilteredCustomers(customers);
+            loadCustomers(1);
             return;
         }
 
@@ -156,13 +160,15 @@ function ManageCustomer() {
         );
 
         setFilteredCustomers(filtered);
+        setTotalPages(Math.ceil(filtered.length / itemsPerPage));
+        setTotalRecords(filtered.length);
     };
 
-    // Load customers from API
-    const loadCustomers = async () => {
+    // Load customers from API with pagination
+    const loadCustomers = async (page: number = currentPage) => {
         try {
             setIsLoading(true);
-            const response = await customerService.getCustomers();
+            const response = await customerService.getCustomers(page, itemsPerPage);
 
             if (response.data.success) {
                 const mappedCustomers: Customer[] = response.data.data.map((customer: any) => ({
@@ -177,6 +183,18 @@ function ManageCustomer() {
 
                 setCustomers(mappedCustomers);
                 setFilteredCustomers(mappedCustomers);
+
+                // Handle pagination data with fallbacks
+                if (response.data.pagination) {
+                    setTotalPages(response.data.pagination.totalPages || 1);
+                    setTotalRecords(response.data.pagination.totalRecords || mappedCustomers.length);
+                    setCurrentPage(response.data.pagination.currentPage || 1);
+                } else {
+                    // Fallback if pagination data is missing
+                    setTotalPages(1);
+                    setTotalRecords(mappedCustomers.length);
+                    setCurrentPage(1);
+                }
             } else {
                 toast.error('Failed to load customers');
             }
@@ -189,7 +207,7 @@ function ManageCustomer() {
     };
 
     useEffect(() => {
-        loadCustomers();
+        loadCustomers(1);
         loadPaymentMethods();
     }, []);
 
@@ -511,8 +529,14 @@ function ManageCustomer() {
 
     const goToPage = (page: number) => {
         if (page >= 1 && page <= totalPages) {
-            setCurrentPage(page);
             setSelectedIndex(0);
+            if (searchQuery.trim()) {
+                // Client-side pagination for search results
+                setCurrentPage(page);
+            } else {
+                // Server-side pagination for full list
+                loadCustomers(page);
+            }
         }
     };
 
@@ -779,8 +803,8 @@ function ManageCustomer() {
 
                     <nav className="bg-white flex items-center justify-between sm:px-6 pt-4 border-t-2 border-gray-100">
                         <div className="text-sm text-gray-600">
-                            Showing <span className="font-bold text-gray-800">{customerData.length === 0 ? 0 : startIndex + 1}-{Math.min(endIndex, filteredCustomers.length)}</span> of{' '}
-                            <span className="font-bold text-gray-800">{filteredCustomers.length}</span> customers
+                            Showing <span className="font-bold text-gray-800">{customerData.length === 0 ? 0 : ((currentPage - 1) * itemsPerPage) + 1}-{searchQuery.trim() ? Math.min(currentPage * itemsPerPage, filteredCustomers.length) : Math.min(currentPage * itemsPerPage, totalRecords)}</span> of{' '}
+                            <span className="font-bold text-gray-800">{searchQuery.trim() ? filteredCustomers.length : totalRecords}</span> customers
                         </div>
                         <div className="flex items-center space-x-2">
                             <button
