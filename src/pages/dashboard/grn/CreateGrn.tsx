@@ -116,6 +116,14 @@ function CreateGrn() {
     // Add item to GRN
     const addToGrn = () => {
         try {
+            if (!selectedSupplier) {
+                toast.error('Please select a supplier first');
+                return;
+            }
+            if (!batchNumber || batchNumber.trim() === '') {
+                toast.error('Batch number is required');
+                return;
+            }
             if (!selectedProduct) {
                 toast.error('Please select a product');
                 return;

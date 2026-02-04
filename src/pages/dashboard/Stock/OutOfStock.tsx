@@ -75,14 +75,29 @@ function OutOfStock() {
     const [stockData, setStockData] = useState<any[]>([]);
     const [isLoadingStock, setIsLoadingStock] = useState(false);
 
+    // Pagination state
+    const [pagination, setPagination] = useState({
+        currentPage: 1,
+        itemsPerPage: 10,
+        totalItems: 0,
+        totalPages: 0,
+        hasNextPage: false,
+        hasPrevPage: false
+    });
+
     // Load out-of-stock data
-    const loadOutOfStockData = async () => {
+    const loadOutOfStockData = async (page: number = 1, limit: number = 10) => {
         setIsLoadingStock(true);
         try {
-            const response = await stockService.getOutOfStockList();
+            const response = await stockService.getOutOfStockList(page, limit);
             if (response.data?.success) {
                 setStockData(response.data.data);
-                setOutOfStockCount(response.data.count || response.data.data.length);
+                setOutOfStockCount(response.data.pagination?.totalItems || response.data.data.length);
+                
+                // Update pagination metadata
+                if (response.data.pagination) {
+                    setPagination(response.data.pagination);
+                }
             } else {
                 toast.error('Failed to load out-of-stock data');
             }
@@ -177,12 +192,17 @@ function OutOfStock() {
         try {
             // If no filters selected, load all data
             if (!selectedProduct && !selectedCategory && !selectedSupplier) {
-                const response = await stockService.getOutOfStockList();
+                const response = await stockService.getOutOfStockList(1, pagination.itemsPerPage);
                 if (response.data?.success) {
                     setStockData(response.data.data);
-                    setCurrentPage(1);
                     setSelectedIndex(0);
-                    const count = response.data.count || response.data.data.length;
+                    
+                    // Update pagination metadata
+                    if (response.data.pagination) {
+                        setPagination(response.data.pagination);
+                    }
+                    
+                    const count = response.data.pagination?.totalItems || response.data.data.length;
                     toast.success(`Found ${count} out-of-stock items`);
                 } else {
                     toast.error('Failed to load out-of-stock data');
@@ -195,14 +215,19 @@ function OutOfStock() {
                     supplier: selectedSupplier || undefined
                 };
 
-                const response = await stockService.searchOutOfStock(filters);
+                const response = await stockService.searchOutOfStock(filters, 1, pagination.itemsPerPage);
                 console.log(response);
 
                 if (response.data?.success) {
                     setStockData(response.data.data || []);
-                    setCurrentPage(1);
                     setSelectedIndex(0);
-                    const count = response.data.count || response.data.data.length;
+                    
+                    // Update pagination metadata
+                    if (response.data.pagination) {
+                        setPagination(response.data.pagination);
+                    }
+                    
+                    const count = response.data.pagination?.totalItems || response.data.data.length;
                     toast.success(`Found ${count} out-of-stock items`);
                 } else {
                     toast.error('Search failed');
@@ -223,8 +248,7 @@ function OutOfStock() {
         setSelectedProduct(null);
         setSelectedCategory(null);
         setSelectedSupplier(null);
-        setCurrentPage(1);
-        loadOutOfStockData();
+        loadOutOfStockData(1, pagination.itemsPerPage);
         toast.success('Filters cleared');
     };
 
@@ -364,13 +388,6 @@ function OutOfStock() {
     };
 
     const [selectedIndex, setSelectedIndex] = useState(0);
-    const [currentPage, setCurrentPage] = useState(1);
-    const [itemsPerPage] = useState(10);
-
-    const totalPages = Math.ceil(stockData.length / itemsPerPage);
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    const currentStockData = stockData.slice(startIndex, endIndex);
 
     useEffect(() => {
         loadDropdownData();
@@ -397,18 +414,18 @@ function OutOfStock() {
 
             if (e.key === "ArrowDown") {
                 e.preventDefault();
-                setSelectedIndex((prev) => (prev < currentStockData.length - 1 ? prev + 1 : prev));
+                setSelectedIndex((prev) => (prev < stockData.length - 1 ? prev + 1 : prev));
             } else if (e.key === "ArrowUp") {
                 e.preventDefault();
                 setSelectedIndex((prev) => (prev > 0 ? prev - 1 : prev));
             } else if (e.key === "PageDown") {
                 e.preventDefault();
-                if (currentPage < totalPages) {
+                if (pagination.hasNextPage) {
                     goToNextPage();
                 }
             } else if (e.key === "PageUp") {
                 e.preventDefault();
-                if (currentPage > 1) {
+                if (pagination.hasPrevPage) {
                     goToPreviousPage();
                 }
             } else if (e.key === "Home") {
@@ -416,10 +433,10 @@ function OutOfStock() {
                 setSelectedIndex(0);
             } else if (e.key === "End") {
                 e.preventDefault();
-                setSelectedIndex(currentStockData.length - 1);
-            } else if (e.key === "Enter" && currentStockData.length > 0) {
+                setSelectedIndex(stockData.length - 1);
+            } else if (e.key === "Enter" && stockData.length > 0) {
                 e.preventDefault();
-                const selectedItem = currentStockData[selectedIndex];
+                const selectedItem = stockData[selectedIndex];
                 if (selectedItem) {
                     toast.success(`Selected: ${selectedItem.productName} (ID: ${selectedItem.productID})`);
                 }
@@ -431,55 +448,47 @@ function OutOfStock() {
 
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [currentStockData.length, selectedIndex, currentStockData, currentPage, totalPages]);
+    }, [stockData.length, selectedIndex, stockData, pagination]);
 
     const goToPage = (page: number) => {
-        if (page >= 1 && page <= totalPages) {
-            setCurrentPage(page);
+        if (page >= 1 && page <= pagination.totalPages) {
+            loadOutOfStockData(page, pagination.itemsPerPage);
             setSelectedIndex(0);
         }
     };
 
     const goToPreviousPage = () => {
-        if (currentPage > 1) {
-            setCurrentPage(currentPage - 1);
-            setSelectedIndex(0);
+        if (pagination.hasPrevPage) {
+            goToPage(pagination.currentPage - 1);
         }
     };
 
     const goToNextPage = () => {
-        if (currentPage < totalPages) {
-            setCurrentPage(currentPage + 1);
-            setSelectedIndex(0);
+        if (pagination.hasNextPage) {
+            goToPage(pagination.currentPage + 1);
         }
     };
 
     const getPageNumbers = () => {
         const pages: (number | string)[] = [];
         const maxPagesToShow = 5;
-
-        if (totalPages <= maxPagesToShow) {
-            for (let i = 1; i <= totalPages; i++) {
-                pages.push(i);
-            }
-        } else {
-            if (currentPage <= 3) {
-                for (let i = 1; i <= 4; i++) pages.push(i);
-                pages.push('...');
-                pages.push(totalPages);
-            } else if (currentPage >= totalPages - 2) {
-                pages.push(1);
-                pages.push('...');
-                for (let i = totalPages - 3; i <= totalPages; i++) pages.push(i);
-            } else {
-                pages.push(1);
-                pages.push('...');
-                for (let i = currentPage - 1; i <= currentPage + 1; i++) pages.push(i);
-                pages.push('...');
-                pages.push(totalPages);
-            }
+        const halfRange = Math.floor(maxPagesToShow / 2);
+        
+        let startPage = Math.max(1, pagination.currentPage - halfRange);
+        let endPage = Math.min(pagination.totalPages, pagination.currentPage + halfRange);
+        
+        // Adjust if we're near the start or end
+        if (pagination.currentPage <= halfRange) {
+            endPage = Math.min(maxPagesToShow, pagination.totalPages);
         }
-
+        if (pagination.currentPage + halfRange >= pagination.totalPages) {
+            startPage = Math.max(1, pagination.totalPages - maxPagesToShow + 1);
+        }
+        
+        for (let i = startPage; i <= endPage; i++) {
+            pages.push(i);
+        }
+        
         return pages;
     };
 
@@ -637,16 +646,16 @@ function OutOfStock() {
                                             Loading out-of-stock items...
                                         </td>
                                     </tr>
-                                ) : currentStockData.length === 0 ? (
+                                ) : stockData.length === 0 ? (
                                     <tr>
                                         <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
                                             No out of stock items found
                                         </td>
                                     </tr>
                                 ) : (
-                                    currentStockData.map((item, index) => (
+                                    stockData.map((item, index) => (
                                         <tr
-                                            key={`${item.productID}-${currentPage}-${index}`}
+                                            key={`${item.productID}-${pagination.currentPage}-${index}`}
                                             onClick={() => setSelectedIndex(index)}
                                             className={`cursor-pointer transition-all ${selectedIndex === index
                                                 ? 'bg-red-50 border-l-4 border-l-red-500'
@@ -689,15 +698,15 @@ function OutOfStock() {
 
                     <nav className="bg-white flex items-center justify-between sm:px-6 pt-4 border-t-2 border-gray-100">
                         <div className="text-sm text-gray-600">
-                            Showing <span className="font-semibold text-gray-800">{startIndex + 1}</span> to{' '}
-                            <span className="font-semibold text-gray-800">{Math.min(endIndex, stockData.length)}</span> of{' '}
-                            <span className="font-semibold text-gray-800">{stockData.length}</span> results
+                            Showing <span className="font-semibold text-gray-800">{pagination.totalItems > 0 ? (pagination.currentPage - 1) * pagination.itemsPerPage + 1 : 0}</span> to{' '}
+                            <span className="font-semibold text-gray-800">{Math.min(pagination.currentPage * pagination.itemsPerPage, pagination.totalItems)}</span> of{' '}
+                            <span className="font-semibold text-gray-800">{pagination.totalItems}</span> results
                         </div>
                         <div className="flex items-center space-x-2">
                             <button
                                 onClick={goToPreviousPage}
-                                disabled={currentPage === 1}
-                                className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${currentPage === 1
+                                disabled={!pagination.hasPrevPage}
+                                className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${!pagination.hasPrevPage
                                     ? 'text-gray-400 cursor-not-allowed'
                                     : 'text-gray-600 hover:text-red-600 hover:bg-red-50'
                                     }`}
@@ -706,28 +715,22 @@ function OutOfStock() {
                             </button>
 
                             {getPageNumbers().map((page, index) =>
-                                typeof page === 'number' ? (
-                                    <button
-                                        key={index}
-                                        onClick={() => goToPage(page)}
-                                        className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${currentPage === page
-                                            ? 'bg-gradient-to-r from-red-500 to-red-600 text-white shadow-md'
-                                            : 'text-gray-600 hover:bg-red-50 hover:text-red-600'
-                                            }`}
-                                    >
-                                        {page}
-                                    </button>
-                                ) : (
-                                    <span key={index} className="text-gray-400 px-2">
-                                        {page}
-                                    </span>
-                                )
+                                <button
+                                    key={index}
+                                    onClick={() => goToPage(Number(page))}
+                                    className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${pagination.currentPage === Number(page)
+                                        ? 'bg-gradient-to-r from-red-500 to-red-600 text-white shadow-md'
+                                        : 'text-gray-600 hover:bg-red-50 hover:text-red-600'
+                                        }`}
+                                >
+                                    {page}
+                                </button>
                             )}
 
                             <button
                                 onClick={goToNextPage}
-                                disabled={currentPage === totalPages}
-                                className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${currentPage === totalPages
+                                disabled={!pagination.hasNextPage}
+                                className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${!pagination.hasNextPage
                                     ? 'text-gray-400 cursor-not-allowed'
                                     : 'text-gray-600 hover:text-red-600 hover:bg-red-50'
                                     }`}
