@@ -90,40 +90,57 @@ class GRN {
         };
     }
 
-    static async getAllGRNs() {
-        const grns = await prisma.grn.findMany({
-            include: {
-                supplier: {
-                    select: {
-                        id: true,
-                        supplier_name: true
+    static async getAllGRNs(page = 1, limit = 10) {
+        const skip = (page - 1) * limit;
+
+        // Run count and findMany in parallel for better performance
+        const [totalCount, grns] = await Promise.all([
+            prisma.grn.count(),
+            prisma.grn.findMany({
+                skip: skip,
+                take: limit,
+                include: {
+                    supplier: {
+                        select: {
+                            id: true,
+                            supplier_name: true
+                        }
+                    },
+                    status: {
+                        select: {
+                            ststus: true
+                        }
                     }
                 },
-                status: {
-                    select: {
-                        ststus: true
-                    }
+                orderBy: {
+                    id: 'desc'
                 }
-            },
-            orderBy: {
-                id: 'desc'
-            }
-        });
+            })
+        ]);
 
-        return grns.map(g => ({
-            id: g.id,
-            supplierName: g.supplier.supplier_name,
-            supplierId: g.supplier.id,
-            billNumber: g.bill_number,
-            totalAmount: g.total,
-            paidAmount: g.paid_amount,
-            balanceAmount: g.balance,
-            grnDate: this.formatDateTime(g.create_at),
-            statusName: g.status.ststus
-        }));
+        return {
+            data: grns.map(g => ({
+                id: g.id,
+                supplierName: g.supplier.supplier_name,
+                supplierId: g.supplier.id,
+                billNumber: g.bill_number,
+                totalAmount: g.total,
+                paidAmount: g.paid_amount,
+                balanceAmount: g.balance,
+                grnDate: this.formatDateTime(g.create_at),
+                statusName: g.status.ststus
+            })),
+            pagination: {
+                currentPage: page,
+                totalPages: Math.ceil(totalCount / limit),
+                totalRecords: totalCount,
+                recordsPerPage: limit
+            }
+        };
     }
 
-    static async searchGRNs(filters) {
+    static async searchGRNs(filters, page = 1, limit = 10) {
+        const skip = (page - 1) * limit;
         const whereClause = {};
 
         if (filters.supplierName) {
@@ -141,43 +158,62 @@ class GRN {
         }
 
         if (filters.fromDate && filters.toDate) {
+            const endDate = new Date(filters.toDate);
+            endDate.setHours(23, 59, 59, 999);
+            
             whereClause.create_at = {
                 gte: new Date(filters.fromDate),
-                lte: new Date(filters.toDate + 'T23:59:59')
+                lte: endDate
             };
         }
 
-        const grns = await prisma.grn.findMany({
-            where: whereClause,
-            include: {
-                supplier: {
-                    select: {
-                        id: true,
-                        supplier_name: true
+        // Run count and findMany in parallel for better performance
+        const [totalCount, grns] = await Promise.all([
+            prisma.grn.count({
+                where: whereClause
+            }),
+            prisma.grn.findMany({
+                where: whereClause,
+                skip: skip,
+                take: limit,
+                include: {
+                    supplier: {
+                        select: {
+                            id: true,
+                            supplier_name: true
+                        }
+                    },
+                    status: {
+                        select: {
+                            ststus: true
+                        }
                     }
                 },
-                status: {
-                    select: {
-                        ststus: true
-                    }
+                orderBy: {
+                    id: 'desc'
                 }
-            },
-            orderBy: {
-                id: 'desc'
-            }
-        });
+            })
+        ]);
 
-        return grns.map(g => ({
-            id: g.id,
-            supplierName: g.supplier.supplier_name,
-            supplierId: g.supplier.id,
-            billNumber: g.bill_number,
-            totalAmount: g.total,
-            paidAmount: g.paid_amount,
-            balanceAmount: g.balance,
-            grnDate: this.formatDateTime(g.create_at),
-            statusName: g.status.ststus
-        }));
+        return {
+            data: grns.map(g => ({
+                id: g.id,
+                supplierName: g.supplier.supplier_name,
+                supplierId: g.supplier.id,
+                billNumber: g.bill_number,
+                totalAmount: g.total,
+                paidAmount: g.paid_amount,
+                balanceAmount: g.balance,
+                grnDate: this.formatDateTime(g.create_at),
+                statusName: g.status.ststus
+            })),
+            pagination: {
+                currentPage: page,
+                totalPages: Math.ceil(totalCount / limit),
+                totalRecords: totalCount,
+                recordsPerPage: limit
+            }
+        };
     }
 
     // Fetch Bill Numbers for a specific supplier with active status
