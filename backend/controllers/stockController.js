@@ -33,6 +33,7 @@ exports.getAllStockWithVariations = catchAsync(async (req, res, next) => {
             productName: item.full_product_name,
             barcode: item.barcode || 'N/A',
             unit: item.unit,
+            unit_conversion: item.unit_conversion,
             isBulk: isBulk,
             costPrice: parseFloat(item.cost_price || 0).toFixed(2),
             MRP: parseFloat(item.mrp || 0).toFixed(2),

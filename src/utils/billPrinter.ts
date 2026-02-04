@@ -64,6 +64,7 @@ const translations: { [key: string]: { [key: string]: string } } = {
         cash: "Cash",
         card: "Card",
         credit: "Credit",
+        bank: "Bank Deposit",
         paid: "Paid",
         oldDebt: "Old Outstanding Debt",
         debtReduction: "Debt Reduced By",
@@ -94,6 +95,7 @@ const translations: { [key: string]: { [key: string]: string } } = {
         cash: "මුදල්",
         card: "කාඩ්පත",
         credit: "ණය",
+        bank: "බැංකු තැන්පතු",
         paid: "ගෙවූ මුදල",
         oldDebt: "පැරණි ණය ශේෂය",
         debtReduction: "ණය අඩු කිරීම",
@@ -110,6 +112,10 @@ interface CartItem {
     quantity: number;
     discount: number;
     category?: string;
+    unit_conversion?: {
+        factor: number;
+        subUnit: string;
+    } | null;
 }
 
 interface Customer {
@@ -199,13 +205,30 @@ export const generateBillHTML = (data: BillData): string => {
         const itemDiscountVal = (itemTotal * item.discount) / 100;
         const finalItemTotal = itemTotal - itemDiscountVal;
         
+        // Sub-unit display logic
+        let displayQty = item.quantity.toString();
+        let displayUnit = item.category || '';
+
+        // Check if quantity is decimal, less than 1, and unit conversion is available
+        if (item.quantity < 1 && item.quantity % 1 !== 0 && item.unit_conversion) {
+             const factor = item.unit_conversion.factor;
+             const subUnitName = item.unit_conversion.subUnit;
+             const totalSubUnits = item.quantity * factor;
+             
+             // Check if it's close to integer (e.g. 0.5 Box = 6 Pieces)
+             if (Math.abs(Math.round(totalSubUnits) - totalSubUnits) < 0.01) {
+                  displayQty = Math.round(totalSubUnits).toString();
+                  displayUnit = subUnitName;
+             }
+        }
+
         return `
             <tr>
                 <td class="item-name">
                     ${item.name.replace(/ - (N\/A|NA|N\.A\.|None|Default|Not Applicable)/gi, '')}
                     ${item.discount > 0 ? `<div class="item-discount">Desc: ${item.discount}%</div>` : ''}
                 </td>
-                <td class="text-right">${item.quantity} <span style="font-size: 12px; font-weight: normal;">${item.category || ''}</span></td>
+                <td class="text-right">${displayQty} <span style="font-size: 12px; font-weight: normal;">${displayUnit}</span></td>
                 <td class="text-right">${item.price.toFixed(2)}</td>
                 <td class="text-right">${finalItemTotal.toFixed(2)}</td>
             </tr>
@@ -281,7 +304,7 @@ export const generateBillHTML = (data: BillData): string => {
             .filter(p => p.amount > 0)
             .map(p => `
                 <div class="summary-row">
-                    <span>${t('paid')} (${p.methodId === 'cash' ? t('cash') : p.methodId === 'card' ? t('card') : t('credit')}):</span>
+                    <span>${t('paid')} (${p.methodId === 'cash' ? t('cash') : p.methodId === 'card' ? t('card') : p.methodId === 'bank' ? t('bank') : t('credit')}):</span>
                     <span>${p.amount.toFixed(2)}</span>
                 </div>
             `).join('');

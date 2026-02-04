@@ -74,6 +74,7 @@ export const ProductAddModal = ({
     };
 
     const unitConfig = getUnitConfig(currentUnitStr, product?.isBulk || false);
+    const isDecimalAllowed = !!unitConfig || unitConversions.length > 0;
 
     // Fetch unit conversions when product changes
     useEffect(() => {
@@ -375,6 +376,11 @@ export const ProductAddModal = ({
                                             <input
                                                 type="number"
                                                 value={quantity}
+                                                onKeyDown={(e) => {
+                                                    if (!isDecimalAllowed && (e.key === '.' || e.key === ',')) {
+                                                        e.preventDefault();
+                                                    }
+                                                }}
                                                 onChange={(e) => {
                                                     const val = e.target.value;
                                                     setSubUnitValue(''); // Clear sub-unit when manual qty change
@@ -382,6 +388,11 @@ export const ProductAddModal = ({
                                                         setQuantity('');
                                                         return;
                                                     }
+
+                                                    if (!isDecimalAllowed && (val.includes('.') || val.includes(','))) {
+                                                        return;
+                                                    }
+
                                                     const numVal = Number(val);
                                                     if (numVal > product.stock) {
                                                         setQuantity(product.stock);
@@ -389,7 +400,7 @@ export const ProductAddModal = ({
                                                         setQuantity(numVal);
                                                     }
                                                 }}
-                                                step="any"
+                                                step={isDecimalAllowed ? "any" : "1"}
                                                 autoFocus
                                                 onFocus={(e) => e.target.select()}
                                                 className="w-full text-center text-2xl font-black py-2.5 bg-gray-50 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-emerald-500 focus:bg-white transition-all shadow-inner tabular-nums"

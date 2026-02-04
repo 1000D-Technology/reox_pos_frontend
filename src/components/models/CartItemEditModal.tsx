@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { X, Plus, Minus, Percent, DollarSign, Calculator, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { unitConversionService, type UnitConversion } from '../../services/unitConversionService';
 import type { CartItem } from '../../types';
 
 interface CartItemEditModalProps {
@@ -31,8 +32,11 @@ export const CartItemEditModal = ({
     const [discountType, setDiscountType] = useState<'percentage' | 'price'>('percentage');
     const [subUnitValue, setSubUnitValue] = useState<number | string>('');
 
+    const [unitConversions, setUnitConversions] = useState<UnitConversion[]>([]);
+    
     const currentUnitStr = (item?.category || '').toLowerCase().trim();
     
+    // Logic from ProductAddModal
     const getUnitConfig = (unit: string, isBulkItem: boolean) => {
         const u = unit.toLowerCase().trim();
         // Weights: KG, Grams, Kilo, etc.
@@ -52,6 +56,32 @@ export const CartItemEditModal = ({
     };
 
     const unitConfig = getUnitConfig(currentUnitStr, item?.isBulk || false);
+    const isDecimalAllowed = !!unitConfig || unitConversions.length > 0;
+
+    // Fetch unit conversions when item changes
+    useEffect(() => {
+        const fetchUnitConversions = async () => {
+             // Need unitId on CartItem type (added previously)
+             if (!item?.unitId) {
+                setUnitConversions([]);
+                return;
+            }
+
+            try {
+                const response = await unitConversionService.getConversionsForUnit(item.unitId);
+                if (response.data?.success) {
+                    setUnitConversions(response.data.data || []);
+                }
+            } catch (error) {
+                console.error('Error fetching unit conversions for edit:', error);
+                setUnitConversions([]);
+            }
+        };
+
+        if (isOpen && item) {
+            fetchUnitConversions();
+        }
+    }, [isOpen, item?.unitId]);
 
     useEffect(() => {
         if (item) {
@@ -60,6 +90,7 @@ export const CartItemEditModal = ({
             setDiscount((item.discount || 0));
             const type = item.discountType === 'fixed' || item.discountType === 'price' ? 'price' : 'percentage';
             setDiscountType(type);
+            setSubUnitValue('');
         }
     }, [item, isOpen]);
 
@@ -257,6 +288,11 @@ export const CartItemEditModal = ({
                                             <input
                                                 type="number"
                                                 value={quantity}
+                                                onKeyDown={(e) => {
+                                                    if (!isDecimalAllowed && (e.key === '.' || e.key === ',')) {
+                                                        e.preventDefault();
+                                                    }
+                                                }}
                                                 onChange={(e) => {
                                                     const val = e.target.value;
                                                     setSubUnitValue(''); // Clear sub-unit when manual qty change
@@ -264,6 +300,11 @@ export const CartItemEditModal = ({
                                                         setQuantity('');
                                                         return;
                                                     }
+                                                    
+                                                    if (!isDecimalAllowed && (val.includes('.') || val.includes(','))) {
+                                                        return;
+                                                    }
+
                                                     const numVal = Number(val);
                                                     if (numVal > item.stock) {
                                                         setQuantity(item.stock);
@@ -271,7 +312,7 @@ export const CartItemEditModal = ({
                                                         setQuantity(numVal);
                                                     }
                                                 }}
-                                                step="any"
+                                                step={isDecimalAllowed ? "any" : "1"}
                                                 className="w-full text-center text-2xl font-black py-2.5 bg-gray-50 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-emerald-500 focus:bg-white transition-all shadow-inner tabular-nums"
                                                 min={0}
                                                 max={item.stock}

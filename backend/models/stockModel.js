@@ -18,7 +18,15 @@ class Stock {
                     include: {
                         product: {
                             include: {
-                                unit_id_product_unit_idTounit_id: true,
+                                unit_id_product_unit_idTounit_id: {
+                                    include: {
+                                        unit_conversions_as_parent: {
+                                            include: {
+                                                child_unit: true
+                                            }
+                                        }
+                                    }
+                                },
                                 category: true,
                                 brand: true
                             }
@@ -80,6 +88,10 @@ class Stock {
                 storage_capacity: pv.storage_capacity,
                 full_product_name: fullProductName,
                 unit: p.unit_id_product_unit_idTounit_id?.name,
+                unit_conversion: p.unit_id_product_unit_idTounit_id?.unit_conversions_as_parent?.[0] ? {
+                    factor: p.unit_id_product_unit_idTounit_id.unit_conversions_as_parent[0].conversion_factor,
+                    subUnit: p.unit_id_product_unit_idTounit_id.unit_conversions_as_parent[0].child_unit.name
+                } : null,
                 category: p.category?.name,
                 brand: p.brand?.name,
                 batch_name: s.batch?.batch_name,
