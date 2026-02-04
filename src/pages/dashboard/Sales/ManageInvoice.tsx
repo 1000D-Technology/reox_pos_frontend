@@ -163,7 +163,9 @@ function ManageInvoice() {
                         name: item.name,
                         price: item.price,
                         quantity: item.quantity,
-                        discount: 0
+                        discount: 0,
+                        category: item.category,
+                        isBulk: item.isBulk
                     })),
                     subtotal: invoice.subTotal || invoice.total, 
                     discount: invoice.discount || 0,
@@ -674,16 +676,39 @@ function ManageInvoice() {
                                                     </tr>
                                                 </thead>
                                                 <tbody className="bg-white divide-y divide-gray-100">
-                                                    {selectedInvoiceDetails.items && selectedInvoiceDetails.items.map((item: any, index: number) => (
-                                                        <tr key={index} className="hover:bg-gray-50/50 transition-colors">
-                                                            <td className="px-4 py-2.5 text-sm font-medium text-gray-800">{item.name}</td>
-                                                            <td className="px-4 py-2.5 text-sm text-right text-gray-500 font-mono">{formatCurrency(item.price)}</td>
-                                                            <td className="px-4 py-2.5 text-sm text-center text-gray-700 font-bold">{item.quantity}</td>
-                                                            <td className="px-4 py-2.5 text-sm font-black text-right text-emerald-600">
-                                                                {formatCurrency(item.price * item.quantity)}
-                                                            </td>
-                                                        </tr>
-                                                    ))}
+                                                    {selectedInvoiceDetails.items && selectedInvoiceDetails.items.map((item: any, index: number) => {
+                                                        const getUnitConfig = (unit: string, isBulkItem: boolean) => {
+                                                            const u = unit.toLowerCase().trim();
+                                                            if (u.includes('kg') || u.includes('kilo') || u.includes('gram') || u.includes('weight') || (isBulkItem && (u === '' || u === 'pcs'))) 
+                                                                return { subLabel: 'g', factor: 1000 };
+                                                            if (u === 'l' || u.includes('ltr') || u.includes('liter') || u.includes('litre') || u.includes('vol') || u.includes('ml')) 
+                                                                return { subLabel: 'ml', factor: 1000 };
+                                                            if (u === 'm' || (u.includes('meter') && !u.includes('centi')) || u.includes('metre') || u.includes('cm')) 
+                                                                return { subLabel: 'cm', factor: 100 };
+                                                            if (isBulkItem) return { subLabel: 'Units', factor: 1000 };
+                                                            return null;
+                                                        };
+
+                                                        let displayQty = item.quantity.toString();
+                                                        let displayUnit = item.category || '';
+                                                        const unitConfig = getUnitConfig(displayUnit, item.isBulk || false);
+
+                                                        if (unitConfig && item.quantity < 1) {
+                                                            displayQty = Math.round(item.quantity * unitConfig.factor).toString();
+                                                            displayUnit = unitConfig.subLabel;
+                                                        }
+
+                                                        return (
+                                                            <tr key={index} className="hover:bg-gray-50/50 transition-colors">
+                                                                <td className="px-4 py-2.5 text-sm font-medium text-gray-800">{item.name}</td>
+                                                                <td className="px-4 py-2.5 text-sm text-right text-gray-500 font-mono">{formatCurrency(item.price)}</td>
+                                                                <td className="px-4 py-2.5 text-sm text-center text-gray-700 font-bold">{displayQty} <span className="text-[10px] text-gray-400 font-normal">{displayUnit}</span></td>
+                                                                <td className="px-4 py-2.5 text-sm font-black text-right text-emerald-600">
+                                                                    {formatCurrency(item.price * item.quantity)}
+                                                                </td>
+                                                            </tr>
+                                                        );
+                                                    })}
                                                 </tbody>
                                             </table>
                                         </div>

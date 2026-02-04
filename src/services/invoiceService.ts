@@ -71,6 +71,8 @@ export interface InvoiceDetail {
         price: number;
         costPrice?: number;
         quantity: number;
+        category?: string;
+        isBulk?: boolean;
         returnedQuantity: number;
         returnQuantity: number;
     }>;

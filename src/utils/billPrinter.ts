@@ -112,10 +112,7 @@ interface CartItem {
     quantity: number;
     discount: number;
     category?: string;
-    unit_conversion?: {
-        factor: number;
-        subUnit: string;
-    } | null;
+    isBulk?: boolean;
 }
 
 interface Customer {
@@ -199,27 +196,47 @@ export const generateBillHTML = (data: BillData): string => {
     const hours12 = parseInt(hours) % 12 || 12;
     const timeStr = `${hours12}:${minutes}:${seconds} ${ampm}`;
 
+    const getUnitConfig = (unit: string, isBulkItem: boolean) => {
+        const u = unit.toLowerCase().trim();
+        // Weights: KG, Grams, Kilo, etc.
+        if (u.includes('kg') || u.includes('kilo') || u.includes('gram') || u.includes('weight') || (isBulkItem && (u === '' || u === 'pcs'))) 
+            return { label: 'Weight', subLabel: 'g', factor: 1000 };
+        // Volumes: L, ML, Liter, litre, etc.
+        if (u === 'l' || u.includes('ltr') || u.includes('liter') || u.includes('litre') || u.includes('vol') || u.includes('ml')) 
+            return { label: 'Volume', subLabel: 'ml', factor: 1000 };
+        // Lengths: M, CM, Meter, metre, etc.
+        if (u === 'm' || (u.includes('meter') && !u.includes('centi')) || u.includes('metre') || u.includes('cm')) 
+            return { label: 'Length', subLabel: 'cm', factor: 100 };
+        
+        // Final fallback for bulk items
+        if (isBulkItem) return { label: 'Bulk', subLabel: 'Units', factor: 1000 };
+        
+        return null;
+    };
+
     // Generate items rows
     const itemsRows = items.map(item => {
         const itemTotal = item.price * item.quantity;
         const itemDiscountVal = (itemTotal * item.discount) / 100;
         const finalItemTotal = itemTotal - itemDiscountVal;
         
-        // Sub-unit display logic
+        // Quantity display logic
         let displayQty = item.quantity.toString();
         let displayUnit = item.category || '';
 
-        // Check if quantity is decimal, less than 1, and unit conversion is available
-        if (item.quantity < 1 && item.quantity % 1 !== 0 && item.unit_conversion) {
-             const factor = item.unit_conversion.factor;
-             const subUnitName = item.unit_conversion.subUnit;
-             const totalSubUnits = item.quantity * factor;
-             
-             // Check if it's close to integer (e.g. 0.5 Box = 6 Pieces)
-             if (Math.abs(Math.round(totalSubUnits) - totalSubUnits) < 0.01) {
-                  displayQty = Math.round(totalSubUnits).toString();
-                  displayUnit = subUnitName;
-             }
+        const unitConfig = getUnitConfig(displayUnit, item.isBulk || false);
+
+        if (unitConfig) {
+            if (item.quantity < 1) {
+                // If less than 1, show in sub unit (e.g. 500g instead of 0.5kg)
+                // This satisfies "not as decimal" for quantities < 1
+                displayQty = Math.round(item.quantity * unitConfig.factor).toString();
+                displayUnit = unitConfig.subLabel;
+            } else {
+                // If 1 or more, show in main unit
+                // This satisfies "over than 1 show in main unit type"
+                displayQty = item.quantity.toString();
+            }
         }
 
         return `
@@ -228,7 +245,7 @@ export const generateBillHTML = (data: BillData): string => {
                     ${item.name.replace(/ - (N\/A|NA|N\.A\.|None|Default|Not Applicable)/gi, '')}
                     ${item.discount > 0 ? `<div class="item-discount">Desc: ${item.discount}%</div>` : ''}
                 </td>
-                <td class="text-right">${displayQty} <span style="font-size: 12px; font-weight: normal;">${displayUnit}</span></td>
+                <td class="text-right">${displayQty} <span style="font-size: 14px; font-weight: 800;">${displayUnit}</span></td>
                 <td class="text-right">${item.price.toFixed(2)}</td>
                 <td class="text-right">${finalItemTotal.toFixed(2)}</td>
             </tr>

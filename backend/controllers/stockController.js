@@ -278,7 +278,7 @@ exports.getLowStockList = catchAsync(async (req, res, next) => {
         let statusLabel = item.available_qty <= 5 ? 'Critical' : 'Low';
 
         return {
-            productID: item.product_id_code,
+            productID: item.pvId,
             productName: item.product_name,
             unit: item.unit,
             costPrice: item.cost_price,
@@ -311,7 +311,7 @@ exports.getFilteredLowStock = catchAsync(async (req, res, next) => {
 
     //Formats data to match the UI table requirements
     const tableData = result.data.map(item => ({
-        productID: item.product_id_code,
+        productID: item.pvId,
         productName: item.product_name,
         unit: item.unit,
         discount: "LKR 0.00", 

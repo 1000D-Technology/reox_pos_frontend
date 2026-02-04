@@ -32,15 +32,7 @@ class POS {
                     include: {
                         product: {
                             include: {
-                                unit_id_product_unit_idTounit_id: {
-                                    include: {
-                                        unit_conversions_as_parent: {
-                                            include: {
-                                                child_unit: true
-                                            }
-                                        }
-                                    }
-                                }
+                                unit_id_product_unit_idTounit_id: true,
                             }
                         }
                     }
@@ -62,10 +54,7 @@ class POS {
                 productName: p.product_name,
                 barcode: s.barcode,
                 unit: p.unit_id_product_unit_idTounit_id?.name,
-                unit_conversion: p.unit_id_product_unit_idTounit_id?.unit_conversions_as_parent?.[0] ? {
-                    factor: p.unit_id_product_unit_idTounit_id.unit_conversions_as_parent[0].conversion_factor,
-                    subUnit: p.unit_id_product_unit_idTounit_id.unit_conversions_as_parent[0].child_unit.name
-                } : null,
+                unit_conversion: null,
                 price: s.rsp,
                 wholesalePrice: s.wsp ?? 0,
                 productCode: p.product_code,
@@ -362,7 +351,11 @@ class POS {
                             include: {
                                 product_variations: {
                                     include: {
-                                        product: true
+                                        product: {
+                                            include: {
+                                                unit_id_product_unit_idTounit_id: true
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -412,15 +405,20 @@ class POS {
             profit: profit,
             creditBalance: creditBalance,
             refundedAmount: invoice.refunded_amount || 0,
-            items: invoice.invoice_items.map(item => ({
-                id: item.stock_id,
-                name: item.stock.product_variations.product.product_name,
-                price: item.current_price,
-                costPrice: item.stock.cost_price, // Added for detail view
-                quantity: item.qty,
-                returnedQuantity: item.returned_qty || 0,
-                returnQuantity: 0
-            })),
+            items: invoice.invoice_items.map(item => {
+                const unitName = item.stock.product_variations.product.unit_id_product_unit_idTounit_id?.name || '';
+                return {
+                    id: item.stock_id,
+                    name: item.stock.product_variations.product.product_name,
+                    price: item.current_price,
+                    costPrice: item.stock.cost_price, // Added for detail view
+                    quantity: item.qty,
+                    category: unitName,
+                    isBulk: unitName.toLowerCase().includes('kg') || unitName.toLowerCase().includes('bag') || unitName.toLowerCase().includes('liter') || unitName.toLowerCase().includes('meter'),
+                    returnedQuantity: item.returned_qty || 0,
+                    returnQuantity: 0
+                };
+            }),
             payments: invoice.invoice_payments.map(p => ({
                 method: p.payment_types.payment_types,
                 amount: p.amount
