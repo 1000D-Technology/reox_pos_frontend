@@ -127,18 +127,41 @@ export const BillModal = ({
                         <div className="mb-6">
                             <h3 className="text-sm font-semibold text-gray-600 mb-3">Items</h3>
                             <div className="space-y-2">
-                                {cartItems.map((item) => (
-                                    <div key={item.id} className="flex justify-between items-start p-3 bg-gray-50 rounded-lg">
-                                        <div className="flex-1">
-                                            <p className="font-semibold text-gray-800">{item.name}</p>
-                                            <p className="text-xs text-gray-500">
-                                                {item.quantity} x Rs {item.price.toFixed(2)}
-                                                {item.discount > 0 && ` (-${item.discount}%)`}
-                                            </p>
+                                {cartItems.map((item: any) => {
+                                    const getUnitConfig = (unit: string, isBulkItem: boolean) => {
+                                        const u = unit.toLowerCase().trim();
+                                        if (u.includes('kg') || u.includes('kilo') || u.includes('gram') || u.includes('weight') || (isBulkItem && (u === '' || u === 'pcs'))) 
+                                            return { subLabel: 'g', factor: 1000 };
+                                        if (u === 'l' || u.includes('ltr') || u.includes('liter') || u.includes('litre') || u.includes('vol') || u.includes('ml')) 
+                                            return { subLabel: 'ml', factor: 1000 };
+                                        if (u === 'm' || (u.includes('meter') && !u.includes('centi')) || u.includes('metre') || u.includes('cm')) 
+                                            return { subLabel: 'cm', factor: 100 };
+                                        if (isBulkItem) return { subLabel: 'Units', factor: 1000 };
+                                        return null;
+                                    };
+
+                                    let displayQty = item.quantity.toString();
+                                    let displayUnit = item.category || '';
+                                    const unitConfig = getUnitConfig(displayUnit, item.isBulk || false);
+
+                                    if (unitConfig && item.quantity < 1) {
+                                        displayQty = Math.round(item.quantity * unitConfig.factor).toString();
+                                        displayUnit = unitConfig.subLabel;
+                                    }
+
+                                    return (
+                                        <div key={item.id} className="flex justify-between items-start p-3 bg-gray-50 rounded-lg">
+                                            <div className="flex-1">
+                                                <p className="font-semibold text-gray-800">{item.name}</p>
+                                                <p className="text-xs text-gray-500">
+                                                    {displayQty} {displayUnit} x Rs {item.price.toFixed(2)}
+                                                    {item.discount > 0 && ` (-${item.discount}%)`}
+                                                </p>
+                                            </div>
+                                            <p className="font-bold text-emerald-600">Rs {calculateItemTotal(item).toFixed(2)}</p>
                                         </div>
-                                        <p className="font-bold text-emerald-600">Rs {calculateItemTotal(item).toFixed(2)}</p>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         </div>
 

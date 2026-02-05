@@ -5,7 +5,11 @@ class Stock {
      * @desc Get ALL stock data with individual variation rows (not grouped)
      */
     static async getAllStockWithVariations(filters = {}) {
-        const whereClause = {};
+        const whereClause = {
+            product_variations: {
+                product_status_id: 1
+            }
+        };
 
         if (filters.hasStock) {
             whereClause.qty = { gt: 0 };
@@ -80,6 +84,7 @@ class Stock {
                 storage_capacity: pv.storage_capacity,
                 full_product_name: fullProductName,
                 unit: p.unit_id_product_unit_idTounit_id?.name,
+                unit_conversion: null,
                 category: p.category?.name,
                 brand: p.brand?.name,
                 batch_name: s.batch?.batch_name,
@@ -98,19 +103,19 @@ class Stock {
 
     static async searchStock(filters, page = 1, limit = 10) {
         const whereClause = {
-            qty: { gt: 0 }
+            qty: { gt: 0 },
+            product_variations: {
+                product_status_id: 1
+            }
         };
 
         if (filters.category) {
-            whereClause.product_variations = {
-                product: {
-                    category_id: parseInt(filters.category)
-                }
-            };
+            if (!whereClause.product_variations.product) whereClause.product_variations.product = {};
+            whereClause.product_variations.product.category_id = parseInt(filters.category);
         }
 
         if (filters.unit) {
-            if (!whereClause.product_variations) whereClause.product_variations = { product: {} };
+            if (!whereClause.product_variations.product) whereClause.product_variations.product = {};
             whereClause.product_variations.product.unit_id = parseInt(filters.unit);
         }
 
@@ -583,6 +588,7 @@ class Stock {
             const supplier = s.grn_items[0]?.grn?.supplier;
 
             return {
+                pvId: s.product_variations_id,
                 product_id_code: product.product_code,
                 product_name: product.product_name,
                 unit: product.unit_id_product_unit_idTounit_id?.name,
@@ -686,6 +692,7 @@ class Stock {
             const supplier = s.grn_items[0]?.grn?.supplier;
 
             return {
+                pvId: s.product_variations_id,
                 product_id_code: product.product_code,
                 product_name: product.product_name,
                 unit: product.unit_id_product_unit_idTounit_id?.name,

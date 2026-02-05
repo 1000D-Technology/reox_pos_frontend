@@ -33,6 +33,7 @@ exports.getAllStockWithVariations = catchAsync(async (req, res, next) => {
             productName: item.full_product_name,
             barcode: item.barcode || 'N/A',
             unit: item.unit,
+            unit_conversion: item.unit_conversion,
             isBulk: isBulk,
             costPrice: parseFloat(item.cost_price || 0).toFixed(2),
             MRP: parseFloat(item.mrp || 0).toFixed(2),
@@ -45,7 +46,9 @@ exports.getAllStockWithVariations = catchAsync(async (req, res, next) => {
             exp: item.exp,
             color: item.color,
             size: item.size,
-            storage: item.storage_capacity
+            storage: item.storage_capacity,
+            category: item.category,
+            brand: item.brand
         };
     });
 
@@ -78,7 +81,12 @@ exports.getStockList = catchAsync(async (req, res, next) => {
         MRP: typeof item.mrp === 'number' ? item.mrp.toFixed(2) : parseFloat(item.mrp).toFixed(2),
         Price: typeof item.selling_price === 'number' ? item.selling_price.toFixed(2) : parseFloat(item.selling_price).toFixed(2),
         supplier: item.supplier || 'N/A',
-        stockQty: item.stock_qty ? item.stock_qty.toString() : item.qty.toString()
+        stockQty: item.stock_qty ? item.stock_qty.toString() : item.qty.toString(),
+        category: item.category,
+        brand: item.brand,
+        mfd: item.mfd,
+        exp: item.exp,
+        batch_name: item.batch_name
     }));
 
     res.status(200).json({
@@ -128,7 +136,12 @@ exports.getSearchStock = catchAsync(async (req, res, next) => {
                 stockQty: item.stock_qty ? item.stock_qty.toString() : (item.qty || 0).toString(),
                 color: item.color,
                 size: item.size,
-                storage: item.storage_capacity
+                storage: item.storage_capacity,
+                category: item.category,
+                brand: item.brand,
+                mfd: item.mfd,
+                exp: item.exp,
+                batch_name: item.batch_name
             };
         });
 
@@ -265,7 +278,7 @@ exports.getLowStockList = catchAsync(async (req, res, next) => {
         let statusLabel = item.available_qty <= 5 ? 'Critical' : 'Low';
 
         return {
-            productID: item.product_id_code,
+            productID: item.pvId,
             productName: item.product_name,
             unit: item.unit,
             costPrice: item.cost_price,
@@ -298,7 +311,7 @@ exports.getFilteredLowStock = catchAsync(async (req, res, next) => {
 
     //Formats data to match the UI table requirements
     const tableData = result.data.map(item => ({
-        productID: item.product_id_code,
+        productID: item.pvId,
         productName: item.product_name,
         unit: item.unit,
         discount: "LKR 0.00", 

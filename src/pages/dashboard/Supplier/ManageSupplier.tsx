@@ -58,6 +58,7 @@ function ManageSupplier() {
     }));
 
     const [newContactNumber, setNewContactNumber] = useState('');
+    const [newEmail, setNewEmail] = useState('');
     const [companies, setCompanies] = useState<{ value: string | number, label: string }[]>([]);
     const [selectedCompany, setSelectedCompany] = useState<{ value: string | number, label: string } | null>(null);
     const [banks, setBanks] = useState<{ value: string | number, label: string }[]>([]);
@@ -219,8 +220,9 @@ function ManageSupplier() {
     const handleEditClick = (category: Category) => {
         setSelectedCategory(category);
         setNewContactNumber(category.contact);
-        setSelectedCompany({ value: category.companyId, label: category.company });
-        setSelectedBank(category.bankId ? { value: category.bankId, label: category.bank } : null);
+        setNewEmail(category.email);
+        setSelectedCompany({ value: category.companyId.toString(), label: category.company });
+        setSelectedBank(category.bankId ? { value: category.bankId.toString(), label: category.bank } : null);
         setNewAccountNumber(category.account);
         setIsModalOpen(true);
     };
@@ -229,6 +231,7 @@ function ManageSupplier() {
         setIsModalOpen(false);
         setSelectedCategory(null);
         setNewContactNumber('');
+        setNewEmail('');
         setSelectedCompany(null);
         setSelectedBank(null);
         setNewAccountNumber('');
@@ -256,8 +259,9 @@ function ManageSupplier() {
             parseInt(selectedCategory.id),
             {
                 contactNumber: newContactNumber.trim(),
-                companyId: typeof selectedCompany.value === 'number' ? selectedCompany.value : parseInt(selectedCompany.value),
-                bankId: selectedBank ? (typeof selectedBank.value === 'number' ? selectedBank.value : parseInt(selectedBank.value)) : undefined,
+                email: newEmail,
+                companyId: typeof selectedCompany.value === 'number' ? selectedCompany.value : parseInt(selectedCompany.value as string),
+                bankId: selectedBank ? (typeof selectedBank.value === 'number' ? selectedBank.value : parseInt(selectedBank.value as string)) : undefined,
                 accountNumber: newAccountNumber.trim()
             }
         );
@@ -613,6 +617,20 @@ function ManageSupplier() {
                                     placeholder="Enter Contact Number"
                                     className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-500 transition-all outline-none"
                                     maxLength={10}
+                                />
+                            </div>
+
+                            <div>
+                                <label htmlFor="update-email" className="block text-sm font-bold text-gray-700 mb-1">
+                                    Email
+                                </label>
+                                <input
+                                    type="email"
+                                    id="update-email"
+                                    value={newEmail}
+                                    onChange={(e) => setNewEmail(e.target.value)}
+                                    placeholder="Enter Email"
+                                    className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-500 transition-all outline-none"
                                 />
                             </div>
 

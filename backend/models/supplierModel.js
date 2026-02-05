@@ -208,6 +208,7 @@ class Supplier {
                 where: { id: parseInt(id) },
                 data: {
                     contact_number: data.contactNumber,
+                    email: data.email || null,
                     company_id: parseInt(data.companyId),
                     bank_id: data.bankId ? parseInt(data.bankId) : null,
                     account_number: data.accountNumber || null

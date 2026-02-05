@@ -64,6 +64,7 @@ const translations: { [key: string]: { [key: string]: string } } = {
         cash: "Cash",
         card: "Card",
         credit: "Credit",
+        bank: "Bank Deposit",
         paid: "Paid",
         oldDebt: "Old Outstanding Debt",
         debtReduction: "Debt Reduced By",
@@ -94,6 +95,7 @@ const translations: { [key: string]: { [key: string]: string } } = {
         cash: "මුදල්",
         card: "කාඩ්පත",
         credit: "ණය",
+        bank: "බැංකු තැන්පතු",
         paid: "ගෙවූ මුදල",
         oldDebt: "පැරණි ණය ශේෂය",
         debtReduction: "ණය අඩු කිරීම",
@@ -110,6 +112,7 @@ interface CartItem {
     quantity: number;
     discount: number;
     category?: string;
+    isBulk?: boolean;
 }
 
 interface Customer {
@@ -193,19 +196,56 @@ export const generateBillHTML = (data: BillData): string => {
     const hours12 = parseInt(hours) % 12 || 12;
     const timeStr = `${hours12}:${minutes}:${seconds} ${ampm}`;
 
+    const getUnitConfig = (unit: string, isBulkItem: boolean) => {
+        const u = unit.toLowerCase().trim();
+        // Weights: KG, Grams, Kilo, etc.
+        if (u.includes('kg') || u.includes('kilo') || u.includes('gram') || u.includes('weight') || (isBulkItem && (u === '' || u === 'pcs'))) 
+            return { label: 'Weight', subLabel: 'g', factor: 1000 };
+        // Volumes: L, ML, Liter, litre, etc.
+        if (u === 'l' || u.includes('ltr') || u.includes('liter') || u.includes('litre') || u.includes('vol') || u.includes('ml')) 
+            return { label: 'Volume', subLabel: 'ml', factor: 1000 };
+        // Lengths: M, CM, Meter, metre, etc.
+        if (u === 'm' || (u.includes('meter') && !u.includes('centi')) || u.includes('metre') || u.includes('cm')) 
+            return { label: 'Length', subLabel: 'cm', factor: 100 };
+        
+        // Final fallback for bulk items
+        if (isBulkItem) return { label: 'Bulk', subLabel: 'Units', factor: 1000 };
+        
+        return null;
+    };
+
     // Generate items rows
     const itemsRows = items.map(item => {
         const itemTotal = item.price * item.quantity;
         const itemDiscountVal = (itemTotal * item.discount) / 100;
         const finalItemTotal = itemTotal - itemDiscountVal;
         
+        // Quantity display logic
+        let displayQty = item.quantity.toString();
+        let displayUnit = item.category || '';
+
+        const unitConfig = getUnitConfig(displayUnit, item.isBulk || false);
+
+        if (unitConfig) {
+            if (item.quantity < 1) {
+                // If less than 1, show in sub unit (e.g. 500g instead of 0.5kg)
+                // This satisfies "not as decimal" for quantities < 1
+                displayQty = Math.round(item.quantity * unitConfig.factor).toString();
+                displayUnit = unitConfig.subLabel;
+            } else {
+                // If 1 or more, show in main unit
+                // This satisfies "over than 1 show in main unit type"
+                displayQty = item.quantity.toString();
+            }
+        }
+
         return `
             <tr>
                 <td class="item-name">
                     ${item.name.replace(/ - (N\/A|NA|N\.A\.|None|Default|Not Applicable)/gi, '')}
                     ${item.discount > 0 ? `<div class="item-discount">Desc: ${item.discount}%</div>` : ''}
                 </td>
-                <td class="text-right">${item.quantity} <span style="font-size: 12px; font-weight: normal;">${item.category || ''}</span></td>
+                <td class="text-right">${displayQty} <span style="font-size: 14px; font-weight: 800;">${displayUnit}</span></td>
                 <td class="text-right">${item.price.toFixed(2)}</td>
                 <td class="text-right">${finalItemTotal.toFixed(2)}</td>
             </tr>
@@ -281,7 +321,7 @@ export const generateBillHTML = (data: BillData): string => {
             .filter(p => p.amount > 0)
             .map(p => `
                 <div class="summary-row">
-                    <span>${t('paid')} (${p.methodId === 'cash' ? t('cash') : p.methodId === 'card' ? t('card') : t('credit')}):</span>
+                    <span>${t('paid')} (${p.methodId === 'cash' ? t('cash') : p.methodId === 'card' ? t('card') : p.methodId === 'bank' ? t('bank') : t('credit')}):</span>
                     <span>${p.amount.toFixed(2)}</span>
                 </div>
             `).join('');
