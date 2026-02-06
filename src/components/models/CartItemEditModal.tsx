@@ -380,8 +380,8 @@ export const CartItemEditModal = ({
                                     {/* Discount Input */}
                                     <input
                                         type="number"
-                                        value={discount}
-                                        onChange={(e) => handleDiscountChange(Number(e.target.value))}
+                                        value={discount === 0 ? '' : discount}
+                                        onChange={(e) => handleDiscountChange(Number(e.target.value) || 0)}
                                         className="w-full px-3 py-2 text-base border-2 border-gray-200 rounded-lg focus:outline-none focus:border-emerald-500"
                                         placeholder={discountType === 'percentage' ? `0-${maxDiscountPercent}%` : `0-${maxDiscountAmount.toFixed(2)}`}
                                         step="0.01"

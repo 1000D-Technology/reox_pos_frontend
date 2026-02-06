@@ -18,15 +18,7 @@ class Stock {
                     include: {
                         product: {
                             include: {
-                                unit_id_product_unit_idTounit_id: {
-                                    include: {
-                                        unit_conversions_as_parent: {
-                                            include: {
-                                                child_unit: true
-                                            }
-                                        }
-                                    }
-                                },
+                                unit_id_product_unit_idTounit_id: true,
                                 category: true,
                                 brand: true
                             }
@@ -88,10 +80,7 @@ class Stock {
                 storage_capacity: pv.storage_capacity,
                 full_product_name: fullProductName,
                 unit: p.unit_id_product_unit_idTounit_id?.name,
-                unit_conversion: p.unit_id_product_unit_idTounit_id?.unit_conversions_as_parent?.[0] ? {
-                    factor: p.unit_id_product_unit_idTounit_id.unit_conversions_as_parent[0].conversion_factor,
-                    subUnit: p.unit_id_product_unit_idTounit_id.unit_conversions_as_parent[0].child_unit.name
-                } : null,
+                unit_conversion: null,
                 category: p.category?.name,
                 brand: p.brand?.name,
                 batch_name: s.batch?.batch_name,
@@ -363,6 +352,7 @@ class Stock {
             .filter(v => v && !['n/a', 'none', 'default', 'na'].includes(v.toLowerCase().trim()));
 
         return {
+            product_variations_id: group.product_variations_id,
             product_id: pv.product.product_code || pv.product.id.toString(),
             product_name: vParts.length > 0 ? `${pv.product.product_name} - ${vParts.join(' - ')}` : pv.product.product_name,
             unit: pv.product.unit_id_product_unit_idTounit_id?.name,
@@ -477,18 +467,20 @@ class Stock {
                 : p.product_name;
 
             return {
-                stock_id: s.id,
-                qty: s.qty,
-                cost_price: s.cost_price,
-                mrp: s.mrp,
-                selling_price: s.rsp,
-                product_name: fullProductName,
-                product_code: p.product_code,
-                barcode: pv.barcode,
-                unit: p.unit_id_product_unit_idTounit_id?.name,
-                supplier: supplier?.supplier_name,
-                batch_name: s.batch?.batch_name
-            };
+            stock_id: s.id,
+            product_variations_id: pv.id,
+            product_id: p.product_code || p.id.toString(),
+            qty: s.qty,
+            cost_price: s.cost_price,
+            mrp: s.mrp,
+            selling_price: s.rsp,
+            product_name: fullProductName,
+            product_code: p.product_code,
+            barcode: pv.barcode,
+            unit: p.unit_id_product_unit_idTounit_id?.name,
+            supplier: supplier?.supplier_name,
+            batch_name: s.batch?.batch_name
+        };
         });
 
         return {
@@ -595,6 +587,7 @@ class Stock {
             const supplier = s.grn_items[0]?.grn?.supplier;
 
             return {
+                pvId: s.product_variations_id,
                 product_id_code: product.product_code,
                 product_name: product.product_name,
                 unit: product.unit_id_product_unit_idTounit_id?.name,
@@ -698,6 +691,7 @@ class Stock {
             const supplier = s.grn_items[0]?.grn?.supplier;
 
             return {
+                pvId: s.product_variations_id,
                 product_id_code: product.product_code,
                 product_name: product.product_name,
                 unit: product.unit_id_product_unit_idTounit_id?.name,

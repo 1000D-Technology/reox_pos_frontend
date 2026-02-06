@@ -622,7 +622,7 @@ class POS {
 
     // Get all invoices with filters and pagination
     static async getAllInvoices(filters, limit, offset) {
-        const { invoiceNumber, cashierName, fromDate, toDate } = filters;
+        const { invoiceNumber, cashierName, fromDate, toDate, customerId } = filters;
         
         // Build where clause
         const where = {};
@@ -631,6 +631,10 @@ class POS {
             where.invoice_number = {
                 contains: invoiceNumber
             };
+        }
+
+        if (customerId) {
+            where.customer_id = parseInt(customerId);
         }
 
         if (cashierName) {

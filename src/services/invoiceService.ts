@@ -3,6 +3,7 @@ import api from '../api/axiosConfig';
 export interface InvoiceFilters {
     invoiceNumber?: string;
     cashierName?: string;
+    customerId?: number;
     fromDate?: string;
     toDate?: string;
     page?: number;
@@ -96,6 +97,7 @@ export const invoiceService = {
         
         if (filters.invoiceNumber) params.append('invoiceNumber', filters.invoiceNumber);
         if (filters.cashierName) params.append('cashierName', filters.cashierName);
+        if (filters.customerId) params.append('customerId', filters.customerId.toString());
         if (filters.fromDate) params.append('fromDate', filters.fromDate);
         if (filters.toDate) params.append('toDate', filters.toDate);
         if (filters.page) params.append('page', filters.page.toString());

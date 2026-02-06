@@ -65,7 +65,6 @@ model category {
   idcategory Int       @id @default(autoincrement())
   name       String    @db.VarChar(255)
   created_at DateTime? @default(now()) @db.DateTime(0)
-  updated_at DateTime? @default(now()) @db.DateTime(0)
   product    product[]
 }
 
@@ -98,7 +97,6 @@ model customer {
   email      String?     @db.VarChar(45)
   status_id  Int
   created_at DateTime    @default(now()) @db.DateTime(0)
-  updated_at DateTime    @default(now()) @db.DateTime(0)
   status     status      @relation(fields: [status_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_customer_status1")
   invoice    invoice[]
   quotations quotation[]
@@ -183,7 +181,6 @@ model invoice {
   total            Float
   refunded_amount  Float              @default(0)
   created_at       DateTime           @db.DateTime(0)
-  updated_at       DateTime?          @default(now()) @db.DateTime(0)
   cash_sessions_id Int
   invoice_type_id  Int
   creadit_book     creadit_book[]
@@ -208,7 +205,6 @@ model invoice_items {
   discount_amount     Float
   qty                 Float
   returned_qty        Float   @default(0)
-  created_at          DateTime @default(now()) @db.DateTime(0)
   invoice             invoice @relation(fields: [invoice_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_inoice_items_invoice1")
   stock               stock   @relation(fields: [stock_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_inoice_items_stock1")
 
@@ -265,7 +261,6 @@ model product {
   unit_id                          Int
   product_type_id                  Int
   created_at                       DateTime?            @default(now()) @db.DateTime(0)
-  updated_at                       DateTime?            @default(now()) @db.DateTime(0)
   brand                            brand                @relation(fields: [brand_id], references: [idbrand], onDelete: NoAction, onUpdate: NoAction, map: "fk_product_brand1")
   category                         category             @relation(fields: [category_id], references: [idcategory], onDelete: NoAction, onUpdate: NoAction, map: "fk_product_category")
   product_type                     product_type         @relation(fields: [product_type_id], references: [idproduct_type], onDelete: NoAction, onUpdate: NoAction, map: "fk_product_product_type1")
@@ -362,7 +357,7 @@ model status {
 model stock {
   id                    Int                @id @default(autoincrement())
   product_variations_id Int
-  barcode               String?            @db.VarChar(255)
+  barcode               String             @db.Text
   batch_id              Int
   mfd                   DateTime?          @db.Date
   exp                   DateTime?          @db.Date
@@ -372,8 +367,6 @@ model stock {
   wsp                   Float?
   qty                   Float
   free_qty              Float?
-  created_at            DateTime           @default(now()) @db.DateTime(0)
-  updated_at            DateTime           @default(now()) @db.DateTime(0)
   damaged               damaged[]
   grn_items             grn_items[]
   invoice_items         invoice_items[]
@@ -406,28 +399,10 @@ model supplier {
 }
 
 model unit_id {
-  idunit_id                          Int                @id @default(autoincrement())
-  name                               String             @db.VarChar(255)
-  created_at                         DateTime?          @default(now()) @db.DateTime(0)
-  product_product_unit_idTounit_id   product[]          @relation("product_unit_idTounit_id")
-  unit_conversions_as_parent         unit_conversions[] @relation("unit_conversions_as_parent")
-  unit_conversions_as_child          unit_conversions[] @relation("unit_conversions_as_child")
-}
-
-model unit_conversions {
-  id                Int       @id @default(autoincrement())
-  parent_unit_id    Int
-  child_unit_id     Int
-  conversion_factor Float     @db.Float
-  created_at        DateTime? @default(now()) @db.DateTime(0)
-  updated_at        DateTime? @default(now()) @db.DateTime(0)
-
-  parent_unit unit_id @relation("unit_conversions_as_parent", fields: [parent_unit_id], references: [idunit_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_unit_conversions_parent")
-  child_unit  unit_id @relation("unit_conversions_as_child", fields: [child_unit_id], references: [idunit_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_unit_conversions_child")
-
-  @@unique([parent_unit_id, child_unit_id], map: "unique_parent_child")
-  @@index([child_unit_id], map: "fk_unit_conversions_child_idx")
-  @@index([parent_unit_id], map: "fk_unit_conversions_parent_idx")
+  idunit_id                        Int       @id @default(autoincrement())
+  name                             String    @db.VarChar(255)
+  created_at                       DateTime? @default(now()) @db.DateTime(0)
+  product_product_unit_idTounit_id product[] @relation("product_unit_idTounit_id")
 }
 
 model user {

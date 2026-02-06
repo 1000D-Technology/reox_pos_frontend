@@ -361,26 +361,18 @@ function ManageCustomer() {
         await loadCustomerInvoices(customer.id);
     };
 
-    const loadCustomerInvoices = async (_customerId: number, fromDate?: string, toDate?: string) => {
+    const loadCustomerInvoices = async (customerId: number, fromDate?: string, toDate?: string) => {
         try {
             setIsLoadingInvoices(true);
             const response = await invoiceService.getAllInvoices({
+                customerId: customerId,
                 fromDate: fromDate || undefined,
                 toDate: toDate || undefined,
             });
 
             if (response.success) {
-                // Filter invoices for the selected customer by customer ID or name
-                // Note: Adjust this based on your actual API response structure
-                const filtered = response.data.filter((inv: any) => {
-                    // Try matching by customer name since we may not have customerId in invoice
-                    const matchesCustomer = inv.customerName === selectedCustomer?.name || 
-                                           inv.customer === selectedCustomer?.name;
-                    return matchesCustomer;
-                });
-                
                 // Map to Invoice interface
-                const mappedInvoices: Invoice[] = filtered.map((inv: any) => ({
+                const mappedInvoices: Invoice[] = response.data.map((inv: any) => ({
                     id: inv.id,
                     invoiceNumber: inv.invoiceID,
                     date: inv.issuedDate || inv.date,

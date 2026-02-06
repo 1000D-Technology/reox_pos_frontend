@@ -181,13 +181,14 @@ exports.processReturn = catchAsync(async (req, res, next) => {
 
 // Get all invoices with filters and pagination
 exports.getAllInvoices = catchAsync(async (req, res, next) => {
-    const { invoiceNumber, cashierName, fromDate, toDate, page = 1, limit = 10 } = req.query;
+    const { invoiceNumber, cashierName, fromDate, toDate, customerId, page = 1, limit = 10 } = req.query;
 
     const filters = {
         invoiceNumber,
         cashierName,
         fromDate,
-        toDate
+        toDate,
+        customerId
     };
 
     const pageNum = parseInt(page);

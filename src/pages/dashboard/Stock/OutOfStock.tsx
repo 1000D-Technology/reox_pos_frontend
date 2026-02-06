@@ -268,7 +268,7 @@ function OutOfStock() {
         try {
             const exportData = data.map((item, index) => ({
                 'No': index + 1,
-                'Product ID': item.productID,
+                'Product Variation ID': item.pvId,
                 'Product Name': item.productName,
                 'Unit': item.unit,
                 'Cost Price': item.costPrice,
@@ -293,10 +293,10 @@ function OutOfStock() {
 
     const generateCSV = (data: any[]) => {
         try {
-            const headers = ['No', 'Product ID', 'Product Name', 'Unit', 'Cost Price', 'MRP', 'Price', 'Supplier', 'Stock'];
+            const headers = ['No', 'PV ID', 'Product Name', 'Unit', 'Cost Price', 'MRP', 'Price', 'Supplier', 'Stock'];
             const csvData = data.map((item, index) => [
                 index + 1,
-                item.productID,
+                item.pvId,
                 item.productName,
                 item.unit,
                 item.costPrice,
@@ -345,7 +345,7 @@ function OutOfStock() {
 
             const tableData = data.map((item, index) => [
                 index + 1,
-                item.productID,
+                item.pvId,
                 item.productName,
                 item.unit,
                 item.costPrice,
@@ -357,7 +357,7 @@ function OutOfStock() {
 
             autoTable(doc, {
                 startY: 35,
-                head: [['No', 'Product ID', 'Product Name', 'Unit', 'Cost Price', 'MRP', 'Price', 'Supplier', 'Stock']],
+                head: [['No', 'PV ID', 'Product Name', 'Unit', 'Cost Price', 'MRP', 'Price', 'Supplier', 'Stock']],
                 body: tableData,
                 theme: 'grid',
                 headStyles: { fillColor: [239, 68, 68], textColor: 255, fontStyle: 'bold' },
@@ -465,7 +465,7 @@ function OutOfStock() {
                 e.preventDefault();
                 const selectedItem = stockData[selectedIndex];
                 if (selectedItem) {
-                    toast.success(`Selected: ${selectedItem.productName} (ID: ${selectedItem.productID})`);
+                toast.success(`Selected: ${selectedItem.productName} (PV ID: ${selectedItem.pvId})`);
                 }
             } else if (e.key === "Escape") {
                 e.preventDefault();
@@ -645,7 +645,7 @@ function OutOfStock() {
                             <thead className="bg-gradient-to-r from-red-500 to-red-600 sticky top-0 z-10">
                                 <tr>
                                     {[
-                                        'Product ID',
+                                        'PV ID',
                                         'Product Name',
                                         'Unit',
                                         'Cost Price',
@@ -690,7 +690,7 @@ function OutOfStock() {
                                                 }`}
                                         >
                                             <td className="px-6 py-2 whitespace-nowrap text-sm font-semibold text-gray-800">
-                                                {item.productID}
+                                                {item.pvId}
                                             </td>
                                             <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-gray-700">
                                                 {item.productName}
