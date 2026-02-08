@@ -1,6 +1,7 @@
 // Settings configuration interfaces
 
 export interface PrintSettings {
+    language: string;
     rollSize: string;
     fontSize: string;
     headerText: string;
@@ -29,22 +30,4 @@ export interface POSSettings {
     quickSaleMode: boolean;
     showCustomerDisplay: boolean;
     stockCodeType: 'barcode' | 'qr';
-}
-
-export interface SystemSettings {
-    language: string;
-    timezone: string;
-    dateFormat: string;
-    timeFormat: string;
-    theme: string;
-    notifications: boolean;
-    autoBackup: boolean;
-    backupFrequency: string;
-}
-
-export interface PaymentSettings {
-    cash: boolean;
-    card: boolean;
-    digitalWallet: boolean;
-    bankTransfer: boolean;
 }

@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Printer, Upload, Settings as SettingsIcon, Save, RefreshCw, Image, FileText, Ruler, DollarSign, ShoppingCart, Package, Bell, Lock, Globe, CreditCard, BarChart3, Barcode } from 'lucide-react';
+import { Printer, Upload, Save, RefreshCw, Image, FileText, Ruler, DollarSign, ShoppingCart, Package, Globe, Barcode } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import CustomConfirmModal from '../../components/common/CustomConfirmModal';
-import type { PrintSettings, POSSettings, SystemSettings, PaymentSettings } from '../../types/settingConfig';
-import { RollSize, FontSize, Language, Timezone, DateFormat, TimeFormat, Theme as ThemeEnum, BackupFrequency, SettingsTab } from '../../enum/settings';
-import { useTheme } from '../../context/ThemeContext';
+import type { PrintSettings, POSSettings } from '../../types/settingConfig';
+import { RollSize, FontSize, Language, SettingsTab } from '../../enum/settings';
 
 function Setting() {
     const [activeTab, setActiveTab] = useState<string>(SettingsTab.PRINT);
@@ -13,6 +12,7 @@ function Setting() {
     const [showResetConfirm, setShowResetConfirm] = useState(false);
 
     const [printSettings, setPrintSettings] = useState<PrintSettings>({
+        language: Language.ENGLISH,
         rollSize: RollSize.SIZE_80MM,
         fontSize: FontSize.MEDIUM,
         headerText: 'WELCOME TO OUR STORE',
@@ -43,32 +43,10 @@ function Setting() {
         stockCodeType: 'barcode'
     });
 
-    const { theme: currentTheme, setTheme } = useTheme();
-
-    const [systemSettings, setSystemSettings] = useState<SystemSettings>({
-        language: Language.ENGLISH,
-        timezone: Timezone.UTC,
-        dateFormat: DateFormat.DD_MM_YYYY,
-        timeFormat: TimeFormat.TWENTY_FOUR_HOUR,
-        theme: currentTheme === 'dark' ? ThemeEnum.DARK : ThemeEnum.LIGHT,
-        notifications: true,
-        autoBackup: true,
-        backupFrequency: BackupFrequency.DAILY
-    });
-
-    const [paymentSettings, setPaymentSettings] = useState<PaymentSettings>({
-        cash: true,
-        card: true,
-        digitalWallet: false,
-        bankTransfer: false
-    });
-
     // Load settings from localStorage on mount
     useEffect(() => {
         const savedPrintSettings = localStorage.getItem('printSettings');
         const savedPOSSettings = localStorage.getItem('posSettings');
-        const savedSystemSettings = localStorage.getItem('systemSettings');
-        const savedPaymentSettings = localStorage.getItem('paymentSettings');
         const savedLogoPath = localStorage.getItem('logoPath');
 
         if (savedPrintSettings) {
@@ -76,12 +54,6 @@ function Setting() {
         }
         if (savedPOSSettings) {
             setPOSSettings(JSON.parse(savedPOSSettings));
-        }
-        if (savedSystemSettings) {
-            setSystemSettings(JSON.parse(savedSystemSettings));
-        }
-        if (savedPaymentSettings) {
-            setPaymentSettings(JSON.parse(savedPaymentSettings));
         }
         if (savedLogoPath) {
             setLogoPreview(savedLogoPath);
@@ -121,25 +93,11 @@ function Setting() {
         setPOSSettings(prev => ({ ...prev, [field]: value }));
     };
 
-    const handleSystemSettingChange = (field: keyof SystemSettings, value: string | boolean) => {
-        setSystemSettings(prev => ({ ...prev, [field]: value }));
-        
-        if (field === 'theme') {
-            setTheme(value === ThemeEnum.DARK ? 'dark' : 'light');
-        }
-    };
-
-    const handlePaymentSettingChange = (field: keyof PaymentSettings, value: boolean) => {
-        setPaymentSettings(prev => ({ ...prev, [field]: value }));
-    };
-
     const saveSettings = async () => {
         try {
             // Save settings to localStorage
             localStorage.setItem('printSettings', JSON.stringify(printSettings));
             localStorage.setItem('posSettings', JSON.stringify(posSettings));
-            localStorage.setItem('systemSettings', JSON.stringify(systemSettings));
-            localStorage.setItem('paymentSettings', JSON.stringify(paymentSettings));
 
             // Save logo if uploaded
             if (logoFile) {
@@ -151,7 +109,7 @@ function Setting() {
             }
 
             toast.success('Settings saved successfully!');
-            console.log('Saved settings:', { printSettings, posSettings, systemSettings, paymentSettings, logoPath: logoPreview });
+            console.log('Saved settings:', { printSettings, posSettings, logoPath: logoPreview });
         } catch (error) {
             console.error('Error saving settings:', error);
             toast.error('Failed to save settings');
@@ -162,8 +120,6 @@ function Setting() {
         const tabNames: { [key: string]: string } = {
             [SettingsTab.PRINT]: 'Print Settings',
             [SettingsTab.POS]: 'POS Settings',
-            [SettingsTab.SYSTEM]: 'System Settings',
-            [SettingsTab.PAYMENT]: 'Payment Settings'
         };
 
         switch (activeTab) {
@@ -173,6 +129,7 @@ function Setting() {
                 localStorage.removeItem('logoPath');
 
                 setPrintSettings({
+                    language: Language.ENGLISH,
                     rollSize: RollSize.SIZE_80MM,
                     fontSize: FontSize.MEDIUM,
                     headerText: 'WELCOME TO OUR STORE',
@@ -216,38 +173,6 @@ function Setting() {
                 toast.success('POS settings reset to default successfully!');
                 break;
 
-            case SettingsTab.SYSTEM:
-                // Reset system settings only
-                localStorage.removeItem('systemSettings');
-
-                setSystemSettings({
-                    language: Language.ENGLISH,
-                    timezone: Timezone.UTC,
-                    dateFormat: DateFormat.DD_MM_YYYY,
-                    timeFormat: TimeFormat.TWENTY_FOUR_HOUR,
-                    theme: ThemeEnum.LIGHT,
-                    notifications: true,
-                    autoBackup: true,
-                    backupFrequency: BackupFrequency.DAILY
-                });
-
-                toast.success('System settings reset to default successfully!');
-                break;
-
-            case SettingsTab.PAYMENT:
-                // Reset payment settings to default
-                localStorage.removeItem('paymentSettings');
-
-                setPaymentSettings({
-                    cash: true,
-                    card: true,
-                    digitalWallet: false,
-                    bankTransfer: false
-                });
-
-                toast.success('Payment settings reset to default successfully!');
-                break;
-
             default:
                 toast.error('Unknown settings tab');
         }
@@ -262,9 +187,7 @@ function Setting() {
 
     const tabs = [
         { id: SettingsTab.PRINT, name: 'Print Settings', icon: Printer, color: 'bg-gradient-to-br from-blue-500 to-blue-600' },
-        { id: SettingsTab.POS, name: 'POS Settings', icon: ShoppingCart, color: 'bg-gradient-to-br from-green-500 to-green-600' },
-        { id: SettingsTab.SYSTEM, name: 'System Settings', icon: SettingsIcon, color: 'bg-gradient-to-br from-purple-500 to-purple-600' },
-        { id: SettingsTab.PAYMENT, name: 'Payment Settings', icon: CreditCard, color: 'bg-gradient-to-br from-orange-500 to-orange-600' }
+        { id: SettingsTab.POS, name: 'POS Settings', icon: ShoppingCart, color: 'bg-gradient-to-br from-green-500 to-green-600' }
     ];
 
     return (
@@ -393,58 +316,24 @@ function Setting() {
                             Print Configuration
                         </h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                          
+
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    <Ruler className="w-4 h-4 inline mr-1" />
-                                    Roll Size
+                                    <Globe className="w-4 h-4 inline mr-1" />
+                                    Language
                                 </label>
                                 <select
-                                    value={printSettings.rollSize}
-                                    onChange={(e) => handlePrintSettingChange('rollSize', e.target.value)}
+                                    value={printSettings.language}
+                                    onChange={(e) => handlePrintSettingChange('language', e.target.value)}
                                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 outline-none"
                                 >
-                                    <option value={RollSize.SIZE_57MM}>57mm (2.25 inches)</option>
-                                    <option value={RollSize.SIZE_80MM}>80mm (3.15 inches)</option>
-                                    <option value={RollSize.SIZE_76MM}>76mm (3 inches)</option>
-                                    <option value={RollSize.SIZE_58MM}>58mm (2.28 inches)</option>
+                                    <option value={Language.ENGLISH}>English</option>
+                                    <option value={Language.SINHALA}>Sinhala (සිංහල)</option>
                                 </select>
                             </div>
 
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Paper Width (mm)</label>
-                                <input
-                                    type="number"
-                                    value={printSettings.paperWidth}
-                                    onChange={(e) => handlePrintSettingChange('paperWidth', e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 outline-none"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Font Size</label>
-                                <select
-                                    value={printSettings.fontSize}
-                                    onChange={(e) => handlePrintSettingChange('fontSize', e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 outline-none"
-                                >
-                                    <option value={FontSize.SMALL}>Small</option>
-                                    <option value={FontSize.MEDIUM}>Medium</option>
-                                    <option value={FontSize.LARGE}>Large</option>
-                                    <option value={FontSize.EXTRA_LARGE}>Extra Large</option>
-                                </select>
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Number of Copies</label>
-                                <input
-                                    type="number"
-                                    min="1"
-                                    max="5"
-                                    value={printSettings.copies}
-                                    onChange={(e) => handlePrintSettingChange('copies', parseInt(e.target.value))}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 outline-none"
-                                />
-                            </div>
+                            
 
                             <div className="col-span-full">
                                 <label className="block text-sm font-medium text-gray-700 mb-2">Header Text</label>
@@ -732,232 +621,14 @@ function Setting() {
                     </div>
                 </div>
             )}
-
-            {/* System Settings Tab */}
-            {activeTab === SettingsTab.SYSTEM && (
-                <div className="space-y-6">
-                    {/* General Settings */}
-                    <div className="bg-white rounded-lg border border-gray-200 p-6">
-                        <h3 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                            <Globe className="w-6 h-6 text-purple-600" />
-                            General Settings
-                        </h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Language</label>
-                                <select
-                                    value={systemSettings.language}
-                                    onChange={(e) => handleSystemSettingChange('language', e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-purple-500 outline-none"
-                                >
-                                    <option value={Language.ENGLISH}>English</option>
-                                    <option value={Language.SINHALA}>Sinhala (සිංහල)</option>
-                                </select>
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Timezone</label>
-                                <select
-                                    value={systemSettings.timezone}
-                                    onChange={(e) => handleSystemSettingChange('timezone', e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-purple-500 outline-none"
-                                >
-                                    <option value={Timezone.UTC}>UTC</option>
-                                    <option value={Timezone.EST}>EST (Eastern)</option>
-                                    <option value={Timezone.CST}>CST (Central)</option>
-                                    <option value={Timezone.PST}>PST (Pacific)</option>
-                                    <option value={Timezone.GMT}>GMT</option>
-                                </select>
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Date Format</label>
-                                <select
-                                    value={systemSettings.dateFormat}
-                                    onChange={(e) => handleSystemSettingChange('dateFormat', e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-purple-500 outline-none"
-                                >
-                                    <option value={DateFormat.DD_MM_YYYY}>DD/MM/YYYY</option>
-                                    <option value={DateFormat.MM_DD_YYYY}>MM/DD/YYYY</option>
-                                    <option value={DateFormat.YYYY_MM_DD}>YYYY-MM-DD</option>
-                                </select>
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Time Format</label>
-                                <select
-                                    value={systemSettings.timeFormat}
-                                    onChange={(e) => handleSystemSettingChange('timeFormat', e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-purple-500 outline-none"
-                                >
-                                    <option value={TimeFormat.TWELVE_HOUR}>12-hour (AM/PM)</option>
-                                    <option value={TimeFormat.TWENTY_FOUR_HOUR}>24-hour</option>
-                                </select>
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Theme</label>
-                                <select
-                                    value={systemSettings.theme}
-                                    onChange={(e) => handleSystemSettingChange('theme', e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-purple-500 outline-none"
-                                >
-                                    <option value={ThemeEnum.LIGHT}>Light</option>
-                                    <option value={ThemeEnum.DARK}>Dark</option>
-                                </select>
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Backup Frequency</label>
-                                <select
-                                    value={systemSettings.backupFrequency}
-                                    onChange={(e) => handleSystemSettingChange('backupFrequency', e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-purple-500 outline-none"
-                                >
-                                    <option value={BackupFrequency.HOURLY}>Hourly</option>
-                                    <option value={BackupFrequency.DAILY}>Daily</option>
-                                    <option value={BackupFrequency.WEEKLY}>Weekly</option>
-                                    <option value={BackupFrequency.MONTHLY}>Monthly</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div className="mt-6 grid grid-cols-2 gap-4">
-                            <label className="flex items-center space-x-2 cursor-pointer">
-                                <input
-                                    type="checkbox"
-                                    checked={systemSettings.notifications}
-                                    onChange={(e) => handleSystemSettingChange('notifications', e.target.checked)}
-                                    className="w-4 h-4 text-purple-600 rounded"
-                                />
-                                <span className="text-sm text-gray-700 flex items-center gap-1">
-                                    <Bell className="w-4 h-4" />
-                                    Enable Notifications
-                                </span>
-                            </label>
-
-                            <label className="flex items-center space-x-2 cursor-pointer">
-                                <input
-                                    type="checkbox"
-                                    checked={systemSettings.autoBackup}
-                                    onChange={(e) => handleSystemSettingChange('autoBackup', e.target.checked)}
-                                    className="w-4 h-4 text-purple-600 rounded"
-                                />
-                                <span className="text-sm text-gray-700">Enable Auto Backup</span>
-                            </label>
-                        </div>
-                    </div>
-
-                    {/* Security Settings */}
-                    <div className="bg-white rounded-lg border border-gray-200 p-6">
-                        <h3 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                            <Lock className="w-6 h-6 text-purple-600" />
-                            Security Settings
-                        </h3>
-                        <div className="space-y-4">
-                            <button className="w-full md:w-auto px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium">
-                                Change Password
-                            </button>
-                            <button className="w-full md:w-auto px-6 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors font-medium ml-0 md:ml-3">
-                                Enable Two-Factor Authentication
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Payment Settings Tab */}
-            {activeTab === SettingsTab.PAYMENT && (
-                <div className="space-y-6">
-                    <div className="bg-white rounded-lg border border-gray-200 p-6">
-                        <h3 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                            <CreditCard className="w-6 h-6 text-orange-600" />
-                            Payment Methods
-                        </h3>
-                        <div className="space-y-4">
-                            <div className="p-4 border-2 border-gray-200 rounded-lg hover:border-orange-500 transition-colors">
-                                <label className="flex items-center justify-between cursor-pointer">
-                                    <div className="flex items-center gap-3">
-                                        <input
-                                            type="checkbox"
-                                            checked={paymentSettings.cash}
-                                            onChange={(e) => handlePaymentSettingChange('cash', e.target.checked)}
-                                            className="w-5 h-5 text-orange-600"
-                                        />
-                                        <div>
-                                            <p className="font-semibold text-gray-800">Cash</p>
-                                            <p className="text-sm text-gray-600">Accept cash payments</p>
-                                        </div>
-                                    </div>
-                                    <DollarSign className="w-6 h-6 text-green-600" />
-                                </label>
-                            </div>
-
-                            <div className="p-4 border-2 border-gray-200 rounded-lg hover:border-orange-500 transition-colors">
-                                <label className="flex items-center justify-between cursor-pointer">
-                                    <div className="flex items-center gap-3">
-                                        <input
-                                            type="checkbox"
-                                            checked={paymentSettings.card}
-                                            onChange={(e) => handlePaymentSettingChange('card', e.target.checked)}
-                                            className="w-5 h-5 text-orange-600"
-                                        />
-                                        <div>
-                                            <p className="font-semibold text-gray-800">Credit/Debit Card</p>
-                                            <p className="text-sm text-gray-600">Accept card payments</p>
-                                        </div>
-                                    </div>
-                                    <CreditCard className="w-6 h-6 text-blue-600" />
-                                </label>
-                            </div>
-
-                            <div className="p-4 border-2 border-gray-200 rounded-lg hover:border-orange-500 transition-colors">
-                                <label className="flex items-center justify-between cursor-pointer">
-                                    <div className="flex items-center gap-3">
-                                        <input
-                                            type="checkbox"
-                                            checked={paymentSettings.digitalWallet}
-                                            onChange={(e) => handlePaymentSettingChange('digitalWallet', e.target.checked)}
-                                            className="w-5 h-5 text-orange-600"
-                                        />
-                                        <div>
-                                            <p className="font-semibold text-gray-800">Digital Wallet</p>
-                                            <p className="text-sm text-gray-600">PayPal, Google Pay, Apple Pay</p>
-                                        </div>
-                                    </div>
-                                    <Package className="w-6 h-6 text-purple-600" />
-                                </label>
-                            </div>
-
-                            <div className="p-4 border-2 border-gray-200 rounded-lg hover:border-orange-500 transition-colors">
-                                <label className="flex items-center justify-between cursor-pointer">
-                                    <div className="flex items-center gap-3">
-                                        <input
-                                            type="checkbox"
-                                            checked={paymentSettings.bankTransfer}
-                                            onChange={(e) => handlePaymentSettingChange('bankTransfer', e.target.checked)}
-                                            className="w-5 h-5 text-orange-600"
-                                        />
-                                        <div>
-                                            <p className="font-semibold text-gray-800">Bank Transfer</p>
-                                            <p className="text-sm text-gray-600">Direct bank transfers</p>
-                                        </div>
-                                    </div>
-                                    <BarChart3 className="w-6 h-6 text-teal-600" />
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
-
             <CustomConfirmModal
                 isOpen={showResetConfirm}
                 onClose={() => setShowResetConfirm(false)}
                 onConfirm={handleConfirmReset}
                 title="Reset Settings"
-                message="Are you sure you want to reset the current settings to their default values? This action cannot be undone."
-                confirmText="Reset to Default"
+                message={`Are you sure you want to reset ${activeTab === SettingsTab.PRINT ? 'Print' : activeTab === SettingsTab.POS ? 'POS' : ''} settings to default? This action cannot be undone.`}
+                confirmText="Reset"
+                cancelText="Cancel"
                 variant="danger"
             />
         </div>
