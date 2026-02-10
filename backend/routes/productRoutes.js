@@ -451,6 +451,7 @@ router.patch('/status/:pvId', productController.changeProductStatus);
 
 router.get('/search' , productController.searchProducts);
 router.get('/search/deactive' , productController.searchDeactiveProducts);
+router.get('/check-code/:code', productController.checkProductCode);
 
 router.delete('/:pvId', productController.deleteProduct);
 

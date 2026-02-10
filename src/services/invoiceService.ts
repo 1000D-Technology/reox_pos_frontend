@@ -8,6 +8,7 @@ export interface InvoiceFilters {
     toDate?: string;
     page?: number;
     limit?: number;
+    order?: 'asc' | 'desc';
 }
 
 export interface Invoice {
@@ -102,6 +103,7 @@ export const invoiceService = {
         if (filters.toDate) params.append('toDate', filters.toDate);
         if (filters.page) params.append('page', filters.page.toString());
         if (filters.limit) params.append('limit', filters.limit.toString());
+        if (filters.order) params.append('order', filters.order);
 
         const response = await api.get(`/pos/invoices?${params.toString()}`);
         return response.data;
@@ -136,8 +138,17 @@ export const invoiceService = {
         invoice_id: string;
         payment_amount: number;
         payment_type_id: number;
+        user_id?: number;
     }) => {
         const response = await api.post(`/pos/invoice/payment`, paymentData);
+        return response.data;
+    },
+
+    /**
+     * Get credit payment history for a customer
+     */
+    getCreditHistory: async (customerId: number) => {
+        const response = await api.get(`/pos/credit-history/${customerId}`);
         return response.data;
     }
 };

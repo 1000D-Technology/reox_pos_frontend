@@ -18,5 +18,6 @@ router.post('/convert', posController.convertBulkToLoose);
 // Route to process return
 router.post('/return', posController.processReturn);
 router.get('/returns', posController.getReturnHistory);
+router.get('/credit-history/:customerId', posController.getCreditPaymentHistory);
 
 module.exports = router;

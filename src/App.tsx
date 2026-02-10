@@ -120,6 +120,11 @@ export default function App() {
                                 <CreateQuotation/>
                             </ProtectedRoute>
                         }/>
+                        <Route path="/quotation/edit-quotation/:id" element={
+                            <ProtectedRoute allowedRoles={['Admin', 'Cashier', 'Storekeeper']}>
+                                <CreateQuotation/>
+                            </ProtectedRoute>
+                        }/>
                         <Route path="/quotation/quotation-list" element={
                             <ProtectedRoute allowedRoles={['Admin', 'Cashier', 'Storekeeper']}>
                                 <QuotationList/>

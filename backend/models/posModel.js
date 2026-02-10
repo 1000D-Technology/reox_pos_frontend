@@ -236,7 +236,7 @@ class POS {
             // If finalBalance > 0: Customer owes money (Credit Sale)
             // If finalBalance < 0: Customer overpaid (Deposit/Store Credit)
             // Using epsilon 0.01 to avoid floating point issues
-            if (Math.abs(finalBalance) > 0.01 && customer_id) {
+            if (finalBalance > 0.01 && customer_id) {
                 console.log(`  📝 Adding to credit book: ${finalBalance}`);
 
                 // Add to credit book
@@ -501,6 +501,20 @@ class POS {
         }
 
         return await prisma.$transaction(async (tx) => {
+            const userIdToUse = parseInt(user_id || 1);
+            let activeSession = null;
+
+            // Pre-fetch active session if needed for refund or logging
+            if (cashRefundAmount > 0 || true) { // Always fetch for logging anyway at the end
+                activeSession = await tx.cash_sessions.findFirst({
+                    where: {
+                        user_id: userIdToUse,
+                        cash_status_id: 1 // Active
+                    },
+                    orderBy: { id: 'desc' }
+                });
+            }
+
              // 1. Update Credit Book (If Debt Changed)
              // If there was a credit book entry, we must update it.
              // Even if there wasn't, if debt > 0 we technically should have one, but we'll focus on updating existing ones.
@@ -532,15 +546,6 @@ class POS {
                      data: { refunded_amount: { increment: cashRefundAmount } }
                  });
 
-                 const userIdToUse = user_id || 1; 
-                 const activeSession = await tx.cash_sessions.findFirst({
-                     where: {
-                         user_id: parseInt(userIdToUse),
-                         cash_status_id: 1 // Active
-                     },
-                     orderBy: { id: 'desc' }
-                 });
-
                  if (activeSession) {
                      await tx.cash_sessions.update({
                          where: { id: activeSession.id },
@@ -564,42 +569,32 @@ class POS {
             // 3. Update Stock & Items
             for (const item of items) {
                 if (item.returnQuantity > 0) {
+                    // Update Stock
                     await tx.stock.update({
                         where: { id: item.id },
                         data: { qty: { increment: item.returnQuantity } }
                     });
 
-                    const invoiceItem = await tx.invoice_items.findFirst({
-                        where: {
-                            invoice_id: invoice.id,
-                            stock_id: item.id
-                        }
-                    });
+                    // Search for the invoice item in our pre-fetched data
+                    const dbInvoiceItem = invoice.invoice_items.find(ii => ii.stock_id === item.id);
                     
-                    if (invoiceItem) {
+                    if (dbInvoiceItem) {
                          await tx.invoice_items.update({
-                            where: { id: invoiceItem.id },
+                            where: { id: dbInvoiceItem.id },
                             data: { returned_qty: { increment: item.returnQuantity } }
                         });
+                    } else {
+                        console.warn(`   ⚠️ Item ID ${item.id} not found in Invoice Items.`);
                     }
                 }
              }
              
              // 4. Log in return_goods
-             const userIdToUse = user_id || 1; 
-             const activeSessionForLog = await tx.cash_sessions.findFirst({
-                 where: {
-                     user_id: parseInt(userIdToUse),
-                     cash_status_id: 1 // Active
-                 },
-                 orderBy: { id: 'desc' }
-             });
-
-             if (activeSessionForLog) {
+             if (activeSession) {
                  await tx.return_goods.create({
                      data: {
                          invoice_id: invoice.id,
-                         cash_sessions_id: activeSessionForLog.id,
+                         cash_sessions_id: activeSession.id,
                          balance: currentReturnValue
                      }
                  });
@@ -617,7 +612,9 @@ class POS {
                  debtReduction: debtReduction,
                  returnValue: currentReturnValue
              };
-          });
+           }, {
+               timeout: 30000 // Extended timeout to 30s to handle complex return logic and prevent expiration
+           });
      }
 
     // Get all invoices with filters and pagination
@@ -628,9 +625,20 @@ class POS {
         const where = {};
         
         if (invoiceNumber) {
-            where.invoice_number = {
-                contains: invoiceNumber
-            };
+            const isNumeric = /^\d+$/.test(invoiceNumber);
+            const isPaddedId = invoiceNumber.startsWith('#') && /^\d+$/.test(invoiceNumber.substring(1));
+            
+            if (isNumeric || isPaddedId) {
+                const numericId = parseInt(isNumeric ? invoiceNumber : invoiceNumber.substring(1));
+                where.OR = [
+                    { id: numericId },
+                    { invoice_number: { contains: invoiceNumber } }
+                ];
+            } else {
+                where.invoice_number = {
+                    contains: invoiceNumber
+                };
+            }
         }
 
         if (customerId) {
@@ -682,7 +690,7 @@ class POS {
                 }
             },
             orderBy: {
-                created_at: 'desc'
+                created_at: filters.order || 'desc'
             },
             take: limit,
             skip: offset
@@ -876,6 +884,15 @@ class POS {
                 }
             });
 
+            // 3.5 Record in credit_payment_history
+            await tx.credit_payment_history.create({
+                data: {
+                    creadit_book_id: activeCredit.id,
+                    amount: parseFloat(payment_amount),
+                    payment_date: getSriLankanTime()
+                }
+            });
+
             // 4. Update Credit Book Balance
             const newBalance = activeCredit.balance - payment_amount;
             
@@ -976,6 +993,45 @@ class POS {
         ]);
 
         return { returns, totalRecords };
+    }
+
+    // Get credit payment history for a customer
+    static async getCreditPaymentHistory(customerId) {
+        if (!customerId) return [];
+
+        const history = await prisma.credit_payment_history.findMany({
+            where: {
+                creadit_book: {
+                    invoice: {
+                        customer_id: parseInt(customerId)
+                    }
+                }
+            },
+            include: {
+                creadit_book: {
+                    select: {
+                        balance: true,
+                        invoice: {
+                            select: {
+                                invoice_number: true
+                            }
+                        }
+                    }
+                }
+            },
+            orderBy: {
+                payment_date: 'desc'
+            }
+        });
+
+        // Format history for frontend
+        return history.map(item => ({
+            id: item.id,
+            invoiceNumber: item.creadit_book.invoice.invoice_number,
+            amount: item.amount,
+            date: item.payment_date,
+            remainingBalance: item.creadit_book.balance
+        }));
     }
 }
 

@@ -139,6 +139,28 @@ exports.searchBank = catchAsync(async (req, res, next) => {
     res.status(200).json({ success: true, data: banks });
 });
 
+exports.addBank = catchAsync(async (req, res, next) => {
+    const { bankName } = req.body;
+    
+    if (!bankName || !bankName.trim()) {
+        return next(new AppError("Bank name is required.", 400));
+    }
+
+    // Check if bank already exists
+    const bankId = await Supplier.getBankIdByName(bankName);
+    if (bankId) {
+        return next(new AppError("Bank with this name already exists.", 400));
+    }
+    
+    const newBankId = await Supplier.createBank({ bankName });
+
+    res.status(201).json({
+        success: true,
+        message: "Bank added successfully!",
+        data: { id: newBankId, bankName }
+    });
+});
+
 exports.addSupplier = catchAsync(async (req, res, next) => {
     const { companyId, bankId } = req.body;
     
@@ -185,13 +207,14 @@ exports.getSupplierDropdownList = catchAsync(async (req, res, next) => {
 
 exports.updateSupplier = catchAsync(async (req, res, next) => {
     const { id } = req.params;
-    const { contactNumber, companyId, bankId, accountNumber, email } = req.body;
-
-    if (!contactNumber || !companyId) {
-        return next(new AppError("Contact number and company are required.", 400));
+    const { supplierName, contactNumber, companyId, bankId, accountNumber, email } = req.body;
+    
+    if (!supplierName || !contactNumber || !companyId) {
+        return next(new AppError("Supplier name, contact number and company are required.", 400));
     }
 
     const result = await Supplier.updateSupplier(id, {
+        supplierName,
         contactNumber,
         email,
         companyId,

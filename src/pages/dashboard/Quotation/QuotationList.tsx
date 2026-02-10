@@ -7,16 +7,21 @@ import {
     SearchCheck,
     Loader2,
     X,
+    Edit,
+    Copy,
 } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import toast, { Toaster } from 'react-hot-toast';
 import { quotationService } from '../../../services/quotationService';
 import { customerService } from '../../../services/customerService';
 import { printQuotation } from '../../../utils/quotationPrinter';
 import type { QuotationData } from '../../../utils/quotationPrinter';
 import TypeableSelect from '../../../components/TypeableSelect';
+import CreateQuotation from "./CreateQuotation";
 
 function QuotationList() {
+    const navigate = useNavigate();
     // State Management
     const [quotations, setQuotations] = useState<any[]>([]);
     const [customers, setCustomers] = useState<any[]>([]);
@@ -39,6 +44,10 @@ function QuotationList() {
     const [showDetailModal, setShowDetailModal] = useState(false);
     const [selectedQuotationDetails, setSelectedQuotationDetails] = useState<any>(null);
     const [detailsLoading, setDetailsLoading] = useState(false);
+    
+    // Edit Modal State
+    const [showEditModal, setShowEditModal] = useState(false);
+    const [editQuotationId, setEditQuotationId] = useState<string | number | null>(null);
 
     // Ref for focus
     const searchRef = useRef<HTMLInputElement>(null);
@@ -119,7 +128,9 @@ function QuotationList() {
                 setSelectedIndex((prev) => (prev > 0 ? prev - 1 : prev));
             } else if (e.key === "Enter") {
                 if (isTyping) {
+                    e.preventDefault();
                     handleSearch();
+                    (e.target as HTMLElement).blur();
                     return;
                 }
                 if (!showDetailModal && quotations.length > 0) {
@@ -127,9 +138,14 @@ function QuotationList() {
                     handleViewDetails(quotations[selectedIndex].id);
                 }
             } else if (e.key === "Escape") {
-                e.preventDefault();
-                if (showDetailModal) setShowDetailModal(false);
-                if (isTyping) (e.target as HTMLElement).blur();
+                if (isTyping) {
+                    (e.target as HTMLElement).blur();
+                    return;
+                }
+                if (showDetailModal) {
+                    e.preventDefault();
+                    setShowDetailModal(false);
+                }
             } else if (e.key.toLowerCase() === "p") {
                 if (isTyping) return;
                 e.preventDefault();
@@ -197,6 +213,12 @@ function QuotationList() {
         }
     };
 
+    const handleCopyId = (e: React.MouseEvent, id: string) => {
+        e.stopPropagation();
+        navigator.clipboard.writeText(id);
+        toast.success(`Quotation # ${id} copied!`);
+    };
+
     // Handle Print
     const handlePrint = (quotation: any) => {
         if (!quotation) return;
@@ -247,7 +269,7 @@ function QuotationList() {
                             <span className="mx-2">›</span>
                             <span className="text-gray-700 font-medium">Manage Quotations</span>
                         </div>
-                        <h1 className="text-3xl font-semibold bg-linear-to-r from-emerald-600 to-emerald-800 bg-clip-text text-transparent leading-tight">
+                        <h1 className="text-3xl font-semibold leading-tight">
                             Manage Quotations
                         </h1>
                     </div>
@@ -267,7 +289,7 @@ function QuotationList() {
                             <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Print</span>
                         </div>
                          <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg border border-gray-200">
-                            <span className="text-[10px] font-black text-gray-500 bg-white px-1.5 py-0.5 rounded shadow-sm border border-gray-200">F</span>
+                            <span className="text-[10px] font-black text-gray-500 bg-white px-1.5 py-0.5 rounded shadow-sm border border-gray-200">CTRL+F</span>
                             <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Search</span>
                         </div>
                          <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg border border-gray-200">
@@ -287,7 +309,6 @@ function QuotationList() {
                                 type="text"
                                 value={quotationNumber}
                                 onChange={(e) => setQuotationNumber(e.target.value)}
-                                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                                 placeholder="Enter Quotation No... (F)"
                                 className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-100 focus:border-emerald-400 focus:outline-none transition-all"
                             />
@@ -310,7 +331,6 @@ function QuotationList() {
                                 type="date"
                                 value={fromDate}
                                 onChange={(e) => setFromDate(e.target.value)}
-                                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                                 className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-100 focus:border-emerald-400 focus:outline-none transition-all"
                             />
                         </div>
@@ -320,7 +340,6 @@ function QuotationList() {
                                 type="date"
                                 value={toDate}
                                 onChange={(e) => setToDate(e.target.value)}
-                                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                                 className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-100 focus:border-emerald-400 focus:outline-none transition-all"
                             />
                         </div>
@@ -395,14 +414,24 @@ function QuotationList() {
                                             </td>
                                             <td className="px-4 py-3 whitespace-nowrap text-sm font-medium">
                                                 <div className="flex gap-2">
-                                                    <button onClick={(e) => { e.stopPropagation(); handleViewDetails(q.id); }} className="p-1.5 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors shadow-sm">
+                                                    <button onClick={(e) => { e.stopPropagation(); handleViewDetails(q.id); }} className="p-1.5 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors shadow-sm" title="View Details">
                                                         <Eye size={14} />
                                                     </button>
                                                     <button onClick={(e) => { 
                                                         e.stopPropagation(); 
+                                                        setEditQuotationId(q.id);
+                                                        setShowEditModal(true);
+                                                    }} className="p-1.5 bg-amber-500 text-white rounded-md hover:bg-amber-600 transition-colors shadow-sm" title="Edit Quotation">
+                                                        <Edit size={14} />
+                                                    </button>
+                                                    <button onClick={(e) => { 
+                                                        e.stopPropagation(); 
                                                         handleViewDetails(q.id).then(d => d && handlePrint(d));
-                                                    }} className="p-1.5 bg-emerald-500 text-white rounded-md hover:bg-emerald-600 transition-colors shadow-sm">
+                                                    }} className="p-1.5 bg-emerald-500 text-white rounded-md hover:bg-emerald-600 transition-colors shadow-sm" title="Print Quotation">
                                                         <Printer size={14} />
+                                                    </button>
+                                                    <button onClick={(e) => handleCopyId(e, q.quotation_number)} className="p-1.5 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors shadow-sm" title="Copy Quotation Number">
+                                                        <Copy size={14} />
                                                     </button>
                                                 </div>
                                             </td>
@@ -523,6 +552,35 @@ function QuotationList() {
                                 <button onClick={() => setShowDetailModal(false)} className="px-6 py-2 bg-white border border-gray-200 text-gray-600 font-bold rounded-xl hover:bg-gray-50 transition-colors">
                                     Close
                                 </button>
+                            </div>
+                        </div>
+                    </div>
+                 )}
+
+                 {/* Edit Modal */}
+                 {showEditModal && editQuotationId && (
+                    <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                        <div className="bg-white rounded-2xl w-full max-w-7xl max-h-[95vh] overflow-hidden shadow-2xl flex flex-col border border-gray-100">
+                             <div className="bg-linear-to-r from-amber-500 to-amber-600 p-4 flex items-center justify-between text-white shrink-0">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 bg-white/20 rounded-lg">
+                                        <Edit size={20} />
+                                    </div>
+                                    <h3 className="text-lg font-bold uppercase tracking-widest">Edit Quotation</h3>
+                                </div>
+                                <button onClick={() => setShowEditModal(false)} className="hover:bg-white/20 p-2 rounded-xl transition-all active:scale-95">
+                                    <X size={24} />
+                                </button>
+                            </div>
+                            <div className="flex-1 overflow-y-auto p-6 bg-gray-50/30">
+                                <CreateQuotation 
+                                    quotationId={editQuotationId} 
+                                    onClose={() => setShowEditModal(false)}
+                                    onSaveSuccess={() => {
+                                        setShowEditModal(false);
+                                        fetchQuotations();
+                                    }}
+                                />
                             </div>
                         </div>
                     </div>
