@@ -12,6 +12,18 @@ class Product {
     return result.length > 0;
   }
 
+  static async getVariationById(id) {
+    return await prisma.product_variations.findUnique({
+        where: { id: parseInt(id) }
+    });
+  }
+
+  static async getProductByCode(code) {
+    return await prisma.product.findUnique({
+        where: { product_code: code }
+    });
+  }
+
   static async create(productData, variations) {
     try {
       return await prisma.$transaction(async (tx) => {

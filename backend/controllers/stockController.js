@@ -193,6 +193,7 @@ exports.getOutOfStockList = catchAsync(async (req, res, next) => {
     const result = await Stock.getOutOfStock(page, limit);
 
     const transformedData = result.data.map(item => ({
+        pvId: item.product_variations_id,
         productID: item.product_code || (item.product_id ? item.product_id.toString() : 'N/A'),
         productName: item.product_name,
         unit: item.unit,
@@ -225,6 +226,7 @@ exports.getSearchOutOfStock = catchAsync(async (req, res, next) => {
     const result = await Stock.searchOutOfStock(filters, page, limit);
 
     const transformedData = result.data.map(item => ({
+        pvId: item.product_variations_id,
         productID: item.product_code || (item.product_id ? item.product_id.toString() : 'N/A'),
         productName: item.product_name,
         unit: item.unit,

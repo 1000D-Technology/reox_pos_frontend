@@ -162,6 +162,43 @@ const customerController = {
         });
     }),
 
+    // Update customer all details
+    updateCustomer: catchAsync(async (req, res, next) => {
+        const { customerId } = req.params;
+        const { name, contact, email } = req.body;
+
+        if (!name || !contact) {
+            return next(new AppError("Name and contact number are required.", 400));
+        }
+
+        // Check if the contact number is already taken by another customer
+        const existing = await prisma.customer.findFirst({
+            where: {
+                contact: contact,
+                id: { not: parseInt(customerId) }
+            }
+        });
+
+        if (existing) {
+            return next(new AppError("This contact number is already assigned to another customer.", 400));
+        }
+
+        const customer = await prisma.customer.update({
+            where: { id: parseInt(customerId) },
+            data: {
+                name,
+                contact,
+                email: email || null
+            }
+        });
+
+        res.status(200).json({
+            success: true,
+            message: "Customer updated successfully.",
+            data: customer
+        });
+    }),
+
     // Search customers by name
     searchCustomers: catchAsync(async (req, res, next) => {
         const { query } = req.query; 

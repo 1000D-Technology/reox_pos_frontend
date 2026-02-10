@@ -3,10 +3,12 @@ import api from '../api/axiosConfig';
 export interface InvoiceFilters {
     invoiceNumber?: string;
     cashierName?: string;
+    customerId?: number;
     fromDate?: string;
     toDate?: string;
     page?: number;
     limit?: number;
+    order?: 'asc' | 'desc';
 }
 
 export interface Invoice {
@@ -96,10 +98,12 @@ export const invoiceService = {
         
         if (filters.invoiceNumber) params.append('invoiceNumber', filters.invoiceNumber);
         if (filters.cashierName) params.append('cashierName', filters.cashierName);
+        if (filters.customerId) params.append('customerId', filters.customerId.toString());
         if (filters.fromDate) params.append('fromDate', filters.fromDate);
         if (filters.toDate) params.append('toDate', filters.toDate);
         if (filters.page) params.append('page', filters.page.toString());
         if (filters.limit) params.append('limit', filters.limit.toString());
+        if (filters.order) params.append('order', filters.order);
 
         const response = await api.get(`/pos/invoices?${params.toString()}`);
         return response.data;
@@ -134,8 +138,17 @@ export const invoiceService = {
         invoice_id: string;
         payment_amount: number;
         payment_type_id: number;
+        user_id?: number;
     }) => {
         const response = await api.post(`/pos/invoice/payment`, paymentData);
+        return response.data;
+    },
+
+    /**
+     * Get credit payment history for a customer
+     */
+    getCreditHistory: async (customerId: number) => {
+        const response = await api.get(`/pos/credit-history/${customerId}`);
         return response.data;
     }
 };

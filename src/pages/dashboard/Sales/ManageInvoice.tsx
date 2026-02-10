@@ -14,6 +14,7 @@
     X,
     Keyboard,
     Command,
+    Copy,
 } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 import invoiceService from "../../../services/invoiceService";
@@ -51,11 +52,12 @@ function ManageInvoice() {
         try {
             setLoading(true);
             const response = await invoiceService.getAllInvoices({
-                invoiceNumber: invoiceNumber || undefined,
+                invoiceNumber: invoiceNumber.trim() || undefined,
                 fromDate: fromDate || undefined,
                 toDate: toDate || undefined,
                 page: currentPage,
-                limit: itemsPerPage
+                limit: itemsPerPage,
+                order: 'desc' // Default to newest first for search results
             });
 
             if (response.success) {
@@ -101,9 +103,12 @@ function ManageInvoice() {
 
     // Handle Search
     const handleSearch = () => {
-        setCurrentPage(1); // Reset to first page
-        fetchInvoices();
-        fetchStats();
+        if (currentPage === 1) {
+            fetchInvoices();
+            fetchStats();
+        } else {
+            setCurrentPage(1);
+        }
     };
 
     // Handle Reset
@@ -111,13 +116,17 @@ function ManageInvoice() {
         setInvoiceNumber('');
         setFromDate('');
         setToDate('');
-        setCurrentPage(1);
         
-        // Trigger re-fetch with cleared filters
-        setTimeout(() => {
-            fetchInvoices();
-            fetchStats();
-        }, 100);
+        if (currentPage === 1) {
+            // Manual trigger when page doesn't change
+            // Using setTimeout to ensure states are partially updated or just calling with defaults
+            setTimeout(() => {
+                fetchInvoices();
+                fetchStats();
+            }, 50);
+        } else {
+            setCurrentPage(1); // Will trigger useEffect
+        }
     };
 
     // Handle View Invoice Details
@@ -184,6 +193,12 @@ function ManageInvoice() {
             console.error('Error printing invoice:', error);
             toast.error('Failed to print invoice');
         }
+    };
+            
+    // Handle Copy Invoice ID
+    const handleCopyInvoiceID = (invoiceID: string) => {
+        navigator.clipboard.writeText(invoiceID);
+        toast.success(`Invoice ID ${invoiceID} copied to clipboard`);
     };
             
 
@@ -526,6 +541,16 @@ function ManageInvoice() {
                                                         title="Print Invoice"
                                                     >
                                                         <Printer size={16} />
+                                                    </button>
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleCopyInvoiceID(invoice.invoiceID);
+                                                        }}
+                                                        className="p-2 bg-linear-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white rounded-lg transition-all"
+                                                        title="Copy Invoice ID"
+                                                    >
+                                                        <Copy size={16} />
                                                     </button>
                                                 </div>
                                             </td>

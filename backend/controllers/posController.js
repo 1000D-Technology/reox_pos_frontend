@@ -181,13 +181,15 @@ exports.processReturn = catchAsync(async (req, res, next) => {
 
 // Get all invoices with filters and pagination
 exports.getAllInvoices = catchAsync(async (req, res, next) => {
-    const { invoiceNumber, cashierName, fromDate, toDate, page = 1, limit = 10 } = req.query;
+    const { invoiceNumber, cashierName, fromDate, toDate, customerId, page = 1, limit = 10, order } = req.query;
 
     const filters = {
         invoiceNumber,
         cashierName,
         fromDate,
-        toDate
+        toDate,
+        customerId,
+        order
     };
 
     const pageNum = parseInt(page);
@@ -273,3 +275,22 @@ exports.getReturnHistory = catchAsync(async (req, res, next) => {
         }
     });
 });
+
+exports.getCreditPaymentHistory = catchAsync(async (req, res, next) => {
+    const { customerId } = req.params;
+
+    if (!customerId) {
+        return res.status(400).json({
+            success: false,
+            message: "Customer ID is required"
+        });
+    }
+
+    const history = await POS.getCreditPaymentHistory(customerId);
+
+    res.status(200).json({
+        success: true,
+        data: history
+    });
+});
+

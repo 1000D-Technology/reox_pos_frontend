@@ -171,6 +171,61 @@ class Quotation {
             pagination: PaginationHelper.getPaginationMetadata(page, limit, totalCount)
         };
     }
+
+    static async update(id, data) {
+        // data: { customer_id, user_id, sub_total, discount, total, items: [{ stock_id, price, discount_amount, qty, total }], valid_until, remarks }
+        
+        return prisma.$transaction(async (tx) => {
+            // 1. Delete existing items
+            await tx.quotation_items.deleteMany({
+                where: { quotation_id: parseInt(id) }
+            });
+
+            // Prepare non-null data
+            const updateData = {
+                customer_id: data.customer_id,
+                sub_total: data.sub_total,
+                discount: data.discount,
+                total: data.total,
+                remarks: data.remarks,
+                quotation_items: {
+                    create: data.items.map(item => ({
+                        stock_id: item.id,
+                        price: item.mrp,
+                        discount_amount: item.discount,
+                        qty: item.qty,
+                        total: item.amount
+                    }))
+                }
+            };
+
+            if (data.user_id) updateData.user_id = data.user_id;
+            if (data.valid_until) updateData.valid_until = new Date(data.valid_until);
+
+            // 2. Update quotation record and create new items
+            return tx.quotation.update({
+                where: { id: parseInt(id) },
+                data: updateData,
+                include: {
+                    quotation_items: {
+                        include: {
+                            stock: {
+                                include: {
+                                    product_variations: {
+                                        include: {
+                                            product: true
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    customer: true,
+                    user: true
+                }
+            });
+        });
+    }
 }
 
 module.exports = Quotation;

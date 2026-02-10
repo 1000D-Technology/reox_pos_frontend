@@ -78,16 +78,27 @@ model company {
 }
 
 model creadit_book {
-  id         Int      @id @default(autoincrement())
-  invoice_id Int
-  balance    Float
-  status_id  Int
-  created_at DateTime @db.DateTime(0)
-  invoice    invoice  @relation(fields: [invoice_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_creadit_book_invoice1")
-  status     status   @relation(fields: [status_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_creadit_book_status1")
+  id                     Int                      @id @default(autoincrement())
+  invoice_id             Int
+  balance                Float
+  status_id              Int
+  created_at             DateTime                 @db.DateTime(0)
+  invoice                invoice                  @relation(fields: [invoice_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_creadit_book_invoice1")
+  status                 status                   @relation(fields: [status_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_creadit_book_status1")
+  credit_payment_history credit_payment_history[]
 
   @@index([invoice_id], map: "fk_creadit_book_invoice1_idx")
   @@index([status_id], map: "fk_creadit_book_status1_idx")
+}
+
+model credit_payment_history {
+  id              Int          @id @default(autoincrement())
+  creadit_book_id Int
+  amount          Float
+  payment_date    DateTime     @default(now()) @db.DateTime(0)
+  creadit_book    creadit_book @relation(fields: [creadit_book_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_credit_payment_history_creadit_book1")
+
+  @@index([creadit_book_id], map: "fk_credit_payment_history_creadit_book1_idx")
 }
 
 model customer {
@@ -433,6 +444,7 @@ model quotation {
   created_at       DateTime          @db.DateTime(0)
   valid_until      DateTime          @db.Date
   user_id          Int
+  remarks          String?           @db.Text
   customer         customer?         @relation(fields: [customer_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   user             user              @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   quotation_items  quotation_items[]

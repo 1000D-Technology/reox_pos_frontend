@@ -57,6 +57,7 @@ function ManageSupplier() {
         no: (((currentPage - 1) * itemsPerPage) + index + 1).toString()
     }));
 
+    const [newSupplierName, setNewSupplierName] = useState('');
     const [newContactNumber, setNewContactNumber] = useState('');
     const [newEmail, setNewEmail] = useState('');
     const [companies, setCompanies] = useState<{ value: string | number, label: string }[]>([]);
@@ -219,6 +220,7 @@ function ManageSupplier() {
 
     const handleEditClick = (category: Category) => {
         setSelectedCategory(category);
+        setNewSupplierName(category.name);
         setNewContactNumber(category.contact);
         setNewEmail(category.email);
         setSelectedCompany({ value: category.companyId.toString(), label: category.company });
@@ -230,6 +232,7 @@ function ManageSupplier() {
     const handleCloseModal = () => {
         setIsModalOpen(false);
         setSelectedCategory(null);
+        setNewSupplierName('');
         setNewContactNumber('');
         setNewEmail('');
         setSelectedCompany(null);
@@ -258,6 +261,7 @@ function ManageSupplier() {
         const updatePromise = supplierService.updateSupplier(
             parseInt(selectedCategory.id),
             {
+                supplierName: newSupplierName.trim(),
                 contactNumber: newContactNumber.trim(),
                 email: newEmail,
                 companyId: typeof selectedCompany.value === 'number' ? selectedCompany.value : parseInt(selectedCompany.value as string),
@@ -605,6 +609,20 @@ function ManageSupplier() {
                         </div>
 
                         <div className="space-y-4">
+                            <div>
+                                <label htmlFor="update-supplier-name" className="block text-sm font-bold text-gray-700 mb-1">
+                                    Supplier Name
+                                </label>
+                                <input
+                                    type="text"
+                                    id="update-supplier-name"
+                                    value={newSupplierName}
+                                    onChange={(e) => setNewSupplierName(e.target.value)}
+                                    placeholder="Enter Supplier Name"
+                                    className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-500 transition-all outline-none"
+                                />
+                            </div>
+
                             <div>
                                 <label htmlFor="update-contact-number" className="block text-sm font-bold text-gray-700 mb-1">
                                     Contact Number

@@ -113,11 +113,11 @@ export default function TypeableSelect({
             e.preventDefault();
             setHighlight((h) => Math.max(h - 1, 0));
         } else if (e.key === 'Enter') {
-            e.preventDefault();
             if (!open) {
-                setOpen(query.trim() !== '');
+                // If closed, let it bubble up (don't prevent default) so parent can trigger search
                 return;
             }
+            e.preventDefault();
             if (filtered.length > 0 && highlight < filtered.length) {
                 handleSelect(filtered[highlight]);
             }
