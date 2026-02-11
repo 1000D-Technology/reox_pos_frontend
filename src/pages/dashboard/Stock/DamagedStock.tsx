@@ -19,6 +19,7 @@ import toast, { Toaster } from 'react-hot-toast';
 import TypeableSelect from '../../../components/TypeableSelect.tsx';
 import { stockService } from '../../../services/stockService';
 import { productService } from '../../../services/productService';
+import { posService } from '../../../services/posService';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -90,13 +91,15 @@ function DamagedStock() {
 
     // Dropdown data states
     const [productAdd, setProductAdd] = useState<SelectOption[]>([]);
+    const [productFilter, setProductFilter] = useState<SelectOption[]>([]);
     const [stock, setStock] = useState<SelectOption[]>([]);
     const [reason, setReason] = useState<SelectOption[]>([]);
     const [status, setStatus] = useState<SelectOption[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [loadingStock, setLoadingStock] = useState<boolean>(false);
 
-    const [selectedProduct, setSelectedProduct] = useState<string>(''); // Changed to string for text input
+    const [selectedProduct, setSelectedProduct] = useState<string>(''); 
+    const [selectedProductFilterId, setSelectedProductFilterId] = useState<string | null>(null);
     const [selectedProductAdd, setSelectedProductAdd] = useState<string | null>(null);
     const [selectedStock, setSelectedStock] = useState<string | null>(null);
     const [selectedReason, setSelectedReason] = useState<string | null>(null);
@@ -135,65 +138,80 @@ function DamagedStock() {
 
     const [selectedIndex, setSelectedIndex] = useState(0);
 
-    // Load dropdown data on component mount
-    // Load product data with optional search
-        const loadProductData = async (query?: string) => {
-            try {
-                // If query is provided, we use it. If not (initial load), we fetch default limited set.
-                // We pass query as 'searchTerm' to backend.
-                const productsData = await productService.getProductsForDropdown({ searchTerm: query || '', limit: 10 });
+    // Load product data with optional search (Matching CreateQuotation logic)
+    const loadProductData = async (query?: string) => {
+        try {
+            const response = query 
+                ? await posService.searchProducts(query)
+                : await posService.getPOSProductsList(20);
 
-                // Transform products
-                if (productsData.data?.success) {
-                    const productOptions = productsData.data.data.map((product: any) => ({
-                        value: product.id.toString(),
-                        label: product.product_name || product.name
+            if (response.data?.success) {
+                const options = response.data.data.map((p: any) => ({
+                    value: (p.id || p.stock_id || p.stockID).toString(),
+                    label: `${p.productName || p.displayName} (${p.productID || p.product_code})`
+                }));
+                setProductAdd(options);
+            }
+        } catch (error) {
+            console.error('Error loading product data:', error);
+        }
+    };
+
+    const loadFilterProducts = async (query?: string) => {
+        try {
+            const response = query 
+                ? await posService.searchProducts(query)
+                : await posService.getPOSProductsList(20);
+
+            if (response.data?.success) {
+                const options = response.data.data.map((p: any) => ({
+                    value: (p.id || p.stock_id || p.stockID).toString(),
+                    label: p.productName || p.displayName
+                }));
+                setProductFilter(options);
+            }
+        } catch (error) {
+            console.error('Error loading filter products:', error);
+        }
+    };
+
+    useEffect(() => {
+        const loadDropdownData = async () => {
+            try {
+                setLoading(true);
+    
+                // Initialize reason and return status from API
+                const reasonResponse = await stockService.getReasons();
+                const returnStatusResponse = await stockService.getReturnStatus();
+    
+                if (reasonResponse.data?.success) {
+                    const reasonOptions = reasonResponse.data.data.map((reason: any) => ({
+                        value: reason.id.toString(),
+                        label: reason.reason
                     }));
-                    
-                    // We update the productAdd list which is used in the "Add Damaged Stock" section
-                    setProductAdd(productOptions);
+                    setReason(reasonOptions);
                 }
+    
+                if (returnStatusResponse.data?.success) {
+                    const statusOptions = returnStatusResponse.data.data.map((status: any) => ({
+                        value: status.id.toString(),
+                        label: status.name
+                    }));
+                    setStatus(statusOptions);
+                }
+    
+                setLoading(false);
             } catch (error) {
-                console.error('Error loading product data:', error);
+                console.error('Error loading dropdown data:', error);
+                setLoading(false);
             }
         };
 
-        useEffect(() => {
-            const loadDropdownData = async () => {
-                try {
-                    setLoading(true);
-    
-                    // Initialize reason and return status from API
-                    const reasonResponse = await stockService.getReasons();
-                    const returnStatusResponse = await stockService.getReturnStatus();
-    
-                    if (reasonResponse.data?.success) {
-                        const reasonOptions = reasonResponse.data.data.map((reason: any) => ({
-                            value: reason.id.toString(),
-                            label: reason.reason
-                        }));
-                        setReason(reasonOptions);
-                    }
-    
-                    if (returnStatusResponse.data?.success) {
-                        const statusOptions = returnStatusResponse.data.data.map((status: any) => ({
-                            value: status.id.toString(),
-                            label: status.name
-                        }));
-                        setStatus(statusOptions);
-                    }
-    
-                    setLoading(false);
-                } catch (error) {
-                    console.error('Error loading dropdown data:', error);
-                    setLoading(false);
-                }
-            };
-
-            loadDropdownData();
-            loadProductData(); // Initial load
-            loadSummaryData();
-        }, []);
+        loadDropdownData();
+        loadProductData(); // Initial load for Add section
+        loadFilterProducts(); // Initial load for Filter section
+        loadSummaryData();
+    }, []);
 
     // Load summary data
     const loadSummaryData = async () => {
@@ -360,6 +378,7 @@ function DamagedStock() {
 
     const handleClearFilters = () => {
         setSelectedProduct('');
+        setSelectedProductFilterId(null);
         setFromDate('');
         setToDate('');
         loadDamagedTableData(1, pagination.itemsPerPage);
@@ -705,17 +724,16 @@ function DamagedStock() {
                 <div className="grid md:grid-cols-4 gap-4">
                     <div className="col-span-1 flex flex-col gap-1">
                         <label className="text-xs font-semibold text-gray-600">Product Name</label>
-                        <div className="relative">
-                            <SearchCheck className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-                            <input
-                                type="text"
-                                id="filter-product-main"
-                                value={selectedProduct}
-                                onChange={(e) => setSelectedProduct(e.target.value)}
-                                placeholder="Search by product name..."
-                                className="w-full pl-10 pr-4 py-2 text-sm border-2 border-gray-200 rounded-lg focus:border-emerald-400 transition-all outline-none"
-                            />
-                        </div>
+                        <TypeableSelect
+                            options={productFilter}
+                            value={selectedProductFilterId}
+                            onChange={(opt) => {
+                                setSelectedProductFilterId(opt?.value as string || null);
+                                setSelectedProduct(opt?.label || '');
+                            }}
+                            onSearch={loadFilterProducts}
+                            placeholder="Search product..."
+                        />
                     </div>
                     <div className="grid grid-cols-2 gap-3 col-span-2">
                         <div className="flex flex-col gap-1">

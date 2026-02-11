@@ -36,6 +36,7 @@ export const supplierService = {
 
     // Update supplier
     updateSupplier: (id: number, supplierData: {
+        supplierName: string;
         contactNumber: string;
         email?: string;
         companyId: number;

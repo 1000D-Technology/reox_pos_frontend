@@ -10,4 +10,8 @@ export interface Product {
     isBulk: boolean;
     batch?: string;
     expiry?: string | null;
+    unit_conversion?: {
+        factor: number;
+        subUnit: string;
+    } | null;
 }

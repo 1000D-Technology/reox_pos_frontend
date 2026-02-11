@@ -16,6 +16,7 @@ import { useEffect, useState } from 'react';
 import toast, { Toaster } from 'react-hot-toast';
 import { supplierService } from '../../../services/supplierService';
 import { companyService } from '../../../services/companyService';
+import { bankService } from '../../../services/bankService';
 import TypeableSelect from '../../../components/TypeableSelect';
 
 interface Category {
@@ -41,6 +42,11 @@ function CreateSupplier() {
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isCompanyModalOpen, setIsCompanyModalOpen] = useState(false);
+
+    // State for bank form
+    const [bankName, setBankName] = useState('');
+    const [isSubmittingBank, setIsSubmittingBank] = useState(false);
+    const [isBankModalOpen, setIsBankModalOpen] = useState(false);
 
     // State for company selection
     const [companies, setCompanies] = useState<{ value: string | number, label: string }[]>([]);
@@ -71,6 +77,7 @@ function CreateSupplier() {
     const [selectedUpdateBank, setSelectedUpdateBank] = useState<{ value: string | number, label: string } | null>(null);
     const [newAccountNumber, setNewAccountNumber] = useState('');
     const [newContactNumber, setNewContactNumber] = useState('');
+    const [newSupplierName, setNewSupplierName] = useState('');
     const [newEmail, setNewEmail] = useState('');
     const [isUpdatingSupplier, setIsUpdatingSupplier] = useState(false);
     const [isUpdatingContact, setIsUpdatingContact] = useState(false);
@@ -508,6 +515,7 @@ function CreateSupplier() {
             const updatePromise = supplierService.updateSupplier(
                 parseInt(selectedCategory.id),
                 {
+                    supplierName: newSupplierName.trim(),
                     contactNumber: newContactNumber,
                     email: newEmail,
                     companyId: selectedCategory.companyId,
@@ -557,6 +565,7 @@ function CreateSupplier() {
 
     const handleEditClick = (category: Category) => {
         setSelectedCategory(category);
+        setNewSupplierName(category.name);
         setNewContactNumber(category.contact);
         setNewEmail(category.email);
         setNewAccountNumber(category.account);
@@ -571,6 +580,7 @@ function CreateSupplier() {
     const handleCloseModal = () => {
         setIsModalOpen(false);
         setSelectedCategory(null);
+        setNewSupplierName('');
         setNewContactNumber('');
         setNewEmail('');
         setNewAccountNumber('');
@@ -582,6 +592,44 @@ function CreateSupplier() {
         setIsCompanyModalOpen(false);
         setCompanyData({ name: '', email: '', contact: '' });
         setIsSubmitting(false);
+    };
+
+    const handleCloseBankModal = () => {
+        setIsBankModalOpen(false);
+        setBankName('');
+        setIsSubmittingBank(false);
+    };
+
+    const handleSubmitBank = async () => {
+        if (!bankName.trim()) {
+            toast.error('Bank name is required');
+            return;
+        }
+
+        setIsSubmittingBank(true);
+
+        try {
+            const createBankPromise = bankService.createBank({ bankName });
+
+            await toast.promise(
+                createBankPromise,
+                {
+                    loading: 'Creating bank...',
+                    success: (res) => {
+                        searchCompaniesAndBanks();
+                        return res.data.message || 'Bank created successfully!';
+                    },
+                    error: (err) => err.response?.data?.message || 'Failed to create bank'
+                }
+            );
+
+            handleCloseBankModal();
+
+        } catch (error) {
+            console.error('Error creating bank:', error);
+        } finally {
+            setIsSubmittingBank(false);
+        }
     };
 
     return (
@@ -736,9 +784,17 @@ function CreateSupplier() {
                             />
                         </div>
                         <div>
-                            <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">
-                                Bank
-                            </label>
+                            <div className="flex justify-between items-center mb-1">
+                                <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider">
+                                    Bank
+                                </label>
+                                <button 
+                                    onClick={() => setIsBankModalOpen(true)}
+                                    className="text-[9px] text-blue-600 hover:text-blue-700 font-bold flex items-center gap-1 bg-blue-50 px-1.5 py-0.5 rounded-full transition-colors"
+                                >
+                                    <CirclePlus size={8} /> New
+                                </button>
+                            </div>
                             <TypeableSelect
                                 options={banks}
                                 value={selectedBank?.value || null}
@@ -984,6 +1040,63 @@ function CreateSupplier() {
                 </div>
             )}
 
+            {/* Add Bank Modal */}
+            {isBankModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+                    <div className="bg-white rounded-2xl border border-gray-200 p-8 w-full max-w-md relative">
+                        <button
+                            onClick={handleCloseBankModal}
+                            className="absolute top-4 right-4 p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                        >
+                            <X size={20} className="text-gray-500" />
+                        </button>
+
+                        <div className="flex items-center gap-3 mb-6">
+                            <div className="p-3 bg-linear-to-br from-purple-500 to-purple-600 rounded-xl">
+                                <Building2 className="text-white" size={24} />
+                            </div>
+                            <div>
+                                <h3 className="text-xl font-semibold text-gray-800">Add New Bank</h3>
+                                <p className="text-sm text-gray-500">Create a new bank record</p>
+                            </div>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Bank Name
+                                </label>
+                                <input
+                                    type="text"
+                                    value={bankName}
+                                    onChange={(e) => setBankName(e.target.value)}
+                                    placeholder="Enter Bank Name"
+                                    className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-purple-500 transition-all outline-none"
+                                    autoFocus
+                                />
+                            </div>
+                        </div>
+
+                        <div className="mt-8 flex justify-end gap-3">
+                            <button
+                                onClick={handleCloseBankModal}
+                                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleSubmitBank}
+                                disabled={isSubmittingBank}
+                                className={`px-6 py-2 bg-linear-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white font-medium rounded-lg transition-all ${isSubmittingBank ? 'opacity-50 cursor-not-allowed' : ''
+                                    }`}
+                            >
+                                {isSubmittingBank ? 'Creating...' : 'Create Bank'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Update Supplier Modal */}
             {isModalOpen && selectedCategory && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
@@ -1009,15 +1122,27 @@ function CreateSupplier() {
 
                         <div className="space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Contact Number
+                                <label className="block text-sm font-bold text-gray-700 mb-1">
+                                    Supplier Name
                                 </label>
                                 <input
                                     type="text"
+                                    value={newSupplierName}
+                                    onChange={(e) => setNewSupplierName(e.target.value)}
+                                    placeholder="Enter Supplier Name"
+                                    className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-500 transition-all outline-none"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-1">
+                                    Contact Number
+                                </label>
+                                <input
+                                    type="tel"
                                     value={newContactNumber}
                                     onChange={(e) => setNewContactNumber(e.target.value)}
-                                    placeholder="Enter new contact number"
-                                    className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all outline-none"
+                                    placeholder="Contact Number"
+                                    className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-500 transition-all outline-none"
                                 />
                             </div>
                             <div>

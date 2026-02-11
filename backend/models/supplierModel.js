@@ -114,6 +114,15 @@ class Supplier {
         return banks;
     }
 
+    static async createBank(bankData) {
+        const bank = await prisma.bank.create({
+            data: {
+                bank_name: bankData.bankName
+            }
+        });
+        return bank.id;
+    }
+
     static async createSupplier(data) {
         const supplier = await prisma.supplier.create({
             data: {
@@ -207,6 +216,7 @@ class Supplier {
             await prisma.supplier.update({
                 where: { id: parseInt(id) },
                 data: {
+                    supplier_name: data.supplierName,
                     contact_number: data.contactNumber,
                     email: data.email || null,
                     company_id: parseInt(data.companyId),

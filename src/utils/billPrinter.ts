@@ -1,602 +1,32 @@
-// Types matching your Setting.tsx
-interface PrintSettings {
-    rollSize: string;
-    fontSize: string;
-    headerText: string;
-    footerText: string;
-    showLogo: boolean;
-    showBarcode: boolean;
-    showQR: boolean;
-    paperWidth: string;
-    copies: number;
-    autocut: boolean;
-    printDate: boolean;
-    printTime: boolean;
-}
-
-interface POSSettings {
-    storeName: string;
-    storeAddress: string;
-    storePhone: string;
-    storeEmail: string;
-    taxRate: number;
-    currency: string;
-    defaultDiscount: number;
-    lowStockAlert: number;
-    enableSound: boolean;
-    enableVibration: boolean;
-    quickSaleMode: boolean;
-    showCustomerDisplay: boolean;
-}
-
-interface SystemSettings {
-    language: string;
-    timezone: string;
-    dateFormat: string;
-    timeFormat: string;
-    theme: string;
-    notifications: boolean;
-    autoBackup: boolean;
-    backupFrequency: string;
-}
-
-const translations: { [key: string]: { [key: string]: string } } = {
-    english: {
-        invoice: "Invoice",
-        refInvoice: "Ref Invoice",
-        date: "Date",
-        time: "Time",
-        customer: "Customer",
-        tel: "Tel",
-        item: "Item",
-        qty: "Qty",
-        price: "Price",
-        total: "Total",
-        subtotal: "Subtotal",
-        discount: "Discount",
-        grandTotal: "TOTAL",
-        change: "Change",
-        balanceDue: "Balance Due",
-        returnReceipt: "RETURN RECEIPT",
-        returnTransaction: "Return Transaction",
-        saleTransaction: "Sale Transaction",
-        originalPayments: "Original Payments",
-        cash: "Cash",
-        card: "Card",
-        credit: "Credit",
-        bank: "Bank Deposit",
-        paid: "Paid",
-        oldDebt: "Old Outstanding Debt",
-        debtReduction: "Debt Reduced By",
-        newDebt: "New Outstanding Debt",
-        cashRefunded: "CASH REFUNDED",
-        thankYou: "Thank you for your purchase!"
-    },
-    sinhala: {
-        invoice: "ඉන්වොයිසිය",
-        refInvoice: "යොමු ඉන්වොයිසිය",
-        date: "දිනය",
-        time: "වේලාව",
-        customer: "පාරිභෝගිකයා",
-        tel: "දුරකථන",
-        item: "විස්තරය",
-        qty: "ප්‍රමාණය",
-        price: "මිල",
-        total: "එකතුව",
-        subtotal: "උප එකතුව",
-        discount: "වට්ටම",
-        grandTotal: "මුළු එකතුව",
-        change: "ඉතිරි මුදල",
-        balanceDue: "ගෙවිය යුතු ශේෂය",
-        returnReceipt: "ආපසු ලබාගත් රිසිට්පත",
-        returnTransaction: "ආපසු ගනුදෙනුව",
-        saleTransaction: "විකුණුම් ගනුදෙනුව",
-        originalPayments: "මුල් ගෙවීම්",
-        cash: "මුදල්",
-        card: "කාඩ්පත",
-        credit: "ණය",
-        bank: "බැංකු තැන්පතු",
-        paid: "ගෙවූ මුදල",
-        oldDebt: "පැරණි ණය ශේෂය",
-        debtReduction: "ණය අඩු කිරීම",
-        newDebt: "නව ණය ශේෂය",
-        cashRefunded: "ආපසු ගෙවූ මුදල",
-        thankYou: "ඔබගේ මිලදී ගැනීමට ස්තූතියි!"
-    }
-};
-
-interface CartItem {
-    id: number;
-    name: string;
-    price: number;
-    quantity: number;
-    discount: number;
-    category?: string;
-    isBulk?: boolean;
-}
-
-interface Customer {
-    id: number;
-    name: string;
-    contact: string;
-}
-
-interface PaymentAmount {
-    methodId: string;
-    amount: number;
-}
+import type { PrintSettings } from '../types/settingConfig';
 
 export interface BillData {
     invoiceId: number;
     invoiceNumber: string;
     date: Date;
-    customer: Customer | null;
-    items: CartItem[];
+    customer: {
+        id: number;
+        name: string;
+        contact: string;
+    } | null;
+    items: {
+        id: number;
+        name: string;
+        price: number;
+        quantity: number;
+        discount: number;
+        category?: string;
+        isBulk?: boolean;
+    }[];
     subtotal: number;
     discount: number;
     total: number;
-    paymentAmounts: PaymentAmount[];
-    itemsCount?: number;
+    paymentAmounts: {
+        methodId: string;
+        amount: number;
+    }[];
     isReturn?: boolean;
-    originalPayments?: { method: string, amount: number }[];
-    // Debt information for returns
-    oldDebt?: number;
-    debtReduction?: number;
-    newDebt?: number;
-    refundedCash?: number;
 }
-
-export const generateBillHTML = (data: BillData): string => {
-    const { invoiceNumber, date, customer, items, subtotal, discount, total, paymentAmounts, isReturn, originalPayments, oldDebt, debtReduction, newDebt, refundedCash } = data;
-
-    // Fetch settings from localStorage
-    const savedPrintSettings = localStorage.getItem('printSettings');
-    const savedPOSSettings = localStorage.getItem('posSettings');
-    const savedSystemSettings = localStorage.getItem('systemSettings');
-    const savedLogoPath = localStorage.getItem('logoPath');
-
-    const systemSettings: SystemSettings = savedSystemSettings ? JSON.parse(savedSystemSettings) : {
-        language: 'english'
-    };
-
-    // Translation helper
-    const lang = systemSettings.language?.toLowerCase() || 'english';
-    const t = (key: string) => translations[lang]?.[key] || translations['english'][key] || key;
-
-    const printSettings: PrintSettings = savedPrintSettings ? JSON.parse(savedPrintSettings) : {
-        headerText: 'WELCOME',
-        footerText: 'Thank you!',
-        showLogo: false,
-        showBarcode: true,
-        showQR: false,
-        rollSize: '80mm',
-        fontSize: 'medium'
-    };
-
-    const posSettings: POSSettings = savedPOSSettings ? JSON.parse(savedPOSSettings) : {
-        storeName: 'REOX POS',
-        storeAddress: '',
-        storePhone: '',
-        storeEmail: '',
-        currency: 'Rs.'
-    };
-
-    const discountAmount = (subtotal * discount) / 100;
-    const totalPaid = paymentAmounts.reduce((sum, p) => sum + p.amount, 0);
-    const balance = isReturn ? 0 : totalPaid - total;
-    
-    // Format date
-    // Format date (Using UTC components to match stored Local Time)
-    const dateStr = `${date.getUTCDate()}/${date.getUTCMonth() + 1}/${date.getUTCFullYear()}`;
-    const hours = date.getUTCHours().toString().padStart(2, '0');
-    const minutes = date.getUTCMinutes().toString().padStart(2, '0');
-    const seconds = date.getUTCSeconds().toString().padStart(2, '0');
-    // Convert to 12-hour format if preferred, usually receipts use 24h or simple
-    const ampm = parseInt(hours) >= 12 ? 'PM' : 'AM';
-    const hours12 = parseInt(hours) % 12 || 12;
-    const timeStr = `${hours12}:${minutes}:${seconds} ${ampm}`;
-
-    const getUnitConfig = (unit: string, isBulkItem: boolean) => {
-        const u = unit.toLowerCase().trim();
-        // Weights: KG, Grams, Kilo, etc.
-        if (u.includes('kg') || u.includes('kilo') || u.includes('gram') || u.includes('weight') || (isBulkItem && (u === '' || u === 'pcs'))) 
-            return { label: 'Weight', subLabel: 'g', factor: 1000 };
-        // Volumes: L, ML, Liter, litre, etc.
-        if (u === 'l' || u.includes('ltr') || u.includes('liter') || u.includes('litre') || u.includes('vol') || u.includes('ml')) 
-            return { label: 'Volume', subLabel: 'ml', factor: 1000 };
-        // Lengths: M, CM, Meter, metre, etc.
-        if (u === 'm' || (u.includes('meter') && !u.includes('centi')) || u.includes('metre') || u.includes('cm')) 
-            return { label: 'Length', subLabel: 'cm', factor: 100 };
-        
-        // Final fallback for bulk items
-        if (isBulkItem) return { label: 'Bulk', subLabel: 'Units', factor: 1000 };
-        
-        return null;
-    };
-
-    // Generate items rows
-    const itemsRows = items.map(item => {
-        const itemTotal = item.price * item.quantity;
-        const itemDiscountVal = (itemTotal * item.discount) / 100;
-        const finalItemTotal = itemTotal - itemDiscountVal;
-        
-        // Quantity display logic
-        let displayQty = item.quantity.toString();
-        let displayUnit = item.category || '';
-
-        const unitConfig = getUnitConfig(displayUnit, item.isBulk || false);
-
-        if (unitConfig) {
-            if (item.quantity < 1) {
-                // If less than 1, show in sub unit (e.g. 500g instead of 0.5kg)
-                // This satisfies "not as decimal" for quantities < 1
-                displayQty = Math.round(item.quantity * unitConfig.factor).toString();
-                displayUnit = unitConfig.subLabel;
-            } else {
-                // If 1 or more, show in main unit
-                // This satisfies "over than 1 show in main unit type"
-                displayQty = item.quantity.toString();
-            }
-        }
-
-        return `
-            <tr>
-                <td class="item-name">
-                    ${item.name.replace(/ - (N\/A|NA|N\.A\.|None|Default|Not Applicable)/gi, '')}
-                    ${item.discount > 0 ? `<div class="item-discount">Desc: ${item.discount}%</div>` : ''}
-                </td>
-                <td class="text-right">${displayQty} <span style="font-size: 14px; font-weight: 800;">${displayUnit}</span></td>
-                <td class="text-right">${item.price.toFixed(2)}</td>
-                <td class="text-right">${finalItemTotal.toFixed(2)}</td>
-            </tr>
-        `;
-    }).join('');
-
-    // Payment methods rows
-    let paymentRows = '';
-    
-    if (isReturn) {
-        // For returns, show detailed debt/refund information
-        const actualCashRefund = refundedCash !== undefined ? refundedCash : total;
-        
-        if (debtReduction && debtReduction > 0) {
-            // Debt was reduced
-            paymentRows += `
-                <div style="border: 2px solid #dc2626; border-radius: 8px; padding: 8px; margin-bottom: 10px; background: #fee2e2;">
-                    <div style="font-weight: 800; font-size: 14px; color: #991b1b; text-align: center; margin-bottom: 6px;">
-                        ⚠️ DEBT REDUCTION
-                    </div>
-                    <div class="summary-row" style="font-size: 12px; color: #7f1d1d;">
-                        <span>Return Value:</span>
-                        <span style="font-weight: bold;">Rs ${total.toFixed(2)}</span>
-                    </div>
-                <div style="margin-top: 10px; padding: 10px; background: #fef2f2; border: 1px solid #fee2e2; border-radius: 6px;">
-                    <div class="summary-row" style="font-size: 12px; color: #7f1d1d;">
-                        <span>${t('oldDebt')}:</span>
-                        <span style="font-weight: bold;">Rs ${(oldDebt || 0).toFixed(2)}</span>
-                    </div>
-                    <div class="summary-row" style="font-size: 12px; color: #16a34a; font-weight: bold;">
-                        <span>${t('debtReduction')}:</span>
-                        <span>Rs ${debtReduction.toFixed(2)}</span>
-                    </div>
-                    <div style="border-top: 2px solid #dc2626; margin: 6px 0; padding-top: 6px;">
-                        <div class="summary-row" style="font-size: 13px; font-weight: 900; color: #991b1b;">
-                            <span>${t('newDebt')}:</span>
-                            <span>Rs ${(newDebt || 0).toFixed(2)}</span>
-                        </div>
-                    </div>
-                    <div class="summary-row" style="font-size: 13px; font-weight: 900; color: #047857; margin-top: 8px; border-top: 1px dashed #dc2626; padding-top: 6px;">
-                        <span>${t('cashRefunded')}:</span>
-                        <span>Rs ${actualCashRefund.toFixed(2)}</span>
-                    </div>
-                </div>
-                </div>
-            `;
-        } else {
-            // No debt, just cash refund
-            paymentRows += `
-                <div class="summary-row" style="font-weight: bold; margin-bottom: 8px; font-size: 16px; color: #047857;">
-                    <span>${t('cashRefunded')}:</span>
-                    <span>Rs ${actualCashRefund.toFixed(2)}</span>
-                </div>
-            `;
-        }
-        
-        if (originalPayments && originalPayments.length > 0) {
-            paymentRows += `
-                <div style="border-top: 1px dashed #ccc; margin: 8px 0; padding-top: 5px;">
-                    <div style="font-size: 12px; font-weight: 600; text-align: center; margin-bottom: 4px;">${t('originalPayments')}</div>
-                    ${originalPayments.map(p => `
-                        <div class="summary-row" style="font-size: 12px; color: #555;">
-                            <span>${p.method}:</span>
-                            <span>${p.amount.toFixed(2)}</span>
-                        </div>
-                    `).join('')}
-                </div>
-            `;
-        }
-    } else {
-        // Normal Sale
-        paymentRows = paymentAmounts
-            .filter(p => p.amount > 0)
-            .map(p => `
-                <div class="summary-row">
-                    <span>${t('paid')} (${p.methodId === 'cash' ? t('cash') : p.methodId === 'card' ? t('card') : p.methodId === 'bank' ? t('bank') : t('credit')}):</span>
-                    <span>${p.amount.toFixed(2)}</span>
-                </div>
-            `).join('');
-    }
-
-    return `
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>Bill #${invoiceNumber}</title>
-            <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.0/dist/JsBarcode.all.min.js"></script>
-            <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-            <style>
-                body {
-                    font-family: 'Arial', 'Helvetica', sans-serif;
-                    font-size: 14px;
-                    line-height: 1.4;
-                    width: 78mm;
-                    margin: 0;
-                    padding: 4px 15px;
-                    background: white;
-                    color: black;
-                }
-                .header {
-                    text-align: center;
-                    margin-bottom: 6px;
-                    border-bottom: 1px dashed #000;
-                    padding-bottom: 6px;
-                }
-                .logo {
-                    max-width: 50%;
-                    max-height: 50px;
-                    margin-bottom: 4px;
-                    display: block;
-                    margin-left: auto;
-                    margin-right: auto;
-                }
-                .shop-name {
-                    font-size: 22px;
-                    font-weight: 900;
-                    margin-bottom: 2px;
-                    text-transform: uppercase;
-                }
-                .header-text {
-                    font-size: 13px;
-                    margin-bottom: 2px;
-                    font-weight: 600;
-                }
-                .meta-info {
-                    margin-bottom: 6px;
-                    font-size: 13px;
-                }
-                .customer-info {
-                    margin-bottom: 6px;
-                    border-bottom: 1px dashed #000;
-                    padding-bottom: 4px;
-                }
-                table {
-                    width: 100%;
-                    border-collapse: collapse;
-                    margin-bottom: 6px;
-                }
-                th {
-                    text-align: left;
-                    border-bottom: 1px solid #000;
-                    padding: 2px 0;
-                    font-weight: 800;
-                    font-size: 14px;
-                }
-                td {
-                    padding: 2px 0;
-                    vertical-align: top;
-                }
-                .text-right {
-                    text-align: right;
-                }
-                .item-name {
-                    width: 45%;
-                    font-size: 16px;
-                    font-weight: 600;
-                }
-                .item-discount {
-                    font-size: 12px;
-                    font-style: italic;
-                    color: #444;
-                }
-                .totals {
-                    border-top: 1px dashed #000;
-                    padding-top: 4px;
-                    margin-bottom: 6px;
-                }
-                .summary-row {
-                    display: flex;
-                    justify-content: space-between;
-                    margin-bottom: 2px;
-                }
-                .grand-total {
-                    font-weight: 900;
-                    font-size: 20px;
-                    margin-top: 4px;
-                    border-top: 2px solid #000;
-                    padding-top: 4px;
-                }
-                .footer {
-                    text-align: center;
-                    margin-top: 10px;
-                    font-size: 11px;
-                }
-                .software-credit {
-                    margin-top: 5px;
-                    font-size: 9px;
-                    color: #666;
-                    border-top: 1px dotted #ccc;
-                    padding-top: 3px;
-                }
-                svg {
-                    max-width: 100%;
-                }
-                #barcode {
-                    width: 100%;
-                    height: 40px;
-                    margin: 5px 0;
-                }
-                #qrcode img {
-                    margin: 0 auto;
-                }
-                @media print {
-                    @page {
-                        margin: 0;
-                        size: auto; 
-                    }
-                    body {
-                        margin: 0;
-                        padding: 5px 15px;
-                    }
-                }
-            </style>
-        </head>
-        <body>
-            <div class="header">
-                <div class="shop-name">${posSettings.storeName}</div>
-                ${printSettings.showLogo && savedLogoPath ? `<img src="${savedLogoPath}" class="logo" alt="Logo" />` : ''}
-                ${isReturn ? `<div style="font-weight:900; font-size:16px; margin: 5px 0; border: 2px solid black; padding: 2px;">${t('returnReceipt')}</div>` : ''}
-                ${printSettings.headerText ? `<div class="header-text">${printSettings.headerText}</div>` : ''}
-                <div>${posSettings.storeAddress}</div>
-                <div>${t('tel')}: ${posSettings.storePhone}</div>
-                ${posSettings.storeEmail ? `<div>Email: ${posSettings.storeEmail}</div>` : ''}
-            </div>
-
-            <div class="meta-info">
-                <div class="summary-row">
-                    <span>${isReturn ? t('refInvoice') : t('invoice')}: ${invoiceNumber}</span>
-                </div>
-                <div class="summary-row">
-                    <span>${t('date')}: ${dateStr}</span>
-                    <span>${t('time')}: ${timeStr}</span>
-                </div>
-            </div>
-
-            ${customer ? `
-            <div class="customer-info">
-                <strong>${t('customer')}:</strong> ${customer.name}<br/>
-                ${t('tel')}: ${customer.contact}
-            </div>
-            ` : ''}
-
-            <table>
-                <thead>
-                    <tr>
-                        <th class="item-name">${t('item')}</th>
-                        <th class="text-right">${t('qty')}</th>
-                        <th class="text-right">${t('price')}</th>
-                        <th class="text-right">${t('total')}</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${itemsRows}
-                </tbody>
-            </table>
-
-            <div class="totals">
-                <div class="summary-row">
-                    <span>${t('subtotal')}:</span>
-                    <span>${subtotal.toFixed(2)}</span>
-                </div>
-                ${discount > 0 ? `
-                <div class="summary-row">
-                    <span>${t('discount')} (${discount}%):</span>
-                    <span>-${discountAmount.toFixed(2)}</span>
-                </div>
-                ` : ''}
-                <div class="summary-row grand-total">
-                    <span>${t('grandTotal')}:</span>
-                    <span>${total.toFixed(2)}</span>
-                </div>
-            </div>
-
-            <div class="totals">
-                ${paymentRows}
-                <div class="summary-row" style="margin-top: 5px; font-weight: bold;">
-                    <span>${balance >= 0 ? t('change') : t('balanceDue')}:</span>
-                    <span>${Math.abs(balance).toFixed(2)}</span>
-                </div>
-            </div>
-
-            <div class="footer">
-                ${printSettings.showQR ? `
-                <div style="display: flex; justify-content: center; margin-bottom: 10px;">
-                    <div id="qrcode"></div>
-                </div>
-                ` : ''}
-
-                <div style="margin-bottom: 10px; font-weight: 600;">
-                    ${(printSettings.footerText === 'Thank you for your purchase!' || printSettings.footerText === 'Thank you!') 
-                        ? t('thankYou') 
-                        : printSettings.footerText}
-                </div>
-                
-                <div style="margin-top: 15px; padding-top: 10px; border-top: 1px dashed #000; text-align: center;">
-                    <div style="font-size: 10px; font-weight: 800; margin-bottom: 2px; text-transform: uppercase; color: #333;">
-                        ${isReturn ? t('returnTransaction') : t('saleTransaction')}
-                    </div>
-                    <div style="font-size: 14px; font-weight: 900; margin-bottom: 5px;">
-                        ${invoiceNumber}
-                    </div>
-                    <div style="display: flex; justify-content: center; margin-bottom: 5px;">
-                        <svg id="barcode-bottom"></svg>
-                    </div>
-                </div>
-
-                <div class="software-credit">
-                    REOX POS System by <strong>1000D Technology (Pvt) Ltd.</strong>
-                    <br/>
-                    Contact us - 0774227449
-                </div>
-            </div>
-
-            <script>
-                function renderElements() {
-                    if (typeof JsBarcode === 'undefined') {
-                        setTimeout(renderElements, 50);
-                        return;
-                    }
-
-                    try {
-                        JsBarcode("#barcode-bottom", "${invoiceNumber}", {
-                            format: "CODE128",
-                            width: 2,
-                            height: 35,
-                            displayValue: false,
-                            margin: 0
-                        });
-                    } catch (e) { console.error(e); }
-
-                    ${printSettings.showQR ? `
-                    try {
-                        if (typeof QRCode !== 'undefined') {
-                            new QRCode(document.getElementById("qrcode"), {
-                                text: "REOX-POS-${invoiceNumber}",
-                                width: 70,
-                                height: 70,
-                                colorDark : "#000000",
-                                colorLight : "#ffffff",
-                                correctLevel : QRCode.CorrectLevel.M
-                            });
-                        }
-                    } catch (e) { console.error(e); }
-                    ` : ''}
-                }
-                renderElements();
-            </script>
-        </body>
-        </html>
-    `;
-};
 
 export const printBill = (data: BillData) => {
     const printWindow = window.open('', '_blank');
@@ -604,14 +34,230 @@ export const printBill = (data: BillData) => {
         const html = generateBillHTML(data);
         printWindow.document.write(html);
         printWindow.document.close();
-        
-        // Wait for content to load then print
         printWindow.onload = () => {
             printWindow.focus();
-            printWindow.print();
-            printWindow.close();
+            setTimeout(() => {
+                printWindow.print();
+                // Optional: close after print? 
+                // printWindow.close(); 
+            }, 500);
         };
     } else {
         console.error("Failed to open print window");
     }
+};
+
+const generateBillHTML = (data: BillData) => {
+    // Load settings
+    const savedPrintSettings = localStorage.getItem('printSettings');
+    const savedPOSSettings = localStorage.getItem('posSettings');
+    
+    const printSettings: PrintSettings = savedPrintSettings ? JSON.parse(savedPrintSettings) : {
+        language: 'english',
+        rollSize: '80mm',
+        fontSize: 'medium',
+        headerText: 'WELCOME TO OUR STORE',
+        footerText: 'Thank you for your purchase!',
+        showLogo: true,
+        showBarcode: true,
+        showQR: false,
+        paperWidth: '80',
+        copies: 1,
+        autocut: true,
+        printDate: true,
+        printTime: true
+    };
+
+    const posSettings = savedPOSSettings ? JSON.parse(savedPOSSettings) : {
+        storeName: 'My POS Store',
+        storeAddress: '123 Main Street',
+        storePhone: '+1 234 567 8900',
+        storeEmail: 'store@example.com'
+    };
+
+    const width = printSettings.rollSize === '58mm' ? '58mm' : '80mm';
+    const fontSize = {
+        'small': '10px',
+        'medium': '12px',
+        'large': '14px',
+        'extra-large': '16px'
+    }[printSettings.fontSize] || '12px';
+
+    const labels = {
+        'english': {
+            invoice: 'Invoice',
+            customer: 'Customer',
+            item: 'Item',
+            qty: 'Qty',
+            price: 'Price',
+            total: 'TOTAL',
+            subtotal: 'Subtotal',
+            discount: 'Discount',
+            tel: 'Tel',
+            inv: 'Inv',
+            date: 'Date'
+        },
+        'sinhala': {
+            invoice: 'ඉන්වොයිසිය',
+            customer: 'පාරිභෝගිකයා',
+            item: 'භාණ්ඩය',
+            qty: 'ප්‍රමා.',
+            price: 'මිල',
+            total: 'මුළු එකතුව',
+            subtotal: 'උප එකතුව',
+            discount: 'වට්ටම්',
+            tel: 'දුරකථන',
+            inv: 'අංකය',
+            date: 'දිනය'
+        }
+    };
+
+    const t = labels[printSettings.language as keyof typeof labels] || labels['english'];
+
+    return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>${t.invoice} #${data.invoiceNumber}</title>
+        <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.0/dist/JsBarcode.all.min.js"></script>
+        <style>
+            @page { margin: 0; }
+            body { 
+                font-family: 'Courier New', monospace; 
+                width: ${width}; 
+                margin: 0 auto; 
+                padding: 10px; 
+                font-size: ${fontSize};
+                color: #000;
+            }
+            .text-center { text-align: center; }
+            .text-right { text-align: right; }
+            .font-bold { font-weight: bold; }
+            .mb-2 { margin-bottom: 5px; }
+            .border-b { border-bottom: 1px dashed #000; padding-bottom: 5px; margin-bottom: 5px; }
+            .border-t { border-top: 1px dashed #000; padding-top: 5px; margin-top: 5px; }
+            
+            .header { margin-bottom: 10px; }
+            .store-name { font-size: 1.2em; font-weight: bold; }
+            
+            table { width: 100%; border-collapse: collapse; }
+            th { text-align: left; border-bottom: 1px solid #000; }
+            td { vertical-align: top; }
+            
+            .item-row td { padding-bottom: 3px; }
+            
+            .totals { margin-top: 10px; }
+            .footer { margin-top: 20px; text-align: center; font-size: 0.9em; }
+            
+            img.logo { max-width: 80%; height: auto; margin-bottom: 5px; }
+            #barcode { height: 40px; margin-top: 10px; max-width: 100%; }
+        </style>
+    </head>
+    <body>
+        <div class="header text-center">
+            ${printSettings.showLogo && localStorage.getItem('logoPath') ? 
+                `<img src="${localStorage.getItem('logoPath')}" class="logo" />` : ''}
+            
+            <div class="store-name">${posSettings.storeName}</div>
+            <div>${posSettings.storeAddress}</div>
+            <div>${t.tel}: ${posSettings.storePhone}</div>
+            <div class="border-b"></div>
+            
+            ${printSettings.headerText ? `<div class="mb-2 font-bold">${printSettings.headerText}</div>` : ''}
+            
+            <div style="display: flex; justify-content: space-between;">
+                <span>${t.inv}: ${data.invoiceNumber}</span>
+                ${printSettings.printDate ? `<span>${new Date(data.date).toLocaleDateString()}</span>` : ''}
+            </div>
+            ${printSettings.printTime ? `<div class="text-right">${new Date(data.date).toLocaleTimeString()}</div>` : ''}
+            
+            ${data.customer ? `
+            <div class="text-left border-b">
+                ${t.customer}: ${data.customer.name}<br/>
+                ${data.customer.contact}
+            </div>` : ''}
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 45%">${t.item}</th>
+                    <th style="width: 15%" class="text-center">${t.qty}</th>
+                    <th style="width: 20%" class="text-right">${t.price}</th>
+                    <th style="width: 20%" class="text-right">${t.total}</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${data.items.map(item => {
+                    const itemTotal = (item.price * item.quantity) - (item.discount || 0);
+                    return `
+                    <tr class="item-row">
+                        <td colspan="4">${item.name}</td>
+                    </tr>
+                    <tr class="item-row">
+                        <td></td>
+                        <td class="text-center">${item.quantity}</td>
+                        <td class="text-right">${item.price.toFixed(2)}</td>
+                        <td class="text-right">${itemTotal.toFixed(2)}</td>
+                    </tr>
+                    ${item.discount > 0 ? `
+                    <tr>
+                        <td colspan="4" class="text-right" style="font-size: 0.9em;">(${t.discount}: -${item.discount.toFixed(2)})</td>
+                    </tr>` : ''}
+                    `;
+                }).join('')}
+            </tbody>
+        </table>
+
+        <div class="totals border-t">
+            <div style="display: flex; justify-content: space-between;">
+                <span>${t.subtotal}:</span>
+                <span>${data.subtotal.toFixed(2)}</span>
+            </div>
+            ${data.discount > 0 ? `
+            <div style="display: flex; justify-content: space-between;">
+                <span>${t.discount}:</span>
+                <span>-${data.discount.toFixed(2)}</span>
+            </div>` : ''}
+            
+            <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 1.1em; margin-top: 5px; border-top: 1px solid #000; padding-top: 5px;">
+                <span>${t.total}:</span>
+                <span>${data.total.toFixed(2)}</span>
+            </div>
+            
+            <div class="border-b" style="margin-top: 10px;"></div>
+            
+            ${data.paymentAmounts.map(p => `
+            <div style="display: flex; justify-content: space-between;">
+                <span>${p.methodId.toUpperCase()}:</span>
+                <span>${p.amount.toFixed(2)}</span>
+            </div>`).join('')}
+        </div>
+
+        <div class="footer">
+            ${printSettings.footerText ? `<div>${printSettings.footerText}</div>` : ''}
+            
+            ${printSettings.showBarcode ? `
+            <div>
+                <svg id="barcode"></svg>
+            </div>` : ''}
+            
+            <div style="margin-top: 10px; font-size: 0.8em;">Software by 1000D Technology</div>
+        </div>
+
+        <script>
+            try {
+                if (${printSettings.showBarcode}) {
+                    JsBarcode("#barcode", "${data.invoiceNumber}", {
+                        format: "CODE128",
+                        width: 1.5,
+                        height: 40,
+                        displayValue: true
+                    });
+                }
+            } catch (e) { console.error(e); }
+        </script>
+    </body>
+    </html>
+    `;
 };

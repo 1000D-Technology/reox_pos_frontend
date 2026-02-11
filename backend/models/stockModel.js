@@ -356,6 +356,7 @@ class Stock {
             .filter(v => v && !['n/a', 'none', 'default', 'na'].includes(v.toLowerCase().trim()));
 
         return {
+            product_variations_id: group.product_variations_id,
             product_id: pv.product.product_code || pv.product.id.toString(),
             product_name: vParts.length > 0 ? `${pv.product.product_name} - ${vParts.join(' - ')}` : pv.product.product_name,
             unit: pv.product.unit_id_product_unit_idTounit_id?.name,
@@ -470,18 +471,20 @@ class Stock {
                 : p.product_name;
 
             return {
-                stock_id: s.id,
-                qty: s.qty,
-                cost_price: s.cost_price,
-                mrp: s.mrp,
-                selling_price: s.rsp,
-                product_name: fullProductName,
-                product_code: p.product_code,
-                barcode: pv.barcode,
-                unit: p.unit_id_product_unit_idTounit_id?.name,
-                supplier: supplier?.supplier_name,
-                batch_name: s.batch?.batch_name
-            };
+            stock_id: s.id,
+            product_variations_id: pv.id,
+            product_id: p.product_code || p.id.toString(),
+            qty: s.qty,
+            cost_price: s.cost_price,
+            mrp: s.mrp,
+            selling_price: s.rsp,
+            product_name: fullProductName,
+            product_code: p.product_code,
+            barcode: pv.barcode,
+            unit: p.unit_id_product_unit_idTounit_id?.name,
+            supplier: supplier?.supplier_name,
+            batch_name: s.batch?.batch_name
+        };
         });
 
         return {

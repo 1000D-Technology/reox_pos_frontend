@@ -140,12 +140,24 @@ function CreateProducts() {
         { id: 4, title: 'Review', description: 'Final check', icon: Package },
     ];
 
-    const nextStep = () => {
+    const nextStep = async () => {
         if (currentStep === 1) {
             if (!productData.name || !productData.code || !productData.categoryId || !productData.brandId || !productData.unitId || !productData.typeId) {
                 toast.error('Please fill all required fields');
                 return;
             }
+
+            // Check if product code exists before proceeding
+            try {
+                const response = await productService.checkProductCode(productData.code);
+                if (response.data?.success && response.data.exists) {
+                    toast.error('This Product Code already exists! Cannot add this record.');
+                    return;
+                }
+            } catch (error) {
+                console.error('Error checking product code:', error);
+            }
+
             setIsVariationModalOpen(true);
             return;
         }

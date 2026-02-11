@@ -46,4 +46,7 @@ export const productService = {
     // Add new variation to existing product
     addProductVariation: (productId: number, variationData: any) =>
         axiosInstance.post(`/api/products/${productId}/variants`, variationData),
+
+    // Check if product code exists
+    checkProductCode: (code: string) => axiosInstance.get(`/api/products/check-code/${code}`),
 };

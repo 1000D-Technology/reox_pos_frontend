@@ -9,6 +9,7 @@ router.get('/companies/search', supplierController.searchCompany);
 router.get('/companies', supplierController.getCompanies);
 router.put('/companies/:id', validateCompany, supplierController.updateCompany);
 router.get('/banks', supplierController.searchBank);
+router.post('/banks', supplierController.addBank);
 
 router.post('/import', upload.single('file'), supplierController.importSuppliers);
 router.post('/add', validateSupplier, supplierController.addSupplier);

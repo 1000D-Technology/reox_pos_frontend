@@ -10,9 +10,12 @@ import {
     Plus,
     UserPlus,
     Percent,
-    FileText
+    FileText,
+    Loader2
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useParams, useNavigate } from 'react-router-dom';
 import toast, { Toaster } from 'react-hot-toast';
 import { customerService } from '../../../services/customerService';
 import { posService } from '../../../services/posService';
@@ -50,7 +53,19 @@ interface Product {
     unit: string;
 }
 
-function CreateQuotation() {
+interface CreateQuotationProps {
+    quotationId?: string | number;
+    onClose?: () => void;
+    onSaveSuccess?: () => void;
+}
+
+function CreateQuotation({ quotationId, onClose, onSaveSuccess }: CreateQuotationProps) {
+    const { id: paramId } = useParams();
+    const navigate = useNavigate();
+    const activeId = quotationId || paramId;
+    const isEdit = !!activeId;
+    const isModal = !!onClose;
+
     // Data State
     const [quotationData, setQuotationData] = useState<QuotationItem[]>([]);
     const [customers, setCustomers] = useState<any[]>([]);
@@ -62,6 +77,10 @@ function CreateQuotation() {
     const [validUntil, setValidUntil] = useState(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]); // +7 days
     const [remarks, setRemarks] = useState('');
     const [showRegistrationModal, setShowRegistrationModal] = useState(false);
+    const [registerLoading, setRegisterLoading] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [saveLoading, setSaveLoading] = useState(false);
+    const [printLoading, setPrintLoading] = useState(false);
     
     // Item Addition State
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -78,25 +97,10 @@ function CreateQuotation() {
 
     // --- Loading Data ---
     useEffect(() => {
-        loadCustomers();
+        // Only load products initially, customers will be searched
         loadProducts();
     }, []);
 
-    const loadCustomers = async () => {
-        try {
-            const response = await customerService.getCustomers();
-            if (response.data?.success) {
-                setCustomers(response.data.data.map((c: any) => ({
-                    value: c.id,
-                    label: `${c.name} (${c.contact})`,
-                    original: c
-                })));
-            }
-        } catch (error) {
-            console.error('Failed to load customers', error);
-            toast.error('Failed to load customers');
-        }
-    };
 
     const loadProducts = async () => {
         try {
@@ -120,6 +124,81 @@ function CreateQuotation() {
             console.error('Failed to load products', error);
             toast.error('Failed to load products');
         }
+    };
+
+    const loadQuotation = async (qId: string) => {
+        try {
+            setLoading(true);
+            const response = await quotationService.getQuotation(qId);
+            if (response.data.success) {
+                const q = response.data.data;
+                setSelectedCustomer(q.customer);
+                setQuotationDate(new Date(q.created_at).toISOString().split('T')[0]);
+                setValidUntil(new Date(q.valid_until).toISOString().split('T')[0]);
+                setRemarks(q.remarks || '');
+                
+                const items: QuotationItem[] = q.quotation_items.map((item: any) => {
+                    const productCode = item.stock?.product_variations?.product?.product_code || '';
+                    const productName = item.stock?.product_variations?.product?.product_name || 'Unknown Item';
+                    const vName = [
+                        item.stock?.product_variations?.color && item.stock?.product_variations?.color !== 'Default' ? item.stock?.product_variations?.color : null,
+                        item.stock?.product_variations?.size && item.stock?.product_variations?.size !== 'Default' ? item.stock?.product_variations?.size : null,
+                        item.stock?.product_variations?.storage_capacity && item.stock?.product_variations?.storage_capacity !== 'N/A' ? item.stock?.product_variations?.storage_capacity : null
+                    ].filter(Boolean).join(' - ');
+
+                    return {
+                        id: item.stock_id,
+                        productId: productCode,
+                        name: vName ? `${productName} (${vName})` : productName,
+                        mrp: item.price,
+                        discount: item.discount_amount,
+                        discountType: 'price',
+                        rate: item.price,
+                        qty: item.qty,
+                        amount: item.total
+                    };
+                });
+                setQuotationData(items);
+            }
+        } catch (error) {
+            console.error('Failed to load quotation', error);
+            toast.error('Failed to load quotation');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        if (activeId) {
+            loadQuotation(activeId.toString());
+        }
+    }, [activeId]);
+
+    const handleCustomerSearch = (query: string) => {
+        if (searchTimeout) clearTimeout(searchTimeout);
+        
+        if (!query.trim()) {
+            setCustomers([]);
+            return;
+        }
+
+        const timeout = setTimeout(async () => {
+            try {
+                const response = await customerService.searchCustomers(query);
+                if (response.data?.success) {
+                    setCustomers(response.data.data.map((c: any) => ({
+                        value: c.id,
+                        label: `${c.name} (${c.contact})`,
+                        original: c
+                    })));
+                } else {
+                    setCustomers([]);
+                }
+            } catch (error) {
+                console.error('Customer search failed', error);
+            }
+        }, 300);
+        setSearchTimeout(timeout);
     };
 
     const handleProductSearch = (query: string) => {
@@ -258,6 +337,11 @@ function CreateQuotation() {
         setQuotationData([]);
         setSelectedCustomer(null);
         setRemarks('');
+        if (onClose) {
+            onClose();
+        } else if (isEdit) {
+            navigate('/quotation/create-quotation');
+        }
         toast.success('All cleared');
     };
 
@@ -274,12 +358,16 @@ function CreateQuotation() {
         const subTotalVal = totalAmount + totalDiscount;
         
         try {
+            if (andPrint) setPrintLoading(true);
+            else setSaveLoading(true);
+
             const payload = {
                 customer_id: selectedCustomer.id,
                 valid_until: validUntil,
                 sub_total: subTotalVal, 
                 discount: totalDiscount,
                 total: totalAmount,
+                remarks: remarks,
                 items: quotationData.map(item => ({
                     id: item.id, // stockID
                     mrp: item.mrp,
@@ -289,10 +377,12 @@ function CreateQuotation() {
                 }))
             };
 
-            const response = await quotationService.createQuotation(payload);
+            const response = isEdit 
+                ? await quotationService.updateQuotation(activeId!, payload)
+                : await quotationService.createQuotation(payload);
             
             if (response.data.success) {
-                toast.success('Quotation saved successfully!');
+                toast.success(isEdit ? 'Quotation updated successfully!' : 'Quotation saved successfully!');
                 const savedData = response.data.data;
 
                 if (andPrint) {
@@ -313,24 +403,26 @@ function CreateQuotation() {
                         total: totalAmount,
                         preparedBy: 'Admin' 
                     });
-                } else {
-                    // If just save, maybe ask to print? Or just done.
                 }
 
-                if (andPrint) {
-                   handleClear(); // Only clear if printing done, otherwise user might want to check
+                if (onSaveSuccess) {
+                    onSaveSuccess();
                 } else {
-                     handleClear();
+                    handleClear();
                 }
             }
         } catch (error: any) {
             console.error('Save failed:', error);
             toast.error(error.response?.data?.message || 'Failed to save quotation');
+        } finally {
+            setSaveLoading(false);
+            setPrintLoading(false);
         }
     };
 
     const registerCustomer = async (name: string, contact: string, email?: string) => {
         try {
+            setRegisterLoading(true);
             const response = await customerService.addCustomer({
                 name: name.trim(),
                 contact: contact.trim(),
@@ -344,7 +436,12 @@ function CreateQuotation() {
                     name: customerFromAPI.name,
                     contact: customerFromAPI.contact
                 };
-                await loadCustomers();
+                // After registration, we add the new customer to the list so they can be selected
+                setCustomers([{
+                    value: customerFromAPI.id,
+                    label: `${customerFromAPI.name} (${customerFromAPI.contact})`,
+                    original: newCustomer
+                }]);
                 setSelectedCustomer(newCustomer);
                 setShowRegistrationModal(false);
                 toast.success('Customer registered successfully!');
@@ -352,6 +449,8 @@ function CreateQuotation() {
         } catch (error: any) {
             console.error('Error registering customer:', error);
             toast.error(error.response?.data?.message || 'Failed to register customer');
+        } finally {
+            setRegisterLoading(false);
         }
     };
 
@@ -402,87 +501,113 @@ function CreateQuotation() {
 
 
     return (
-        <>
+        <div className="relative">
             <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
             
+            <AnimatePresence>
+                {loading && (
+                    <motion.div 
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="absolute inset-0 z-[60] bg-white/60 backdrop-blur-[2px] flex flex-col items-center justify-center gap-4 rounded-2xl"
+                    >
+                        <div className="relative">
+                            <motion.div 
+                                animate={{ rotate: 360 }}
+                                transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+                                className="w-16 h-16 border-4 border-amber-100 border-t-amber-500 rounded-full"
+                            />
+                            <div className="absolute inset-0 flex items-center justify-center">
+                                <Loader2 size={24} className="text-amber-600 animate-pulse" />
+                            </div>
+                        </div>
+                        <div className="flex flex-col items-center">
+                            <span className="text-amber-800 font-bold uppercase tracking-widest text-xs">Loading Quotation</span>
+                            <span className="text-gray-400 text-[10px] font-medium">Please wait while we fetch the details...</span>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
             <CustomerRegistrationModal 
                 isOpen={showRegistrationModal}
                 onClose={() => setShowRegistrationModal(false)}
                 onRegister={registerCustomer}
+                isLoading={registerLoading}
             />
 
-            <div className="flex flex-col gap-4 h-full">
-                {/* Header */}
-                <div className="flex items-center justify-between">
-                    <div>
-                        <div className="text-sm text-gray-400 flex items-center">
-                            <span>Quotation</span>
-                            <span className="mx-2">›</span>
-                            <span className="text-gray-700 font-medium">Create Quotation</span>
+            <div className={`flex flex-col gap-4 ${isModal ? 'h-[85vh]' : 'h-full'}`}>
+                {/* Header Section */}
+                {!isModal && (
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <div className="text-sm text-gray-400 flex items-center">
+                                <span>Quotation</span>
+                                <span className="mx-2">›</span>
+                                <span className="text-gray-700 font-medium">{isEdit ? 'Edit' : 'Create'} Quotation</span>
+                            </div>
+                            <h1 className="text-3xl font-semibold bg-linear-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
+                                {isEdit ? 'Edit' : 'Create'} Quotation
+                            </h1>
                         </div>
-                        <h1 className="text-3xl font-semibold bg-linear-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
-                            Create Quotation
-                        </h1>
-                    </div>
-
-                     {/* Shortcuts Hint Style from ManageInvoice */}
-                    <div className="hidden lg:flex items-center gap-3 bg-white px-4 py-2 rounded-xl border border-gray-100 shadow-sm border-b-2">
-                         <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg border border-gray-200">
-                            <span className="text-[10px] font-black text-gray-500 bg-white px-1.5 py-0.5 rounded shadow-sm border border-gray-200">F1</span>
-                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Product</span>
-                        </div>
-                         <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg border border-gray-200">
-                            <span className="text-[10px] font-black text-gray-500 bg-white px-1.5 py-0.5 rounded shadow-sm border border-gray-200">F2</span>
-                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Customer</span>
-                        </div>
-                        <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg border border-gray-200">
-                            <span className="text-[10px] font-black text-gray-500 bg-white px-1.5 py-0.5 rounded shadow-sm border border-gray-200">F4</span>
-                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Save</span>
-                        </div>
-                        <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg border border-gray-200">
-                            <span className="text-[10px] font-black text-gray-500 bg-white px-1.5 py-0.5 rounded shadow-sm border border-gray-200">F9</span>
-                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Save & Print</span>
-                        </div>
-                        <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg border border-gray-200">
-                            <span className="text-[10px] font-black text-gray-500 bg-white px-1.5 py-0.5 rounded shadow-sm border border-gray-200">Ins</span>
-                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">New Custo</span>
+        
+                        {/* Shortcuts Legend */}
+                        <div className="hidden lg:flex items-center gap-3 bg-white p-2 rounded-2xl border border-gray-200 shadow-xl shadow-gray-100/50">
+                            {[
+                                { key: 'F1', label: 'Product' },
+                                { key: 'F2', label: 'Customer' },
+                                { key: 'F4', label: 'Save' },
+                                { key: 'F9', label: 'Print' },
+                                { key: 'Ins', label: 'New Cust' }
+                            ].map((s, idx) => (
+                                <div key={idx} className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-xl border border-gray-200 hover:border-emerald-200 transition-colors group">
+                                    <span className="text-[10px] font-black text-gray-600 bg-white px-2 py-1 rounded-lg shadow-sm border border-gray-200 group-hover:text-emerald-600 transition-colors">{s.key}</span>
+                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{s.label}</span>
+                                </div>
+                            ))}
                         </div>
                     </div>
-                </div>
+                )}
 
-                {/* Main Form Area */}
-                <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 grid md:grid-cols-4 gap-6">
+                {/* Form Section - Mimics ManageInvoice Filter look */}
+                <div className="bg-white rounded-2xl p-6 shadow-xl shadow-gray-100/50 border border-gray-200 grid md:grid-cols-4 gap-6 relative overflow-hidden">
+                    <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500"></div>
+                    
                     {/* Customer Selection */}
-                    <div className="md:col-span-2 relative">
+                    <div className="md:col-span-2 space-y-1">
                          <div className="flex justify-between items-center mb-1">
                              <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                                <User size={16} className="text-emerald-500" /> Customer
+                                <User size={16} className="text-emerald-500" /> Customer Information
                             </label>
                             <button 
                                 onClick={() => setShowRegistrationModal(true)}
                                 className="text-xs text-emerald-600 hover:text-emerald-700 font-bold flex items-center gap-1 bg-emerald-50 px-2 py-0.5 rounded-full transition-colors"
                             >
-                                <UserPlus size={12} /> New Customer
+                                <Plus size={12} /> New Customer
                             </button>
                          </div>
                         
-                        <TypeableSelect
-                             options={customers}
-                             value={selectedCustomer ? selectedCustomer.id : null}
-                             onChange={(opt) => {
-                                 if (opt) {
-                                     setSelectedCustomer((opt as any).original);
-                                 } else {
-                                     setSelectedCustomer(null);
-                                 }
-                             }}
-                             placeholder="Search Customer by Name or Contact (F2)..."
-                             id="customer-search-input"
-                        />
+                        <div className="relative group">
+                            <TypeableSelect
+                                 options={customers}
+                                 value={selectedCustomer ? selectedCustomer.id : null}
+                                 onChange={(opt) => {
+                                     if (opt) {
+                                         setSelectedCustomer((opt as any).original);
+                                     } else {
+                                         setSelectedCustomer(null);
+                                     }
+                                 }}
+                                 placeholder="Type Name or Number... (F2)"
+                                 id="customer-search-input"
+                                 onSearch={handleCustomerSearch}
+                            />
+                        </div>
                     </div>
 
                     {/* Dates */}
-                    <div>
+                    <div className="space-y-1">
                         <label className="text-sm font-medium text-gray-700 mb-1 flex items-center gap-2">
                            <Calendar size={16} className="text-emerald-500" /> Date
                         </label>
@@ -493,7 +618,7 @@ function CreateQuotation() {
                             className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-100 focus:border-emerald-500 outline-none transition-all"
                         />
                     </div>
-                    <div>
+                    <div className="space-y-1">
                          <label className="text-sm font-medium text-gray-700 mb-1 flex items-center gap-2">
                            <Calendar size={16} className="text-red-500" /> Valid Until
                         </label>
@@ -506,38 +631,30 @@ function CreateQuotation() {
                     </div>
                 </div>
 
-                {/* Add Item Section */}
+                {/* Product Selection Section */}
                 <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-                    <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                        <Package size={20} className="text-emerald-600" /> Add Products
-                    </h2>
-                    
-                    {/* Selected Product Banner */}
-                    <div className="mb-4">
-                         {selectedProduct ? (
-                             <div className="bg-emerald-50 border border-emerald-100 rounded-lg p-3 flex justify-between items-center animate-in fade-in slide-in-from-top-2">
-                                 <div>
-                                     <h3 className="text-emerald-900 font-bold">{selectedProduct.productName}</h3>
-                                     <div className="flex gap-4 text-xs text-emerald-700 mt-0.5">
-                                         <span>Code: {selectedProduct.productCode}</span>
-                                         <span>Stock: {selectedProduct.currentStock} {selectedProduct.unit}</span>
-                                     </div>
-                                 </div>
-                                 <div className="text-right">
-                                     <span className="block text-xs text-emerald-600 font-medium uppercase">Unit Price</span>
-                                     <span className="text-xl font-bold text-emerald-700">LKR {selectedProduct.price.toLocaleString()}</span>
-                                 </div>
-                             </div>
-                         ) : (
-                             <div className="bg-gray-50 border border-gray-100 rounded-lg p-3 text-center text-gray-400 text-sm italic">
-                                 Start by searching for a product below...
-                             </div>
-                         )}
+                    <div className="flex items-center justify-between mb-4">
+                        <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                            <Package size={20} className="text-emerald-600" /> Add Products
+                        </h2>
+                        {selectedProduct && (
+                            <div className="flex items-center gap-4 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100">
+                                <div className="text-right">
+                                    <span className="block text-[10px] text-gray-400 font-bold uppercase">Stock</span>
+                                    <span className="text-xs font-bold text-gray-700">{selectedProduct.currentStock} {selectedProduct.unit}</span>
+                                </div>
+                                <div className="w-px h-6 bg-gray-200"></div>
+                                <div className="text-right">
+                                    <span className="block text-[10px] text-gray-400 font-bold uppercase">Price</span>
+                                    <span className="text-xs font-bold text-emerald-600">LKR {selectedProduct.price.toLocaleString()}</span>
+                                </div>
+                            </div>
+                        )}
                     </div>
-
+                    
                     <div className="grid md:grid-cols-12 gap-4 items-end">
-                        <div className="md:col-span-5">
-                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Search Product</label>
+                        <div className="md:col-span-5 relative">
+                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Search Product (F1)</label>
                             <TypeableSelect 
                                 options={products}
                                 value={selectedProduct ? selectedProduct.stockID : null}
@@ -545,7 +662,6 @@ function CreateQuotation() {
                                     if (opt) {
                                         const original = (opt as any).original;
                                         setSelectedProduct(original);
-                                        // Reset qty/discount on new product select
                                         setAddQty(1);
                                         setAddDiscount(0);
                                         setDiscountType('percentage');
@@ -553,13 +669,13 @@ function CreateQuotation() {
                                         setSelectedProduct(null);
                                     }
                                 }}
-                                placeholder="Scan Barcode or Type Name (F1)..."
+                                placeholder="Scan Barcode or Type Name..."
                                 id="product-search-input"
                                 onSearch={handleProductSearch}
                             />
                         </div>
                         
-                        <div className="md:col-span-1">
+                        <div className="md:col-span-2">
                             <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Qty</label>
                             <input 
                                 type="number" 
@@ -572,57 +688,36 @@ function CreateQuotation() {
                         </div>
                         
                         <div className="md:col-span-3">
-                             <label className="block text-xs font-bold text-gray-500 uppercase mb-1">
-                                 Discount 
-                                 {selectedProduct && (
-                                     <span className="text-[10px] text-gray-400 font-normal normal-case ml-1">
-                                         (Max: {(selectedProduct.price - selectedProduct.wholesalePrice).toLocaleString()} LKR / {Math.floor(((selectedProduct.price - selectedProduct.wholesalePrice) / selectedProduct.price) * 100)}%)
-                                     </span>
-                                 )}
-                             </label>
-                             <div className="flex">
-                                <div className="relative flex-1">
-                                    <input 
-                                        type="number" 
-                                        min="0"     
-                                        value={addDiscount}
-                                        onChange={(e) => setAddDiscount(parseFloat(e.target.value) || 0)}
-                                        className="w-full py-2 pl-3 pr-8 rounded-l-lg border-2 border-r-0 border-gray-100 focus:border-emerald-500 outline-none transition-all text-right font-medium"
-                                        placeholder="0.00"
-                                    />
-                                </div>
+                             <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Discount</label>
+                             <div className="flex group focus-within:shadow-sm transition-all duration-300">
+                                <input 
+                                    type="number" 
+                                    min="0"     
+                                    value={addDiscount}
+                                    onChange={(e) => setAddDiscount(parseFloat(e.target.value) || 0)}
+                                    className="w-full py-2 pl-3 pr-10 rounded-l-lg border-2 border-r-0 border-gray-100 focus:border-emerald-500 outline-none transition-all text-right font-medium"
+                                    placeholder="0.00"
+                                />
                                 <div className="flex border-2 border-l-0 border-gray-100 rounded-r-lg overflow-hidden">
                                     <button
                                         onClick={() => setDiscountType('percentage')}
-                                        className={`px-2 flex items-center justify-center transition-colors ${discountType === 'percentage' ? 'bg-emerald-500 text-white' : 'bg-gray-50 text-gray-400 hover:bg-gray-100'}`}
+                                        className={`w-8 flex items-center justify-center transition-all ${discountType === 'percentage' ? 'bg-emerald-500 text-white' : 'bg-gray-50 text-gray-400 hover:bg-gray-100'}`}
                                         title="Percentage (%)"
                                     >
-                                        <Percent size={14} />
+                                        <Percent size={12} />
                                     </button>
                                      <button
                                         onClick={() => setDiscountType('price')}
-                                        className={`px-2 flex items-center justify-center transition-colors ${discountType === 'price' ? 'bg-blue-500 text-white' : 'bg-gray-50 text-gray-400 hover:bg-gray-100'}`}
+                                        className={`w-8 flex items-center justify-center transition-all ${discountType === 'price' ? 'bg-blue-500 text-white' : 'bg-gray-50 text-gray-400 hover:bg-gray-100'}`}
                                         title="Fixed Amount (LKR)"
                                     >
-                                        <DollarSign size={14} />
+                                        <DollarSign size={12} />
                                     </button>
                                 </div>
                              </div>
                         </div>
 
-                        <div className="md:col-span-3 flex flex-col justify-end">
-                             {selectedProduct && (
-                                 <div className="mb-2 text-right">
-                                     <div className="text-xs text-gray-500">Net Amount</div>
-                                     <div className={`font-bold ${
-                                         ((selectedProduct.price * addQty) - (discountType === 'percentage' ? (selectedProduct.price * addQty * addDiscount / 100) : (addDiscount * addQty))) / addQty < selectedProduct.wholesalePrice
-                                         ? 'text-red-500' 
-                                         : 'text-emerald-600'
-                                     }`}>
-                                         LKR {((selectedProduct.price * addQty) - (discountType === 'percentage' ? (selectedProduct.price * addQty * addDiscount / 100) : (addDiscount))).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                     </div>
-                                 </div>
-                             )}
+                        <div className="md:col-span-2">
                              <button
                                 onClick={handleAddItem}
                                 className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2.5 rounded-lg shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 active:scale-95"
@@ -633,19 +728,25 @@ function CreateQuotation() {
                     </div>
                 </div>
 
-                {/* Items Table */}
-                <div className="bg-white rounded-2xl p-0 overflow-hidden shadow-xl shadow-gray-200/50 border border-gray-100 flex-1 flex flex-col min-h-[450px]">
-                    <div className="overflow-auto flex-1 h-full scrollbar-thin scrollbar-thumb-emerald-200">
-                        <table className="min-w-full divide-y divide-gray-200 relative">
-                            <thead className="sticky top-0 z-10 bg-emerald-600 shadow-sm text-white">
-                                <tr className="text-white text-sm uppercase tracking-wider font-bold">
-                                    <th className="px-6 py-5 text-left">Product Code</th>
-                                    <th className="px-6 py-5 text-left">Description</th>
-                                    <th className="px-6 py-5 text-right">Rate</th>
-                                    <th className="px-6 py-5 text-center">Qty</th>
-                                    <th className="px-6 py-5 text-right">Discount</th>
-                                    <th className="px-6 py-5 text-right">Amount</th>
-                                    <th className="px-6 py-5 text-center">Action</th>
+                {/* Items Table Section */}
+                <div className="bg-white rounded-2xl shadow-xl shadow-gray-200/50 border border-gray-200 flex-1 flex flex-col overflow-hidden">
+                    <div className="overflow-auto flex-1 scrollbar-thin scrollbar-thumb-gray-200">
+                        <table className="min-w-full divide-y divide-gray-200">
+                            <thead className="bg-linear-to-r from-gray-800 to-gray-700 sticky top-0 z-10">
+                                <tr>
+                                    {[
+                                        { label: 'Product Code', align: 'text-left' },
+                                        { label: 'Description', align: 'text-left' },
+                                        { label: 'Rate', align: 'text-right' },
+                                        { label: 'Qty', align: 'text-center' },
+                                        { label: 'Discount', align: 'text-right' },
+                                        { label: 'Amount', align: 'text-right' },
+                                        { label: 'Action', align: 'text-center' }
+                                    ].map((h, i) => (
+                                        <th key={i} className={`px-6 py-4 ${h.align} text-[10px] text-white uppercase tracking-[0.2em] opacity-80`}>
+                                            {h.label}
+                                        </th>
+                                    ))}
                                 </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-100">
@@ -687,50 +788,99 @@ function CreateQuotation() {
                     </div>
                 </div>
 
-                {/* Footer Section */}
-                <div className="grid md:grid-cols-4 gap-4 mt-auto">
-                    {/* Summary Cards */}
-                    <div className="bg-linear-to-br from-blue-500 to-blue-600 p-4 rounded-xl text-white shadow-lg shadow-blue-200">
-                         <div className="flex items-center gap-3 mb-1">
-                             <div className="p-2 bg-white/20 rounded-lg"><Package size={20} /></div>
-                             <span className="text-sm font-medium opacity-80">Total Items</span>
-                         </div>
-                         <p className="text-2xl font-bold">{totalItems}</p>
+                {/* Footer Summary - Mimics ManageInvoice Stats Cards */}
+                <div className="grid md:grid-cols-4 gap-4">
+                    {/* Items Card */}
+                    <div className="flex items-center p-5 bg-white rounded-2xl border border-gray-200 shadow-lg shadow-gray-100/50 group hover:border-blue-200 transition-all">
+                        <div className="p-3 bg-linear-to-br from-blue-400 to-blue-600 rounded-xl shadow-lg shadow-blue-200/50">
+                            <Package size={22} className="text-white" />
+                        </div>
+                        <div className="w-px h-10 bg-gray-100 mx-4"></div>
+                        <div>
+                            <span className="block text-[10px] font-black text-gray-400 uppercase tracking-widest">Total Items</span>
+                            <span className="text-xl font-black text-gray-700">{totalItems}</span>
+                        </div>
                     </div>
-                     <div className="bg-linear-to-br from-indigo-500 to-indigo-600 p-4 rounded-xl text-white shadow-lg shadow-indigo-200">
-                         <div className="flex items-center gap-3 mb-1">
-                             <div className="p-2 bg-white/20 rounded-lg"><ShoppingCart size={20} /></div>
-                             <span className="text-sm font-medium opacity-80">Total Qty</span>
-                         </div>
-                         <p className="text-2xl font-bold">{totalQuantity}</p>
+
+                    {/* Quantity Card */}
+                    <div className="flex items-center p-5 bg-white rounded-2xl border border-gray-200 shadow-lg shadow-gray-100/50 group hover:border-indigo-200 transition-all">
+                        <div className="p-3 bg-linear-to-br from-indigo-400 to-indigo-600 rounded-xl shadow-lg shadow-indigo-200/50">
+                            <ShoppingCart size={22} className="text-white" />
+                        </div>
+                        <div className="w-px h-10 bg-gray-100 mx-4"></div>
+                        <div>
+                            <span className="block text-[10px] font-black text-gray-400 uppercase tracking-widest">Total Quantity</span>
+                            <span className="text-xl font-black text-gray-700">{totalQuantity}</span>
+                        </div>
                     </div>
-                     <div className="bg-linear-to-br from-emerald-500 to-emerald-600 p-4 rounded-xl text-white shadow-lg shadow-emerald-200 md:col-span-2 flex flex-col justify-center">
-                         <div className="flex items-center justify-between mb-2 border-b border-white/10 pb-2">
-                             <span className="flex items-center gap-2 text-sm font-medium"><DollarSign size={16} /> Total Discount</span>
-                             <span className="font-mono font-bold">{totalDiscount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
-                         </div>
-                         <div className="flex items-center justify-between">
-                             <span className="text-lg font-bold uppercase tracking-wide">Net Total</span>
-                             <span className="text-3xl font-black tracking-tight">LKR {totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
-                         </div>
+
+                    {/* Discount Card */}
+                    <div className="flex items-center p-5 bg-white rounded-2xl border border-gray-200 shadow-lg shadow-gray-100/50 group hover:border-red-200 transition-all">
+                        <div className="p-3 bg-linear-to-br from-red-400 to-red-600 rounded-xl shadow-lg shadow-red-200/50">
+                            <DollarSign size={22} className="text-white" />
+                        </div>
+                        <div className="w-px h-10 bg-gray-100 mx-4"></div>
+                        <div>
+                            <span className="block text-[10px] font-black text-gray-400 uppercase tracking-widest">Total Discount</span>
+                            <span className="text-xl font-black text-red-600">LKR {totalDiscount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                        </div>
+                    </div>
+
+                    {/* Net Total Card - Standout */}
+                    <div className="flex items-center p-5 bg-linear-to-br from-emerald-500 to-emerald-700 rounded-2xl border border-emerald-400 shadow-2xl shadow-emerald-200/50 group">
+                        <div className="p-3 bg-white/20 rounded-xl">
+                            <FileText size={22} className="text-white" />
+                        </div>
+                        <div className="w-px h-10 bg-white/20 mx-4"></div>
+                        <div className="flex-1">
+                            <span className="block text-[10px] font-black text-white/60 uppercase tracking-widest">Net Payable Total</span>
+                            <span className="text-2xl font-black text-white tabular-nums drop-shadow-md">LKR {totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                        </div>
                     </div>
                 </div>
                 
-                {/* Actions */}
-                <div className="grid grid-cols-4 gap-4 bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-                     <button onClick={handleClear} className="col-span-1 flex items-center justify-center gap-2 py-3 rounded-lg border-2 border-gray-200 font-bold text-gray-500 hover:bg-gray-50 hover:text-red-500 transition-colors">
-                        <Trash size={20} /> Clear
+                {/* Global Actions - Refined Gradients */}
+                <div className="flex gap-4 bg-white p-4 rounded-2xl border border-gray-200 shadow-sm">
+                     <button onClick={handleClear} className="px-8 flex items-center justify-center gap-2 py-3.5 rounded-xl border-2 border-gray-100 font-black text-gray-400 uppercase tracking-widest hover:bg-red-50 hover:text-red-500 hover:border-red-100 transition-all active:scale-95">
+                        <Trash size={18} /> Clear All
                      </button>
-                     {/* Placeholder for simple Save button if needed, but we have Save and Save & Print */}
-                      <button onClick={() => handleSave(false)} className="col-span-1 flex items-center justify-center gap-2 py-3 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white font-bold transition-colors shadow-emerald-200 shadow-md">
-                        <Save size={20} /> Save
-                     </button>
-                      <button onClick={() => handleSave(true)} className="col-span-2 flex items-center justify-center gap-2 py-3 rounded-lg bg-linear-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold transition-all shadow-blue-200 shadow-md text-lg">
-                        <Printer size={22} /> Save & Print
-                     </button>
+                     <div className="flex-1 flex gap-4">
+                        <button 
+                            onClick={() => handleSave(false)} 
+                            disabled={saveLoading || printLoading}
+                            className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl bg-linear-to-r from-gray-700 to-gray-800 hover:from-gray-800 hover:to-gray-900 text-white font-black uppercase tracking-widest transition-all shadow-xl shadow-gray-200 active:scale-95 border-b-4 border-gray-950 disabled:opacity-50"
+                        >
+                            {saveLoading ? (
+                                <motion.div
+                                    animate={{ rotate: 360 }}
+                                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                                    className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
+                                />
+                            ) : (
+                                <Save size={20} />
+                            )}
+                            {saveLoading ? 'Saving...' : 'Save Only'}
+                        </button>
+                        <button 
+                            onClick={() => handleSave(true)} 
+                            disabled={saveLoading || printLoading}
+                            className="flex-[2] flex items-center justify-center gap-3 py-3.5 rounded-xl bg-linear-to-r from-emerald-500 via-emerald-600 to-teal-600 hover:from-emerald-600 hover:via-emerald-700 hover:to-teal-700 text-white font-black uppercase tracking-widest transition-all shadow-2xl shadow-emerald-200 active:scale-95 border-b-4 border-emerald-800 text-xl disabled:opacity-50"
+                        >
+                            {printLoading ? (
+                                <motion.div
+                                    animate={{ rotate: 360 }}
+                                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                                    className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full"
+                                />
+                            ) : (
+                                <Printer size={24} />
+                            )}
+                            {printLoading ? 'Processing...' : 'Confirm & Print'}
+                        </button>
+                     </div>
                 </div>
             </div>
-        </>
+        </div>
     );
 }
 
