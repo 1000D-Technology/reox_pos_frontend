@@ -64,7 +64,7 @@ export const ProductAddModal = ({
     };
 
     const unitConfig = getUnitConfig(currentUnitStr, product?.isBulk || false);
-    const isDecimalAllowed = !!unitConfig || unitConversions.length > 0;
+    const isDecimalAllowed = !!unitConfig;
 
 
     useEffect(() => {
