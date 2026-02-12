@@ -147,8 +147,10 @@ export const invoiceService = {
     /**
      * Get credit payment history for a customer
      */
-    getCreditHistory: async (customerId: number) => {
-        const response = await api.get(`/pos/credit-history/${customerId}`);
+    getCreditHistory: async (customerId: number, page: number = 1, limit: number = 10) => {
+        const response = await api.get(`/pos/credit-history/${customerId}`, {
+            params: { page, limit }
+        });
         return response.data;
     }
 };
