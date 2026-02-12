@@ -1,4 +1,5 @@
 const prisma = require("../config/prismaClient");
+const PaginationHelper = require("../utils/paginationHelper");
 
 // Helper function to get Sri Lankan time (UTC+5:30)
 const getSriLankanTime = () => {
@@ -253,6 +254,8 @@ class POS {
             }
 
             return invoice;
+        }, {
+            timeout: 30000 // Extended timeout to 30s for complex invoice creation with credit book entries
         });
         } catch (error) {
             console.error('ERROR in POS.createInvoice:', error);
@@ -335,6 +338,8 @@ class POS {
                 bulkStock: updatedBulk,
                 looseStock: updatedLoose
             };
+        }, {
+            timeout: 15000 // Extended timeout to 15s for stock conversion operations
         });
     }
 
@@ -946,6 +951,8 @@ class POS {
                 payment: paymentRecord,
                 remainingBalance: newBalance
             };
+        }, {
+            timeout: 15000 // Extended timeout to 15s for credit payment processing
         });
     }
 
@@ -996,42 +1003,76 @@ class POS {
     }
 
     // Get credit payment history for a customer
-    static async getCreditPaymentHistory(customerId) {
-        if (!customerId) return [];
-
-        const history = await prisma.credit_payment_history.findMany({
-            where: {
-                creadit_book: {
-                    invoice: {
-                        customer_id: parseInt(customerId)
-                    }
+    static async getCreditPaymentHistory(customerId, page = 1, limit = 10) {
+        if (!customerId) {
+            const emptyPagination = PaginationHelper.getPaginationMetadata(page, limit, 0);
+            return { 
+                history: [], 
+                pagination: {
+                    ...emptyPagination,
+                    hasMore: false
                 }
-            },
-            include: {
-                creadit_book: {
-                    select: {
-                        balance: true,
+            };
+        }
+
+        const offset = PaginationHelper.getSkip(page, limit);
+
+        const [history, totalRecords] = await Promise.all([
+            prisma.credit_payment_history.findMany({
+                where: {
+                    creadit_book: {
                         invoice: {
-                            select: {
-                                invoice_number: true
+                            customer_id: parseInt(customerId)
+                        }
+                    }
+                },
+                include: {
+                    creadit_book: {
+                        select: {
+                            balance: true,
+                            invoice: {
+                                select: {
+                                    invoice_number: true
+                                }
                             }
                         }
                     }
+                },
+                orderBy: {
+                    payment_date: 'desc'
+                },
+                take: limit,
+                skip: offset
+            }),
+            prisma.credit_payment_history.count({
+                where: {
+                    creadit_book: {
+                        invoice: {
+                            customer_id: parseInt(customerId)
+                        }
+                    }
                 }
-            },
-            orderBy: {
-                payment_date: 'desc'
-            }
-        });
+            })
+        ]);
 
         // Format history for frontend
-        return history.map(item => ({
+        const formattedHistory = history.map(item => ({
             id: item.id,
             invoiceNumber: item.creadit_book.invoice.invoice_number,
             amount: item.amount,
             date: item.payment_date,
             remainingBalance: item.creadit_book.balance
         }));
+
+        const paginationMetadata = PaginationHelper.getPaginationMetadata(page, limit, totalRecords);
+
+        return {
+            history: formattedHistory,
+            pagination: {
+                ...paginationMetadata,
+                hasMore: paginationMetadata.hasNextPage // Add hasMore as alias
+            }
+        };
     }
 }
 

@@ -278,6 +278,7 @@ exports.getReturnHistory = catchAsync(async (req, res, next) => {
 
 exports.getCreditPaymentHistory = catchAsync(async (req, res, next) => {
     const { customerId } = req.params;
+    const { page = 1, limit = 10 } = req.query;
 
     if (!customerId) {
         return res.status(400).json({
@@ -286,11 +287,15 @@ exports.getCreditPaymentHistory = catchAsync(async (req, res, next) => {
         });
     }
 
-    const history = await POS.getCreditPaymentHistory(customerId);
+    const result = await POS.getCreditPaymentHistory(
+        customerId,
+        parseInt(page),
+        parseInt(limit)
+    );
 
     res.status(200).json({
         success: true,
-        data: history
+        data: result.history,
+        pagination: result.pagination
     });
 });
-

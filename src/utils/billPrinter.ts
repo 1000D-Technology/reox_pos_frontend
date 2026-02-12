@@ -26,11 +26,6 @@ export interface BillData {
         amount: number;
     }[];
     isReturn?: boolean;
-    refundedCash?: number;
-    oldDebt?: number;
-    debtReduction?: number;
-    newDebt?: number;
-    originalPayments?: { method: string, amount: number }[];
 }
 
 export const printBill = (data: BillData) => {
@@ -230,37 +225,13 @@ const generateBillHTML = (data: BillData) => {
                 <span>${data.total.toFixed(2)}</span>
             </div>
             
+            <div class="border-b" style="margin-top: 10px;"></div>
+            
             ${data.paymentAmounts.map(p => `
             <div style="display: flex; justify-content: space-between;">
                 <span>${p.methodId.toUpperCase()}:</span>
                 <span>${p.amount.toFixed(2)}</span>
             </div>`).join('')}
-
-            ${data.isReturn ? `
-                <div class="border-t" style="margin-top: 10px; padding-top: 5px;">
-                    <div style="text-align: center; font-weight: bold; margin-bottom: 5px;">RETURN SUMMARY</div>
-                    ${data.oldDebt !== undefined ? `
-                    <div style="display: flex; justify-content: space-between;">
-                        <span>Old Debt:</span>
-                        <span>${data.oldDebt.toFixed(2)}</span>
-                    </div>` : ''}
-                    ${data.debtReduction ? `
-                    <div style="display: flex; justify-content: space-between; color: #d00;">
-                        <span>Debt Reduced:</span>
-                        <span>-${data.debtReduction.toFixed(2)}</span>
-                    </div>` : ''}
-                    ${data.newDebt !== undefined ? `
-                    <div style="display: flex; justify-content: space-between; font-weight: bold;">
-                        <span>New Debt:</span>
-                        <span>${data.newDebt.toFixed(2)}</span>
-                    </div>` : ''}
-                    ${data.refundedCash ? `
-                    <div style="display: flex; justify-content: space-between; margin-top: 5px; border-top: 1px dotted #000; padding-top: 2px;">
-                        <span>Cash Refunded:</span>
-                        <span style="font-weight: bold;">${data.refundedCash.toFixed(2)}</span>
-                    </div>` : ''}
-                </div>
-            ` : ''}
         </div>
 
         <div class="footer">

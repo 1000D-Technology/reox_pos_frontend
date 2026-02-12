@@ -86,6 +86,9 @@ function ManageCustomer() {
 
     const [customerInvoices, setCustomerInvoices] = useState<Invoice[]>([]);
     const [isLoadingInvoices, setIsLoadingInvoices] = useState(false);
+    const [invoicePage, setInvoicePage] = useState(1);
+    const [hasMoreInvoices, setHasMoreInvoices] = useState(true);
+    const [isLoadingMoreInvoices, setIsLoadingMoreInvoices] = useState(false);
 
     const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
     const [selectedInvoice, setSelectedInvoice] = useState<InvoiceDetail | null>(null);
@@ -102,6 +105,9 @@ function ManageCustomer() {
     const [showCreditHistory, setShowCreditHistory] = useState(false);
     const [creditHistory, setCreditHistory] = useState<any[]>([]);
     const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+    const [creditHistoryPage, setCreditHistoryPage] = useState(1);
+    const [hasMoreCreditHistory, setHasMoreCreditHistory] = useState(true);
+    const [isLoadingMoreHistory, setIsLoadingMoreHistory] = useState(false);
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [newName, setNewName] = useState('');
@@ -370,17 +376,26 @@ function ManageCustomer() {
         setShowInvoices(true);
         setInvoiceFromDate('');
         setInvoiceToDate('');
+        // Reset pagination state
+        setInvoicePage(1);
+        setHasMoreInvoices(true);
+        setIsLoadingMoreInvoices(false);
         await loadCustomerInvoices(customer.id);
     };
 
     const handleViewCreditHistory = async (customer: Customer) => {
         setSelectedCustomer(customer);
         setShowCreditHistory(true);
+        setCreditHistory([]);
+        setCreditHistoryPage(1);
+        setHasMoreCreditHistory(true);
         setIsLoadingHistory(true);
         try {
-            const response = await invoiceService.getCreditHistory(customer.id);
+            const response = await invoiceService.getCreditHistory(customer.id, 1, 10);
             if (response.success) {
                 setCreditHistory(response.data);
+                setHasMoreCreditHistory(response.pagination.hasMore);
+                console.log('📊 Initial load - Pagination:', response.pagination);
             } else {
                 toast.error('Failed to load credit history');
             }
@@ -392,14 +407,21 @@ function ManageCustomer() {
         }
     };
 
-    const loadCustomerInvoices = async (customerId: number, fromDate?: string, toDate?: string) => {
+    const loadCustomerInvoices = async (customerId: number, fromDate?: string, toDate?: string, page: number = 1, append: boolean = false) => {
         try {
-            setIsLoadingInvoices(true);
+            if (append) {
+                setIsLoadingMoreInvoices(true);
+            } else {
+                setIsLoadingInvoices(true);
+            }
+            
             const response = await invoiceService.getAllInvoices({
                 customerId: customerId,
                 fromDate: fromDate || undefined,
                 toDate: toDate || undefined,
-                order: 'asc'
+                page: page,
+                limit: 10,
+                order: 'desc'
             });
 
             if (response.success) {
@@ -415,20 +437,60 @@ function ManageCustomer() {
                     status: parseFloat(inv.balance || 0) === 0 ? 'paid' : 'open'
                 }));
                 
-                setCustomerInvoices(mappedInvoices);
+                if (append) {
+                    setCustomerInvoices(prev => [...prev, ...mappedInvoices]);
+                } else {
+                    setCustomerInvoices(mappedInvoices);
+                }
+                
+                // Update pagination state
+                setInvoicePage(response.pagination.currentPage);
+                setHasMoreInvoices(response.pagination.currentPage < response.pagination.totalPages);
             }
         } catch (error) {
             console.error('Error loading customer invoices:', error);
             toast.error('Failed to load customer invoices');
-            setCustomerInvoices([]);
+            if (!append) {
+                setCustomerInvoices([]);
+            }
         } finally {
-            setIsLoadingInvoices(false);
+            if (append) {
+                setIsLoadingMoreInvoices(false);
+            } else {
+                setIsLoadingInvoices(false);
+            }
         }
     };
 
     const handleInvoiceDateFilter = () => {
         if (selectedCustomer) {
-            loadCustomerInvoices(selectedCustomer.id, invoiceFromDate, invoiceToDate);
+            // Reset pagination on filter change
+            setInvoicePage(1);
+            setHasMoreInvoices(true);
+            loadCustomerInvoices(selectedCustomer.id, invoiceFromDate, invoiceToDate, 1, false);
+        }
+    };
+
+    const loadMoreInvoices = async () => {
+        if (!selectedCustomer || isLoadingMoreInvoices || !hasMoreInvoices) return;
+        
+        try {
+            const nextPage = invoicePage + 1;
+            await loadCustomerInvoices(selectedCustomer.id, invoiceFromDate, invoiceToDate, nextPage, true);
+        } catch (error) {
+            console.error('Error loading more invoices:', error);
+            toast.error('Failed to load more invoices');
+        }
+    };
+
+    const handleInvoiceScroll = (e: React.UIEvent<HTMLDivElement>) => {
+        const { scrollTop, clientHeight, scrollHeight } = e.currentTarget;
+        
+        // Check if scrolled near bottom (50px threshold)
+        if (scrollHeight - scrollTop - clientHeight < 50) {
+            if (!isLoadingMoreInvoices && hasMoreInvoices && !isLoadingInvoices) {
+                loadMoreInvoices();
+            }
         }
     };
 
@@ -606,6 +668,39 @@ function ManageCustomer() {
                 return 'bg-gradient-to-r from-amber-400 to-orange-500 text-white shadow-sm font-black';
             default:
                 return 'bg-gradient-to-r from-slate-400 to-gray-500 text-white shadow-sm font-black';
+        }
+    };
+
+    const loadMoreCreditHistory = async () => {
+        if (!selectedCustomer || isLoadingMoreHistory || !hasMoreCreditHistory) return;
+        
+        setIsLoadingMoreHistory(true);
+        try {
+            const nextPage = creditHistoryPage + 1;
+            console.log(`📄 Loading page ${nextPage} of credit history for customer ${selectedCustomer.id}`);
+            
+            const response = await invoiceService.getCreditHistory(selectedCustomer.id, nextPage, 10);
+            
+            console.log(`✅ Received ${response.data.length} records`);
+            console.log('📊 Pagination Info:', {
+                currentPage: response.pagination.currentPage,
+                totalPages: response.pagination.totalPages,
+                totalRecords: response.pagination.totalRecords,
+                hasMore: response.pagination.hasMore,
+                recordsPerPage: response.pagination.recordsPerPage
+            });
+            console.log('🔢 Response data sample:', response.data.slice(0, 2));
+            
+            if (response.success) {
+                setCreditHistory(prev => [...prev, ...response.data]);
+                setCreditHistoryPage(nextPage);
+                setHasMoreCreditHistory(response.pagination.hasMore);
+            }
+        } catch (error) {
+            console.error('Error loading more credit history:', error);
+            toast.error('Failed to load more history');
+        } finally {
+            setIsLoadingMoreHistory(false);
         }
     };
 
@@ -847,8 +942,8 @@ function ManageCustomer() {
                                 onClick={() => goToPage(currentPage - 1)}
                                 disabled={currentPage === 1}
                                 className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${currentPage === 1
-                                        ? 'text-gray-400 cursor-not-allowed'
-                                        : 'text-gray-600 hover:bg-emerald-50 hover:text-emerald-600'
+                                    ? 'text-gray-400 cursor-not-allowed'
+                                    : 'text-gray-600 hover:bg-emerald-50 hover:text-emerald-600'
                                     }`}
                             >
                                 <ChevronLeft className="mr-2 h-5 w-5" /> Previous
@@ -861,8 +956,8 @@ function ManageCustomer() {
                                         key={page}
                                         onClick={() => goToPage(page as number)}
                                         className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${currentPage === page
-                                                ? 'bg-linear-to-r from-emerald-500 to-emerald-600 text-white'
-                                                : 'text-gray-600 hover:bg-emerald-50 hover:text-emerald-600'
+                                            ? 'bg-linear-to-r from-emerald-500 to-emerald-600 text-white'
+                                            : 'text-gray-600 hover:bg-emerald-50 hover:text-emerald-600'
                                             }`}
                                     >
                                         {page}
@@ -873,8 +968,8 @@ function ManageCustomer() {
                                 onClick={() => goToPage(currentPage + 1)}
                                 disabled={currentPage === totalPages}
                                 className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${currentPage === totalPages
-                                        ? 'text-gray-400 cursor-not-allowed'
-                                        : 'text-gray-600 hover:bg-emerald-50 hover:text-emerald-600'
+                                    ? 'text-gray-400 cursor-not-allowed'
+                                    : 'text-gray-600 hover:bg-emerald-50 hover:text-emerald-600'
                                     }`}
                             >
                                 Next <ChevronRight className="ml-2 h-5 w-5" />
@@ -977,7 +1072,7 @@ function ManageCustomer() {
                             </button>
                         </div>
 
-                        <div className="p-6 overflow-y-auto max-h-[calc(90vh-100px)]">
+                        <div className="p-6 overflow-y-auto max-h-[calc(90vh-100px)]" onScroll={handleInvoiceScroll}>
                             {/* Date Filter */}
                             <div className="mb-4 pb-4 border-b border-gray-200">
                                 <div className="flex items-center gap-3">
@@ -1056,6 +1151,25 @@ function ManageCustomer() {
                                             </div>
                                         </div>
                                     ))}
+                                    
+                                    {/* Loading More Indicator */}
+                                    {isLoadingMoreInvoices && (
+                                        <div className="flex items-center justify-center py-8">
+                                            <Loader2 className="animate-spin text-emerald-500 mr-2" size={24} />
+                                            <span className="text-gray-600 text-sm font-medium">Loading more invoices...</span>
+                                        </div>
+                                    )}
+                                    
+                                    {/* All Loaded Indicator */}
+                                    {!hasMoreInvoices && customerInvoices.length > 0 && !isLoadingInvoices && (
+                                        <div className="text-center py-6 mt-4 border-t border-gray-200">
+                                            <CheckCircle className="w-8 h-8 mx-auto mb-2 text-emerald-500" />
+                                            <p className="text-gray-500 text-sm font-medium">All invoices loaded</p>
+                                            <p className="text-gray-400 text-xs mt-1">
+                                                Showing {customerInvoices.length} invoice{customerInvoices.length !== 1 ? 's' : ''}
+                                            </p>
+                                        </div>
+                                    )}
                                 </div>
                             ) : (
                                 <div className="text-center py-12 text-gray-500">
@@ -1333,7 +1447,12 @@ function ManageCustomer() {
                                 <p className="text-purple-100 text-sm">{selectedCustomer.name}</p>
                             </div>
                             <button
-                                onClick={() => setShowCreditHistory(false)}
+                                onClick={() => {
+                                    setShowCreditHistory(false);
+                                    setCreditHistory([]);
+                                    setCreditHistoryPage(1);
+                                    setHasMoreCreditHistory(true);
+                                }}
                                 className="p-2 hover:bg-white/20 rounded-lg transition-colors"
                             >
                                 <X size={24} className="text-white" />
@@ -1346,34 +1465,64 @@ function ManageCustomer() {
                                     <span className="text-gray-600">Loading history...</span>
                                 </div>
                             ) : creditHistory.length > 0 ? (
-                                <table className="w-full">
-                                    <thead className="bg-gray-50">
-                                        <tr>
-                                            <th className="px-4 py-3 text-left text-sm font-bold text-gray-700">Date</th>
-                                            <th className="px-4 py-3 text-left text-sm font-bold text-gray-700">Invoice No</th>
-                                            <th className="px-4 py-3 text-right text-sm font-bold text-gray-700">Amount Paid</th>
-                                            <th className="px-4 py-3 text-right text-sm font-bold text-gray-700">Remaining Balance</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-200">
-                                        {creditHistory.map((item) => (
-                                            <tr key={item.id} className="hover:bg-gray-50">
-                                                <td className="px-4 py-3 text-sm text-gray-800">
-                                                    {new Date(item.date).toLocaleDateString()}
-                                                </td>
-                                                <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                                                    {item.invoiceNumber}
-                                                </td>
-                                                <td className="px-4 py-3 text-sm font-bold text-emerald-600 text-right">
-                                                    Rs. {item.amount.toLocaleString()}
-                                                </td>
-                                                <td className="px-4 py-3 text-sm font-semibold text-gray-700 text-right">
-                                                    Rs. {item.remainingBalance.toLocaleString()}
-                                                </td>
+                                <>
+                                    <table className="w-full">
+                                        <thead className="bg-gray-50 sticky top-0 z-10">
+                                            <tr>
+                                                <th className="px-4 py-3 text-left text-sm font-bold text-gray-700">Date</th>
+                                                <th className="px-4 py-3 text-left text-sm font-bold text-gray-700">Invoice No</th>
+                                                <th className="px-4 py-3 text-right text-sm font-bold text-gray-700">Amount Paid</th>
+                                                <th className="px-4 py-3 text-right text-sm font-bold text-gray-700">Remaining Balance</th>
                                             </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-200">
+                                            {creditHistory.map((item) => (
+                                                <tr key={item.id} className="hover:bg-gray-50">
+                                                    <td className="px-4 py-3 text-sm text-gray-800">
+                                                        {new Date(item.date).toLocaleDateString()}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                                                        {item.invoiceNumber}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-sm font-bold text-emerald-600 text-right">
+                                                        Rs. {item.amount.toLocaleString()}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-sm font-semibold text-gray-700 text-right">
+                                                        Rs. {item.remainingBalance.toLocaleString()}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                    <div className="mt-6 flex justify-center">
+                                        <button
+                                            onClick={loadMoreCreditHistory}
+                                            disabled={isLoadingMoreHistory}
+                                            className="px-6 py-3 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white font-semibold rounded-lg transition-all shadow-md active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                                        >
+                                            {isLoadingMoreHistory ? (
+                                                <>
+                                                    <Loader2 className="animate-spin" size={20} />
+                                                    <span>Loading...</span>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <ChevronRight size={20} />
+                                                    <span>Load More</span>
+                                                </>
+                                            )}
+                                        </button>
+                                    </div>
+                                    {!hasMoreCreditHistory && creditHistory.length > 0 && (
+                                        <div className="text-center py-6 mt-4 border-t border-gray-200">
+                                            <CheckCircle className="w-8 h-8 mx-auto mb-2 text-purple-500" />
+                                            <p className="text-gray-500 text-sm font-medium">All records loaded</p>
+                                            <p className="text-gray-400 text-xs mt-1">
+                                                Showing {creditHistory.length} payment{creditHistory.length !== 1 ? 's' : ''}
+                                            </p>
+                                        </div>
+                                    )}
+                                </>
                             ) : (
                                 <div className="text-center py-12 text-gray-500">
                                     <History className="w-16 h-16 mx-auto mb-3 opacity-30" />
