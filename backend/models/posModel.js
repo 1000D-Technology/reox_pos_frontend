@@ -1153,7 +1153,7 @@ class POS {
         return { returns, totalRecords };
     }
 
-    // Get credit payment history for a customer
+    // Get credit payment history for a customer (grouped by invoice)
     static async getCreditPaymentHistory(customerId, page = 1, limit = 10) {
         if (!customerId) {
             const emptyPagination = PaginationHelper.getPaginationMetadata(page, limit, 0);
@@ -1166,62 +1166,71 @@ class POS {
             };
         }
 
-        const offset = PaginationHelper.getSkip(page, limit);
-
-        const [history, totalRecords] = await Promise.all([
-            prisma.credit_payment_history.findMany({
-                where: {
-                    creadit_book: {
-                        invoice: {
-                            customer_id: parseInt(customerId)
-                        }
-                    }
-                },
-                include: {
-                    creadit_book: {
-                        select: {
-                            balance: true,
-                            invoice: {
-                                select: {
-                                    invoice_number: true
-                                }
-                            }
-                        }
-                    }
-                },
-                orderBy: {
-                    payment_date: 'desc'
-                },
-                take: limit,
-                skip: offset
-            }),
-            prisma.credit_payment_history.count({
-                where: {
-                    creadit_book: {
-                        invoice: {
-                            customer_id: parseInt(customerId)
+        // Get all invoices with credit history for this customer
+        const invoicesWithPayments = await prisma.invoice.findMany({
+            where: {
+                customer_id: parseInt(customerId),
+                creadit_book: {
+                    some: {
+                        credit_payment_history: {
+                            some: {}
                         }
                     }
                 }
-            })
-        ]);
+            },
+            include: {
+                creadit_book: {
+                    include: {
+                        credit_payment_history: {
+                            orderBy: {
+                                payment_date: 'desc'
+                            }
+                        }
+                    }
+                }
+            },
+            orderBy: {
+                created_at: 'desc'
+            }
+        });
 
-        // Format history for frontend
-        const formattedHistory = history.map(item => ({
-            id: item.id,
-            invoiceNumber: item.creadit_book.invoice.invoice_number,
-            amount: item.amount,
-            date: item.payment_date,
-            remainingBalance: item.creadit_book.balance
-        }));
+        // Group payments by invoice
+        const groupedHistory = invoicesWithPayments.map(invoice => {
+            // Get current balance from credit_book (should be one record per invoice)
+            const currentBalance = invoice.creadit_book[0]?.balance || 0;
+            
+            // Get all payments for this invoice
+            const payments = invoice.creadit_book.flatMap(cb => 
+                cb.credit_payment_history.map(payment => ({
+                    id: payment.id,
+                    amount: payment.amount,
+                    date: payment.payment_date,
+                    paymentType: 'Credit Payment' // Can be enhanced if payment type is stored
+                }))
+            );
+
+            return {
+                invoiceNumber: invoice.invoice_number,
+                invoiceId: invoice.id,
+                currentBalance: currentBalance,
+                totalPaid: payments.reduce((sum, p) => sum + p.amount, 0),
+                paymentCount: payments.length,
+                payments: payments
+            };
+        });
+
+        // Apply pagination to grouped data
+        const offset = PaginationHelper.getSkip(page, limit);
+        const paginatedHistory = groupedHistory.slice(offset, offset + limit);
+        const totalRecords = groupedHistory.length;
 
         const paginationMetadata = PaginationHelper.getPaginationMetadata(page, limit, totalRecords);
 
         return {
-            history: formattedHistory,
+            history: paginatedHistory,
             pagination: {
                 ...paginationMetadata,
-                hasMore: paginationMetadata.hasNextPage // Add hasMore as alias
+                hasMore: paginationMetadata.hasNextPage
             }
         };
     }
