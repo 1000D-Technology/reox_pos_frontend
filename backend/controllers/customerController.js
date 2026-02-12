@@ -199,51 +199,51 @@ const customerController = {
         });
     }),
 
-    // Search customers by name
+    // Search customers by name - Uses local SQLite for initial search
     searchCustomers: catchAsync(async (req, res, next) => {
         const { query } = req.query; 
+        const localDb = require("../config/localDb");
 
         if (!query) {
             return next(new AppError("Search query is required.", 400));
         }
 
-        const customers = await prisma.customer.findMany({
-            where: {
-                OR: [
-                    { name: { contains: query } },
-                    { contact: { contains: query } }
-                ]
-            },
-            include: {
-                status: {
-                    select: {
-                        ststus: true
-                    }
-                },
-                invoice: {
-                    include: {
-                        creadit_book: true
-                    }
-                }
-            },
-            take: 10
+        const sql = `
+            SELECT c.*, s.ststus as status_name
+            FROM customer c
+            LEFT JOIN status s ON c.status_id = s.id
+            WHERE c.name LIKE ? OR c.contact LIKE ?
+            LIMIT 10
+        `;
+        
+        const customerRows = localDb.prepare(sql).all(`%${query}%`, `%${query}%`);
+
+        if (customerRows.length === 0) {
+            return res.status(200).json({ success: true, data: [] });
+        }
+
+        // Fetch credit balance from MySQL for precision
+        const customerIds = customerRows.map(c => c.id);
+        const creditData = await prisma.invoice.findMany({
+            where: { customer_id: { in: customerIds } },
+            select: {
+                customer_id: true,
+                creadit_book: { select: { balance: true } }
+            }
         });
 
-        // Calculate credit balance for each customer from creadit_book
-        const formattedCustomers = customers.map(c => {
-            // Sum all credit book balances for this customer's invoices
-            const creditBalance = c.invoice.reduce((total, inv) => {
-                const invoiceCredit = inv.creadit_book.reduce((sum, cb) => sum + cb.balance, 0);
-                return total + invoiceCredit;
-            }, 0);
-
-            return {
-                ...c,
-                credit_balance: creditBalance,
-                status_name: c.status.ststus,
-                invoice: undefined // Remove invoice details from response
-            };
+        const creditBalanceMap = new Map();
+        creditData.forEach(invoice => {
+            const currentBalance = creditBalanceMap.get(invoice.customer_id) || 0;
+            const invoiceBalance = invoice.creadit_book.reduce((sum, cb) => sum + cb.balance, 0);
+            creditBalanceMap.set(invoice.customer_id, currentBalance + invoiceBalance);
         });
+
+        const formattedCustomers = customerRows.map(c => ({
+            ...c,
+            credit_balance: creditBalanceMap.get(c.id) || 0,
+            invoice: undefined
+        }));
 
         res.status(200).json({
             success: true,

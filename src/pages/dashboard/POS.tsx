@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { posService } from '../../services/posService';
 import { customerService } from '../../services/customerService';
 import { authService } from '../../services/authService';
@@ -251,19 +251,30 @@ const POSInterface = () => {
         );
     };
 
-    const subtotal = cartItems.reduce((sum, item) => {
-        const itemTotal = item.price * item.quantity;
-        const itemDiscount = item.discountType === 'percentage'
-            ? (itemTotal * item.discount) / 100
-            : item.discount;
-        return sum + (itemTotal - itemDiscount);
-    }, 0);
-    const discountAmount = (subtotal * discount) / 100;
-    const total = subtotal - discountAmount;
-    const itemsCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+    const { subtotal, discountAmount, total, itemsCount } = useMemo(() => {
+        const sub = cartItems.reduce((sum, item) => {
+            const itemTotal = item.price * item.quantity;
+            const itemDiscount = item.discountType === 'percentage'
+                ? (itemTotal * item.discount) / 100
+                : item.discount;
+            return sum + (itemTotal - itemDiscount);
+        }, 0);
+        const discAmt = (sub * discount) / 100;
+        return {
+            subtotal: sub,
+            discountAmount: discAmt,
+            total: sub - discAmt,
+            itemsCount: cartItems.reduce((sum, item) => sum + item.quantity, 0)
+        };
+    }, [cartItems, discount]);
 
-    const totalPaid = paymentAmounts.reduce((sum, p) => sum + p.amount, 0);
-    const remaining = total - totalPaid;
+    const { totalPaid, remaining } = useMemo(() => {
+        const paid = paymentAmounts.reduce((sum, p) => sum + p.amount, 0);
+        return {
+            totalPaid: paid,
+            remaining: total - paid
+        };
+    }, [paymentAmounts, total]);
 
     const filteredProducts = products; // Already filtered from backend or initial load
 

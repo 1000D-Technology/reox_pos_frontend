@@ -53,21 +53,13 @@ class Supplier {
     }
 
     static async searchCompanies(searchTerm) {
-        const companies = await prisma.company.findMany({
-            where: {
-                company_name: {
-                    contains: searchTerm
-                }
-            },
-            select: {
-                id: true,
-                company_name: true,
-                company_email: true,
-                company_contact: true,
-                created_at: true
-            },
-            take: 100
-        });
+        const localDb = require("../config/localDb");
+        const companies = localDb.prepare(`
+            SELECT id, company_name, company_email, company_contact
+            FROM company
+            WHERE company_name LIKE ?
+            LIMIT 100
+        `).all(`%${searchTerm}%`);
         return companies;
     }
 
@@ -139,37 +131,25 @@ class Supplier {
     }
 
     static async getAllSuppliers(page = 1, limit = 10) {
-        const skip = PaginationHelper.getSkip(page, limit);
+        const localDb = require("../config/localDb");
+        const skip = (page - 1) * limit;
 
-        // Run count and findMany in parallel for better performance
-        const [totalCount, suppliers] = await Promise.all([
-            prisma.supplier.count(),
-            prisma.supplier.findMany({
-                skip: skip,
-                take: parseInt(limit),
-                include: {
-                    company: {
-                        select: {
-                            company_name: true,
-                            company_contact: true
-                        }
-                    },
-                    bank: {
-                        select: {
-                            bank_name: true
-                        }
-                    },
-                    status: {
-                        select: {
-                            ststus: true
-                        }
-                    }
-                },
-                orderBy: {
-                    created_at: 'desc'
-                }
-            })
-        ]);
+        const countSql = `SELECT COUNT(*) as total FROM supplier`;
+        const totalCount = localDb.prepare(countSql).get().total;
+
+        const sql = `
+            SELECT 
+                s.id, s.supplier_name, s.email, s.contact_number, 
+                c.company_name, c.company_contact, s.company_id,
+                st.ststus as status
+            FROM supplier s
+            LEFT JOIN company c ON s.company_id = c.id
+            LEFT JOIN status st ON s.status_id = st.id
+            ORDER BY s.id DESC
+            LIMIT ? OFFSET ?
+        `;
+        
+        const suppliers = localDb.prepare(sql).all(parseInt(limit), skip);
 
         return {
             data: suppliers.map(s => ({
@@ -177,33 +157,24 @@ class Supplier {
                 supplierName: s.supplier_name,
                 email: s.email,
                 contactNumber: s.contact_number,
-                companyName: s.company?.company_name,
-                companyContact: s.company?.company_contact,
+                companyName: s.company_name,
+                companyContact: s.company_contact,
                 companyId: s.company_id,
-                bankName: s.bank?.bank_name,
-                bankId: s.bank_id,
-                accountNumber: s.account_number,
-                status: s.status.ststus,
-                status_id: s.status_id,
-                joinedDate: s.created_at.toISOString().split('T')[0]
+                status: s.status,
+                joinedDate: 'Synced'
             })),
             pagination: PaginationHelper.getPaginationMetadata(page, limit, totalCount)
         };
     }
 
     static async getSupplierDropdownList() {
-        const suppliers = await prisma.supplier.findMany({
-            where: {
-                status_id: 1
-            },
-            select: {
-                id: true,
-                supplier_name: true
-            },
-            orderBy: {
-                supplier_name: 'asc'
-            }
-        });
+        const localDb = require("../config/localDb");
+        const suppliers = localDb.prepare(`
+            SELECT id, supplier_name
+            FROM supplier
+            WHERE status_id = 1
+            ORDER BY supplier_name ASC
+        `).all();
 
         return suppliers.map(s => ({
             id: s.id,

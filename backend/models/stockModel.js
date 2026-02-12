@@ -4,88 +4,73 @@ class Stock {
     /**
      * @desc Get ALL stock data with individual variation rows (not grouped)
      */
+    /**
+     * @desc Get ALL stock data with individual variation rows (not grouped) - Uses local SQLite
+     */
     static async getAllStockWithVariations(filters = {}) {
-        const whereClause = {};
+        const localDb = require("../config/localDb");
+        let sql = `
+            SELECT 
+                s.id as stock_id,
+                s.product_variations_id,
+                s.batch_id,
+                s.qty,
+                s.cost_price,
+                s.mrp,
+                s.rsp as selling_price,
+                s.wsp,
+                s.mfd,
+                s.exp,
+                p.id as product_id,
+                p.product_name,
+                p.product_code,
+                pv.barcode,
+                pv.color,
+                pv.size,
+                pv.storage_capacity,
+                u.name as unit,
+                c.name as category,
+                br.name as brand,
+                b.batch_name
+            FROM stock s
+            JOIN product_variations pv ON s.product_variations_id = pv.id
+            JOIN product p ON pv.product_id = p.id
+            LEFT JOIN unit_id u ON p.unit_id = u.idunit_id
+            LEFT JOIN category c ON p.category_id = c.idcategory
+            LEFT JOIN brand br ON p.brand_id = br.idbrand
+            LEFT JOIN batch b ON s.batch_id = b.id
+            WHERE pv.product_status_id = 1
+        `;
 
+        const params = [];
         if (filters.hasStock) {
-            whereClause.qty = { gt: 0 };
+            sql += ` AND s.qty > 0`;
         }
 
-        const stocks = await prisma.stock.findMany({
-            where: whereClause,
-            include: {
-                product_variations: {
-                    include: {
-                        product: {
-                            include: {
-                                unit_id_product_unit_idTounit_id: true,
-                                category: true,
-                                brand: true
-                            }
-                        },
-                        product_status: true
-                    }
-                },
-                batch: true,
-                grn_items: {
-                    include: {
-                        grn: {
-                            include: {
-                                supplier: true
-                            }
-                        }
-                    },
-                    take: 1
-                }
-            },
-            orderBy: [
-                { product_variations: { product: { product_name: 'asc' } } },
-                { product_variations: { id: 'asc' } },
-                { id: 'asc' }
-            ],
-            take: filters.limit ? parseInt(filters.limit) : undefined
-        });
+        sql += ` ORDER BY p.product_name ASC, pv.id ASC, s.id ASC`;
+
+        if (filters.limit) {
+            sql += ` LIMIT ?`;
+            params.push(parseInt(filters.limit));
+        }
+
+        const stocks = localDb.prepare(sql).all(...params);
 
         return stocks.map(s => {
-            const pv = s.product_variations;
-            const p = pv.product;
-            const supplier = s.grn_items[0]?.grn?.supplier;
-
-            // Build full product name - Only include meaningful variants
-            const variations = [pv.color, pv.size, pv.storage_capacity]
+            const variations = [s.color, s.size, s.storage_capacity]
                 .filter(v => v && !['n/a', 'na', 'n.a.', 'none', 'default', 'not applicable'].includes(v.toLowerCase().trim()) && v.trim() !== '');
 
-            let fullProductName = p.product_name;
+            let fullProductName = s.product_name;
             if (variations.length > 0) {
                 fullProductName += ` - ${variations.join(' - ')}`;
             }
 
             return {
-                stock_id: s.id,
-                product_variations_id: s.product_variations_id,
-                batch_id: s.batch_id,
-                qty: s.qty,
-                cost_price: s.cost_price,
-                mrp: s.mrp,
-                selling_price: s.rsp,
-                wsp: s.wsp,
-                mfd: s.mfd,
-                exp: s.exp,
-                product_id: p.id,
-                product_name: p.product_name,
-                product_code: p.product_code,
-                barcode: pv.barcode,
-                color: pv.color,
-                size: pv.size,
-                storage_capacity: pv.storage_capacity,
+                ...s,
                 full_product_name: fullProductName,
-                unit: p.unit_id_product_unit_idTounit_id?.name,
                 unit_conversion: null,
-                category: p.category?.name,
-                brand: p.brand?.name,
-                batch_name: s.batch?.batch_name,
-                supplier: supplier?.supplier_name,
-                product_status: pv.product_status?.status_name
+                supplier: 'Synced', // Local search doesn't join GRN/Supplier for speed
+                product_status: 'Active'
             };
         });
     }
@@ -98,149 +83,72 @@ class Stock {
     }
 
     static async searchStock(filters, page = 1, limit = 10) {
-        const whereClause = {
-            qty: { gt: 0 }
-        };
+        const localDb = require("../config/localDb");
+        let sql = `
+            FROM stock s
+            JOIN product_variations pv ON s.product_variations_id = pv.id
+            JOIN product p ON pv.product_id = p.id
+            LEFT JOIN unit_id u ON p.unit_id = u.idunit_id
+            LEFT JOIN category c ON p.category_id = c.idcategory
+            LEFT JOIN brand br ON p.brand_id = br.idbrand
+            LEFT JOIN batch b ON s.batch_id = b.id
+            WHERE s.qty > 0 AND pv.product_status_id = 1
+        `;
+
+        const params = [];
 
         if (filters.category) {
-            whereClause.product_variations = {
-                product: {
-                    category_id: parseInt(filters.category)
-                }
-            };
+            sql += ` AND p.category_id = ?`;
+            params.push(parseInt(filters.category));
         }
 
         if (filters.unit) {
-            if (!whereClause.product_variations) whereClause.product_variations = { product: {} };
-            whereClause.product_variations.product.unit_id = parseInt(filters.unit);
-        }
-
-        if (filters.supplier) {
-            whereClause.grn_items = {
-                some: {
-                    grn: {
-                        supplier_id: parseInt(filters.supplier)
-                    }
-                }
-            };
+            sql += ` AND p.unit_id = ?`;
+            params.push(parseInt(filters.unit));
         }
 
         if (filters.searchQuery) {
-            const query = filters.searchQuery.toLowerCase();
-            whereClause.OR = [
-                {
-                    product_variations: {
-                        product: {
-                            OR: [
-                                { product_name: { contains: query } },
-                                { product_code: { contains: query } }
-                            ]
-                        }
-                    }
-                },
-                { barcode: { contains: query } },
-                { product_variations: { barcode: { contains: query } } }
-            ];
-
-            // If query is a number, also check ID
-            const numericId = parseInt(query);
+            const query = `%${filters.searchQuery.toLowerCase()}%`;
+            sql += ` AND (LOWER(p.product_name) LIKE ? OR LOWER(p.product_code) LIKE ? OR s.barcode LIKE ? OR pv.barcode LIKE ?)`;
+            params.push(query, query, query, query);
+            
+            const numericId = parseInt(filters.searchQuery);
             if (!isNaN(numericId)) {
-                whereClause.OR.push({
-                    product_variations: {
-                        product: {
-                            id: numericId
-                        }
-                    }
-                });
+                sql += ` OR p.id = ?`;
+                params.push(numericId);
             }
         }
 
-        // Get total count for pagination
-        const totalCount = await prisma.stock.count({
-            where: whereClause
-        });
+        // Get total count
+        const countSql = `SELECT COUNT(*) as total ` + sql;
+        const totalCount = localDb.prepare(countSql).get(...params).total;
 
+        // Paginate
         const skip = (page - 1) * limit;
+        const dataSql = `
+            SELECT 
+                s.id as stock_id, s.product_variations_id, s.batch_id, s.qty, s.cost_price, s.mrp, s.rsp as selling_price,
+                s.wsp, s.mfd, s.exp, p.id as product_id, p.product_name, p.product_code, pv.barcode,
+                pv.color, pv.size, pv.storage_capacity, u.name as unit, c.name as category, br.name as brand, b.batch_name
+            ` + sql + ` ORDER BY p.product_name ASC LIMIT ? OFFSET ?`;
+        
+        params.push(limit, skip);
+        const stocks = localDb.prepare(dataSql).all(...params);
 
-        // Fetch paginated stocks with relations using Prisma
-        const stocks = await prisma.stock.findMany({
-            where: whereClause,
-            include: {
-                product_variations: {
-                    include: {
-                        product: {
-                            include: {
-                                unit_id_product_unit_idTounit_id: true,
-                                category: true,
-                                brand: true
-                            }
-                        },
-                        product_status: true
-                    }
-                },
-                batch: true,
-                grn_items: {
-                    include: {
-                        grn: {
-                            include: {
-                                supplier: true
-                            }
-                        }
-                    },
-                    take: 1
-                }
-            },
-            take: limit,
-            skip: skip,
-            orderBy: {
-                product_variations: {
-                    product: {
-                        product_name: 'asc'
-                    }
-                }
-            }
-        });
-
-        // Map to individual items (no grouping)
         const result = stocks.map(s => {
-            const pv = s.product_variations;
-            const p = pv.product;
-            const supplier = s.grn_items[0]?.grn?.supplier;
-
-            // Build full product name - Only include meaningful variants
-            const variations = [pv.color, pv.size, pv.storage_capacity]
+            const variations = [s.color, s.size, s.storage_capacity]
                 .filter(v => v && !['n/a', 'na', 'n.a.', 'none', 'default', 'not applicable'].includes(v.toLowerCase().trim()) && v.trim() !== '');
 
-            let fullProductName = p.product_name;
+            let fullProductName = s.product_name;
             if (variations.length > 0) {
                 fullProductName += ` - ${variations.join(' - ')}`;
             }
 
             return {
-                stock_id: s.id,
-                product_variations_id: s.product_variations_id,
-                batch_id: s.batch_id,
-                qty: s.qty,
-                cost_price: s.cost_price,
-                mrp: s.mrp,
-                selling_price: s.rsp,
-                wsp: s.wsp,
-                mfd: s.mfd,
-                exp: s.exp,
-                product_id: p.id,
-                product_name: p.product_name,
+                ...s,
                 full_product_name: fullProductName,
-                product_code: p.product_code,
-                barcode: pv.barcode,
-                color: pv.color,
-                size: pv.size,
-                storage_capacity: pv.storage_capacity,
-                unit: p.unit_id_product_unit_idTounit_id?.name,
-                category: p.category?.name,
-                brand: p.brand?.name,
-                batch_name: s.batch?.batch_name,
-                supplier: supplier?.supplier_name,
-                product_status: pv.product_status?.status_name
+                supplier: 'Synced',
+                product_status: 'Active'
             };
         });
 

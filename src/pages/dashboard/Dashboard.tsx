@@ -46,13 +46,12 @@ export default function Dashboard() {
     const fetchDashboardData = async () => {
         try {
             setIsLoading(true);
-            const [detailed, trend] = await Promise.all([
-                reportService.getDetailedDashboardData(),
-                reportService.getDashboardData()
-            ]);
+            const response = await reportService.getDetailedDashboardData();
 
-            if (detailed.success) setDashboardData(detailed.data);
-            if (trend.success) setChartData(trend.data);
+            if (response.success) {
+                setDashboardData(response.data);
+                setChartData(response.data); // Use same data as it now contains dailySales
+            }
         } catch (error) {
             console.error("Dashboard load error:", error);
         } finally {

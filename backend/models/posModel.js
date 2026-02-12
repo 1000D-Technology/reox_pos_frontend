@@ -13,59 +13,48 @@ class POS {
     // Redundant getPOSProducts and searchProducts removed.
 
 
-    // Search product by barcode (checks both stock and product_variations barcodes)
+    // Search product by barcode (checks local SQLite for fast response)
     static async searchByBarcode(barcode) {
-        const stocks = await prisma.stock.findMany({
-            where: {
-                OR: [
-                    { barcode: barcode },
-                    { product_variations: { barcode: barcode } },
-                    { product_variations: { product: { product_code: { contains: barcode } } } }
-                ],
-                qty: { gt: 0 },
-                product_variations: {
-                    product_status_id: 1
-                }
-            },
-            include: {
-                product_variations: {
-                    include: {
-                        product: {
-                            include: {
-                                unit_id_product_unit_idTounit_id: true,
-                            }
-                        }
-                    }
-                },
-                batch: true
-            },
-            orderBy: {
-                mfd: 'asc'
-            },
-            take: 10
-        });
+        const localDb = require("../config/localDb");
+        
+        const sql = `
+            SELECT 
+                s.id as stockID,
+                p.product_name as productName,
+                s.barcode as barcode,
+                u.name as unit,
+                s.rsp as price,
+                s.wsp as wholesalePrice,
+                p.product_code as productCode,
+                s.qty as currentStock,
+                b.batch_name as batchName,
+                s.exp as expiry,
+                pv.color,
+                pv.size,
+                pv.storage_capacity
+            FROM stock s
+            JOIN product_variations pv ON s.product_variations_id = pv.id
+            JOIN product p ON pv.product_id = p.id
+            LEFT JOIN unit_id u ON p.unit_id = u.idunit_id
+            LEFT JOIN batch b ON s.batch_id = b.id
+            WHERE (
+                s.barcode = ? 
+                OR pv.barcode = ? 
+                OR p.product_code LIKE ?
+            )
+            AND s.qty > 0
+            AND pv.product_status_id = 1
+            ORDER BY s.mfd ASC
+            LIMIT 10
+        `;
 
-        return stocks.map(s => {
-            const pv = s.product_variations;
-            const p = pv.product;
-            
-            return {
-                stockID: s.id,
-                productName: p.product_name,
-                barcode: s.barcode,
-                unit: p.unit_id_product_unit_idTounit_id?.name,
-                unit_conversion: null,
-                price: s.rsp,
-                wholesalePrice: s.wsp ?? 0,
-                productCode: p.product_code,
-                currentStock: s.qty,
-                batchName: s.batch.batch_name,
-                expiry: s.exp ? s.exp.toISOString().split('T')[0] : null,
-                color: pv.color,
-                size: pv.size,
-                storage_capacity: pv.storage_capacity
-            };
-        });
+        const rows = localDb.prepare(sql).all(barcode, barcode, `%${barcode}%`);
+
+        return rows.map(s => ({
+            ...s,
+            wholesalePrice: s.wholesalePrice ?? 0,
+            expiry: s.expiry ? s.expiry.split('T')[0] : null
+        }));
     }
     // Create Invoice with Transaction
     static async createInvoice(data) {

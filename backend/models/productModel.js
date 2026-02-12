@@ -291,121 +291,59 @@ class Product {
   }
 
   static async searchProducts(filter, statusId = 1) {
-    const whereClause = {
-      product_variations: {
-        some: {
-          product_status_id: statusId,
-        },
-      },
-    };
+    const localDb = require("../config/localDb");
+    let sql = `
+        SELECT 
+            p.id as productID, pv.id as pvId, p.product_name as productName, 
+            p.product_name as baseProductName, p.product_code as productCode,
+            pv.barcode, c.name as category, p.category_id as categoryId, 
+            br.name as brand, p.brand_id as brandId, u.name as unit, 
+            p.unit_id as unitId, pt.name as productType, p.product_type_id as productTypeId,
+            pv.color, pv.size, pv.storage_capacity as storage, p.created_at as createdOn
+        FROM product p
+        JOIN product_variations pv ON pv.product_id = p.id
+        LEFT JOIN category c ON p.category_id = c.idcategory
+        LEFT JOIN brand br ON p.brand_id = br.idbrand
+        LEFT JOIN unit_id u ON p.unit_id = u.idunit_id
+        LEFT JOIN product_type pt ON p.product_type_id = pt.idproduct_type
+        WHERE pv.product_status_id = ?
+    `;
 
-    if (
-      filter.productTypeId &&
-      filter.productTypeId !== "null" &&
-      filter.productTypeId !== "undefined"
-    ) {
-      whereClause.product_type_id = Number(filter.productTypeId);
+    const params = [statusId];
+
+    if (filter.productTypeId && filter.productTypeId !== "null") {
+      sql += ` AND p.product_type_id = ?`;
+      params.push(parseInt(filter.productTypeId));
     }
 
-    if (
-      filter.unitId &&
-      filter.unitId !== "null" &&
-      filter.unitId !== "undefined"
-    ) {
-      whereClause.unit_id = Number(filter.unitId);
+    if (filter.unitId && filter.unitId !== "null") {
+      sql += ` AND p.unit_id = ?`;
+      params.push(parseInt(filter.unitId));
     }
 
-    if (
-      filter.searchTerm &&
-      filter.searchTerm !== "null" &&
-      filter.searchTerm !== "undefined"
-    ) {
-      const search = filter.searchTerm;
-      const searchConditions = [
-        { product_name: { contains: search } },
-        { product_code: { contains: search } },
-        { product_variations: { some: { barcode: { contains: search } } } },
-      ];
-
-      if (!isNaN(parseInt(search))) {
-        searchConditions.push({ id: parseInt(search) });
+    if (filter.searchTerm && filter.searchTerm !== "null") {
+      const search = `%${filter.searchTerm.toLowerCase()}%`;
+      sql += ` AND (LOWER(p.product_name) LIKE ? OR LOWER(p.product_code) LIKE ? OR pv.barcode LIKE ?)`;
+      params.push(search, search, search);
+      
+      const numericId = parseInt(filter.searchTerm);
+      if (!isNaN(numericId)) {
+        sql += ` OR p.id = ?`;
+        params.push(numericId);
       }
-
-      whereClause.OR = searchConditions;
     }
 
-    const products = await prisma.product.findMany({
-      where: whereClause,
-      include: {
-        category: true,
-        brand: true,
-        unit_id_product_unit_idTounit_id: true,
-        product_type: true,
-        product_variations: {
-          where: { product_status_id: statusId },
-        },
-      },
-      orderBy: { created_at: "desc" },
-    });
+    sql += ` ORDER BY p.created_at DESC`;
 
-    if (statusId === 2) {
-      return products.flatMap((p) => {
-        const categoryName = p.category ? p.category.name : null;
-        const brandName = p.brand ? p.brand.name : null;
-        const unitName = p.unit_id_product_unit_idTounit_id ? p.unit_id_product_unit_idTounit_id.name : null;
-        const typeName = p.product_type ? p.product_type.name : null;
+    const products = localDb.prepare(sql).all(...params);
 
-        return p.product_variations.map(pv => ({
-          productID: p.id,
-          pvId: pv.id,
-          productName: p.product_name,
-          baseProductName: p.product_name,
-          productCode: p.product_code,
-          barcode: pv.barcode || '',
-          category: categoryName,
-          categoryId: p.category_id,
-          brand: brandName,
-          brandId: p.brand_id,
-          unit: unitName,
-          unitId: p.unit_id,
-          productType: typeName,
-          productTypeId: p.product_type_id,
-          color: pv.color || 'Default',
-          size: pv.size || 'Default',
-          storage: pv.storage_capacity || 'N/A',
-          createdOn: p.created_at ? p.created_at.toISOString().split("T")[0] : null,
-        }));
-      });
-    }
-
-    return products.map((p) => {
-      const pv = p.product_variations[0] || {};
-      const categoryName = p.category ? p.category.name : null;
-      const brandName = p.brand ? p.brand.name : null;
-      const unitName = p.unit_id_product_unit_idTounit_id ? p.unit_id_product_unit_idTounit_id.name : null;
-      const typeName = p.product_type ? p.product_type.name : null;
-
-      return {
-        productID: p.id,
-        pvId: pv.id,
-        productName: p.product_name,
-        baseProductName: p.product_name,
-        productCode: p.product_code,
-        barcode: pv.barcode || '',
-        category: categoryName,
-        categoryId: p.category_id,
-        brand: brandName,
-        brandId: p.brand_id,
-        unit: unitName,
-        unitId: p.unit_id,
-        productType: typeName,
-        productTypeId: p.product_type_id,
-        color: pv.color || 'Default',
-        size: pv.size || 'Default',
-        storage: pv.storage_capacity || 'N/A',
-        createdOn: p.created_at ? p.created_at.toISOString().split("T")[0] : null,
-      };
-    });
+    return products.map(p => ({
+      ...p,
+      color: p.color || 'Default',
+      size: p.size || 'Default',
+      storage: p.storage || 'N/A',
+      createdOn: p.createdOn ? p.createdOn.split('T')[0] : null
+    }));
   }
 
   static async updateProductStatus(pvId, statusId) {
@@ -451,65 +389,39 @@ class Product {
   }
 
   static async getAllVariations(statusId = 1) {
-    const products = await prisma.product.findMany({
-      where: {
-        product_variations: {
-          some: {
-            product_status_id: statusId,
-          },
-        },
-      },
-      include: {
-        category: true,
-        brand: true,
-        unit_id_product_unit_idTounit_id: true,
-        product_type: true,
-        product_variations: {
-          where: {
-            product_status_id: statusId,
-          },
-          include: {
-            stock: true
-          }
-        },
-      },
-      orderBy: { created_at: "desc" },
-    });
+    const localDb = require("../config/localDb");
+    const sql = `
+        SELECT 
+            p.id as productID, pv.id as pvId, p.product_name, p.product_name as baseProductName,
+            p.product_code as productCode, pv.barcode, c.name as category, 
+            p.category_id as categoryId, br.name as brand, p.brand_id as brandId,
+            u.name as unit, p.unit_id as unitId, pt.name as productType,
+            p.product_type_id as productTypeId, pv.color, pv.size, 
+            pv.storage_capacity as storage, p.created_at as createdOn,
+            (SELECT SUM(qty) FROM stock WHERE product_variations_id = pv.id) as stock
+        FROM product p
+        JOIN product_variations pv ON pv.product_id = p.id
+        LEFT JOIN category c ON p.category_id = c.idcategory
+        LEFT JOIN brand br ON p.brand_id = br.idbrand
+        LEFT JOIN unit_id u ON p.unit_id = u.idunit_id
+        LEFT JOIN product_type pt ON p.product_type_id = pt.idproduct_type
+        WHERE pv.product_status_id = ?
+        ORDER BY p.created_at DESC
+    `;
 
-    return products.flatMap((p) => {
-      const categoryName = p.category ? p.category.name : null;
-      const brandName = p.brand ? p.brand.name : null;
-      const unitName = p.unit_id_product_unit_idTounit_id ? p.unit_id_product_unit_idTounit_id.name : null;
-      const typeName = p.product_type ? p.product_type.name : null;
+    const variations = localDb.prepare(sql).all(statusId);
 
-      return p.product_variations.map(pv => {
-        const currentStock = pv.stock ? pv.stock.reduce((sum, item) => sum + (item.qty || 0), 0) : 0;
-        
-        return {
-          productID: p.id,
-          pvId: pv.id,
-          productName: pv.color !== 'Default' || pv.size !== 'Default' 
-            ? `${p.product_name} (${pv.color || ''} ${pv.size || ''})`
-            : p.product_name,
-          baseProductName: p.product_name,
-          productCode: p.product_code,
-          barcode: pv.barcode || '',
-          category: categoryName,
-          categoryId: p.category_id,
-          brand: brandName,
-          brandId: p.brand_id,
-          unit: unitName,
-          unitId: p.unit_id,
-          productType: typeName,
-          productTypeId: p.product_type_id,
-          color: pv.color || 'Default',
-          size: pv.size || 'Default',
-          storage: pv.storage_capacity || 'N/A',
-          stock: currentStock,
-          createdOn: p.created_at ? p.created_at.toISOString().split("T")[0] : null,
-        };
-      });
-    });
+    return variations.map(v => ({
+        ...v,
+        productName: v.color !== 'Default' || v.size !== 'Default' 
+            ? `${v.product_name} (${v.color || ''} ${v.size || ''})`
+            : v.product_name,
+        stock: v.stock || 0,
+        color: v.color || 'Default',
+        size: v.size || 'Default',
+        storage: v.storage || 'N/A',
+        createdOn: v.createdOn ? v.createdOn.split('T')[0] : null
+    }));
   }
 }
 

@@ -171,33 +171,32 @@ class Report {
         return Object.values(grouped).sort((a, b) => b.date.localeCompare(a.date));
     }
 
-    // Get core dashboard statistics
+    // Get core dashboard statistics - Uses local SQLite for faster counts
     static async getDashboardStats() {
+        const localDb = require("../config/localDb");
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
-        const [
-            todaySales,
-            supplierCount,
-            productCount,
-            customerCount,
-            employeeCount,
-            lowStockCount
-        ] = await Promise.all([
-            // Today's Sales & Invoices
+        // Parallel fetch for speed
+        const [todaySales, counts] = await Promise.all([
+            // Today's Sales & Invoices remains on MySQL for accuracy
             prisma.invoice.aggregate({
                 where: { created_at: { gte: today } },
                 _sum: { total: true },
                 _count: { id: true }
             }),
-            // Entity Counts
-            prisma.supplier.count({ where: { status_id: 1 } }),
-            prisma.product.count(),
-            prisma.customer.count({ where: { status_id: 1 } }),
-            prisma.user.count({ where: { status_id: 1 } }),
-            // Low Stock Items (less than 10 qty)
-            prisma.stock.count({ where: { qty: { lt: 10 } } })
+            // Rest from local SQLite
+            (async () => {
+                const supplierCount = localDb.prepare('SELECT COUNT(*) as total FROM supplier WHERE status_id = 1').get().total;
+                const productCount = localDb.prepare('SELECT COUNT(*) as total FROM product').get().total;
+                const customerCount = localDb.prepare('SELECT COUNT(*) as total FROM customer WHERE status_id = 1').get().total;
+                const employeeCount = localDb.prepare('SELECT COUNT(*) as total FROM user WHERE status_id = 1').get().total;
+                const lowStockCount = localDb.prepare('SELECT COUNT(*) as total FROM stock WHERE qty < 10').get().total;
+                return { supplierCount, productCount, customerCount, employeeCount, lowStockCount };
+            })()
         ]);
+
+        const { supplierCount, productCount, customerCount, employeeCount, lowStockCount } = counts;
 
         // Monthly comparison for trends (Simplified)
         const lastMonth = new Date();

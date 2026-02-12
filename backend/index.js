@@ -32,6 +32,8 @@ const quotationRoutes = require('./routes/quotationRoutes');
 const reportRoutes = require('./routes/reportRoutes');
 const analyticsRoutes = require('./routes/reportRoutes'); // Using the same file for now
 const subscriptionRoutes = require('./routes/subscriptionRoutes');
+const SyncService = require('./services/syncService');
+
 
 
 // Middleware
@@ -103,6 +105,15 @@ seedDatabase().then(() => {
         } catch (error) {
             console.error('❌ Failed to start session auto-close scheduler:', error.message);
         }
+
+        // Initialize local data sync
+        try {
+            SyncService.startScheduledSync();
+            console.log('✅ Local data sync service started successfully');
+        } catch (error) {
+            console.error('❌ Failed to start local data sync service:', error.message);
+        }
+
     });
 
     server.on('error', (error) => {
