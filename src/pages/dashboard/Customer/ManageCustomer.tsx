@@ -118,6 +118,12 @@ function ManageCustomer() {
     const [paymentMethod, setPaymentMethod] = useState('');
     const [paymentMethods, setPaymentMethods] = useState<Array<{ id: number; name: string }>>([]);
     const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+    
+    // Credit Payment State (for invoices modal)
+    const [creditPaymentAmount, setCreditPaymentAmount] = useState('');
+    const [creditPaymentMethod, setCreditPaymentMethod] = useState('');
+    const [isProcessingCreditPayment, setIsProcessingCreditPayment] = useState(false);
+    
     const searchRef = useRef<HTMLInputElement>(null);
 
     // Stats calculation
@@ -380,7 +386,64 @@ function ManageCustomer() {
         setInvoicePage(1);
         setHasMoreInvoices(true);
         setIsLoadingMoreInvoices(false);
+        // Reset credit payment state
+        setCreditPaymentAmount('');
+        setCreditPaymentMethod(paymentMethods.length > 0 ? paymentMethods[0].id.toString() : '');
         await loadCustomerInvoices(customer.id);
+    };
+
+    const handleCreditPayment = async () => {
+        if (!selectedCustomer || !creditPaymentAmount || !creditPaymentMethod) {
+            toast.error('Please enter payment amount and select payment method');
+            return;
+        }
+
+        const amount = parseFloat(creditPaymentAmount);
+        if (amount <= 0) {
+            toast.error('Payment amount must be greater than zero');
+            return;
+        }
+
+        if (amount > selectedCustomer.totalCreditBalance) {
+            toast.error('Payment amount cannot exceed credit balance');
+            return;
+        }
+
+        try {
+            setIsProcessingCreditPayment(true);
+            const user = authService.getCurrentUser();
+
+            const response = await invoiceService.processCreditPayment({
+                customer_id: selectedCustomer.id,
+                payment_amount: amount,
+                payment_type_id: parseInt(creditPaymentMethod),
+                user_id: user?.id
+            });
+
+            if (response.success) {
+                toast.success(
+                    `Payment of Rs. ${amount.toLocaleString()} processed successfully across ${response.data.invoicesPaid} invoice(s)`
+                );
+                setCreditPaymentAmount('');
+                // Reload customer data and invoices
+                await loadCustomers();
+                if (selectedCustomer) {
+                    await loadCustomerInvoices(selectedCustomer.id, invoiceFromDate, invoiceToDate, 1, false);
+                    // Update selected customer with new balance (subtract payment amount)
+                    setSelectedCustomer({
+                        ...selectedCustomer,
+                        totalCreditBalance: selectedCustomer.totalCreditBalance - amount
+                    });
+                }
+            } else {
+                toast.error(response.message || 'Failed to process payment');
+            }
+        } catch (error: any) {
+            console.error('Error processing credit payment:', error);
+            toast.error(error.response?.data?.message || 'Failed to process payment');
+        } finally {
+            setIsProcessingCreditPayment(false);
+        }
     };
 
     const handleViewCreditHistory = async (customer: Customer) => {
@@ -1073,6 +1136,98 @@ function ManageCustomer() {
                         </div>
 
                         <div className="p-6 overflow-y-auto max-h-[calc(90vh-100px)]" onScroll={handleInvoiceScroll}>
+                            {/* Credit Payment Section */}
+                            <div className="mb-6 p-6 bg-gradient-to-br from-purple-50 to-indigo-50 rounded-2xl border-2 border-purple-200/50">
+                                <div className="flex items-center justify-between mb-4">
+                                    <div>
+                                        <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                                            <CreditCard size={20} className="text-purple-600" />
+                                            Credit Payment
+                                        </h3>
+                                        <p className="text-sm text-gray-600 mt-1">Process payment for customer credit balance</p>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-xs font-bold text-purple-600 uppercase tracking-wider">Credit Balance</p>
+                                        <p className={`text-2xl font-black ${
+                                            selectedCustomer.totalCreditBalance > 0 ? 'text-red-600' : 'text-emerald-600'
+                                        }`}>
+                                            Rs. {selectedCustomer.totalCreditBalance.toLocaleString()}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {selectedCustomer.totalCreditBalance > 0 ? (
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <div className="space-y-2">
+                                            <label htmlFor="credit-payment-amount" className="block text-xs font-bold text-gray-700">
+                                                Payment Amount
+                                            </label>
+                                            <div className="relative">
+                                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-bold">Rs.</span>
+                                                <input
+                                                    type="number"
+                                                    id="credit-payment-amount"
+                                                    value={creditPaymentAmount}
+                                                    onChange={(e) => {
+                                                        const value = e.target.value;
+                                                        if (value === '' || parseFloat(value) >= 0) {
+                                                            setCreditPaymentAmount(value);
+                                                        }
+                                                    }}
+                                                    placeholder="0.00"
+                                                    min="0"
+                                                    max={selectedCustomer.totalCreditBalance}
+                                                    step="0.01"
+                                                    className="w-full text-sm font-bold rounded-lg py-2 pl-10 pr-3 border-2 border-gray-200 bg-white focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all outline-none"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <label htmlFor="credit-payment-method" className="block text-xs font-bold text-gray-700">
+                                                Payment Method
+                                            </label>
+                                            <select
+                                                id="credit-payment-method"
+                                                value={creditPaymentMethod}
+                                                onChange={(e) => setCreditPaymentMethod(e.target.value)}
+                                                className="w-full text-sm font-medium rounded-lg py-2 px-3 border-2 border-gray-200 bg-white focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all outline-none"
+                                            >
+                                                {paymentMethods.map(method => (
+                                                    <option key={method.id} value={method.id}>{method.name}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+
+                                        <div className="flex items-end">
+                                            <button
+                                                onClick={handleCreditPayment}
+                                                disabled={isProcessingCreditPayment || !creditPaymentAmount || !creditPaymentMethod}
+                                                className="w-full px-6 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold rounded-lg transition-all shadow-lg shadow-purple-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:grayscale flex items-center justify-center gap-2"
+                                            >
+                                                {isProcessingCreditPayment ? (
+                                                    <>
+                                                        <Loader2 className="animate-spin" size={16} />
+                                                        Processing...
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <CheckCircle size={16} />
+                                                        Process Payment
+                                                    </>
+                                                )}
+                                            </button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="text-center py-4">
+                                        <CheckCircle className="w-12 h-12 mx-auto mb-2 text-emerald-500" />
+                                        <p className="text-sm font-bold text-emerald-600">No outstanding credit balance</p>
+                                        <p className="text-xs text-gray-500 mt-1">This customer has cleared all dues</p>
+                                    </div>
+                                )}
+                            </div>
+
                             {/* Date Filter */}
                             <div className="mb-4 pb-4 border-b border-gray-200">
                                 <div className="flex items-center gap-3">

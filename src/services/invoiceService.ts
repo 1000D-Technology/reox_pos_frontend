@@ -145,6 +145,19 @@ export const invoiceService = {
     },
 
     /**
+     * Process credit payment for customer (across multiple invoices)
+     */
+    processCreditPayment: async (paymentData: {
+        customer_id: number;
+        payment_amount: number;
+        payment_type_id: number;
+        user_id?: number;
+    }) => {
+        const response = await api.post(`/pos/credit/payment`, paymentData);
+        return response.data;
+    },
+
+    /**
      * Get credit payment history for a customer
      */
     getCreditHistory: async (customerId: number, page: number = 1, limit: number = 10) => {
