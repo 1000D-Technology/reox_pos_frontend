@@ -5,11 +5,7 @@ class Stock {
      * @desc Get ALL stock data with individual variation rows (not grouped)
      */
     static async getAllStockWithVariations(filters = {}) {
-        const whereClause = {
-            product_variations: {
-                product_status_id: 1
-            }
-        };
+        const whereClause = {};
 
         if (filters.hasStock) {
             whereClause.qty = { gt: 0 };
@@ -103,19 +99,19 @@ class Stock {
 
     static async searchStock(filters, page = 1, limit = 10) {
         const whereClause = {
-            qty: { gt: 0 },
-            product_variations: {
-                product_status_id: 1
-            }
+            qty: { gt: 0 }
         };
 
         if (filters.category) {
-            if (!whereClause.product_variations.product) whereClause.product_variations.product = {};
-            whereClause.product_variations.product.category_id = parseInt(filters.category);
+            whereClause.product_variations = {
+                product: {
+                    category_id: parseInt(filters.category)
+                }
+            };
         }
 
         if (filters.unit) {
-            if (!whereClause.product_variations.product) whereClause.product_variations.product = {};
+            if (!whereClause.product_variations) whereClause.product_variations = { product: {} };
             whereClause.product_variations.product.unit_id = parseInt(filters.unit);
         }
 
