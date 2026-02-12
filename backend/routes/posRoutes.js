@@ -12,6 +12,7 @@ router.get('/invoices', posController.getAllInvoices);
 router.get('/invoices/stats', posController.getInvoiceStats);
 router.get('/invoice/:invoiceNo', posController.getInvoice);
 router.post('/invoice/payment', posController.processInvoicePayment);
+router.post('/credit/payment', posController.processCreditPayment);
 
 // Route to convert bulk stock to loose stock
 router.post('/convert', posController.convertBulkToLoose);
