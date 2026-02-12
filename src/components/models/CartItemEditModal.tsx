@@ -31,8 +31,10 @@ export const CartItemEditModal = ({
     const [discountType, setDiscountType] = useState<'percentage' | 'price'>('percentage');
     const [subUnitValue, setSubUnitValue] = useState<number | string>('');
 
+    
     const currentUnitStr = (item?.category || '').toLowerCase().trim();
     
+    // Logic from ProductAddModal
     const getUnitConfig = (unit: string, isBulkItem: boolean) => {
         const u = unit.toLowerCase().trim();
         // Weights: KG, Grams, Kilo, etc.
@@ -52,6 +54,8 @@ export const CartItemEditModal = ({
     };
 
     const unitConfig = getUnitConfig(currentUnitStr, item?.isBulk || false);
+    const isDecimalAllowed = !!unitConfig;
+
 
     useEffect(() => {
         if (item) {
@@ -60,6 +64,7 @@ export const CartItemEditModal = ({
             setDiscount((item.discount || 0));
             const type = item.discountType === 'fixed' || item.discountType === 'price' ? 'price' : 'percentage';
             setDiscountType(type);
+            setSubUnitValue('');
         }
     }, [item, isOpen]);
 
@@ -257,6 +262,11 @@ export const CartItemEditModal = ({
                                             <input
                                                 type="number"
                                                 value={quantity}
+                                                onKeyDown={(e) => {
+                                                    if (!isDecimalAllowed && (e.key === '.' || e.key === ',')) {
+                                                        e.preventDefault();
+                                                    }
+                                                }}
                                                 onChange={(e) => {
                                                     const val = e.target.value;
                                                     setSubUnitValue(''); // Clear sub-unit when manual qty change
@@ -264,6 +274,11 @@ export const CartItemEditModal = ({
                                                         setQuantity('');
                                                         return;
                                                     }
+                                                    
+                                                    if (!isDecimalAllowed && (val.includes('.') || val.includes(','))) {
+                                                        return;
+                                                    }
+
                                                     const numVal = Number(val);
                                                     if (numVal > item.stock) {
                                                         setQuantity(item.stock);
@@ -271,7 +286,7 @@ export const CartItemEditModal = ({
                                                         setQuantity(numVal);
                                                     }
                                                 }}
-                                                step="any"
+                                                step={isDecimalAllowed ? "any" : "1"}
                                                 className="w-full text-center text-2xl font-black py-2.5 bg-gray-50 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-emerald-500 focus:bg-white transition-all shadow-inner tabular-nums"
                                                 min={0}
                                                 max={item.stock}
@@ -365,8 +380,8 @@ export const CartItemEditModal = ({
                                     {/* Discount Input */}
                                     <input
                                         type="number"
-                                        value={discount}
-                                        onChange={(e) => handleDiscountChange(Number(e.target.value))}
+                                        value={discount === 0 ? '' : discount}
+                                        onChange={(e) => handleDiscountChange(Number(e.target.value) || 0)}
                                         className="w-full px-3 py-2 text-base border-2 border-gray-200 rounded-lg focus:outline-none focus:border-emerald-500"
                                         placeholder={discountType === 'percentage' ? `0-${maxDiscountPercent}%` : `0-${maxDiscountAmount.toFixed(2)}`}
                                         step="0.01"

@@ -56,3 +56,28 @@ exports.getAllQuotations = catchAsync(async (req, res, next) => {
         pagination: result.pagination
     });
 });
+
+exports.updateQuotation = catchAsync(async (req, res, next) => {
+    const { id } = req.params;
+    const { customer_id, user_id, items, sub_total, discount, total, valid_until, remarks } = req.body;
+
+    if (!items || items.length === 0) {
+        return res.status(400).json({ success: false, message: 'No items provided' });
+    }
+
+    const quotation = await Quotation.update(id, {
+        customer_id: customer_id ? parseInt(customer_id) : undefined,
+        user_id: user_id ? parseInt(user_id) : undefined,
+        items,
+        sub_total,
+        discount,
+        total,
+        valid_until,
+        remarks
+    });
+
+    res.status(200).json({
+        success: true,
+        data: quotation
+    });
+});

@@ -48,7 +48,8 @@ const mapAPIProductToProduct = (apiData: any): Product => {
         productCode: item.productCode || item.productID || item.product_id_code || item.product_code || '',
         isBulk: Boolean(item.isBulk) || String(item.unit || '').toLowerCase().includes('kg') || String(item.unit || '').toLowerCase().includes('bag'),
         batch: item.batchName || item.batch || item.batch_name || '',
-        expiry: item.expiry || item.exp || null
+        expiry: item.expiry || item.exp || null,
+        unit_conversion: item.unit_conversion || null
     };
 };
 
@@ -617,7 +618,7 @@ const POSInterface = () => {
             <ReturnModal isOpen={showReturnModal} onClose={() => setShowReturnModal(false)} />
             <BillModal
                 isOpen={showBillModal}
-                onClose={closeBillAndReset}
+                onClose={() => setShowBillModal(false)}
                 cartItems={cartItems}
                 customer={selectedCustomer}
                 subtotal={subtotal}

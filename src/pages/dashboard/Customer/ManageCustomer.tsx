@@ -12,7 +12,8 @@ import {
     Eye,
     Receipt,
     DollarSign,
-    Loader2
+    Loader2,
+    History
 } from 'lucide-react';
 
 import { useEffect, useState, useRef } from 'react';
@@ -20,6 +21,7 @@ import toast, { Toaster } from 'react-hot-toast';
 import { customerService } from '../../../services/customerService';
 import invoiceService from '../../../services/invoiceService';
 import { paymentTypeService } from '../../../services/paymentTypeService';
+import { authService } from '../../../services/authService';
 
 
 interface Customer {
@@ -84,6 +86,9 @@ function ManageCustomer() {
 
     const [customerInvoices, setCustomerInvoices] = useState<Invoice[]>([]);
     const [isLoadingInvoices, setIsLoadingInvoices] = useState(false);
+    const [invoicePage, setInvoicePage] = useState(1);
+    const [hasMoreInvoices, setHasMoreInvoices] = useState(true);
+    const [isLoadingMoreInvoices, setIsLoadingMoreInvoices] = useState(false);
 
     const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
     const [selectedInvoice, setSelectedInvoice] = useState<InvoiceDetail | null>(null);
@@ -96,9 +101,18 @@ function ManageCustomer() {
     const [invoiceToDate, setInvoiceToDate] = useState('');
     const [isLoadingInvoiceDetail, setIsLoadingInvoiceDetail] = useState(false);
 
+    // Credit History State
+    const [showCreditHistory, setShowCreditHistory] = useState(false);
+    const [creditHistory, setCreditHistory] = useState<any[]>([]);
+    const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+    const [creditHistoryPage, setCreditHistoryPage] = useState(1);
+    const [hasMoreCreditHistory, setHasMoreCreditHistory] = useState(true);
+    const [isLoadingMoreHistory, setIsLoadingMoreHistory] = useState(false);
+
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [newName, setNewName] = useState('');
     const [newPhone, setNewPhone] = useState('');
-    const [isUpdatingPhone, setIsUpdatingPhone] = useState(false);
+    const [isUpdatingCustomer, setIsUpdatingCustomer] = useState(false);
 
     const [paymentAmount, setPaymentAmount] = useState('');
     const [paymentMethod, setPaymentMethod] = useState('');
@@ -280,6 +294,7 @@ function ManageCustomer() {
 
     const handleEditClick = (customer: Customer) => {
         setSelectedCustomer(customer);
+        setNewName(customer.name);
         setNewPhone(customer.phone);
         setIsModalOpen(true);
     };
@@ -287,42 +302,45 @@ function ManageCustomer() {
     const handleCloseModal = () => {
         setIsModalOpen(false);
         setSelectedCustomer(null);
+        setNewName('');
         setNewPhone('');
-        setIsUpdatingPhone(false);
+        setIsUpdatingCustomer(false);
     };
 
-    const handleUpdatePhone = async () => {
-        if (!selectedCustomer || !newPhone.trim()) {
-            toast.error('Please enter a valid phone number');
+    const handleUpdateCustomer = async () => {
+        if (!selectedCustomer || !newName.trim() || !newPhone.trim()) {
+            toast.error('Please enter a name and a valid phone number');
             return;
         }
 
-        setIsUpdatingPhone(true);
+        setIsUpdatingCustomer(true);
         try {
-            const response = await customerService.updatePhone(selectedCustomer.id, newPhone.trim());
+            const response = await customerService.updateCustomer(selectedCustomer.id, {
+                name: newName.trim(),
+                contact: newPhone.trim()
+            });
 
             if (response.data.success) {
                 // Update local state
                 const updatedCustomers = customers.map(customer =>
                     customer.id === selectedCustomer.id
-                        ? { ...customer, phone: newPhone.trim() }
+                        ? { ...customer, name: newName.trim(), phone: newPhone.trim() }
                         : customer
                 );
                 setCustomers(updatedCustomers);
                 setFilteredCustomers(updatedCustomers);
 
-                toast.success('Phone number updated successfully!');
+                toast.success('Customer updated successfully!');
                 handleCloseModal();
             } else {
-                toast.error(response.data.message || 'Failed to update phone number');
+                toast.error(response.data.message || 'Failed to update customer');
             }
         } catch (error: any) {
-            console.error('Error updating phone:', error);
-            // Check if error response contains a message
-            const errorMessage = error.response?.data?.message || 'Failed to update phone number. Please try again.';
+            console.error('Error updating customer:', error);
+            const errorMessage = error.response?.data?.message || 'Failed to update customer. Please try again.';
             toast.error(errorMessage);
         } finally {
-            setIsUpdatingPhone(false);
+            setIsUpdatingCustomer(false);
         }
     };
 
@@ -358,29 +376,57 @@ function ManageCustomer() {
         setShowInvoices(true);
         setInvoiceFromDate('');
         setInvoiceToDate('');
+        // Reset pagination state
+        setInvoicePage(1);
+        setHasMoreInvoices(true);
+        setIsLoadingMoreInvoices(false);
         await loadCustomerInvoices(customer.id);
     };
 
-    const loadCustomerInvoices = async (_customerId: number, fromDate?: string, toDate?: string) => {
+    const handleViewCreditHistory = async (customer: Customer) => {
+        setSelectedCustomer(customer);
+        setShowCreditHistory(true);
+        setCreditHistory([]);
+        setCreditHistoryPage(1);
+        setHasMoreCreditHistory(true);
+        setIsLoadingHistory(true);
         try {
-            setIsLoadingInvoices(true);
+            const response = await invoiceService.getCreditHistory(customer.id, 1, 10);
+            if (response.success) {
+                setCreditHistory(response.data);
+                setHasMoreCreditHistory(response.pagination.hasMore);
+                console.log('📊 Initial load - Pagination:', response.pagination);
+            } else {
+                toast.error('Failed to load credit history');
+            }
+        } catch (error) {
+            console.error('Error loading credit history:', error);
+            toast.error('Failed to load credit history');
+        } finally {
+            setIsLoadingHistory(false);
+        }
+    };
+
+    const loadCustomerInvoices = async (customerId: number, fromDate?: string, toDate?: string, page: number = 1, append: boolean = false) => {
+        try {
+            if (append) {
+                setIsLoadingMoreInvoices(true);
+            } else {
+                setIsLoadingInvoices(true);
+            }
+            
             const response = await invoiceService.getAllInvoices({
+                customerId: customerId,
                 fromDate: fromDate || undefined,
                 toDate: toDate || undefined,
+                page: page,
+                limit: 10,
+                order: 'desc'
             });
 
             if (response.success) {
-                // Filter invoices for the selected customer by customer ID or name
-                // Note: Adjust this based on your actual API response structure
-                const filtered = response.data.filter((inv: any) => {
-                    // Try matching by customer name since we may not have customerId in invoice
-                    const matchesCustomer = inv.customerName === selectedCustomer?.name || 
-                                           inv.customer === selectedCustomer?.name;
-                    return matchesCustomer;
-                });
-                
                 // Map to Invoice interface
-                const mappedInvoices: Invoice[] = filtered.map((inv: any) => ({
+                const mappedInvoices: Invoice[] = response.data.map((inv: any) => ({
                     id: inv.id,
                     invoiceNumber: inv.invoiceID,
                     date: inv.issuedDate || inv.date,
@@ -391,20 +437,60 @@ function ManageCustomer() {
                     status: parseFloat(inv.balance || 0) === 0 ? 'paid' : 'open'
                 }));
                 
-                setCustomerInvoices(mappedInvoices);
+                if (append) {
+                    setCustomerInvoices(prev => [...prev, ...mappedInvoices]);
+                } else {
+                    setCustomerInvoices(mappedInvoices);
+                }
+                
+                // Update pagination state
+                setInvoicePage(response.pagination.currentPage);
+                setHasMoreInvoices(response.pagination.currentPage < response.pagination.totalPages);
             }
         } catch (error) {
             console.error('Error loading customer invoices:', error);
             toast.error('Failed to load customer invoices');
-            setCustomerInvoices([]);
+            if (!append) {
+                setCustomerInvoices([]);
+            }
         } finally {
-            setIsLoadingInvoices(false);
+            if (append) {
+                setIsLoadingMoreInvoices(false);
+            } else {
+                setIsLoadingInvoices(false);
+            }
         }
     };
 
     const handleInvoiceDateFilter = () => {
         if (selectedCustomer) {
-            loadCustomerInvoices(selectedCustomer.id, invoiceFromDate, invoiceToDate);
+            // Reset pagination on filter change
+            setInvoicePage(1);
+            setHasMoreInvoices(true);
+            loadCustomerInvoices(selectedCustomer.id, invoiceFromDate, invoiceToDate, 1, false);
+        }
+    };
+
+    const loadMoreInvoices = async () => {
+        if (!selectedCustomer || isLoadingMoreInvoices || !hasMoreInvoices) return;
+        
+        try {
+            const nextPage = invoicePage + 1;
+            await loadCustomerInvoices(selectedCustomer.id, invoiceFromDate, invoiceToDate, nextPage, true);
+        } catch (error) {
+            console.error('Error loading more invoices:', error);
+            toast.error('Failed to load more invoices');
+        }
+    };
+
+    const handleInvoiceScroll = (e: React.UIEvent<HTMLDivElement>) => {
+        const { scrollTop, clientHeight, scrollHeight } = e.currentTarget;
+        
+        // Check if scrolled near bottom (50px threshold)
+        if (scrollHeight - scrollTop - clientHeight < 50) {
+            if (!isLoadingMoreInvoices && hasMoreInvoices && !isLoadingInvoices) {
+                loadMoreInvoices();
+            }
         }
     };
 
@@ -440,6 +526,7 @@ function ManageCustomer() {
                 };
                 
                 setSelectedInvoice(detail);
+                setPaymentAmount(detail.balance.toString());
             } else {
                 toast.error('Failed to load invoice details');
             }
@@ -475,7 +562,8 @@ function ManageCustomer() {
             const paymentData = {
                 invoice_id: selectedInvoice.invoiceNumber,
                 payment_amount: amount,
-                payment_type_id: parseInt(paymentMethod)
+                payment_type_id: parseInt(paymentMethod),
+                user_id: authService.getUserId() || undefined
             };
 
             const response = await invoiceService.processInvoicePayment(paymentData);
@@ -571,15 +659,48 @@ function ManageCustomer() {
 
     const getStatusBadge = (status: string, refundedAmount?: number) => {
         if (refundedAmount && refundedAmount > 0) {
-            return 'bg-linear-to-r from-red-500 to-red-600 text-white shadow-sm font-black';
+            return 'bg-gradient-to-r from-rose-500 to-red-600 text-white shadow-sm font-black';
         }
         switch (status) {
             case 'paid':
-                return 'bg-linear-to-r from-emerald-500 to-emerald-600 text-white shadow-sm font-black';
+                return 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-sm font-black';
             case 'open':
-                return 'bg-linear-to-r from-yellow-500 to-yellow-600 text-white shadow-sm font-black';
+                return 'bg-gradient-to-r from-amber-400 to-orange-500 text-white shadow-sm font-black';
             default:
-                return 'bg-linear-to-r from-gray-400 to-gray-500 text-white shadow-sm font-black';
+                return 'bg-gradient-to-r from-slate-400 to-gray-500 text-white shadow-sm font-black';
+        }
+    };
+
+    const loadMoreCreditHistory = async () => {
+        if (!selectedCustomer || isLoadingMoreHistory || !hasMoreCreditHistory) return;
+        
+        setIsLoadingMoreHistory(true);
+        try {
+            const nextPage = creditHistoryPage + 1;
+            console.log(`📄 Loading page ${nextPage} of credit history for customer ${selectedCustomer.id}`);
+            
+            const response = await invoiceService.getCreditHistory(selectedCustomer.id, nextPage, 10);
+            
+            console.log(`✅ Received ${response.data.length} records`);
+            console.log('📊 Pagination Info:', {
+                currentPage: response.pagination.currentPage,
+                totalPages: response.pagination.totalPages,
+                totalRecords: response.pagination.totalRecords,
+                hasMore: response.pagination.hasMore,
+                recordsPerPage: response.pagination.recordsPerPage
+            });
+            console.log('🔢 Response data sample:', response.data.slice(0, 2));
+            
+            if (response.success) {
+                setCreditHistory(prev => [...prev, ...response.data]);
+                setCreditHistoryPage(nextPage);
+                setHasMoreCreditHistory(response.pagination.hasMore);
+            }
+        } catch (error) {
+            console.error('Error loading more credit history:', error);
+            toast.error('Failed to load more history');
+        } finally {
+            setIsLoadingMoreHistory(false);
         }
     };
 
@@ -792,6 +913,16 @@ function ManageCustomer() {
                                                     >
                                                         <Eye size={16} />
                                                     </button>
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleViewCreditHistory(customer);
+                                                        }}
+                                                        className="p-2 bg-linear-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white rounded-lg transition-all"
+                                                        title="View Credit Payment History"
+                                                    >
+                                                        <History size={16} />
+                                                    </button>
                                                 </div>
                                             </td>
                                         </tr>
@@ -811,8 +942,8 @@ function ManageCustomer() {
                                 onClick={() => goToPage(currentPage - 1)}
                                 disabled={currentPage === 1}
                                 className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${currentPage === 1
-                                        ? 'text-gray-400 cursor-not-allowed'
-                                        : 'text-gray-600 hover:bg-emerald-50 hover:text-emerald-600'
+                                    ? 'text-gray-400 cursor-not-allowed'
+                                    : 'text-gray-600 hover:bg-emerald-50 hover:text-emerald-600'
                                     }`}
                             >
                                 <ChevronLeft className="mr-2 h-5 w-5" /> Previous
@@ -825,8 +956,8 @@ function ManageCustomer() {
                                         key={page}
                                         onClick={() => goToPage(page as number)}
                                         className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${currentPage === page
-                                                ? 'bg-linear-to-r from-emerald-500 to-emerald-600 text-white'
-                                                : 'text-gray-600 hover:bg-emerald-50 hover:text-emerald-600'
+                                            ? 'bg-linear-to-r from-emerald-500 to-emerald-600 text-white'
+                                            : 'text-gray-600 hover:bg-emerald-50 hover:text-emerald-600'
                                             }`}
                                     >
                                         {page}
@@ -837,8 +968,8 @@ function ManageCustomer() {
                                 onClick={() => goToPage(currentPage + 1)}
                                 disabled={currentPage === totalPages}
                                 className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all ${currentPage === totalPages
-                                        ? 'text-gray-400 cursor-not-allowed'
-                                        : 'text-gray-600 hover:bg-emerald-50 hover:text-emerald-600'
+                                    ? 'text-gray-400 cursor-not-allowed'
+                                    : 'text-gray-600 hover:bg-emerald-50 hover:text-emerald-600'
                                     }`}
                             >
                                 Next <ChevronRight className="ml-2 h-5 w-5" />
@@ -871,12 +1002,22 @@ function ManageCustomer() {
                         </div>
 
                         <div className="space-y-4">
-                            <p className="text-sm text-gray-600">
-                                Current Phone: <span className="font-semibold text-emerald-600">{selectedCustomer.phone}</span>
-                            </p>
+                            <div>
+                                <label htmlFor="update-customer-name" className="block text-sm font-bold text-gray-700 mb-1">
+                                    Customer Name
+                                </label>
+                                <input
+                                    type="text"
+                                    id="update-customer-name"
+                                    value={newName}
+                                    onChange={(e) => setNewName(e.target.value)}
+                                    placeholder="Enter Customer Name"
+                                    className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-500 transition-all outline-none"
+                                />
+                            </div>
                             <div>
                                 <label htmlFor="update-phone-number" className="block text-sm font-bold text-gray-700 mb-1">
-                                    New Phone Number
+                                    Phone Number
                                 </label>
                                 <input
                                     type="tel"
@@ -897,12 +1038,12 @@ function ManageCustomer() {
                                 Cancel
                             </button>
                             <button
-                                onClick={handleUpdatePhone}
-                                disabled={isUpdatingPhone}
-                                className={`px-6 py-2.5 bg-linear-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-semibold rounded-lg transition-all ${isUpdatingPhone ? 'opacity-50 cursor-not-allowed' : ''
+                                onClick={handleUpdateCustomer}
+                                disabled={isUpdatingCustomer}
+                                className={`px-6 py-2.5 bg-linear-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-teal-600 text-white font-semibold rounded-lg transition-all shadow-md active:scale-95 ${isUpdatingCustomer ? 'opacity-50 cursor-not-allowed grayscale' : ''
                                     }`}
                             >
-                                {isUpdatingPhone ? 'Updating...' : 'Update Phone'}
+                                {isUpdatingCustomer ? 'Updating...' : 'Update Customer'}
                             </button>
                         </div>
                     </div>
@@ -931,7 +1072,7 @@ function ManageCustomer() {
                             </button>
                         </div>
 
-                        <div className="p-6 overflow-y-auto max-h-[calc(90vh-100px)]">
+                        <div className="p-6 overflow-y-auto max-h-[calc(90vh-100px)]" onScroll={handleInvoiceScroll}>
                             {/* Date Filter */}
                             <div className="mb-4 pb-4 border-b border-gray-200">
                                 <div className="flex items-center gap-3">
@@ -1010,6 +1151,25 @@ function ManageCustomer() {
                                             </div>
                                         </div>
                                     ))}
+                                    
+                                    {/* Loading More Indicator */}
+                                    {isLoadingMoreInvoices && (
+                                        <div className="flex items-center justify-center py-8">
+                                            <Loader2 className="animate-spin text-emerald-500 mr-2" size={24} />
+                                            <span className="text-gray-600 text-sm font-medium">Loading more invoices...</span>
+                                        </div>
+                                    )}
+                                    
+                                    {/* All Loaded Indicator */}
+                                    {!hasMoreInvoices && customerInvoices.length > 0 && !isLoadingInvoices && (
+                                        <div className="text-center py-6 mt-4 border-t border-gray-200">
+                                            <CheckCircle className="w-8 h-8 mx-auto mb-2 text-emerald-500" />
+                                            <p className="text-gray-500 text-sm font-medium">All invoices loaded</p>
+                                            <p className="text-gray-400 text-xs mt-1">
+                                                Showing {customerInvoices.length} invoice{customerInvoices.length !== 1 ? 's' : ''}
+                                            </p>
+                                        </div>
+                                    )}
                                 </div>
                             ) : (
                                 <div className="text-center py-12 text-gray-500">
@@ -1029,8 +1189,12 @@ function ManageCustomer() {
                     <div
                         className="bg-white rounded-2xl border border-gray-200 w-full max-w-4xl max-h-[90vh] overflow-hidden"
                     >
-                        <div className="bg-gradient-to-r from-emerald-500 to-emerald-600 px-6 py-4 flex justify-between items-center">
-                            <h2 className="text-2xl font-bold text-white">Invoice Details</h2>
+                        <div className="bg-gradient-to-r from-gray-800 to-gray-900 px-8 py-6 flex justify-between items-center relative overflow-hidden">
+                            <div className="absolute inset-0 bg-emerald-500/10 mix-blend-overlay" />
+                            <div className="relative z-10">
+                                <h2 className="text-2xl font-black text-white tracking-tight">INVOICE DETAILS</h2>
+                                <p className="text-emerald-400 text-xs font-bold tracking-[0.2em] uppercase mt-1">Ref: {selectedInvoice.invoiceNumber}</p>
+                            </div>
                             <button
                                 onClick={() => {
                                     setShowInvoiceDetail(false);
@@ -1039,166 +1203,330 @@ function ManageCustomer() {
                                         setPaymentMethod(paymentMethods[0].id.toString());
                                     }
                                 }}
-                                className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                                className="relative z-10 p-2 hover:bg-white/10 rounded-xl transition-all hover:scale-110 active:scale-90"
                             >
                                 <X size={24} className="text-white" />
                             </button>
                         </div>
 
-                        <div className="p-6 overflow-y-auto max-h-[calc(90vh-100px)]">
+                        <div className="p-8 overflow-y-auto max-h-[calc(90vh-120px)] hide-scrollbar">
                             {isLoadingInvoiceDetail ? (
-                                <div className="flex items-center justify-center py-12">
-                                    <Loader2 className="animate-spin text-emerald-500 mr-2" size={32} />
-                                    <span className="text-gray-600">Loading invoice details...</span>
+                                <div className="flex flex-col items-center justify-center py-20">
+                                    <div className="relative">
+                                        <div className="w-16 h-16 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin" />
+                                        <Loader2 className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-emerald-500" size={24} />
+                                    </div>
+                                    <span className="mt-4 text-gray-500 font-bold uppercase tracking-widest text-xs">Fetching Invoice...</span>
                                 </div>
                             ) : selectedInvoice ? (
                             <>
-                            <div className="grid grid-cols-2 gap-6 mb-6">
-                                <div>
-                                    <p className="text-sm text-gray-500 mb-1">Invoice Number</p>
-                                    <h3 className="text-xl font-bold text-gray-900">{selectedInvoice.invoiceNumber}</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-10">
+                                <div className="p-5 bg-gray-50 rounded-2xl border border-gray-100">
+                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Customer Info</p>
+                                    <h3 className="text-lg font-bold text-gray-900">{selectedInvoice.customerName}</h3>
+                                    <p className="text-xs text-gray-500 font-medium">Verified Account</p>
                                 </div>
-                                <div>
-                                    <p className="text-sm text-gray-500 mb-1">Customer</p>
-                                    <h3 className="text-xl font-bold text-gray-900">{selectedInvoice.customerName}</h3>
+                                <div className="p-5 bg-gray-50 rounded-2xl border border-gray-100">
+                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Issue Date</p>
+                                    <p className="text-lg font-bold text-gray-900">{selectedInvoice.date}</p>
+                                    <div className="flex items-center gap-1 mt-1 text-[10px] text-gray-500 font-bold">
+                                        <span>DUE:</span>
+                                        <span className="text-gray-900">{selectedInvoice.dueDate}</span>
+                                    </div>
                                 </div>
-                                <div>
-                                    <p className="text-sm text-gray-500 mb-1">Invoice Date</p>
-                                    <p className="text-gray-900 font-medium">{selectedInvoice.date}</p>
-                                </div>
-                                <div>
-                                    <p className="text-sm text-gray-500 mb-1">Due Date</p>
-                                    <p className="text-gray-900 font-medium">{selectedInvoice.dueDate}</p>
-                                </div>
-                                <div>
-                                    <p className="text-sm text-gray-500 mb-1">Status</p>
-                                    <span className={`px-3 py-1 text-[10px] font-bold rounded-full border border-white/20 uppercase tracking-widest inline-block ${getStatusBadge(selectedInvoice.status, selectedInvoice.refundedAmount)}`}>
-                                        {selectedInvoice.refundedAmount > 0 ? 'Returned' : selectedInvoice.status.toUpperCase()}
+                                <div className="p-5 bg-gray-50 rounded-2xl border border-gray-100 flex flex-col justify-between">
+                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Payment Status</p>
+                                    <span className={`w-fit px-4 py-1.5 text-[10px] font-black rounded-lg uppercase tracking-widest shadow-sm ${getStatusBadge(selectedInvoice.status, selectedInvoice.refundedAmount)}`}>
+                                        {selectedInvoice.refundedAmount > 0 ? 'Returned' : selectedInvoice.status}
                                     </span>
                                 </div>
                             </div>
 
-                            <hr className="my-6 border-gray-200" />
-
-                            <h3 className="text-lg font-bold text-gray-900 mb-4">Items</h3>
-                            <div className="border-2 border-gray-200 rounded-lg overflow-hidden mb-6">
-                                <table className="w-full">
-                                    <thead className="bg-gray-50">
-                                        <tr>
-                                            <th className="px-4 py-3 text-left text-sm font-bold text-gray-700">Item</th>
-                                            <th className="px-4 py-3 text-right text-sm font-bold text-gray-700">Quantity</th>
-                                            <th className="px-4 py-3 text-right text-sm font-bold text-gray-700">Price</th>
-                                            <th className="px-4 py-3 text-right text-sm font-bold text-gray-700">Total</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-200">
-                                        {selectedInvoice.items.map((item, index) => (
-                                            <tr key={index} className="hover:bg-gray-50">
-                                                <td className="px-4 py-3 text-sm text-gray-800">{item.name}</td>
-                                                <td className="px-4 py-3 text-sm text-gray-600 text-right">{item.quantity}</td>
-                                                <td className="px-4 py-3 text-sm text-gray-600 text-right">Rs. {item.price.toLocaleString()}</td>
-                                                <td className="px-4 py-3 text-sm font-semibold text-gray-900 text-right">Rs. {item.total.toLocaleString()}</td>
+                            <div className="mb-10">
+                                <div className="flex items-center gap-2 mb-4">
+                                    <Receipt size={18} className="text-emerald-500" />
+                                    <h3 className="text-sm font-black text-gray-900 uppercase tracking-widest">Itemized List</h3>
+                                </div>
+                                <div className="rounded-2xl border-2 border-gray-50 overflow-hidden shadow-sm">
+                                    <table className="w-full">
+                                        <thead>
+                                            <tr className="bg-gray-900">
+                                                <th className="px-6 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Product/Service</th>
+                                                <th className="px-6 py-4 text-center text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Qty</th>
+                                                <th className="px-6 py-4 text-right text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Unit Price</th>
+                                                <th className="px-6 py-4 text-right text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Total</th>
                                             </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-50">
+                                            {selectedInvoice.items.map((item, index) => (
+                                                <tr key={index} className="hover:bg-emerald-50/30 transition-colors">
+                                                    <td className="px-6 py-5">
+                                                        <p className="text-sm font-bold text-gray-900">{item.name}</p>
+                                                    </td>
+                                                    <td className="px-6 py-5 text-center">
+                                                        <span className="px-3 py-1 bg-gray-100 rounded-full text-xs font-black text-gray-700">{item.quantity}</span>
+                                                    </td>
+                                                    <td className="px-6 py-5 text-sm text-gray-500 text-right font-medium">Rs. {item.price.toLocaleString()}</td>
+                                                    <td className="px-6 py-5 text-sm font-black text-gray-900 text-right tracking-tight">Rs. {item.total.toLocaleString()}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
 
-                            <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg p-6 space-y-3">
-                                <div className="flex justify-between text-sm">
-                                    <span className="text-gray-600 font-medium">Subtotal:</span>
-                                    <span className="text-gray-900 font-semibold">Rs. {selectedInvoice.subtotal.toLocaleString()}</span>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                                <div className="p-8 bg-gray-900 rounded-3xl text-white relative overflow-hidden">
+                                     {/* Receipt pattern overlay */}
+                                    <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)', backgroundSize: '24px 24px' }} />
+                                    
+                                    <h4 className="text-[10px] font-black text-emerald-500 uppercase tracking-[0.3em] mb-6">Financial Summary</h4>
+                                    
+                                    <div className="space-y-4">
+                                        <div className="flex justify-between items-center group">
+                                            <span className="text-gray-400 text-xs font-bold uppercase tracking-wider group-hover:text-white transition-colors">Gross Subtotal</span>
+                                            <span className="text-sm font-bold">Rs. {selectedInvoice.subtotal.toLocaleString()}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center group">
+                                            <span className="text-gray-400 text-xs font-bold uppercase tracking-wider group-hover:text-white transition-colors">Applied Discount/Tax</span>
+                                            <span className="text-sm font-bold text-emerald-400">- Rs. {selectedInvoice.tax.toLocaleString()}</span>
+                                        </div>
+                                        
+                                        <div className="h-px bg-white/10 my-4" />
+                                        
+                                        <div className="flex justify-between items-center bg-white/5 p-4 rounded-2xl">
+                                            <span className="text-emerald-400 text-xs font-black uppercase tracking-[0.2em]">Net Total</span>
+                                            <span className="text-2xl font-black">Rs. {selectedInvoice.totalAmount.toLocaleString()}</span>
+                                        </div>
+                                        
+                                        <div className="flex justify-between items-center px-4">
+                                            <span className="text-gray-500 text-[10px] font-black uppercase tracking-widest">Amount Settle</span>
+                                            <span className="text-sm font-black text-emerald-500">Rs. {selectedInvoice.paidAmount.toLocaleString()}</span>
+                                        </div>
+
+                                        <div className={`mt-6 p-5 rounded-2xl flex justify-between items-center transition-all ${selectedInvoice.balance === 0 ? 'bg-emerald-500/20 border border-emerald-500/50' : 'bg-red-500/10 border border-red-500/30'}`}>
+                                            <div>
+                                                <p className="text-[9px] font-black uppercase tracking-widest opacity-60">
+                                                    {selectedInvoice.balance === 0 ? 'STATUS: FULLY PAID' : 'CURRENT DEBT'}
+                                                </p>
+                                                <p className="text-xs font-bold">Remaining Balance</p>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className={`text-2xl font-black ${selectedInvoice.balance === 0 ? 'text-emerald-400' : 'text-red-500'}`}>
+                                                    Rs. {selectedInvoice.balance.toLocaleString()}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div className="flex justify-between text-sm">
-                                    <span className="text-gray-600 font-medium">Tax:</span>
-                                    <span className="text-gray-900 font-semibold">Rs. {selectedInvoice.tax.toLocaleString()}</span>
-                                </div>
-                                <hr className="border-gray-300" />
-                                <div className="flex justify-between text-lg">
-                                    <span className="text-gray-900 font-bold">Total Amount:</span>
-                                    <span className="text-gray-900 font-bold">Rs. {selectedInvoice.totalAmount.toLocaleString()}</span>
-                                </div>
-                                <div className="flex justify-between text-lg">
-                                    <span className="text-emerald-700 font-bold">Paid Amount:</span>
-                                    <span className="text-emerald-600 font-bold">Rs. {selectedInvoice.paidAmount.toLocaleString()}</span>
-                                </div>
-                                <hr className="border-gray-300" />
-                                <div className="flex justify-between text-xl">
-                                    <span className={`font-bold ${selectedInvoice.balance === 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                                        Balance:
-                                    </span>
-                                    <span className={`font-bold ${selectedInvoice.balance === 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                                        Rs. {selectedInvoice.balance.toLocaleString()}
-                                    </span>
-                                </div>
-                            </div>
 
                             {/* Payment Section - Only show for open invoices */}
                             {selectedInvoice.status === 'open' && selectedInvoice.balance > 0 && (
-                                <div className="mt-6 p-6 bg-gradient-to-r from-blue-50 to-emerald-50 rounded-lg border-2 border-emerald-200">
-                                    <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                                        <DollarSign className="text-emerald-600" size={24} />
-                                        Make Payment
-                                    </h3>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                                        <div>
-                                            <label htmlFor="payment-method" className="block text-sm font-bold text-gray-700 mb-2">
-                                                Payment Method
-                                            </label>
-                                            <select
-                                                id="payment-method"
-                                                value={paymentMethod}
-                                                onChange={(e) => setPaymentMethod(e.target.value)}
-                                                className="w-full text-sm font-semibold rounded-lg py-3 px-4 border-2 border-gray-300 focus:border-emerald-500 transition-all outline-none"
-                                            >
-                                                {paymentMethods.map((method) => (
-                                                    <option key={method.id} value={method.id}>
-                                                        {method.name}
-                                                    </option>
-                                                ))}
-                                            </select>
+                                <div className="mt-8 p-8 bg-gradient-to-br from-emerald-50 to-teal-50 rounded-3xl border border-emerald-100 shadow-inner relative overflow-hidden">
+                                    {/* Decorative background element */}
+                                    <div className="absolute -right-8 -top-8 w-32 h-32 bg-emerald-100/50 rounded-full blur-2xl" />
+                                    
+                                    <div className="relative z-10">
+                                        <div className="flex items-center justify-between mb-6">
+                                            <h3 className="text-xl font-bold text-gray-900 flex items-center gap-3">
+                                                <div className="p-2 bg-emerald-500 rounded-xl shadow-lg shadow-emerald-200">
+                                                    <CreditCard className="text-white" size={20} />
+                                                </div>
+                                                Payment Settlement
+                                            </h3>
+                                            <div className="text-right">
+                                                <p className="text-xs font-bold text-emerald-600 uppercase tracking-wider mb-1">Outstanding Balance</p>
+                                                <p className="text-2xl font-black text-gray-900">Rs. {selectedInvoice.balance.toLocaleString()}</p>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <label htmlFor="payment-amount" className="block text-sm font-bold text-gray-700 mb-2">
-                                                Payment Amount
-                                            </label>
-                                            <input
-                                                type="number"
-                                                id="payment-amount"
-                                                value={paymentAmount}
-                                                onChange={(e) => setPaymentAmount(e.target.value)}
-                                                placeholder="0.00"
-                                                min="0"
-                                                max={selectedInvoice.balance}
-                                                step="0.01"
-                                                className="w-full text-lg font-semibold rounded-lg py-3 px-4 border-2 border-gray-300 focus:border-emerald-500 transition-all outline-none"
-                                            />
-                                            <p className="text-xs text-gray-500 mt-1">
-                                                Maximum payable: Rs. {selectedInvoice.balance.toLocaleString()}
-                                            </p>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                                            <div className="space-y-2">
+                                                <label htmlFor="payment-method" className="block text-sm font-bold text-gray-700 flex items-center gap-2">
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                                    Payment Method
+                                                </label>
+                                                <div className="relative group">
+                                                    <select
+                                                        id="payment-method"
+                                                        value={paymentMethod}
+                                                        onChange={(e) => setPaymentMethod(e.target.value)}
+                                                        className="w-full text-base font-semibold rounded-2xl py-4 px-5 border-2 border-gray-100 bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none appearance-none hover:border-emerald-200"
+                                                    >
+                                                        {paymentMethods.map((method) => (
+                                                            <option key={method.id} value={method.id}>
+                                                                {method.name}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400 group-hover:text-emerald-500 transition-colors">
+                                                        <ChevronRight size={20} className="rotate-90" />
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="space-y-2">
+                                                <label htmlFor="payment-amount" className="block text-sm font-bold text-gray-700 flex items-center gap-2">
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                                    Amount to Pay
+                                                </label>
+                                                <div className="relative">
+                                                    <span className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400 font-bold">Rs.</span>
+                                                    <input
+                                                        type="number"
+                                                        id="payment-amount"
+                                                        value={paymentAmount}
+                                                        onChange={(e) => {
+                                                            const val = e.target.value;
+                                                            if (parseFloat(val) > selectedInvoice.balance) {
+                                                                setPaymentAmount(selectedInvoice.balance.toString());
+                                                            } else {
+                                                                setPaymentAmount(val);
+                                                            }
+                                                        }}
+                                                        placeholder="0.00"
+                                                        min="0"
+                                                        max={selectedInvoice.balance}
+                                                        step="0.01"
+                                                        className="w-full text-xl font-bold rounded-2xl py-4 pl-12 pr-5 border-2 border-gray-100 bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none"
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <button
+                                            onClick={handlePayment}
+                                            disabled={isProcessingPayment || !paymentAmount || !paymentMethod}
+                                            className={`w-full relative overflow-hidden group px-8 py-5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-black text-lg rounded-2xl transition-all shadow-xl shadow-emerald-200 active:scale-95 flex items-center justify-center gap-3 ${
+                                                isProcessingPayment || !paymentAmount || !paymentMethod ? 'opacity-50 cursor-not-allowed grayscale' : ''
+                                            }`}
+                                        >
+                                            <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500 skew-x-12" />
+                                            {isProcessingPayment ? (
+                                                <>
+                                                    <Loader2 className="animate-spin" size={24} />
+                                                    <span>PROCESSING...</span>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <CheckCircle size={24} />
+                                                    <span>CONFIRM PAYMENT</span>
+                                                </>
+                                            )}
+                                        </button>
+                                        
+                                        <div className="mt-4 flex items-center justify-center gap-2 text-xs font-bold text-emerald-600/60 uppercase tracking-tighter">
+                                            <CheckCircle size={12} />
+                                            Secure Transaction • Instant Settlement
                                         </div>
                                     </div>
-                                    <button
-                                        onClick={handlePayment}
-                                        disabled={isProcessingPayment || !paymentAmount || !paymentMethod}
-                                        className={`w-full px-8 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-bold rounded-lg transition-all transform hover:scale-105 ${isProcessingPayment || !paymentAmount || !paymentMethod ? 'opacity-50 cursor-not-allowed' : ''
-                                            }`}
-                                    >
-                                        {isProcessingPayment ? (
-                                            <span className="flex items-center justify-center gap-2">
-                                                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                                                Processing...
-                                            </span>
-                                        ) : (
-                                            'Pay Now'
-                                        )}
-                                    </button>
                                 </div>
                             )}
-                            </>
+                        </div>
+                        </>
+                        ) : (
+                                <div className="text-center py-12 flex flex-col items-center justify-center space-y-4">
+                                    <div className="p-4 bg-gray-50 rounded-full">
+                                        <Receipt size={48} className="text-gray-300" />
+                                    </div>
+                                    <p className="text-gray-500 font-medium">No invoice details available</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Credit History Modal */}
+            {showCreditHistory && selectedCustomer && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+                    <div className="bg-white rounded-2xl border border-gray-200 w-full max-w-2xl max-h-[90vh] overflow-hidden">
+                        <div className="bg-gradient-to-r from-purple-500 to-purple-600 px-6 py-4 flex justify-between items-center">
+                            <div>
+                                <h2 className="text-2xl font-bold text-white">Credit Payment History</h2>
+                                <p className="text-purple-100 text-sm">{selectedCustomer.name}</p>
+                            </div>
+                            <button
+                                onClick={() => {
+                                    setShowCreditHistory(false);
+                                    setCreditHistory([]);
+                                    setCreditHistoryPage(1);
+                                    setHasMoreCreditHistory(true);
+                                }}
+                                className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                            >
+                                <X size={24} className="text-white" />
+                            </button>
+                        </div>
+                        <div className="p-6 overflow-y-auto max-h-[calc(90vh-100px)]">
+                            {isLoadingHistory ? (
+                                <div className="flex items-center justify-center py-12">
+                                    <Loader2 className="animate-spin text-purple-500 mr-2" size={32} />
+                                    <span className="text-gray-600">Loading history...</span>
+                                </div>
+                            ) : creditHistory.length > 0 ? (
+                                <>
+                                    <table className="w-full">
+                                        <thead className="bg-gray-50 sticky top-0 z-10">
+                                            <tr>
+                                                <th className="px-4 py-3 text-left text-sm font-bold text-gray-700">Date</th>
+                                                <th className="px-4 py-3 text-left text-sm font-bold text-gray-700">Invoice No</th>
+                                                <th className="px-4 py-3 text-right text-sm font-bold text-gray-700">Amount Paid</th>
+                                                <th className="px-4 py-3 text-right text-sm font-bold text-gray-700">Remaining Balance</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-200">
+                                            {creditHistory.map((item) => (
+                                                <tr key={item.id} className="hover:bg-gray-50">
+                                                    <td className="px-4 py-3 text-sm text-gray-800">
+                                                        {new Date(item.date).toLocaleDateString()}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                                                        {item.invoiceNumber}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-sm font-bold text-emerald-600 text-right">
+                                                        Rs. {item.amount.toLocaleString()}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-sm font-semibold text-gray-700 text-right">
+                                                        Rs. {item.remainingBalance.toLocaleString()}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                    <div className="mt-6 flex justify-center">
+                                        <button
+                                            onClick={loadMoreCreditHistory}
+                                            disabled={isLoadingMoreHistory}
+                                            className="px-6 py-3 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white font-semibold rounded-lg transition-all shadow-md active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                                        >
+                                            {isLoadingMoreHistory ? (
+                                                <>
+                                                    <Loader2 className="animate-spin" size={20} />
+                                                    <span>Loading...</span>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <ChevronRight size={20} />
+                                                    <span>Load More</span>
+                                                </>
+                                            )}
+                                        </button>
+                                    </div>
+                                    {!hasMoreCreditHistory && creditHistory.length > 0 && (
+                                        <div className="text-center py-6 mt-4 border-t border-gray-200">
+                                            <CheckCircle className="w-8 h-8 mx-auto mb-2 text-purple-500" />
+                                            <p className="text-gray-500 text-sm font-medium">All records loaded</p>
+                                            <p className="text-gray-400 text-xs mt-1">
+                                                Showing {creditHistory.length} payment{creditHistory.length !== 1 ? 's' : ''}
+                                            </p>
+                                        </div>
+                                    )}
+                                </>
                             ) : (
-                                <div className="text-center py-8 text-gray-500">
-                                    No invoice details available
+                                <div className="text-center py-12 text-gray-500">
+                                    <History className="w-16 h-16 mx-auto mb-3 opacity-30" />
+                                    <p>No credit payment history found</p>
                                 </div>
                             )}
                         </div>

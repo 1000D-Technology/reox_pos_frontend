@@ -1,4 +1,5 @@
 const prisma = require("../config/prismaClient");
+const PaginationHelper = require("../utils/paginationHelper");
 
 // Helper function to get Sri Lankan time (UTC+5:30)
 const getSriLankanTime = () => {
@@ -32,7 +33,7 @@ class POS {
                     include: {
                         product: {
                             include: {
-                                unit_id_product_unit_idTounit_id: true
+                                unit_id_product_unit_idTounit_id: true,
                             }
                         }
                     }
@@ -54,6 +55,7 @@ class POS {
                 productName: p.product_name,
                 barcode: s.barcode,
                 unit: p.unit_id_product_unit_idTounit_id?.name,
+                unit_conversion: null,
                 price: s.rsp,
                 wholesalePrice: s.wsp ?? 0,
                 productCode: p.product_code,
@@ -235,7 +237,7 @@ class POS {
             // If finalBalance > 0: Customer owes money (Credit Sale)
             // If finalBalance < 0: Customer overpaid (Deposit/Store Credit)
             // Using epsilon 0.01 to avoid floating point issues
-            if (Math.abs(finalBalance) > 0.01 && customer_id) {
+            if (finalBalance > 0.01 && customer_id) {
                 console.log(`  📝 Adding to credit book: ${finalBalance}`);
 
                 // Add to credit book
@@ -252,6 +254,8 @@ class POS {
             }
 
             return invoice;
+        }, {
+            timeout: 30000 // Extended timeout to 30s for complex invoice creation with credit book entries
         });
         } catch (error) {
             console.error('ERROR in POS.createInvoice:', error);
@@ -334,6 +338,8 @@ class POS {
                 bulkStock: updatedBulk,
                 looseStock: updatedLoose
             };
+        }, {
+            timeout: 15000 // Extended timeout to 15s for stock conversion operations
         });
     }
 
@@ -350,7 +356,11 @@ class POS {
                             include: {
                                 product_variations: {
                                     include: {
-                                        product: true
+                                        product: {
+                                            include: {
+                                                unit_id_product_unit_idTounit_id: true
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -400,15 +410,20 @@ class POS {
             profit: profit,
             creditBalance: creditBalance,
             refundedAmount: invoice.refunded_amount || 0,
-            items: invoice.invoice_items.map(item => ({
-                id: item.stock_id,
-                name: item.stock.product_variations.product.product_name,
-                price: item.current_price,
-                costPrice: item.stock.cost_price, // Added for detail view
-                quantity: item.qty,
-                returnedQuantity: item.returned_qty || 0,
-                returnQuantity: 0
-            })),
+            items: invoice.invoice_items.map(item => {
+                const unitName = item.stock.product_variations.product.unit_id_product_unit_idTounit_id?.name || '';
+                return {
+                    id: item.stock_id,
+                    name: item.stock.product_variations.product.product_name,
+                    price: item.current_price,
+                    costPrice: item.stock.cost_price, // Added for detail view
+                    quantity: item.qty,
+                    category: unitName,
+                    isBulk: unitName.toLowerCase().includes('kg') || unitName.toLowerCase().includes('bag') || unitName.toLowerCase().includes('liter') || unitName.toLowerCase().includes('meter'),
+                    returnedQuantity: item.returned_qty || 0,
+                    returnQuantity: 0
+                };
+            }),
             payments: invoice.invoice_payments.map(p => ({
                 method: p.payment_types.payment_types,
                 amount: p.amount
@@ -491,6 +506,20 @@ class POS {
         }
 
         return await prisma.$transaction(async (tx) => {
+            const userIdToUse = parseInt(user_id || 1);
+            let activeSession = null;
+
+            // Pre-fetch active session if needed for refund or logging
+            if (cashRefundAmount > 0 || true) { // Always fetch for logging anyway at the end
+                activeSession = await tx.cash_sessions.findFirst({
+                    where: {
+                        user_id: userIdToUse,
+                        cash_status_id: 1 // Active
+                    },
+                    orderBy: { id: 'desc' }
+                });
+            }
+
              // 1. Update Credit Book (If Debt Changed)
              // If there was a credit book entry, we must update it.
              // Even if there wasn't, if debt > 0 we technically should have one, but we'll focus on updating existing ones.
@@ -522,15 +551,6 @@ class POS {
                      data: { refunded_amount: { increment: cashRefundAmount } }
                  });
 
-                 const userIdToUse = user_id || 1; 
-                 const activeSession = await tx.cash_sessions.findFirst({
-                     where: {
-                         user_id: parseInt(userIdToUse),
-                         cash_status_id: 1 // Active
-                     },
-                     orderBy: { id: 'desc' }
-                 });
-
                  if (activeSession) {
                      await tx.cash_sessions.update({
                          where: { id: activeSession.id },
@@ -554,25 +574,35 @@ class POS {
             // 3. Update Stock & Items
             for (const item of items) {
                 if (item.returnQuantity > 0) {
+                    // Update Stock
                     await tx.stock.update({
                         where: { id: item.id },
                         data: { qty: { increment: item.returnQuantity } }
                     });
 
-                    const invoiceItem = await tx.invoice_items.findFirst({
-                        where: {
-                            invoice_id: invoice.id,
-                            stock_id: item.id
-                        }
-                    });
+                    // Search for the invoice item in our pre-fetched data
+                    const dbInvoiceItem = invoice.invoice_items.find(ii => ii.stock_id === item.id);
                     
-                    if (invoiceItem) {
+                    if (dbInvoiceItem) {
                          await tx.invoice_items.update({
-                            where: { id: invoiceItem.id },
+                            where: { id: dbInvoiceItem.id },
                             data: { returned_qty: { increment: item.returnQuantity } }
                         });
+                    } else {
+                        console.warn(`   ⚠️ Item ID ${item.id} not found in Invoice Items.`);
                     }
                 }
+             }
+             
+             // 4. Log in return_goods
+             if (activeSession) {
+                 await tx.return_goods.create({
+                     data: {
+                         invoice_id: invoice.id,
+                         cash_sessions_id: activeSession.id,
+                         balance: currentReturnValue
+                     }
+                 });
              }
              
              // Calculate old debt (before this return)
@@ -587,20 +617,37 @@ class POS {
                  debtReduction: debtReduction,
                  returnValue: currentReturnValue
              };
-          });
+           }, {
+               timeout: 30000 // Extended timeout to 30s to handle complex return logic and prevent expiration
+           });
      }
 
     // Get all invoices with filters and pagination
     static async getAllInvoices(filters, limit, offset) {
-        const { invoiceNumber, cashierName, fromDate, toDate } = filters;
+        const { invoiceNumber, cashierName, fromDate, toDate, customerId } = filters;
         
         // Build where clause
         const where = {};
         
         if (invoiceNumber) {
-            where.invoice_number = {
-                contains: invoiceNumber
-            };
+            const isNumeric = /^\d+$/.test(invoiceNumber);
+            const isPaddedId = invoiceNumber.startsWith('#') && /^\d+$/.test(invoiceNumber.substring(1));
+            
+            if (isNumeric || isPaddedId) {
+                const numericId = parseInt(isNumeric ? invoiceNumber : invoiceNumber.substring(1));
+                where.OR = [
+                    { id: numericId },
+                    { invoice_number: { contains: invoiceNumber } }
+                ];
+            } else {
+                where.invoice_number = {
+                    contains: invoiceNumber
+                };
+            }
+        }
+
+        if (customerId) {
+            where.customer_id = parseInt(customerId);
         }
 
         if (cashierName) {
@@ -648,7 +695,7 @@ class POS {
                 }
             },
             orderBy: {
-                created_at: 'desc'
+                created_at: filters.order || 'desc'
             },
             take: limit,
             skip: offset
@@ -842,6 +889,15 @@ class POS {
                 }
             });
 
+            // 3.5 Record in credit_payment_history
+            await tx.credit_payment_history.create({
+                data: {
+                    creadit_book_id: activeCredit.id,
+                    amount: parseFloat(payment_amount),
+                    payment_date: getSriLankanTime()
+                }
+            });
+
             // 4. Update Credit Book Balance
             const newBalance = activeCredit.balance - payment_amount;
             
@@ -895,7 +951,128 @@ class POS {
                 payment: paymentRecord,
                 remainingBalance: newBalance
             };
+        }, {
+            timeout: 15000 // Extended timeout to 15s for credit payment processing
         });
+    }
+
+    // Get return history
+    static async getReturnHistory(filters, limit, offset) {
+        const { invoiceNumber, fromDate, toDate } = filters;
+        
+        const where = {};
+        if (invoiceNumber) {
+            where.invoice = {
+                invoice_number: { contains: invoiceNumber }
+            };
+        }
+        
+        if (fromDate || toDate) {
+            const dateFilter = {};
+            if (fromDate) dateFilter.gte = new Date(fromDate);
+            if (toDate) dateFilter.lte = new Date(toDate);
+            
+            where.cash_sessions = {
+                opening_date_time: dateFilter
+            };
+        }
+
+        const [returns, totalRecords] = await Promise.all([
+            prisma.return_goods.findMany({
+                where,
+                include: {
+                    invoice: {
+                        include: {
+                            customer: true,
+                            cash_sessions: {
+                                include: {
+                                    user: true
+                                }
+                            }
+                        }
+                    }
+                },
+                orderBy: { id: 'desc' },
+                take: limit,
+                skip: offset
+            }),
+            prisma.return_goods.count({ where })
+        ]);
+
+        return { returns, totalRecords };
+    }
+
+    // Get credit payment history for a customer
+    static async getCreditPaymentHistory(customerId, page = 1, limit = 10) {
+        if (!customerId) {
+            const emptyPagination = PaginationHelper.getPaginationMetadata(page, limit, 0);
+            return { 
+                history: [], 
+                pagination: {
+                    ...emptyPagination,
+                    hasMore: false
+                }
+            };
+        }
+
+        const offset = PaginationHelper.getSkip(page, limit);
+
+        const [history, totalRecords] = await Promise.all([
+            prisma.credit_payment_history.findMany({
+                where: {
+                    creadit_book: {
+                        invoice: {
+                            customer_id: parseInt(customerId)
+                        }
+                    }
+                },
+                include: {
+                    creadit_book: {
+                        select: {
+                            balance: true,
+                            invoice: {
+                                select: {
+                                    invoice_number: true
+                                }
+                            }
+                        }
+                    }
+                },
+                orderBy: {
+                    payment_date: 'desc'
+                },
+                take: limit,
+                skip: offset
+            }),
+            prisma.credit_payment_history.count({
+                where: {
+                    creadit_book: {
+                        invoice: {
+                            customer_id: parseInt(customerId)
+                        }
+                    }
+                }
+            })
+        ]);
+
+        // Format history for frontend
+        const formattedHistory = history.map(item => ({
+            id: item.id,
+            invoiceNumber: item.creadit_book.invoice.invoice_number,
+            amount: item.amount,
+            date: item.payment_date,
+            remainingBalance: item.creadit_book.balance
+        }));
+
+        const paginationMetadata = PaginationHelper.getPaginationMetadata(page, limit, totalRecords);
+
+        return {
+            history: formattedHistory,
+            pagination: {
+                ...paginationMetadata,
+                hasMore: paginationMetadata.hasNextPage // Add hasMore as alias
+            }
+        };
     }
 }
 

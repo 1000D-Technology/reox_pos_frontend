@@ -13,4 +13,7 @@ export const bankService = {
     
     // Delete bank
     deleteBank: (id: number) => axiosInstance.delete(`/api/suppliers/banks/${id}`),
+
+    // Create new bank
+    createBank: (bankData: { bankName: string }) => axiosInstance.post('/api/suppliers/banks', bankData),
 };

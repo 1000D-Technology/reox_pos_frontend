@@ -19,6 +19,11 @@ import toast, { Toaster } from 'react-hot-toast';
 import TypeableSelect from '../../../components/TypeableSelect.tsx';
 import { stockService } from '../../../services/stockService';
 import { productService } from '../../../services/productService';
+import { posService } from '../../../services/posService';
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import ExportModal from '../../../components/modals/ExportModal.tsx';
 
 
 function DamagedStock() {
@@ -86,13 +91,15 @@ function DamagedStock() {
 
     // Dropdown data states
     const [productAdd, setProductAdd] = useState<SelectOption[]>([]);
+    const [productFilter, setProductFilter] = useState<SelectOption[]>([]);
     const [stock, setStock] = useState<SelectOption[]>([]);
     const [reason, setReason] = useState<SelectOption[]>([]);
     const [status, setStatus] = useState<SelectOption[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [loadingStock, setLoadingStock] = useState<boolean>(false);
 
-    const [selectedProduct, setSelectedProduct] = useState<string>(''); // Changed to string for text input
+    const [selectedProduct, setSelectedProduct] = useState<string>(''); 
+    const [selectedProductFilterId, setSelectedProductFilterId] = useState<string | null>(null);
     const [selectedProductAdd, setSelectedProductAdd] = useState<string | null>(null);
     const [selectedStock, setSelectedStock] = useState<string | null>(null);
     const [selectedReason, setSelectedReason] = useState<string | null>(null);
@@ -105,6 +112,11 @@ function DamagedStock() {
     const [fromDate, setFromDate] = useState<string>('');
     const [toDate, setToDate] = useState<string>('');
     const [isSearching, setIsSearching] = useState<boolean>(false);
+
+    // Export Modal State
+    const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+    const [exportType, setExportType] = useState<'excel' | 'csv' | 'pdf'>('excel');
+    const [isExporting, setIsExporting] = useState(false);
 
     // Table data state
     const [salesData, setSalesData] = useState<any[]>([]);
@@ -126,65 +138,80 @@ function DamagedStock() {
 
     const [selectedIndex, setSelectedIndex] = useState(0);
 
-    // Load dropdown data on component mount
-    // Load product data with optional search
-        const loadProductData = async (query?: string) => {
-            try {
-                // If query is provided, we use it. If not (initial load), we fetch default limited set.
-                // We pass query as 'searchTerm' to backend.
-                const productsData = await productService.getProductsForDropdown({ searchTerm: query || '', limit: 10 });
+    // Load product data with optional search (Matching CreateQuotation logic)
+    const loadProductData = async (query?: string) => {
+        try {
+            const response = query 
+                ? await posService.searchProducts(query)
+                : await posService.getPOSProductsList(20);
 
-                // Transform products
-                if (productsData.data?.success) {
-                    const productOptions = productsData.data.data.map((product: any) => ({
-                        value: product.id.toString(),
-                        label: product.product_name || product.name
+            if (response.data?.success) {
+                const options = response.data.data.map((p: any) => ({
+                    value: (p.id || p.stock_id || p.stockID).toString(),
+                    label: `${p.productName || p.displayName} (${p.productID || p.product_code})`
+                }));
+                setProductAdd(options);
+            }
+        } catch (error) {
+            console.error('Error loading product data:', error);
+        }
+    };
+
+    const loadFilterProducts = async (query?: string) => {
+        try {
+            const response = query 
+                ? await posService.searchProducts(query)
+                : await posService.getPOSProductsList(20);
+
+            if (response.data?.success) {
+                const options = response.data.data.map((p: any) => ({
+                    value: (p.id || p.stock_id || p.stockID).toString(),
+                    label: p.productName || p.displayName
+                }));
+                setProductFilter(options);
+            }
+        } catch (error) {
+            console.error('Error loading filter products:', error);
+        }
+    };
+
+    useEffect(() => {
+        const loadDropdownData = async () => {
+            try {
+                setLoading(true);
+    
+                // Initialize reason and return status from API
+                const reasonResponse = await stockService.getReasons();
+                const returnStatusResponse = await stockService.getReturnStatus();
+    
+                if (reasonResponse.data?.success) {
+                    const reasonOptions = reasonResponse.data.data.map((reason: any) => ({
+                        value: reason.id.toString(),
+                        label: reason.reason
                     }));
-                    
-                    // We update the productAdd list which is used in the "Add Damaged Stock" section
-                    setProductAdd(productOptions);
+                    setReason(reasonOptions);
                 }
+    
+                if (returnStatusResponse.data?.success) {
+                    const statusOptions = returnStatusResponse.data.data.map((status: any) => ({
+                        value: status.id.toString(),
+                        label: status.name
+                    }));
+                    setStatus(statusOptions);
+                }
+    
+                setLoading(false);
             } catch (error) {
-                console.error('Error loading product data:', error);
+                console.error('Error loading dropdown data:', error);
+                setLoading(false);
             }
         };
 
-        useEffect(() => {
-            const loadDropdownData = async () => {
-                try {
-                    setLoading(true);
-    
-                    // Initialize reason and return status from API
-                    const reasonResponse = await stockService.getReasons();
-                    const returnStatusResponse = await stockService.getReturnStatus();
-    
-                    if (reasonResponse.data?.success) {
-                        const reasonOptions = reasonResponse.data.data.map((reason: any) => ({
-                            value: reason.id.toString(),
-                            label: reason.reason
-                        }));
-                        setReason(reasonOptions);
-                    }
-    
-                    if (returnStatusResponse.data?.success) {
-                        const statusOptions = returnStatusResponse.data.data.map((status: any) => ({
-                            value: status.id.toString(),
-                            label: status.name
-                        }));
-                        setStatus(statusOptions);
-                    }
-    
-                    setLoading(false);
-                } catch (error) {
-                    console.error('Error loading dropdown data:', error);
-                    setLoading(false);
-                }
-            };
-
-            loadDropdownData();
-            loadProductData(); // Initial load
-            loadSummaryData();
-        }, []);
+        loadDropdownData();
+        loadProductData(); // Initial load for Add section
+        loadFilterProducts(); // Initial load for Filter section
+        loadSummaryData();
+    }, []);
 
     // Load summary data
     const loadSummaryData = async () => {
@@ -351,6 +378,7 @@ function DamagedStock() {
 
     const handleClearFilters = () => {
         setSelectedProduct('');
+        setSelectedProductFilterId(null);
         setFromDate('');
         setToDate('');
         loadDamagedTableData(1, pagination.itemsPerPage);
@@ -458,9 +486,182 @@ function DamagedStock() {
         setIsDetailModalOpen(true);
     };
 
-    const handleExportExcel = () => toast.success('Exporting to Excel...');
-    const handleExportCSV = () => toast.success('Exporting to CSV...');
-    const handleExportPDF = () => toast.success('Exporting to PDF...');
+    // Open Export Modal
+    const openExportModal = (type: 'excel' | 'csv' | 'pdf') => {
+        setExportType(type);
+        setIsExportModalOpen(true);
+    };
+
+    // Actual Export Functions
+    const generateExcel = (data: any[]) => {
+        try {
+            const exportData = data.map((item, index) => ({
+                'No': index + 1,
+                'Product ID': item.productId || item.productID,
+                'Product Name': item.productName,
+                'Unit': item.unit,
+                'Cost Price': item.costPrice,
+                'Price': item.price,
+                'Supplier': item.supplier,
+                'Damage Qty': item.damagedQty,
+                'Reason': item.reason,
+                'Status': item.status,
+                'Date': item.date ? new Date(item.date).toLocaleDateString() : '-'
+            }));
+
+            const ws = XLSX.utils.json_to_sheet(exportData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Damaged Stock');
+
+            const timestamp = new Date().toISOString().split('T')[0];
+            XLSX.writeFile(wb, `Damaged_Stock_${timestamp}.xlsx`);
+            toast.success('Excel file exported successfully');
+        } catch (error) {
+            console.error('Error generating Excel:', error);
+            toast.error('Failed to generate Excel file');
+        }
+    };
+
+    const generateCSV = (data: any[]) => {
+        try {
+            const headers = ['No', 'Product ID', 'Product Name', 'Unit', 'Cost Price', 'Price', 'Supplier', 'Damage Qty', 'Reason', 'Status', 'Date'];
+            const csvData = data.map((item, index) => [
+                index + 1,
+                item.productId || item.productID,
+                item.productName,
+                item.unit,
+                item.costPrice,
+                item.price,
+                item.supplier,
+                item.damagedQty,
+                item.reason,
+                item.status,
+                item.date ? new Date(item.date).toLocaleDateString() : '-'
+            ]);
+
+            const csvContent = [
+                headers.join(','),
+                ...csvData.map(row => row.map(cell => `"${cell}"`).join(','))
+            ].join('\n');
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            const timestamp = new Date().toISOString().split('T')[0];
+
+            link.setAttribute('href', url);
+            link.setAttribute('download', `Damaged_Stock_${timestamp}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            toast.success('CSV file exported successfully');
+        } catch (error) {
+            console.error('Error generating CSV:', error);
+            toast.error('Failed to generate CSV file');
+        }
+    };
+
+    const generatePDF = (data: any[]) => {
+        try {
+            const doc = new jsPDF();
+            doc.setFontSize(18);
+            doc.text('Damaged Stock Report', 14, 22);
+
+            doc.setFontSize(10);
+            doc.text(`Generated on: ${new Date().toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            })}`, 14, 30);
+
+            const tableData = data.map((item, index) => [
+                index + 1,
+                item.productId || item.productID,
+                item.productName,
+                item.unit,
+                `LKR ${item.costPrice}`,
+                `LKR ${item.price}`,
+                item.damagedQty,
+                item.reason,
+                item.status
+            ]);
+
+            autoTable(doc, {
+                startY: 35,
+                head: [['No', 'ID', 'Product', 'Unit', 'Cost', 'Price', 'Qty', 'Reason', 'Status']],
+                body: tableData,
+                theme: 'grid',
+                headStyles: { fillColor: [220, 38, 38], textColor: 255, fontStyle: 'bold' },
+                styles: { fontSize: 8, cellPadding: 2 },
+                columnStyles: { 0: { cellWidth: 8 }, 1: { cellWidth: 15 }, 2: { cellWidth: 35 } }
+            });
+
+            const timestamp = new Date().toISOString().split('T')[0];
+            doc.save(`Damaged_Stock_${timestamp}.pdf`);
+            toast.success('PDF file exported successfully');
+        } catch (error) {
+            console.error('Error generating PDF:', error);
+            toast.error('Failed to generate PDF file');
+        }
+    };
+
+    // Handle Export Confirmation
+    const handleExportConfirm = async (scope: 'all' | 'current') => {
+        setIsExporting(true);
+        try {
+            let dataToExport = [];
+
+            if (scope === 'all') {
+                // Fetch all data from API (using large limit)
+                const response = await stockService.getDamagedTableData(1, 100000);
+                if (response.data?.success) {
+                    const mappedData = response.data.data.map((item: any) => ({
+                        productId: item.productID,
+                        productName: item.productName,
+                        unit: item.unit,
+                        costPrice: item.costPrice,
+                        mrp: item.mrp,
+                        price: item.price,
+                        supplier: item.supplier,
+                        stock: item.stockStatus,
+                        damagedQty: item.damagedQty,
+                        reason: item.reason,
+                        status: item.status,
+                        id: item.id,
+                        description: item.description,
+                        date: item.date
+                    }));
+                    dataToExport = mappedData;
+                } else {
+                    toast.error('Failed to fetch all data');
+                    setIsExporting(false);
+                    return;
+                }
+            } else {
+                // Use current table data
+                dataToExport = salesData;
+            }
+
+            if (dataToExport.length === 0) {
+                toast.error('No data to export');
+                setIsExporting(false);
+                return;
+            }
+
+            if (exportType === 'excel') generateExcel(dataToExport);
+            if (exportType === 'csv') generateCSV(dataToExport);
+            if (exportType === 'pdf') generatePDF(dataToExport);
+
+            setIsExportModalOpen(false);
+        } catch (error) {
+            console.error('Export error:', error);
+            toast.error('An error occurred during export');
+        } finally {
+            setIsExporting(false);
+        }
+    };
 
     return (
         <div className="flex flex-col gap-4 min-h-full">
@@ -523,17 +724,16 @@ function DamagedStock() {
                 <div className="grid md:grid-cols-4 gap-4">
                     <div className="col-span-1 flex flex-col gap-1">
                         <label className="text-xs font-semibold text-gray-600">Product Name</label>
-                        <div className="relative">
-                            <SearchCheck className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-                            <input
-                                type="text"
-                                id="filter-product-main"
-                                value={selectedProduct}
-                                onChange={(e) => setSelectedProduct(e.target.value)}
-                                placeholder="Search by product name..."
-                                className="w-full pl-10 pr-4 py-2 text-sm border-2 border-gray-200 rounded-lg focus:border-emerald-400 transition-all outline-none"
-                            />
-                        </div>
+                        <TypeableSelect
+                            options={productFilter}
+                            value={selectedProductFilterId}
+                            onChange={(opt) => {
+                                setSelectedProductFilterId(opt?.value as string || null);
+                                setSelectedProduct(opt?.label || '');
+                            }}
+                            onSearch={loadFilterProducts}
+                            placeholder="Search product..."
+                        />
                     </div>
                     <div className="grid grid-cols-2 gap-3 col-span-2">
                         <div className="flex flex-col gap-1">
@@ -783,7 +983,7 @@ function DamagedStock() {
                     </table>
                 </div>
 
-                <nav className="bg-white flex items-center justify-between sm:px-6 pt-4 border-t-2 border-gray-200">
+                <nav className="bg-white flex items-center justify-between sm:px-6 py-4 border-t-2 border-gray-200">
                     <div className="text-sm text-gray-600">
                         Showing <span className="font-semibold text-gray-800">{pagination.totalItems > 0 ? (pagination.currentPage - 1) * pagination.itemsPerPage + 1 : 0}</span> to{' '}
                         <span className="font-semibold text-gray-800">{Math.min(pagination.currentPage * pagination.itemsPerPage, pagination.totalItems)}</span> of{' '}
@@ -832,16 +1032,35 @@ function DamagedStock() {
             </div>
 
             {/* Export Buttons */}
-            <div className="bg-white flex justify-center p-4 gap-4 rounded-xl border border-gray-200">
-                <button onClick={handleExportExcel} className="bg-emerald-500 hover:bg-emerald-600 px-6 py-2 font-semibold text-white rounded-lg flex gap-2 items-center transition-all active:scale-95 border border-gray-100 shadow-sm"><FileText size={15} />Excel</button>
-                <button onClick={handleExportCSV} className="bg-blue-500 hover:bg-blue-600 px-6 py-2 font-semibold text-white rounded-lg flex gap-2 items-center transition-all active:scale-95 border border-gray-100 shadow-sm"><FileText size={15} />CSV</button>
-                <button onClick={handleExportPDF} className="bg-purple-500 hover:bg-purple-600 px-6 py-2 font-semibold text-white rounded-lg flex gap-2 items-center transition-all active:scale-95 border border-gray-100 shadow-sm"><FileText size={15} />PDF</button>
+            <div className="bg-white flex justify-center p-4 gap-4 rounded-xl shadow-lg">
+                <button
+                    onClick={() => openExportModal('excel')}
+                    className="flex items-center gap-2 px-6 py-3 bg-linear-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-medium rounded-lg shadow-lg shadow-emerald-200 hover:shadow-xl transition-all"
+                >
+                    <FileText size={20} />
+                    Excel
+                </button>
+                <button
+                    onClick={() => openExportModal('csv')}
+                    className="flex items-center gap-2 px-6 py-3 bg-linear-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-medium rounded-lg shadow-lg shadow-blue-200 hover:shadow-xl transition-all"
+                >
+                    <FileText size={20} />
+                    CSV
+                </button>
+                <button
+                    onClick={() => openExportModal('pdf')}
+                    className="flex items-center gap-2 px-6 py-3 bg-linear-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-medium rounded-lg shadow-lg shadow-red-200 hover:shadow-xl transition-all"
+                >
+                    <FileText size={20} />
+                    PDF
+                </button>
             </div>
 
             {/* Detail Modal */}
             {isDetailModalOpen && selectedDetailRecord && (
                 <div className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
                     <div className="bg-white rounded-2xl w-full max-w-2xl overflow-hidden animate-in zoom-in-95 border border-gray-200">
+                        {/* Modal content details */}
                         <div className="bg-linear-to-r from-emerald-500 to-emerald-600 px-6 py-4 flex items-center justify-between text-white border-b border-gray-200">
                             <h3 className="text-xl font-bold flex items-center gap-2"><div className="p-1 bg-white/20 rounded-lg"><AlertTriangle size={20} /></div> Damaged Stock Details</h3>
                             <button onClick={() => setIsDetailModalOpen(false)}><X size={20} /></button>
@@ -869,6 +1088,14 @@ function DamagedStock() {
                     </div>
                 </div>
             )}
+
+            <ExportModal
+                isOpen={isExportModalOpen}
+                onClose={() => setIsExportModalOpen(false)}
+                onExport={handleExportConfirm}
+                type={exportType}
+                isLoading={isExporting}
+            />
         </div>
     );
 }

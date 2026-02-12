@@ -440,6 +440,7 @@ const upload = require('../middleware/fileUpload');
 router.post('/import', upload.single('file'), productController.importProducts);
 router.post('/create', validateProduct, productController.addProduct);
 router.get('/', productController.getProducts);
+router.get('/variations', productController.getAllVariations);
 router.get('/dropdown', productController.getProductsForDropdown);
 router.get('/:productId/variants', productController.getProductVariants);
 router.post('/:productId/variants', productController.addProductVariation);
@@ -450,6 +451,7 @@ router.patch('/status/:pvId', productController.changeProductStatus);
 
 router.get('/search' , productController.searchProducts);
 router.get('/search/deactive' , productController.searchDeactiveProducts);
+router.get('/check-code/:code', productController.checkProductCode);
 
 router.delete('/:pvId', productController.deleteProduct);
 

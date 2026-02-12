@@ -22,6 +22,7 @@ import toast, { Toaster } from 'react-hot-toast';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import ExportModal from "../../../components/modals/ExportModal.tsx";
 
 function OutOfStock() {
 
@@ -125,6 +126,10 @@ function OutOfStock() {
             // Keep default values on error
         }
     };
+
+    const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+    const [exportType, setExportType] = useState<'excel' | 'csv' | 'pdf'>('excel');
+    const [isExporting, setIsExporting] = useState(false);
 
     type SelectOption = {
         value: string | number;
@@ -252,12 +257,18 @@ function OutOfStock() {
         toast.success('Filters cleared');
     };
 
-    // Export to Excel
-    const handleExportExcel = () => {
+    // Open Export Modal
+    const openExportModal = (type: 'excel' | 'csv' | 'pdf') => {
+        setExportType(type);
+        setIsExportModalOpen(true);
+    };
+
+    // Actual Export Functions
+    const generateExcel = (data: any[]) => {
         try {
-            const exportData = stockData.map((item, index) => ({
+            const exportData = data.map((item, index) => ({
                 'No': index + 1,
-                'Product ID': item.productID,
+                'Product Variation ID': item.pvId,
                 'Product Name': item.productName,
                 'Unit': item.unit,
                 'Cost Price': item.costPrice,
@@ -275,18 +286,17 @@ function OutOfStock() {
             XLSX.writeFile(wb, `Out_Of_Stock_${timestamp}.xlsx`);
             toast.success('Excel file exported successfully');
         } catch (error) {
-            console.error('Error exporting Excel:', error);
-            toast.error('Failed to export Excel file');
+            console.error('Error generating Excel:', error);
+            toast.error('Failed to generate Excel file');
         }
     };
 
-    // Export to CSV
-    const handleExportCSV = () => {
+    const generateCSV = (data: any[]) => {
         try {
-            const headers = ['No', 'Product ID', 'Product Name', 'Unit', 'Cost Price', 'MRP', 'Price', 'Supplier', 'Stock'];
-            const csvData = stockData.map((item, index) => [
+            const headers = ['No', 'PV ID', 'Product Name', 'Unit', 'Cost Price', 'MRP', 'Price', 'Supplier', 'Stock'];
+            const csvData = data.map((item, index) => [
                 index + 1,
-                item.productID,
+                item.pvId,
                 item.productName,
                 item.unit,
                 item.costPrice,
@@ -315,21 +325,17 @@ function OutOfStock() {
 
             toast.success('CSV file exported successfully');
         } catch (error) {
-            console.error('Error exporting CSV:', error);
-            toast.error('Failed to export CSV file');
+            console.error('Error generating CSV:', error);
+            toast.error('Failed to generate CSV file');
         }
     };
 
-    // Export to PDF
-    const handleExportPDF = () => {
+    const generatePDF = (data: any[]) => {
         try {
             const doc = new jsPDF();
-
-            // Add title
             doc.setFontSize(18);
             doc.text('Out of Stock Report', 14, 22);
 
-            // Add date
             doc.setFontSize(10);
             doc.text(`Generated on: ${new Date().toLocaleDateString('en-US', {
                 year: 'numeric',
@@ -337,10 +343,9 @@ function OutOfStock() {
                 day: 'numeric'
             })}`, 14, 30);
 
-            // Prepare table data
-            const tableData = stockData.map((item, index) => [
+            const tableData = data.map((item, index) => [
                 index + 1,
-                item.productID,
+                item.pvId,
                 item.productName,
                 item.unit,
                 item.costPrice,
@@ -350,40 +355,62 @@ function OutOfStock() {
                 item.stockQty
             ]);
 
-            // Add table
             autoTable(doc, {
                 startY: 35,
-                head: [['No', 'Product ID', 'Product Name', 'Unit', 'Cost Price', 'MRP', 'Price', 'Supplier', 'Stock']],
+                head: [['No', 'PV ID', 'Product Name', 'Unit', 'Cost Price', 'MRP', 'Price', 'Supplier', 'Stock']],
                 body: tableData,
                 theme: 'grid',
-                headStyles: {
-                    fillColor: [239, 68, 68],
-                    textColor: 255,
-                    fontStyle: 'bold'
-                },
-                styles: {
-                    fontSize: 8,
-                    cellPadding: 2
-                },
-                columnStyles: {
-                    0: { cellWidth: 10 },
-                    1: { cellWidth: 20 },
-                    2: { cellWidth: 35 },
-                    3: { cellWidth: 15 },
-                    4: { cellWidth: 20 },
-                    5: { cellWidth: 20 },
-                    6: { cellWidth: 20 },
-                    7: { cellWidth: 30 },
-                    8: { cellWidth: 15 }
-                }
+                headStyles: { fillColor: [239, 68, 68], textColor: 255, fontStyle: 'bold' },
+                styles: { fontSize: 8, cellPadding: 2 },
+                columnStyles: { 0: { cellWidth: 10 }, 1: { cellWidth: 20 }, 2: { cellWidth: 35 } }
             });
 
             const timestamp = new Date().toISOString().split('T')[0];
             doc.save(`Out_Of_Stock_${timestamp}.pdf`);
             toast.success('PDF file exported successfully');
         } catch (error) {
-            console.error('Error exporting PDF:', error);
-            toast.error('Failed to export PDF file');
+            console.error('Error generating PDF:', error);
+            toast.error('Failed to generate PDF file');
+        }
+    };
+
+    // Handle Export Confirmation
+    const handleExportConfirm = async (scope: 'all' | 'current') => {
+        setIsExporting(true);
+        try {
+            let dataToExport = [];
+
+            if (scope === 'all') {
+                // Fetch all data from API (using large limit)
+                const response = await stockService.getOutOfStockList(1, 100000);
+                if (response.data?.success) {
+                    dataToExport = response.data.data;
+                } else {
+                    toast.error('Failed to fetch all data');
+                    setIsExporting(false);
+                    return;
+                }
+            } else {
+                // Use current table data
+                dataToExport = stockData;
+            }
+
+            if (dataToExport.length === 0) {
+                toast.error('No data to export');
+                setIsExporting(false);
+                return;
+            }
+
+            if (exportType === 'excel') generateExcel(dataToExport);
+            if (exportType === 'csv') generateCSV(dataToExport);
+            if (exportType === 'pdf') generatePDF(dataToExport);
+
+            setIsExportModalOpen(false);
+        } catch (error) {
+            console.error('Export error:', error);
+            toast.error('An error occurred during export');
+        } finally {
+            setIsExporting(false);
         }
     };
 
@@ -438,7 +465,7 @@ function OutOfStock() {
                 e.preventDefault();
                 const selectedItem = stockData[selectedIndex];
                 if (selectedItem) {
-                    toast.success(`Selected: ${selectedItem.productName} (ID: ${selectedItem.productID})`);
+                toast.success(`Selected: ${selectedItem.productName} (PV ID: ${selectedItem.pvId})`);
                 }
             } else if (e.key === "Escape") {
                 e.preventDefault();
@@ -618,7 +645,7 @@ function OutOfStock() {
                             <thead className="bg-gradient-to-r from-red-500 to-red-600 sticky top-0 z-10">
                                 <tr>
                                     {[
-                                        'Product ID',
+                                        'PV ID',
                                         'Product Name',
                                         'Unit',
                                         'Cost Price',
@@ -663,7 +690,7 @@ function OutOfStock() {
                                                 }`}
                                         >
                                             <td className="px-6 py-2 whitespace-nowrap text-sm font-semibold text-gray-800">
-                                                {item.productID}
+                                                {item.pvId}
                                             </td>
                                             <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-gray-700">
                                                 {item.productName}
@@ -743,22 +770,28 @@ function OutOfStock() {
 
                 {/* Export Buttons */}
                 <div
-                    className={'bg-white flex justify-center p-4 gap-4 rounded-xl border border-gray-200'}
+                    className="bg-white flex justify-center p-4 gap-4 rounded-xl shadow-lg"
                 >
                     <button
-                        onClick={handleExportExcel}
-                        className={'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 px-6 py-2 font-medium text-white rounded-lg flex gap-2 items-center shadow-lg shadow-emerald-200 hover:shadow-xl transition-all'}>
-                        <FileText size={15} />Excel
+                        onClick={() => openExportModal('excel')}
+                        className="flex items-center gap-2 px-6 py-3 bg-linear-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-medium rounded-lg shadow-lg shadow-emerald-200 hover:shadow-xl transition-all"
+                    >
+                        <FileText size={20} />
+                        Excel
                     </button>
                     <button
-                        onClick={handleExportCSV}
-                        className={'bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 px-6 py-2 font-medium text-white rounded-lg flex gap-2 items-center shadow-lg shadow-yellow-200 hover:shadow-xl transition-all'}>
-                        <FileText size={15} />CSV
+                        onClick={() => openExportModal('csv')}
+                        className="flex items-center gap-2 px-6 py-3 bg-linear-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-medium rounded-lg shadow-lg shadow-blue-200 hover:shadow-xl transition-all"
+                    >
+                        <FileText size={20} />
+                        CSV
                     </button>
                     <button
-                        onClick={handleExportPDF}
-                        className={'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 px-6 py-2 font-medium text-white rounded-lg flex gap-2 items-center shadow-lg shadow-red-200 hover:shadow-xl transition-all'}>
-                        <FileText size={15} />PDF
+                        onClick={() => openExportModal('pdf')}
+                        className="flex items-center gap-2 px-6 py-3 bg-linear-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-medium rounded-lg shadow-lg shadow-red-200 hover:shadow-xl transition-all"
+                    >
+                        <FileText size={20} />
+                        PDF
                     </button>
                 </div>
             </div>
@@ -783,6 +816,13 @@ function OutOfStock() {
                         },
                     },
                 }}
+            />
+            <ExportModal
+                isOpen={isExportModalOpen}
+                onClose={() => setIsExportModalOpen(false)}
+                onExport={handleExportConfirm}
+                type={exportType}
+                isLoading={isExporting}
             />
         </>
     );

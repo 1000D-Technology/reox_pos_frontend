@@ -68,19 +68,12 @@ export const PaymentPanel = ({
 
     useEffect(() => {
         const searchCustomers = async () => {
-            if (customerSearchTerm.trim().length >= 2) {
+            // Don't search if term is too short or matches the already selected customer
+            if (customerSearchTerm.trim().length >= 2 && customerSearchTerm !== selectedCustomer?.name) {
                 try {
-                    const response = await customerService.getCustomers();
+                    const response = await customerService.searchCustomers(customerSearchTerm);
                     if (response.data?.success) {
-                        const customersList = response.data.data;
-
-                        const filtered = customersList.filter((customer: Customer) => {
-                            const searchLower = customerSearchTerm.toLowerCase();
-                            const nameMatch = customer.name.toLowerCase().includes(searchLower);
-                            const contactMatch = customer.contact.includes(customerSearchTerm);
-                            return nameMatch || contactMatch;
-                        });
-
+                        const filtered = response.data.data;
                         setFilteredCustomers(filtered);
                         setHighlightedCustomerIndex(0);
                         setShowCustomerDropdown(filtered.length > 0);
@@ -97,7 +90,7 @@ export const PaymentPanel = ({
 
         const debounceTimer = setTimeout(searchCustomers, 300);
         return () => clearTimeout(debounceTimer);
-    }, [customerSearchTerm]);
+    }, [customerSearchTerm, selectedCustomer?.name]);
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {

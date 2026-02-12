@@ -6,12 +6,14 @@ interface CustomerRegistrationModalProps {
     isOpen: boolean;
     onClose: () => void;
     onRegister: (name: string, contact: string, email?: string, creditBalance?: number) => void;
+    isLoading?: boolean;
 }
 
 export const CustomerRegistrationModal = ({
     isOpen,
     onClose,
-    onRegister
+    onRegister,
+    isLoading = false
 }: CustomerRegistrationModalProps) => {
     const [name, setName] = useState('');
     const [contact, setContact] = useState('');
@@ -121,12 +123,20 @@ export const CustomerRegistrationModal = ({
                                 </button>
                                 <button
                                     onClick={handleSubmit}
-                                    disabled={!name.trim() || !contact.trim()}
-                                    className="flex-1 py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-xl font-semibold hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                                    disabled={!name.trim() || !contact.trim() || isLoading}
+                                    className="flex-1 py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-xl font-semibold hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all relative overflow-hidden"
                                 >
                                     <div className="flex items-center justify-center gap-2">
-                                        <UserPlus className="w-4 h-4" />
-                                        Register
+                                        {isLoading ? (
+                                            <motion.div
+                                                animate={{ rotate: 360 }}
+                                                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                                                className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full"
+                                            />
+                                        ) : (
+                                            <UserPlus className="w-4 h-4" />
+                                        )}
+                                        {isLoading ? 'Registering...' : 'Register'}
                                     </div>
                                 </button>
                             </div>

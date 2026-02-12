@@ -3,6 +3,7 @@ import { X, RotateCcw, Search, Barcode, FileText, Printer, Minus, Plus } from 'l
 import { useState } from 'react';
 import { posService } from '../../services/posService';
 import { printBill } from '../../utils/billPrinter';
+import { ReturnItemEditModal } from './ReturnItemEditModal';
 import { authService } from '../../services/authService';
 import toast from 'react-hot-toast';
 import CustomConfirmModal from '../common/CustomConfirmModal';
@@ -19,6 +20,8 @@ interface ReturnItem {
     quantity: number;
     returnedQuantity?: number; // Quantity already returned
     returnQuantity: number; // Quantity to return NOW
+    category?: string;
+    isBulk?: boolean;
 }
 
 interface Invoice {
@@ -36,6 +39,8 @@ export const ReturnModal = ({ isOpen, onClose }: ReturnModalProps) => {
     const [originalInvoice, setOriginalInvoice] = useState<Invoice | null>(null);
     const [returnItems, setReturnItems] = useState<ReturnItem[]>([]);
     const [returnSearchTerm, setReturnSearchTerm] = useState('');
+    const [editingItem, setEditingItem] = useState<ReturnItem | null>(null);
+    const [showEditModal, setShowEditModal] = useState(false);
 
     const [loading, setLoading] = useState(false);
 
@@ -48,7 +53,11 @@ export const ReturnModal = ({ isOpen, onClose }: ReturnModalProps) => {
             if (response.data?.success && response.data?.data) {
                 const invoiceData = response.data.data;
                 setOriginalInvoice(invoiceData);
-                setReturnItems(invoiceData.items);
+                // Ensure each item has a returnQuantity of 0 initially
+                setReturnItems(invoiceData.items.map((item: any) => ({
+                    ...item,
+                    returnQuantity: 0
+                })));
                 toast.success('Invoice loaded successfully');
             }
         } catch (error: any) {
@@ -62,7 +71,13 @@ export const ReturnModal = ({ isOpen, onClose }: ReturnModalProps) => {
         }
     };
 
-    const updateReturnQuantity = (id: number, delta: number) => {
+    const updateReturnQuantity = (id: number, qty: number) => {
+        setReturnItems(prev => prev.map(item => 
+            item.id === id ? { ...item, returnQuantity: qty } : item
+        ));
+    };
+
+    const toggleQuickReturn = (id: number, delta: number) => {
         setReturnItems(returnItems.map(item => {
             if (item.id === id) {
                 const alreadyReturned = item.returnedQuantity || 0;
@@ -177,6 +192,8 @@ export const ReturnModal = ({ isOpen, onClose }: ReturnModalProps) => {
         setOriginalInvoice(null);
         setReturnItems([]);
         setReturnSearchTerm('');
+        setEditingItem(null);
+        setShowEditModal(false);
         onClose();
     };
 
@@ -317,66 +334,133 @@ export const ReturnModal = ({ isOpen, onClose }: ReturnModalProps) => {
                                     </div>
 
                                     {/* Return Items List */}
-                                    <div className="space-y-2 max-h-64 overflow-y-auto">
-                                        {filteredReturnItems.map((item) => (
-                                            <div key={item.id} className="p-3 bg-gray-50 rounded-xl border-2 border-gray-200">
-                                                <div className="flex items-center justify-between mb-2">
-                                                    <div className="flex-1">
-                                                        <h4 className="font-semibold text-gray-800">{item.name}</h4>
-                                                        <div className="flex gap-3 text-xs text-gray-500 mt-1">
-                                                            <span className="font-medium text-blue-600">Orig: {item.quantity}</span>
-                                                            <span className="font-medium text-red-500">Returned: {item.returnedQuantity || 0}</span>
-                                                            <span className="font-medium text-emerald-600">Avail: {item.quantity - (item.returnedQuantity || 0)}</span>
+                                    <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
+                                        {filteredReturnItems.map((item) => {
+                                            const isReturning = item.returnQuantity > 0;
+                                            const availToReturn = item.quantity - (item.returnedQuantity || 0);
+                                            
+                                            return (
+                                                <div 
+                                                    key={item.id} 
+                                                    onClick={() => {
+                                                        setEditingItem(item);
+                                                        setShowEditModal(true);
+                                                    }}
+                                                    className={`p-4 rounded-xl border-2 transition-all cursor-pointer group relative overflow-hidden ${
+                                                        isReturning 
+                                                            ? 'bg-amber-50 border-amber-300 shadow-sm' 
+                                                            : 'bg-white border-gray-100 hover:border-amber-200'
+                                                    }`}
+                                                >
+                                                    <div className="flex items-center justify-between mb-3">
+                                                        <div className="flex-1">
+                                                            <div className="flex items-center gap-2">
+                                                                <h4 className="font-bold text-gray-800 text-lg">{item.name}</h4>
+                                                                {isReturning && (
+                                                                    <span className="px-2 py-0.5 bg-amber-500 text-white text-[10px] font-black rounded uppercase tracking-wider animate-pulse">
+                                                                        Returning
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <div className="flex gap-4 text-xs text-gray-500 mt-2">
+                                                                <div className="flex flex-col">
+                                                                    <span className="text-[10px] uppercase font-bold text-gray-400">Orig Qty</span>
+                                                                    <span className="font-bold text-gray-700">{item.quantity}</span>
+                                                                </div>
+                                                                <div className="flex flex-col">
+                                                                    <span className="text-[10px] uppercase font-bold text-red-400">Returned</span>
+                                                                    <span className="font-bold text-red-600">{item.returnedQuantity || 0}</span>
+                                                                </div>
+                                                                <div className="flex flex-col">
+                                                                    <span className="text-[10px] uppercase font-bold text-emerald-400">Available</span>
+                                                                    <span className="font-bold text-emerald-600">{availToReturn}</span>
+                                                                </div>
+                                                                <div className="flex flex-col">
+                                                                    <span className="text-[10px] uppercase font-bold text-blue-400">Unit Price</span>
+                                                                    <span className="font-bold text-blue-700">Rs {item.price.toFixed(2)}</span>
+                                                                </div>
+                                                            </div>
                                                         </div>
-                                                        <p className="text-xs text-gray-500 mt-0.5">Price: Rs {item.price}</p>
+                                                        <div className="text-right flex flex-col items-end">
+                                                            <div className="text-xs text-gray-400 font-bold uppercase mb-1">Return Value</div>
+                                                            <p className={`font-black text-xl ${isReturning ? 'text-amber-600' : 'text-gray-300'}`}>
+                                                                Rs {(item.price * item.returnQuantity).toFixed(2)}
+                                                            </p>
+                                                        </div>
                                                     </div>
-                                                    <div className="text-right">
-                                                        <p className="font-bold text-amber-600">
-                                                            Rs {(item.price * item.returnQuantity).toFixed(2)}
-                                                        </p>
+
+                                                    <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                                                        <div className="flex items-center gap-4">
+                                                            <div className="flex items-center gap-2 bg-white/50 border-2 border-gray-200 rounded-lg p-1">
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        toggleQuickReturn(item.id, -1);
+                                                                    }}
+                                                                    className="p-1 px-2 bg-gray-100 hover:bg-red-500 hover:text-white rounded transition-colors disabled:opacity-30"
+                                                                    disabled={item.returnQuantity <= 0}
+                                                                >
+                                                                    <Minus className="w-4 h-4" />
+                                                                </button>
+                                                                <span className="px-3 font-black text-base min-w-[30px] text-center">
+                                                                    {item.returnQuantity}
+                                                                </span>
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        toggleQuickReturn(item.id, 1);
+                                                                    }}
+                                                                    className="p-1 px-2 bg-gray-100 hover:bg-emerald-500 hover:text-white rounded transition-colors disabled:opacity-30"
+                                                                    disabled={item.returnQuantity >= availToReturn}
+                                                                >
+                                                                    <Plus className="w-4 h-4" />
+                                                                </button>
+                                                            </div>
+                                                            <p className="text-[10px] text-gray-400 font-bold uppercase">Click anywhere to edit details</p>
+                                                        </div>
+
+                                                        <button 
+                                                            className={`p-2 rounded-lg transition-all ${
+                                                                isReturning 
+                                                                    ? 'bg-amber-500 text-white shadow-md' 
+                                                                    : 'bg-gray-100 text-gray-400 group-hover:bg-amber-100 group-hover:text-amber-500'
+                                                            }`}
+                                                        >
+                                                            <FileText className="w-5 h-5" />
+                                                        </button>
                                                     </div>
                                                 </div>
-                                                <div className="flex items-center gap-2">
-                                                    <span className="text-xs text-gray-600">Return Qty:</span>
-                                                    <div className="flex items-center gap-2 bg-white border-2 border-gray-200 rounded-lg p-1">
-                                                        <button
-                                                            onClick={() => updateReturnQuantity(item.id, -1)}
-                                                            className="p-1 bg-gray-100 hover:bg-amber-500 hover:text-white rounded transition-colors"
-                                                            disabled={item.returnQuantity <= 0}
-                                                        >
-                                                            <Minus className="w-3.5 h-3.5" />
-                                                        </button>
-                                                        <span className="px-3 font-semibold text-sm">{item.returnQuantity}</span>
-                                                        <button
-                                                            onClick={() => updateReturnQuantity(item.id, 1)}
-                                                            className="p-1 bg-gray-100 hover:bg-amber-500 hover:text-white rounded transition-colors"
-                                                            disabled={item.returnQuantity >= (item.quantity - (item.returnedQuantity || 0))}
-                                                        >
-                                                            <Plus className="w-3.5 h-3.5" />
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ))}
+                                            );
+                                        })}
                                     </div>
 
                                     {/* Return Summary */}
-                                    <div className="p-4 bg-linear-to-br from-amber-50 to-amber-100 rounded-xl border-2 border-amber-200">
-                                        <div className="space-y-2">
-                                            <div className="flex justify-between text-sm">
-                                                <span className="text-gray-600">Original Total:</span>
-                                                <span className="font-semibold">Rs {originalInvoice.total.toFixed(2)}</span>
+                                    <div className="p-5 bg-linear-to-br from-amber-50 to-orange-50 rounded-2xl border-2 border-amber-200 shadow-inner">
+                                        <div className="space-y-3">
+                                            <div className="flex justify-between text-sm font-bold">
+                                                <span className="text-gray-500">Invoice Total:</span>
+                                                <span className="text-gray-700">Rs {originalInvoice.total.toFixed(2)}</span>
                                             </div>
-                                            <div className="flex justify-between text-sm">
-                                                <span className="text-gray-600">Return Amount:</span>
-                                                <span className="font-semibold text-amber-600">
-                                                    Rs {returnSubtotal.toFixed(2)}
+                                            <div className="flex justify-between text-sm font-bold">
+                                                <span className="text-gray-500 uppercase tracking-wider text-[10px]">Return Quantity Sum</span>
+                                                <span className="text-amber-600">
+                                                    {returnItems.reduce((s, i) => s + i.returnQuantity, 0)} Units
                                                 </span>
                                             </div>
-                                            <div className="h-px bg-amber-300"></div>
-                                            <div className="flex justify-between text-lg font-bold">
-                                                <span>Refund Total:</span>
-                                                <span className="text-amber-600">Rs {returnTotal.toFixed(2)}</span>
+                                            <div className="h-px bg-amber-200"></div>
+                                            <div className="flex justify-between items-end">
+                                                <div>
+                                                    <p className="text-[10px] font-black text-amber-500 uppercase tracking-widest">Total Refund Due</p>
+                                                    <h3 className="text-3xl font-black text-amber-600">
+                                                        Rs {returnTotal.toFixed(2)}
+                                                    </h3>
+                                                </div>
+                                                <div className="text-right">
+                                                    <p className="text-[10px] font-bold text-gray-400 uppercase">Items Selected</p>
+                                                    <p className="text-lg font-black text-gray-700">
+                                                        {returnItems.filter(i => i.returnQuantity > 0).length} Product(s)
+                                                    </p>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -384,11 +468,12 @@ export const ReturnModal = ({ isOpen, onClose }: ReturnModalProps) => {
                             )}
 
                             {!originalInvoice && (
-                                <div className="text-center py-12">
-                                    <div className="p-4 bg-gray-100 rounded-full inline-block mb-4">
-                                        <FileText className="w-12 h-12 text-gray-400" />
+                                <div className="text-center py-20 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200">
+                                    <div className="p-6 bg-white shadow-sm rounded-full inline-block mb-4">
+                                        <FileText className="w-16 h-16 text-amber-400" />
                                     </div>
-                                    <p className="text-gray-500">Enter invoice number to load details</p>
+                                    <h3 className="text-xl font-bold text-gray-800">No Invoice Loaded</h3>
+                                    <p className="text-gray-500 max-w-xs mx-auto mt-2">Enter or scan an invoice number above to start the return process.</p>
                                 </div>
                             )}
                         </div>
@@ -396,22 +481,20 @@ export const ReturnModal = ({ isOpen, onClose }: ReturnModalProps) => {
                         {/* Footer */}
                         {originalInvoice && (
                             <div className="p-6 border-t border-gray-200 bg-gray-50">
-                                <div className="flex gap-3">
+                                <div className="flex gap-4">
                                     <button
                                         onClick={handleClose}
-                                        className="flex-1 px-6 py-3 bg-gray-200 text-gray-700 rounded-xl font-semibold hover:bg-gray-300 transition-colors"
+                                        className="flex-1 px-6 py-4 bg-white text-gray-700 rounded-xl font-bold border-2 border-gray-200 hover:bg-gray-50 transition-colors shadow-sm"
                                     >
                                         Cancel
                                     </button>
                                     <button
                                         onClick={completeReturn}
                                         disabled={returnItems.filter(i => i.returnQuantity > 0).length === 0 || loading}
-                                        className="flex-1 px-6 py-3 bg-linear-to-r from-amber-500 to-amber-600 text-white rounded-xl font-semibold hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                                        className="flex-[2] px-6 py-4 bg-linear-to-r from-amber-500 to-orange-600 text-white rounded-xl font-black text-lg hover:shadow-xl hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100 transition-all shadow-lg flex items-center justify-center gap-3"
                                     >
-                                        <div className="flex items-center justify-center gap-2">
-                                            <Printer className="w-5 h-5" />
-                                            Process Return
-                                        </div>
+                                        <Printer className="w-6 h-6" />
+                                        Process & Print Return
                                     </button>
                                 </div>
                             </div>
@@ -419,6 +502,16 @@ export const ReturnModal = ({ isOpen, onClose }: ReturnModalProps) => {
                     </motion.div>
                 </div>
             )}
+
+            <ReturnItemEditModal 
+                isOpen={showEditModal}
+                onClose={() => {
+                    setShowEditModal(false);
+                    setEditingItem(null);
+                }}
+                item={editingItem}
+                onUpdate={updateReturnQuantity}
+            />
 
             <CustomConfirmModal
                 isOpen={showConfirmModal}

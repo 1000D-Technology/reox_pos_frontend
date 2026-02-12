@@ -129,9 +129,23 @@ exports.importProducts = catchAsync(async (req, res, next) => {
 exports.addProduct = catchAsync(async (req, res, next) => {
     const { productData, variations } = req.body;
 
+    // Check if product code already exists
+    const codeExists = await Product.checkIdExists('product', 'product_code', productData.code);
+    if (codeExists) {
+        return next(new AppError('Product Code already exists!', 400));
+    }
+
     let finalVariations = [];
     // If no variations are provided, create a default variation
     if (!variations || variations.length === 0) {
+        // Check if barcode exists
+        if (productData.barcode) {
+            const barcodeExists = await Product.checkIdExists('product_variations', 'barcode', productData.barcode);
+            if (barcodeExists) {
+                return next(new AppError('Barcode already exists!', 400));
+            }
+        }
+
         finalVariations.push({
             barcode: productData.barcode,
             color: 'Default', 
@@ -140,6 +154,15 @@ exports.addProduct = catchAsync(async (req, res, next) => {
             statusId: 1
         });
     } else {
+        // Check all barcodes in variations
+        for (const variant of variations) {
+            if (variant.barcode) {
+                const barcodeExists = await Product.checkIdExists('product_variations', 'barcode', variant.barcode);
+                if (barcodeExists) {
+                    return next(new AppError(`Barcode '${variant.barcode}' already exists!`, 400));
+                }
+            }
+        }
         finalVariations = variations;
     }
 
@@ -161,6 +184,19 @@ exports.getProducts = catchAsync(async (req, res, next) => {
     res.status(200).json({
         success: true,
         data: products
+    });
+});
+
+/**
+ * @desc    Get all active product variations
+ * @route   GET /api/products/variations
+ */
+exports.getAllVariations = catchAsync(async (req, res, next) => {
+    const variations = await Product.getAllVariations(1);
+    
+    res.status(200).json({
+        success: true,
+        data: variations
     });
 });
 
@@ -209,24 +245,41 @@ exports.updateProduct = catchAsync(async (req, res, next) => {
     const { pvId } = req.params;
     const { productData, variationData } = req.body;
 
-    // Check if product variation exists
-    const productExists = await Product.checkIdExists('product_variations', 'id', pvId);
-    if (!productExists) {
+    const parsedPvId = parseInt(pvId);
+    const variation = await Product.getVariationById(parsedPvId);
+    if (!variation) {
         return next(new AppError("Product variation not found", 404));
     }
 
-    // Generate unique barcode if not provided
-    if (variationData && !variationData.barcode) {
-        let isUnique = false;
-        let newBarcode = "";
-        while (!isUnique) {
-            newBarcode = Math.floor(Math.random() * 1000000000000).toString().padStart(13, '0');
-            const exists = await Product.checkIdExists('product_variations', 'barcode', newBarcode);
-            if (!exists) {
-                isUnique = true;
+    const productId = variation.product_id;
+
+    // Check if new product code already exists on a DIFFERENT product
+    if (productData.code) {
+        const productWithCode = await Product.getProductByCode(productData.code);
+        if (productWithCode && productWithCode.id !== productId) {
+            return next(new AppError('Product Code already exists on another product!', 400));
+        }
+    }
+
+    // Generate unique barcode if not provided or check uniqueness if changed
+    if (variationData) {
+        if (!variationData.barcode) {
+            let isUnique = false;
+            let newBarcode = "";
+            while (!isUnique) {
+                newBarcode = Math.floor(Math.random() * 1000000000000).toString().padStart(13, '0');
+                const exists = await Product.checkIdExists('product_variations', 'barcode', newBarcode);
+                if (!exists) {
+                    isUnique = true;
+                }
+            }
+            variationData.barcode = newBarcode;
+        } else if (variationData.barcode !== variation.barcode) {
+            const barcodeExists = await Product.checkIdExists('product_variations', 'barcode', variationData.barcode);
+            if (barcodeExists) {
+                return next(new AppError('Barcode already exists on another product!', 400));
             }
         }
-        variationData.barcode = newBarcode;
     }
 
     await Product.updateProductVariation(pvId, productData, variationData);
@@ -372,5 +425,19 @@ exports.addProductVariation = catchAsync(async (req, res, next) => {
         success: true,
         message: "Variation added successfully!",
         data: variation
+    });
+});
+
+/**
+ * @desc    Check if a product code exists
+ * @route   GET /api/products/check-code/:code
+ */
+exports.checkProductCode = catchAsync(async (req, res, next) => {
+    const { code } = req.params;
+    const exists = await Product.checkIdExists('product', 'product_code', code);
+    
+    res.status(200).json({
+        success: true,
+        exists
     });
 });

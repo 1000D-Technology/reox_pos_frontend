@@ -7,6 +7,7 @@ import Dashboard from "./pages/dashboard/Dashboard";
 import ManageInvoice from "./pages/dashboard/Sales/ManageInvoice";
 import ManageSales from "./pages/dashboard/Sales/ManageSales";
 import ManageUserSales from "./pages/dashboard/Sales/ManageUserSales";
+import ReturnList from "./pages/dashboard/Sales/ReturnList";
 import CreateProducts from "./pages/dashboard/Products/CreateProducts.tsx";
 import StockList from "./pages/dashboard/Stock/StockList.tsx";
 import CreateQuotation from "./pages/dashboard/Quotation/CreateQuotation.tsx";
@@ -22,7 +23,6 @@ import DamagedStock from "./pages/dashboard/Stock/DamagedStock.tsx";
 import LowStock from "./pages/dashboard/Stock/LowStock.tsx";
 import ProductList from "./pages/dashboard/Products/ProductList.tsx";
 import ManageUnit from "./pages/dashboard/Products/ManageUnit.tsx";
-import ManageUnitConversions from "./pages/dashboard/Products/ManageUnitConversions.tsx";
 import ManageCategory from "./pages/dashboard/Products/ManageCategory.tsx";
 import DeactivatedProducts from "./pages/dashboard/Products/DeactivatedProducts.tsx";
 import CreateSupplier from "./pages/dashboard/Supplier/CreateSupplier.tsx";
@@ -103,6 +103,11 @@ export default function App() {
                                 <ManageUserSales/>
                             </ProtectedRoute>
                         }/>
+                        <Route path="/sales/return-history" element={
+                            <ProtectedRoute allowedRoles={['Admin', 'Cashier']}>
+                                <ReturnList/>
+                            </ProtectedRoute>
+                        }/>
 
                         {/* Quotation - All roles */}
                         <Route path="/quotation" element={
@@ -111,6 +116,11 @@ export default function App() {
                             </ProtectedRoute>
                         }/>
                         <Route path="/quotation/create-quotation" element={
+                            <ProtectedRoute allowedRoles={['Admin', 'Cashier', 'Storekeeper']}>
+                                <CreateQuotation/>
+                            </ProtectedRoute>
+                        }/>
+                        <Route path="/quotation/edit-quotation/:id" element={
                             <ProtectedRoute allowedRoles={['Admin', 'Cashier', 'Storekeeper']}>
                                 <CreateQuotation/>
                             </ProtectedRoute>
@@ -189,11 +199,6 @@ export default function App() {
                         <Route path="/products/manage-unit" element={
                             <ProtectedRoute allowedRoles={['Admin', 'Storekeeper']}>
                                 <ManageUnit/>
-                            </ProtectedRoute>
-                        }/>
-                        <Route path="/products/manage-unit-conversions" element={
-                            <ProtectedRoute allowedRoles={['Admin', 'Storekeeper']}>
-                                <ManageUnitConversions/>
                             </ProtectedRoute>
                         }/>
                         <Route path="/products/manage-category" element={

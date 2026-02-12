@@ -1,0 +1,99 @@
+[33mbc3f86e[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mbackend[m[33m)[m Merge branch 'master' of https://github.com/1000D-Technology/reox_pos_frontend into backend
+[33m9dc52e1[m[33m ([m[1;31mupstream/backend[m[33m)[m Only allow decimals when unit config exists
+[33mac56b96[m[33m ([m[1;31mupstream/master[m[33m, [m[1;31mupstream/HEAD[m[33m, [m[1;31morigin/master[m[33m, [m[1;31morigin/HEAD[m[33m)[m Bug fix (#162)
+[33m984797f[m Fixed conflicts in stock model and damaged stock page
+[33m488158d[m Merge branch 'bug_fix' of https://github.com/1000D-Technology/reox_pos_frontend into backend
+[33m59539c9[m Bug fix (#161)
+[33mbe06388[m Merge branch 'master' into BugFix
+[33mdcc60a6[m feat: Implement core Point of Sale (POS) system with invoice and stock management, and remove old unit conversion documentation.
+[33m14a4f83[m Bug fix (#160)
+[33m3d4aac3[m feat: implement Point of Sale (POS) system with product, cart, and stock management.
+[33m5192a84[m feat: Implement comprehensive stock and supplier management, adding new backend controllers, models, and frontend pages for various stock views and supplier operations.
+[33m07ca125[m Update package-lock.json
+[33mf5cf6e0[m Bug fix (#159)
+[33m29f439c[m Bug fix (#158)
+[33mf97bd7a[m Merge branch 'master' into BugFix
+[33m4165fd7[m[33m ([m[1;31morigin/backend[m[33m)[m Merge branch 'BugFix' of https://github.com/1000D-Technology/reox_pos_frontend into backend
+[33mcfbe167[m[33m ([m[1;31mupstream/bug_fix[m[33m, [m[1;31morigin/bug_fix[m[33m)[m Merge pull request #157 from 1000D-Technology/backend
+[33m5982180[m Unify quotation pagination response
+[33m3010696[m version update
+[33mc3ca1e4[m Bug fix (#156)
+[33m0b493dd[m feat: Implement core Point of Sale (POS) system including customer management, product search, invoice creation, and related UI components.
+[33mf369f3c[m Add pagination and optimize customer queries
+[33m22d5821[m Add supplier pagination (server & client)
+[33m6a744b6[m Merge pull request #155 from 1000D-Technology/backend
+[33m6b0831b[m Add pagination and validations for GRN list
+[33mbcbdad5[m Merge branch 'BugFix' of https://github.com/1000D-Technology/reox_pos_frontend into BugFix
+[33m9d3178a[m feat: Implement comprehensive product return functionality including UI modals, services, and backend API endpoints for product and stock management.
+[33m8444420[m Add pagination to out-of-stock endpoints and UI
+[33mf018e10[m Bug fix (#154)
+[33md04a34d[m Bug fix (#153)
+[33mccfbac9[m Merge branch 'bug_fix' into BugFix
+[33m51008ef[m feat: Initialize Electron application with React frontend, integrated Node.js backend, and auto-update capabilities.
+[33m649e4a9[m Merge branch 'BugFix' of https://github.com/1000D-Technology/reox_pos_frontend into BugFix
+[33m8ee486b[m feat: Implement core Electron application with backend process management, auto-update functionality, and a dedicated update notification component.
+[33m73e928d[m Bug fix (#152)
+[33m8398389[m Merge branch 'master' into BugFix
+[33m8853b87[m feat: Implement database backup management with a new frontend page, backend routes, and services for creating, listing, downloading, and deleting backups.
+[33mb0b08d5[m Bug fix (#151)
+[33mcec7fea[m Merge branch 'master' into bug_fix
+[33mc9f682f[m Bug fix (#147)
+[33m52d14ca[m feat: Implement auto-update functionality for the Electron application, including UI, main process logic, and configuration.
+[33m971a62a[m Bug fix (#150)
+[33mdc3379d[m feat: Implement unit conversion functionality including new UI components, backend services, and database migrations.
+[33m23c733c[m Add pagination and improve filtering for damaged stock
+[33m6f19d28[m Merge pull request #149 from 1000D-Technology/backend
+[33mf34bad4[m Merge branch 'bug_fix' into backend
+[33m9c2c54f[m Add pagination to low stock APIs and UI
+[33m96235f6[m Bug fix (#148)
+[33m50e36cf[m feat: Add Stock model with methods for retrieving, searching, and summarizing stock data.
+[33ma90dc65[m Bug fix (#146)
+[33m8c03ff2[m Merge branch 'BugFix' into bug_fix
+[33m0169201[m chore: Install or update frontend project dependencies.
+[33m3ef2f2b[m Refactor updateUser to remove redundant try-catch
+[33mb769369[m Merge pull request #145 from 1000D-Technology/backend
+[33m9bcb519[m Remove redundant try-catch blocks in userService
+[33m8ebf3e7[m Add backend pagination to stock list and search
+[33m5aeb1db[m feat: Introduce barcode/QR code printing, a new settings page, and initial Electron setup.
+[33mb5b5880[m feat: Implement the core Point of Sale (POS) system with frontend components, backend APIs, and database schema.
+[33mb242f4a[m Merge branch 'master' of https://github.com/1000D-Technology/reox_pos_frontend into backend
+[33m9e7c932[m Change backend default port to 3000
+[33mec7e7b8[m[33m ([m[1;33mtag: [m[1;33mv1.0[m[33m)[m feat: Implement core POS functionality, subscription management, authentication, and initial application structure with database setup.
+[33m35b9bf3[m Switch to 127.0.0.1 and improve quotation logic
+[33m6e3b046[m feat: Introduce product management features, new dashboard pages for sales and stock, and initial Electron application setup.
+[33m1d145ec[m Add company management and improve UI/UX
+[33m0bafeff[m Merged master and accepted all incoming changes
+[33mb80fc07[m[33m ([m[1;32mmaster[m[33m, [m[1;32mbug_fix[m[33m)[m Add Electron support and update backend integration
+[33mcbee4c3[m Add reporting, damaged, and POS enhancements
+[33mc8ea0a0[m[33m ([m[1;31mupstream/fix/migrate-to-orm[m[33m, [m[1;31morigin/fix/migrate-to-orm[m[33m)[m Refactor stock data mapping and improve StockList UX
+[33m72accb0[m Add quotation feature to backend and frontend
+[33m72cc251[m feat: Implement initial Point of Sale (POS) system including sales, invoice management, and supporting UI components.
+[33m9c53b39[m Integrate invoice management with backend API
+[33m24e6a02[m[33m ([m[1;31mupstream/Developer---Minidu[m[33m, [m[1;31morigin/Developer---Minidu[m[33m)[m Merge branch 'Minidu_New' into fix/migrate-to-orm
+[33m2599190[m Implement accounts dashboard and session auto-close
+[33m08c0e53[m Merge branch 'fix/migrate-to-orm' of https://github.com/1000D-Technology/reox_pos_frontend into fix/migrate-to-orm
+[33me3577fb[m feat: Implement core Point of Sale (POS) system with database schema, seeding, backend API, and frontend UI components.
+[33m26b3bd3[m Enhance user management and validation logic (#140)
+[33m816eb07[m Refactor stock queries to use Prisma and improve filtering
+[33mefe4e84[m Merge pull request #138 from 1000D-Technology/fix/migrate-to-orm
+[33m4a8420c[m Merge branch 'Minidu_New' into fix/migrate-to-orm
+[33m9fd37cd[m Refactor dashboard UI to use borders instead of shadows
+[33m502dc16[m Refactor dashboard UI to use borders instead of shadows
+[33m57de9ef[m feat: Implement initial database setup, supplier management, and stock listing features.
+[33m996a148[m Refactor product dashboard UI for consistent borders
+[33m24a363e[m Replace shadow with border on GRN pages
+[33m0b2eb75[m Add border styling to stock dashboard components
+[33m2501b46[m Add supplier import via file upload and UI support
+[33m2e68531[m Add bulk product import via Excel/CSV upload
+[33m88a5648[m Add quick-add modals for category, brand, unit, and type
+[33m0c37db9[m refactor: Migrate company existence check from raw SQL to Prisma ORM.
+[33mdf6def3[m Merge branch 'development' into fix/migrate-to-orm
+[33m4c4a693[m feat: Implement custom Prisma wrapper scripts and comprehensive database setup documentation.
+[33m90aefe8[m sign in problems
+[33mc6ad10f[m Fix/migrate to orm (#136)
+[33mddc6c3f[m Revert "Fix/migrate to orm (#134)" (#135)
+[33m1e0d0a8[m Fix/migrate to orm (#134)
+[33m8d6f94b[m Merge branch 'development' into fix/migrate-to-orm
+[33mc6fde35[m feat: implement core backend models, controllers, and initial frontend components for the POS system, including customer, product, and user management.
+[33m760c0c2[m Validate quantity input in POS modals and cart
+[33m632e

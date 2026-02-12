@@ -20,6 +20,7 @@ import type { ReactNode } from "react";
 import { useState, useEffect } from "react";
 import { authService } from "../services/authService";
 import logo from "/logo.png";
+import icon from "/icon.png";
 
 interface NavItemChild {
     label: string;
@@ -86,6 +87,7 @@ export default function Sidebar({ isOpen }: SidebarProps) {
                 { label: "Manage Invoice", path: "/sales/manage-invoice" },
                 { label: "Manage Sales", path: "/sales/manage-sales" },
                 { label: "User Sales", path: "/sales/manage-user-sales" },
+                { label: "Return History", path: "/sales/return-history" },
             ],
         },
         {
@@ -130,7 +132,6 @@ export default function Sidebar({ isOpen }: SidebarProps) {
                 { label: "Product List", path: "/products/product-list" },
                 { label: "Manage Product Type", path: "/products/manage-product-type" },
                 { label: "Manage Unit", path: "/products/manage-unit" },
-                { label: "Unit Conversions", path: "/products/manage-unit-conversions" },
                 { label: "Manage Category", path: "/products/manage-category" },
                 { label: "Manage Brand", path: "/products/manage-brand" },
                 { label: "Deactivated Products", path: "/products/deactivated-products" },
@@ -182,7 +183,7 @@ export default function Sidebar({ isOpen }: SidebarProps) {
                 {/* Logo */}
                 <div className="flex items-center justify-center h-20 px-2">
                     <img 
-                        src={logo} 
+                        src={isOpen ? logo : icon} 
                         alt="ReoX POS" 
                         className={`transition-all duration-500 object-contain max-w-full px-2 ${isOpen ? "h-12" : "h-9"}`} 
                     />

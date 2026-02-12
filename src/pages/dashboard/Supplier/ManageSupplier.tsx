@@ -57,7 +57,9 @@ function ManageSupplier() {
         no: (((currentPage - 1) * itemsPerPage) + index + 1).toString()
     }));
 
+    const [newSupplierName, setNewSupplierName] = useState('');
     const [newContactNumber, setNewContactNumber] = useState('');
+    const [newEmail, setNewEmail] = useState('');
     const [companies, setCompanies] = useState<{ value: string | number, label: string }[]>([]);
     const [selectedCompany, setSelectedCompany] = useState<{ value: string | number, label: string } | null>(null);
     const [banks, setBanks] = useState<{ value: string | number, label: string }[]>([]);
@@ -218,9 +220,11 @@ function ManageSupplier() {
 
     const handleEditClick = (category: Category) => {
         setSelectedCategory(category);
+        setNewSupplierName(category.name);
         setNewContactNumber(category.contact);
-        setSelectedCompany({ value: category.companyId, label: category.company });
-        setSelectedBank(category.bankId ? { value: category.bankId, label: category.bank } : null);
+        setNewEmail(category.email);
+        setSelectedCompany({ value: category.companyId.toString(), label: category.company });
+        setSelectedBank(category.bankId ? { value: category.bankId.toString(), label: category.bank } : null);
         setNewAccountNumber(category.account);
         setIsModalOpen(true);
     };
@@ -228,7 +232,9 @@ function ManageSupplier() {
     const handleCloseModal = () => {
         setIsModalOpen(false);
         setSelectedCategory(null);
+        setNewSupplierName('');
         setNewContactNumber('');
+        setNewEmail('');
         setSelectedCompany(null);
         setSelectedBank(null);
         setNewAccountNumber('');
@@ -255,9 +261,11 @@ function ManageSupplier() {
         const updatePromise = supplierService.updateSupplier(
             parseInt(selectedCategory.id),
             {
+                supplierName: newSupplierName.trim(),
                 contactNumber: newContactNumber.trim(),
-                companyId: typeof selectedCompany.value === 'number' ? selectedCompany.value : parseInt(selectedCompany.value),
-                bankId: selectedBank ? (typeof selectedBank.value === 'number' ? selectedBank.value : parseInt(selectedBank.value)) : undefined,
+                email: newEmail,
+                companyId: typeof selectedCompany.value === 'number' ? selectedCompany.value : parseInt(selectedCompany.value as string),
+                bankId: selectedBank ? (typeof selectedBank.value === 'number' ? selectedBank.value : parseInt(selectedBank.value as string)) : undefined,
                 accountNumber: newAccountNumber.trim()
             }
         );
@@ -602,6 +610,20 @@ function ManageSupplier() {
 
                         <div className="space-y-4">
                             <div>
+                                <label htmlFor="update-supplier-name" className="block text-sm font-bold text-gray-700 mb-1">
+                                    Supplier Name
+                                </label>
+                                <input
+                                    type="text"
+                                    id="update-supplier-name"
+                                    value={newSupplierName}
+                                    onChange={(e) => setNewSupplierName(e.target.value)}
+                                    placeholder="Enter Supplier Name"
+                                    className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-500 transition-all outline-none"
+                                />
+                            </div>
+
+                            <div>
                                 <label htmlFor="update-contact-number" className="block text-sm font-bold text-gray-700 mb-1">
                                     Contact Number
                                 </label>
@@ -613,6 +635,20 @@ function ManageSupplier() {
                                     placeholder="Enter Contact Number"
                                     className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-500 transition-all outline-none"
                                     maxLength={10}
+                                />
+                            </div>
+
+                            <div>
+                                <label htmlFor="update-email" className="block text-sm font-bold text-gray-700 mb-1">
+                                    Email
+                                </label>
+                                <input
+                                    type="email"
+                                    id="update-email"
+                                    value={newEmail}
+                                    onChange={(e) => setNewEmail(e.target.value)}
+                                    placeholder="Enter Email"
+                                    className="w-full text-sm rounded-lg py-2 px-3 border-2 border-gray-200 focus:border-emerald-500 transition-all outline-none"
                                 />
                             </div>
 
