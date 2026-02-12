@@ -46,16 +46,12 @@ const getFilteredReport = async (req, res) => {
     }
 };
 
-// Combined Dashboard endpoint for optimized performance
 const getDetailedDashboard = async (req, res) => {
     try {
-        const [stats, summary, topProducts, categories, dailySales] = await Promise.all([
-            Report.getDashboardStats(),
-            Report.getFinancialSummary(),
-            Report.getDashboardTopProducts(),
-            Report.getCategoryDistribution(),
-            Report.getDailySales()
-        ]);
+        const stats = await Report.getDashboardStats();
+        const summary = await Report.getFinancialSummary();
+        const topProducts = await Report.getDashboardTopProducts();
+        const categories = await Report.getCategoryDistribution();
 
         res.json({
             success: true,
@@ -63,15 +59,14 @@ const getDetailedDashboard = async (req, res) => {
                 stats,
                 summary,
                 topProducts,
-                categories,
-                dailySales
+                categories
             }
         });
     } catch (error) {
         console.error('Error in getDetailedDashboard:', error);
         res.status(500).json({
             success: false,
-            message: 'Failed to fetch dashboard data'
+            message: 'Failed to fetch detailed dashboard data'
         });
     }
 };

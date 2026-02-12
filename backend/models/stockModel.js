@@ -4,41 +4,88 @@ class Stock {
     /**
      * @desc Get ALL stock data with individual variation rows (not grouped)
      */
-    /**
-     * @desc Get ALL stock data with individual variation rows (not grouped) - Uses local SQLite
-     */
     static async getAllStockWithVariations(filters = {}) {
         const whereClause = {};
 
-        const params = [];
         if (filters.hasStock) {
-            sql += ` AND s.qty > 0`;
+            whereClause.qty = { gt: 0 };
         }
 
-        sql += ` ORDER BY p.product_name ASC, pv.id ASC, s.id ASC`;
-
-        if (filters.limit) {
-            sql += ` LIMIT ?`;
-            params.push(parseInt(filters.limit));
-        }
-
-        const stocks = localDb.prepare(sql).all(...params);
+        const stocks = await prisma.stock.findMany({
+            where: whereClause,
+            include: {
+                product_variations: {
+                    include: {
+                        product: {
+                            include: {
+                                unit_id_product_unit_idTounit_id: true,
+                                category: true,
+                                brand: true
+                            }
+                        },
+                        product_status: true
+                    }
+                },
+                batch: true,
+                grn_items: {
+                    include: {
+                        grn: {
+                            include: {
+                                supplier: true
+                            }
+                        }
+                    },
+                    take: 1
+                }
+            },
+            orderBy: [
+                { product_variations: { product: { product_name: 'asc' } } },
+                { product_variations: { id: 'asc' } },
+                { id: 'asc' }
+            ],
+            take: filters.limit ? parseInt(filters.limit) : undefined
+        });
 
         return stocks.map(s => {
-            const variations = [s.color, s.size, s.storage_capacity]
+            const pv = s.product_variations;
+            const p = pv.product;
+            const supplier = s.grn_items[0]?.grn?.supplier;
+
+            // Build full product name - Only include meaningful variants
+            const variations = [pv.color, pv.size, pv.storage_capacity]
                 .filter(v => v && !['n/a', 'na', 'n.a.', 'none', 'default', 'not applicable'].includes(v.toLowerCase().trim()) && v.trim() !== '');
 
-            let fullProductName = s.product_name;
+            let fullProductName = p.product_name;
             if (variations.length > 0) {
                 fullProductName += ` - ${variations.join(' - ')}`;
             }
 
             return {
-                ...s,
+                stock_id: s.id,
+                product_variations_id: s.product_variations_id,
+                batch_id: s.batch_id,
+                qty: s.qty,
+                cost_price: s.cost_price,
+                mrp: s.mrp,
+                selling_price: s.rsp,
+                wsp: s.wsp,
+                mfd: s.mfd,
+                exp: s.exp,
+                product_id: p.id,
+                product_name: p.product_name,
+                product_code: p.product_code,
+                barcode: pv.barcode,
+                color: pv.color,
+                size: pv.size,
+                storage_capacity: pv.storage_capacity,
                 full_product_name: fullProductName,
+                unit: p.unit_id_product_unit_idTounit_id?.name,
                 unit_conversion: null,
-                supplier: 'Synced', // Local search doesn't join GRN/Supplier for speed
-                product_status: 'Active'
+                category: p.category?.name,
+                brand: p.brand?.name,
+                batch_name: s.batch?.batch_name,
+                supplier: supplier?.supplier_name,
+                product_status: pv.product_status?.status_name
             };
         });
     }
@@ -79,47 +126,121 @@ class Stock {
         }
 
         if (filters.searchQuery) {
-            const query = `%${filters.searchQuery.toLowerCase()}%`;
-            sql += ` AND (LOWER(p.product_name) LIKE ? OR LOWER(p.product_code) LIKE ? OR s.barcode LIKE ? OR pv.barcode LIKE ?)`;
-            params.push(query, query, query, query);
-            
-            const numericId = parseInt(filters.searchQuery);
+            const query = filters.searchQuery.toLowerCase();
+            whereClause.OR = [
+                {
+                    product_variations: {
+                        product: {
+                            OR: [
+                                { product_name: { contains: query } },
+                                { product_code: { contains: query } }
+                            ]
+                        }
+                    }
+                },
+                { barcode: { contains: query } },
+                { product_variations: { barcode: { contains: query } } }
+            ];
+
+            // If query is a number, also check ID
+            const numericId = parseInt(query);
             if (!isNaN(numericId)) {
-                sql += ` OR p.id = ?`;
-                params.push(numericId);
+                whereClause.OR.push({
+                    product_variations: {
+                        product: {
+                            id: numericId
+                        }
+                    }
+                });
             }
         }
 
-        // Get total count
-        const countSql = `SELECT COUNT(*) as total ` + sql;
-        const totalCount = localDb.prepare(countSql).get(...params).total;
+        // Get total count for pagination
+        const totalCount = await prisma.stock.count({
+            where: whereClause
+        });
 
-        // Paginate
         const skip = (page - 1) * limit;
-        const dataSql = `
-            SELECT 
-                s.id as stock_id, s.product_variations_id, s.batch_id, s.qty, s.cost_price, s.mrp, s.rsp as selling_price,
-                s.wsp, s.mfd, s.exp, p.id as product_id, p.product_name, p.product_code, pv.barcode,
-                pv.color, pv.size, pv.storage_capacity, u.name as unit, c.name as category, br.name as brand, b.batch_name
-            ` + sql + ` ORDER BY p.product_name ASC LIMIT ? OFFSET ?`;
-        
-        params.push(limit, skip);
-        const stocks = localDb.prepare(dataSql).all(...params);
 
+        // Fetch paginated stocks with relations using Prisma
+        const stocks = await prisma.stock.findMany({
+            where: whereClause,
+            include: {
+                product_variations: {
+                    include: {
+                        product: {
+                            include: {
+                                unit_id_product_unit_idTounit_id: true,
+                                category: true,
+                                brand: true
+                            }
+                        },
+                        product_status: true
+                    }
+                },
+                batch: true,
+                grn_items: {
+                    include: {
+                        grn: {
+                            include: {
+                                supplier: true
+                            }
+                        }
+                    },
+                    take: 1
+                }
+            },
+            take: limit,
+            skip: skip,
+            orderBy: {
+                product_variations: {
+                    product: {
+                        product_name: 'asc'
+                    }
+                }
+            }
+        });
+
+        // Map to individual items (no grouping)
         const result = stocks.map(s => {
-            const variations = [s.color, s.size, s.storage_capacity]
+            const pv = s.product_variations;
+            const p = pv.product;
+            const supplier = s.grn_items[0]?.grn?.supplier;
+
+            // Build full product name - Only include meaningful variants
+            const variations = [pv.color, pv.size, pv.storage_capacity]
                 .filter(v => v && !['n/a', 'na', 'n.a.', 'none', 'default', 'not applicable'].includes(v.toLowerCase().trim()) && v.trim() !== '');
 
-            let fullProductName = s.product_name;
+            let fullProductName = p.product_name;
             if (variations.length > 0) {
                 fullProductName += ` - ${variations.join(' - ')}`;
             }
 
             return {
-                ...s,
+                stock_id: s.id,
+                product_variations_id: s.product_variations_id,
+                batch_id: s.batch_id,
+                qty: s.qty,
+                cost_price: s.cost_price,
+                mrp: s.mrp,
+                selling_price: s.rsp,
+                wsp: s.wsp,
+                mfd: s.mfd,
+                exp: s.exp,
+                product_id: p.id,
+                product_name: p.product_name,
                 full_product_name: fullProductName,
-                supplier: 'Synced',
-                product_status: 'Active'
+                product_code: p.product_code,
+                barcode: pv.barcode,
+                color: pv.color,
+                size: pv.size,
+                storage_capacity: pv.storage_capacity,
+                unit: p.unit_id_product_unit_idTounit_id?.name,
+                category: p.category?.name,
+                brand: p.brand?.name,
+                batch_name: s.batch?.batch_name,
+                supplier: supplier?.supplier_name,
+                product_status: pv.product_status?.status_name
             };
         });
 
