@@ -8,39 +8,7 @@ class Stock {
      * @desc Get ALL stock data with individual variation rows (not grouped) - Uses local SQLite
      */
     static async getAllStockWithVariations(filters = {}) {
-        const localDb = require("../config/localDb");
-        let sql = `
-            SELECT 
-                s.id as stock_id,
-                s.product_variations_id,
-                s.batch_id,
-                s.qty,
-                s.cost_price,
-                s.mrp,
-                s.rsp as selling_price,
-                s.wsp,
-                s.mfd,
-                s.exp,
-                p.id as product_id,
-                p.product_name,
-                p.product_code,
-                pv.barcode,
-                pv.color,
-                pv.size,
-                pv.storage_capacity,
-                u.name as unit,
-                c.name as category,
-                br.name as brand,
-                b.batch_name
-            FROM stock s
-            JOIN product_variations pv ON s.product_variations_id = pv.id
-            JOIN product p ON pv.product_id = p.id
-            LEFT JOIN unit_id u ON p.unit_id = u.idunit_id
-            LEFT JOIN category c ON p.category_id = c.idcategory
-            LEFT JOIN brand br ON p.brand_id = br.idbrand
-            LEFT JOIN batch b ON s.batch_id = b.id
-            WHERE pv.product_status_id = 1
-        `;
+        const whereClause = {};
 
         const params = [];
         if (filters.hasStock) {
@@ -83,28 +51,31 @@ class Stock {
     }
 
     static async searchStock(filters, page = 1, limit = 10) {
-        const localDb = require("../config/localDb");
-        let sql = `
-            FROM stock s
-            JOIN product_variations pv ON s.product_variations_id = pv.id
-            JOIN product p ON pv.product_id = p.id
-            LEFT JOIN unit_id u ON p.unit_id = u.idunit_id
-            LEFT JOIN category c ON p.category_id = c.idcategory
-            LEFT JOIN brand br ON p.brand_id = br.idbrand
-            LEFT JOIN batch b ON s.batch_id = b.id
-            WHERE s.qty > 0 AND pv.product_status_id = 1
-        `;
-
-        const params = [];
+        const whereClause = {
+            qty: { gt: 0 }
+        };
 
         if (filters.category) {
-            sql += ` AND p.category_id = ?`;
-            params.push(parseInt(filters.category));
+            whereClause.product_variations = {
+                product: {
+                    category_id: parseInt(filters.category)
+                }
+            };
         }
 
         if (filters.unit) {
-            sql += ` AND p.unit_id = ?`;
-            params.push(parseInt(filters.unit));
+            if (!whereClause.product_variations) whereClause.product_variations = { product: {} };
+            whereClause.product_variations.product.unit_id = parseInt(filters.unit);
+        }
+
+        if (filters.supplier) {
+            whereClause.grn_items = {
+                some: {
+                    grn: {
+                        supplier_id: parseInt(filters.supplier)
+                    }
+                }
+            };
         }
 
         if (filters.searchQuery) {
