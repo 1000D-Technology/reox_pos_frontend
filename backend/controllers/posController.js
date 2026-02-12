@@ -299,4 +299,3 @@ exports.getCreditPaymentHistory = catchAsync(async (req, res, next) => {
         pagination: result.pagination
     });
 });
-
