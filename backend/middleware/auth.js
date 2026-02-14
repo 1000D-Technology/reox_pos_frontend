@@ -23,7 +23,14 @@ const verifyToken = (req, res, next) => {
         }
 
         // Verify token
-        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+        if (!process.env.JWT_SECRET) {
+            return res.status(500).json({
+                success: false,
+                message: 'Server configuration error. JWT_SECRET not configured.'
+            });
+        }
+
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
         // Add user info to request
         req.user = {

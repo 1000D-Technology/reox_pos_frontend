@@ -13,7 +13,8 @@ import {
     Receipt,
     DollarSign,
     Loader2,
-    History
+    History,
+    ChevronDown
 } from 'lucide-react';
 
 import { useEffect, useState, useRef } from 'react';
@@ -108,6 +109,7 @@ function ManageCustomer() {
     const [creditHistoryPage, setCreditHistoryPage] = useState(1);
     const [hasMoreCreditHistory, setHasMoreCreditHistory] = useState(true);
     const [isLoadingMoreHistory, setIsLoadingMoreHistory] = useState(false);
+    const [expandedInvoices, setExpandedInvoices] = useState<Set<string>>(new Set());
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [newName, setNewName] = useState('');
@@ -452,6 +454,7 @@ function ManageCustomer() {
         setCreditHistory([]);
         setCreditHistoryPage(1);
         setHasMoreCreditHistory(true);
+        setExpandedInvoices(new Set());
         setIsLoadingHistory(true);
         try {
             const response = await invoiceService.getCreditHistory(customer.id, 1, 10);
@@ -468,6 +471,18 @@ function ManageCustomer() {
         } finally {
             setIsLoadingHistory(false);
         }
+    };
+
+    const toggleInvoiceAccordion = (invoiceNumber: string) => {
+        setExpandedInvoices(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(invoiceNumber)) {
+                newSet.delete(invoiceNumber);
+            } else {
+                newSet.add(invoiceNumber);
+            }
+            return newSet;
+        });
     };
 
     const loadCustomerInvoices = async (customerId: number, fromDate?: string, toDate?: string, page: number = 1, append: boolean = false) => {
@@ -1607,6 +1622,7 @@ function ManageCustomer() {
                                     setCreditHistory([]);
                                     setCreditHistoryPage(1);
                                     setHasMoreCreditHistory(true);
+                                    setExpandedInvoices(new Set());
                                 }}
                                 className="p-2 hover:bg-white/20 rounded-lg transition-colors"
                             >
@@ -1621,59 +1637,113 @@ function ManageCustomer() {
                                 </div>
                             ) : creditHistory.length > 0 ? (
                                 <>
-                                    <table className="w-full">
-                                        <thead className="bg-gray-50 sticky top-0 z-10">
-                                            <tr>
-                                                <th className="px-4 py-3 text-left text-sm font-bold text-gray-700">Date</th>
-                                                <th className="px-4 py-3 text-left text-sm font-bold text-gray-700">Invoice No</th>
-                                                <th className="px-4 py-3 text-right text-sm font-bold text-gray-700">Amount Paid</th>
-                                                <th className="px-4 py-3 text-right text-sm font-bold text-gray-700">Remaining Balance</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-gray-200">
-                                            {creditHistory.map((item) => (
-                                                <tr key={item.id} className="hover:bg-gray-50">
-                                                    <td className="px-4 py-3 text-sm text-gray-800">
-                                                        {new Date(item.date).toLocaleDateString()}
-                                                    </td>
-                                                    <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                                                        {item.invoiceNumber}
-                                                    </td>
-                                                    <td className="px-4 py-3 text-sm font-bold text-emerald-600 text-right">
-                                                        Rs. {item.amount.toLocaleString()}
-                                                    </td>
-                                                    <td className="px-4 py-3 text-sm font-semibold text-gray-700 text-right">
-                                                        Rs. {item.remainingBalance.toLocaleString()}
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                    <div className="mt-6 flex justify-center">
-                                        <button
-                                            onClick={loadMoreCreditHistory}
-                                            disabled={isLoadingMoreHistory}
-                                            className="px-6 py-3 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white font-semibold rounded-lg transition-all shadow-md active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                                        >
-                                            {isLoadingMoreHistory ? (
-                                                <>
-                                                    <Loader2 className="animate-spin" size={20} />
-                                                    <span>Loading...</span>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <ChevronRight size={20} />
-                                                    <span>Load More</span>
-                                                </>
-                                            )}
-                                        </button>
+                                    <div className="space-y-3">
+                                        {creditHistory.map((invoice) => {
+                                            const isExpanded = expandedInvoices.has(invoice.invoiceNumber);
+                                            return (
+                                                <div 
+                                                    key={invoice.invoiceId} 
+                                                    className="border border-gray-200 rounded-xl overflow-hidden bg-white shadow-sm hover:shadow-md transition-shadow"
+                                                >
+                                                    {/* Accordion Header */}
+                                                    <button
+                                                        onClick={() => toggleInvoiceAccordion(invoice.invoiceNumber)}
+                                                        className="w-full px-5 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+                                                    >
+                                                        <div className="flex items-center gap-4 flex-1">
+                                                            <div className="flex items-center justify-center w-10 h-10 rounded-full bg-purple-100">
+                                                                <Receipt size={20} className="text-purple-600" />
+                                                            </div>
+                                                            <div className="text-left">
+                                                                <h3 className="text-sm font-bold text-gray-900">{invoice.invoiceNumber}</h3>
+                                                                <p className="text-xs text-gray-500 mt-0.5">
+                                                                    {invoice.paymentCount} payment{invoice.paymentCount !== 1 ? 's' : ''} • Total: Rs. {invoice.totalPaid.toLocaleString()}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        <div className="flex items-center gap-4">
+                                                            <div className="text-right">
+                                                                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Balance</p>
+                                                                <p className={`text-lg font-black ${invoice.currentBalance > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+                                                                    Rs. {invoice.currentBalance.toLocaleString()}
+                                                                </p>
+                                                            </div>
+                                                            <ChevronDown 
+                                                                size={20} 
+                                                                className={`text-gray-400 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
+                                                            />
+                                                        </div>
+                                                    </button>
+
+                                                    {/* Accordion Content */}
+                                                    {isExpanded && (
+                                                        <div className="border-t border-gray-100 bg-gray-50">
+                                                            <div className="px-5 py-3">
+                                                                <h4 className="text-xs font-bold text-gray-600 uppercase tracking-wider mb-3">Payment History</h4>
+                                                                <div className="space-y-2">
+                                                                    {invoice.payments.map((payment: any) => (
+                                                                        <div 
+                                                                            key={payment.id}
+                                                                            className="flex items-center justify-between py-2.5 px-3 bg-white rounded-lg border border-gray-200"
+                                                                        >
+                                                                            <div className="flex items-center gap-3">
+                                                                                <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center">
+                                                                                    <DollarSign size={16} className="text-emerald-600" />
+                                                                                </div>
+                                                                                <div>
+                                                                                    <p className="text-xs font-medium text-gray-900">
+                                                                                        {new Date(payment.date).toLocaleDateString('en-US', { 
+                                                                                            month: 'short', 
+                                                                                            day: 'numeric', 
+                                                                                            year: 'numeric',
+                                                                                            hour: '2-digit',
+                                                                                            minute: '2-digit'
+                                                                                        })}
+                                                                                    </p>
+                                                                                    <p className="text-xs text-gray-500">{payment.paymentType}</p>
+                                                                                </div>
+                                                                            </div>
+                                                                            <p className="text-sm font-bold text-emerald-600">
+                                                                                + Rs. {payment.amount.toLocaleString()}
+                                                                            </p>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
                                     </div>
+                                    {hasMoreCreditHistory && (
+                                        <div className="mt-6 flex justify-center">
+                                            <button
+                                                onClick={loadMoreCreditHistory}
+                                                disabled={isLoadingMoreHistory}
+                                                className="px-6 py-3 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white font-semibold rounded-lg transition-all shadow-md active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                                            >
+                                                {isLoadingMoreHistory ? (
+                                                    <>
+                                                        <Loader2 className="animate-spin" size={20} />
+                                                        <span>Loading...</span>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <ChevronRight size={20} />
+                                                        <span>Load More</span>
+                                                    </>
+                                                )}
+                                            </button>
+                                        </div>
+                                    )}
                                     {!hasMoreCreditHistory && creditHistory.length > 0 && (
                                         <div className="text-center py-6 mt-4 border-t border-gray-200">
                                             <CheckCircle className="w-8 h-8 mx-auto mb-2 text-purple-500" />
                                             <p className="text-gray-500 text-sm font-medium">All records loaded</p>
                                             <p className="text-gray-400 text-xs mt-1">
-                                                Showing {creditHistory.length} payment{creditHistory.length !== 1 ? 's' : ''}
+                                                Showing {creditHistory.length} invoice{creditHistory.length !== 1 ? 's' : ''} with payment history
                                             </p>
                                         </div>
                                     )}
