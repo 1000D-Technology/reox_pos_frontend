@@ -1187,6 +1187,20 @@ class POS {
                             }
                         }
                     }
+                },
+                orderBy: {
+                    payment_date: 'desc'
+                },
+                take: limit,
+                skip: offset
+            }),
+            prisma.credit_payment_history.count({
+                where: {
+                    creadit_book: {
+                        invoice: {
+                            customer_id: parseInt(customerId)
+                        }
+                    }
                 }
             },
             orderBy: {
