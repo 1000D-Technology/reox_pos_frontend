@@ -77,6 +77,14 @@ router.post('/login', async (req, res) => {
             });
         }
 
+        // Check JWT_SECRET configuration
+        if (!process.env.JWT_SECRET) {
+            return res.status(500).json({
+                success: false,
+                message: 'Server configuration error. JWT_SECRET not configured.'
+            });
+        }
+
         // Generate JWT token
         const token = jwt.sign(
             {
@@ -84,7 +92,7 @@ router.post('/login', async (req, res) => {
                 role_id: user.role_id,
                 email: user.email
             },
-            process.env.JWT_SECRET || 'your-secret-key',
+            process.env.JWT_SECRET, 
             { expiresIn: '24h' }
         );
 
