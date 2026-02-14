@@ -13,7 +13,8 @@ import {
     Receipt,
     DollarSign,
     Loader2,
-    History
+    History,
+    ChevronDown
 } from 'lucide-react';
 
 import { useEffect, useState, useRef } from 'react';
@@ -108,6 +109,7 @@ function ManageCustomer() {
     const [creditHistoryPage, setCreditHistoryPage] = useState(1);
     const [hasMoreCreditHistory, setHasMoreCreditHistory] = useState(true);
     const [isLoadingMoreHistory, setIsLoadingMoreHistory] = useState(false);
+    const [expandedInvoices, setExpandedInvoices] = useState<Set<string>>(new Set());
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [newName, setNewName] = useState('');
@@ -118,6 +120,12 @@ function ManageCustomer() {
     const [paymentMethod, setPaymentMethod] = useState('');
     const [paymentMethods, setPaymentMethods] = useState<Array<{ id: number; name: string }>>([]);
     const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+    
+    // Credit Payment State (for invoices modal)
+    const [creditPaymentAmount, setCreditPaymentAmount] = useState('');
+    const [creditPaymentMethod, setCreditPaymentMethod] = useState('');
+    const [isProcessingCreditPayment, setIsProcessingCreditPayment] = useState(false);
+    
     const searchRef = useRef<HTMLInputElement>(null);
 
     // Stats calculation
@@ -380,7 +388,64 @@ function ManageCustomer() {
         setInvoicePage(1);
         setHasMoreInvoices(true);
         setIsLoadingMoreInvoices(false);
+        // Reset credit payment state
+        setCreditPaymentAmount('');
+        setCreditPaymentMethod(paymentMethods.length > 0 ? paymentMethods[0].id.toString() : '');
         await loadCustomerInvoices(customer.id);
+    };
+
+    const handleCreditPayment = async () => {
+        if (!selectedCustomer || !creditPaymentAmount || !creditPaymentMethod) {
+            toast.error('Please enter payment amount and select payment method');
+            return;
+        }
+
+        const amount = parseFloat(creditPaymentAmount);
+        if (amount <= 0) {
+            toast.error('Payment amount must be greater than zero');
+            return;
+        }
+
+        if (amount > selectedCustomer.totalCreditBalance) {
+            toast.error('Payment amount cannot exceed credit balance');
+            return;
+        }
+
+        try {
+            setIsProcessingCreditPayment(true);
+            const user = authService.getCurrentUser();
+
+            const response = await invoiceService.processCreditPayment({
+                customer_id: selectedCustomer.id,
+                payment_amount: amount,
+                payment_type_id: parseInt(creditPaymentMethod),
+                user_id: user?.id
+            });
+
+            if (response.success) {
+                toast.success(
+                    `Payment of Rs. ${amount.toLocaleString()} processed successfully across ${response.data.invoicesPaid} invoice(s)`
+                );
+                setCreditPaymentAmount('');
+                // Reload customer data and invoices
+                await loadCustomers();
+                if (selectedCustomer) {
+                    await loadCustomerInvoices(selectedCustomer.id, invoiceFromDate, invoiceToDate, 1, false);
+                    // Update selected customer with new balance (subtract payment amount)
+                    setSelectedCustomer({
+                        ...selectedCustomer,
+                        totalCreditBalance: selectedCustomer.totalCreditBalance - amount
+                    });
+                }
+            } else {
+                toast.error(response.message || 'Failed to process payment');
+            }
+        } catch (error: any) {
+            console.error('Error processing credit payment:', error);
+            toast.error(error.response?.data?.message || 'Failed to process payment');
+        } finally {
+            setIsProcessingCreditPayment(false);
+        }
     };
 
     const handleViewCreditHistory = async (customer: Customer) => {
@@ -389,6 +454,7 @@ function ManageCustomer() {
         setCreditHistory([]);
         setCreditHistoryPage(1);
         setHasMoreCreditHistory(true);
+        setExpandedInvoices(new Set());
         setIsLoadingHistory(true);
         try {
             const response = await invoiceService.getCreditHistory(customer.id, 1, 10);
@@ -405,6 +471,18 @@ function ManageCustomer() {
         } finally {
             setIsLoadingHistory(false);
         }
+    };
+
+    const toggleInvoiceAccordion = (invoiceNumber: string) => {
+        setExpandedInvoices(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(invoiceNumber)) {
+                newSet.delete(invoiceNumber);
+            } else {
+                newSet.add(invoiceNumber);
+            }
+            return newSet;
+        });
     };
 
     const loadCustomerInvoices = async (customerId: number, fromDate?: string, toDate?: string, page: number = 1, append: boolean = false) => {
@@ -1073,6 +1151,98 @@ function ManageCustomer() {
                         </div>
 
                         <div className="p-6 overflow-y-auto max-h-[calc(90vh-100px)]" onScroll={handleInvoiceScroll}>
+                            {/* Credit Payment Section */}
+                            <div className="mb-6 p-6 bg-gradient-to-br from-purple-50 to-indigo-50 rounded-2xl border-2 border-purple-200/50">
+                                <div className="flex items-center justify-between mb-4">
+                                    <div>
+                                        <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                                            <CreditCard size={20} className="text-purple-600" />
+                                            Credit Payment
+                                        </h3>
+                                        <p className="text-sm text-gray-600 mt-1">Process payment for customer credit balance</p>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-xs font-bold text-purple-600 uppercase tracking-wider">Credit Balance</p>
+                                        <p className={`text-2xl font-black ${
+                                            selectedCustomer.totalCreditBalance > 0 ? 'text-red-600' : 'text-emerald-600'
+                                        }`}>
+                                            Rs. {selectedCustomer.totalCreditBalance.toLocaleString()}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {selectedCustomer.totalCreditBalance > 0 ? (
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <div className="space-y-2">
+                                            <label htmlFor="credit-payment-amount" className="block text-xs font-bold text-gray-700">
+                                                Payment Amount
+                                            </label>
+                                            <div className="relative">
+                                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-bold">Rs.</span>
+                                                <input
+                                                    type="number"
+                                                    id="credit-payment-amount"
+                                                    value={creditPaymentAmount}
+                                                    onChange={(e) => {
+                                                        const value = e.target.value;
+                                                        if (value === '' || parseFloat(value) >= 0) {
+                                                            setCreditPaymentAmount(value);
+                                                        }
+                                                    }}
+                                                    placeholder="0.00"
+                                                    min="0"
+                                                    max={selectedCustomer.totalCreditBalance}
+                                                    step="0.01"
+                                                    className="w-full text-sm font-bold rounded-lg py-2 pl-10 pr-3 border-2 border-gray-200 bg-white focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all outline-none"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <label htmlFor="credit-payment-method" className="block text-xs font-bold text-gray-700">
+                                                Payment Method
+                                            </label>
+                                            <select
+                                                id="credit-payment-method"
+                                                value={creditPaymentMethod}
+                                                onChange={(e) => setCreditPaymentMethod(e.target.value)}
+                                                className="w-full text-sm font-medium rounded-lg py-2 px-3 border-2 border-gray-200 bg-white focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all outline-none"
+                                            >
+                                                {paymentMethods.map(method => (
+                                                    <option key={method.id} value={method.id}>{method.name}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+
+                                        <div className="flex items-end">
+                                            <button
+                                                onClick={handleCreditPayment}
+                                                disabled={isProcessingCreditPayment || !creditPaymentAmount || !creditPaymentMethod}
+                                                className="w-full px-6 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold rounded-lg transition-all shadow-lg shadow-purple-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:grayscale flex items-center justify-center gap-2"
+                                            >
+                                                {isProcessingCreditPayment ? (
+                                                    <>
+                                                        <Loader2 className="animate-spin" size={16} />
+                                                        Processing...
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <CheckCircle size={16} />
+                                                        Process Payment
+                                                    </>
+                                                )}
+                                            </button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="text-center py-4">
+                                        <CheckCircle className="w-12 h-12 mx-auto mb-2 text-emerald-500" />
+                                        <p className="text-sm font-bold text-emerald-600">No outstanding credit balance</p>
+                                        <p className="text-xs text-gray-500 mt-1">This customer has cleared all dues</p>
+                                    </div>
+                                )}
+                            </div>
+
                             {/* Date Filter */}
                             <div className="mb-4 pb-4 border-b border-gray-200">
                                 <div className="flex items-center gap-3">
@@ -1452,6 +1622,7 @@ function ManageCustomer() {
                                     setCreditHistory([]);
                                     setCreditHistoryPage(1);
                                     setHasMoreCreditHistory(true);
+                                    setExpandedInvoices(new Set());
                                 }}
                                 className="p-2 hover:bg-white/20 rounded-lg transition-colors"
                             >
@@ -1466,59 +1637,113 @@ function ManageCustomer() {
                                 </div>
                             ) : creditHistory.length > 0 ? (
                                 <>
-                                    <table className="w-full">
-                                        <thead className="bg-gray-50 sticky top-0 z-10">
-                                            <tr>
-                                                <th className="px-4 py-3 text-left text-sm font-bold text-gray-700">Date</th>
-                                                <th className="px-4 py-3 text-left text-sm font-bold text-gray-700">Invoice No</th>
-                                                <th className="px-4 py-3 text-right text-sm font-bold text-gray-700">Amount Paid</th>
-                                                <th className="px-4 py-3 text-right text-sm font-bold text-gray-700">Remaining Balance</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-gray-200">
-                                            {creditHistory.map((item) => (
-                                                <tr key={item.id} className="hover:bg-gray-50">
-                                                    <td className="px-4 py-3 text-sm text-gray-800">
-                                                        {new Date(item.date).toLocaleDateString()}
-                                                    </td>
-                                                    <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                                                        {item.invoiceNumber}
-                                                    </td>
-                                                    <td className="px-4 py-3 text-sm font-bold text-emerald-600 text-right">
-                                                        Rs. {item.amount.toLocaleString()}
-                                                    </td>
-                                                    <td className="px-4 py-3 text-sm font-semibold text-gray-700 text-right">
-                                                        Rs. {item.remainingBalance.toLocaleString()}
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                    <div className="mt-6 flex justify-center">
-                                        <button
-                                            onClick={loadMoreCreditHistory}
-                                            disabled={isLoadingMoreHistory}
-                                            className="px-6 py-3 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white font-semibold rounded-lg transition-all shadow-md active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                                        >
-                                            {isLoadingMoreHistory ? (
-                                                <>
-                                                    <Loader2 className="animate-spin" size={20} />
-                                                    <span>Loading...</span>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <ChevronRight size={20} />
-                                                    <span>Load More</span>
-                                                </>
-                                            )}
-                                        </button>
+                                    <div className="space-y-3">
+                                        {creditHistory.map((invoice) => {
+                                            const isExpanded = expandedInvoices.has(invoice.invoiceNumber);
+                                            return (
+                                                <div 
+                                                    key={invoice.invoiceId} 
+                                                    className="border border-gray-200 rounded-xl overflow-hidden bg-white shadow-sm hover:shadow-md transition-shadow"
+                                                >
+                                                    {/* Accordion Header */}
+                                                    <button
+                                                        onClick={() => toggleInvoiceAccordion(invoice.invoiceNumber)}
+                                                        className="w-full px-5 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+                                                    >
+                                                        <div className="flex items-center gap-4 flex-1">
+                                                            <div className="flex items-center justify-center w-10 h-10 rounded-full bg-purple-100">
+                                                                <Receipt size={20} className="text-purple-600" />
+                                                            </div>
+                                                            <div className="text-left">
+                                                                <h3 className="text-sm font-bold text-gray-900">{invoice.invoiceNumber}</h3>
+                                                                <p className="text-xs text-gray-500 mt-0.5">
+                                                                    {invoice.paymentCount} payment{invoice.paymentCount !== 1 ? 's' : ''} • Total: Rs. {invoice.totalPaid.toLocaleString()}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        <div className="flex items-center gap-4">
+                                                            <div className="text-right">
+                                                                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Balance</p>
+                                                                <p className={`text-lg font-black ${invoice.currentBalance > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+                                                                    Rs. {invoice.currentBalance.toLocaleString()}
+                                                                </p>
+                                                            </div>
+                                                            <ChevronDown 
+                                                                size={20} 
+                                                                className={`text-gray-400 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
+                                                            />
+                                                        </div>
+                                                    </button>
+
+                                                    {/* Accordion Content */}
+                                                    {isExpanded && (
+                                                        <div className="border-t border-gray-100 bg-gray-50">
+                                                            <div className="px-5 py-3">
+                                                                <h4 className="text-xs font-bold text-gray-600 uppercase tracking-wider mb-3">Payment History</h4>
+                                                                <div className="space-y-2">
+                                                                    {invoice.payments.map((payment: any) => (
+                                                                        <div 
+                                                                            key={payment.id}
+                                                                            className="flex items-center justify-between py-2.5 px-3 bg-white rounded-lg border border-gray-200"
+                                                                        >
+                                                                            <div className="flex items-center gap-3">
+                                                                                <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center">
+                                                                                    <DollarSign size={16} className="text-emerald-600" />
+                                                                                </div>
+                                                                                <div>
+                                                                                    <p className="text-xs font-medium text-gray-900">
+                                                                                        {new Date(payment.date).toLocaleDateString('en-US', { 
+                                                                                            month: 'short', 
+                                                                                            day: 'numeric', 
+                                                                                            year: 'numeric',
+                                                                                            hour: '2-digit',
+                                                                                            minute: '2-digit'
+                                                                                        })}
+                                                                                    </p>
+                                                                                    <p className="text-xs text-gray-500">{payment.paymentType}</p>
+                                                                                </div>
+                                                                            </div>
+                                                                            <p className="text-sm font-bold text-emerald-600">
+                                                                                + Rs. {payment.amount.toLocaleString()}
+                                                                            </p>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
                                     </div>
+                                    {hasMoreCreditHistory && (
+                                        <div className="mt-6 flex justify-center">
+                                            <button
+                                                onClick={loadMoreCreditHistory}
+                                                disabled={isLoadingMoreHistory}
+                                                className="px-6 py-3 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white font-semibold rounded-lg transition-all shadow-md active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                                            >
+                                                {isLoadingMoreHistory ? (
+                                                    <>
+                                                        <Loader2 className="animate-spin" size={20} />
+                                                        <span>Loading...</span>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <ChevronRight size={20} />
+                                                        <span>Load More</span>
+                                                    </>
+                                                )}
+                                            </button>
+                                        </div>
+                                    )}
                                     {!hasMoreCreditHistory && creditHistory.length > 0 && (
                                         <div className="text-center py-6 mt-4 border-t border-gray-200">
                                             <CheckCircle className="w-8 h-8 mx-auto mb-2 text-purple-500" />
                                             <p className="text-gray-500 text-sm font-medium">All records loaded</p>
                                             <p className="text-gray-400 text-xs mt-1">
-                                                Showing {creditHistory.length} payment{creditHistory.length !== 1 ? 's' : ''}
+                                                Showing {creditHistory.length} invoice{creditHistory.length !== 1 ? 's' : ''} with payment history
                                             </p>
                                         </div>
                                     )}

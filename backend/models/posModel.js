@@ -850,6 +850,7 @@ class POS {
             totalRefunded
         };
     }
+
     // Process payment for customer invoice (settle credit balance)
     static async processInvoicePayment(data) {
         const { invoice_number, payment_amount, payment_type_id, user_id } = data;
@@ -956,6 +957,156 @@ class POS {
         });
     }
 
+    // Process credit payment for customer (across multiple invoices)
+    static async processCreditPayment(data) {
+        const { customer_id, payment_amount, payment_type_id, user_id } = data;
+
+        // Pre-fetch payment type details outside transaction
+        const paymentType = await prisma.payment_types.findUnique({
+            where: { id: parseInt(payment_type_id) }
+        });
+
+        if (!paymentType) {
+            throw new Error("Invalid payment type.");
+        }
+
+        return await prisma.$transaction(async (tx) => {
+            // 1. Validate customer
+            const customer = await tx.customer.findUnique({
+                where: { id: parseInt(customer_id) }
+            });
+
+            if (!customer) {
+                throw new Error("Customer not found.");
+            }
+
+            // 2. Get all credit book entries with balance > 0, ordered by creation date (oldest first)
+            const creditEntries = await tx.creadit_book.findMany({
+                where: {
+                    invoice: {
+                        customer_id: parseInt(customer_id)
+                    },
+                    balance: { gt: 0 }
+                },
+                include: {
+                    invoice: true
+                },
+                orderBy: {
+                    created_at: 'asc' // Pay oldest debts first (FIFO)
+                }
+            });
+
+            if (creditEntries.length === 0) {
+                throw new Error("This customer does not have any outstanding credit balance.");
+            }
+
+            // Calculate total debt
+            const totalDebt = creditEntries.reduce((sum, entry) => sum + entry.balance, 0);
+
+            if (payment_amount > totalDebt) {
+                throw new Error(`Payment amount (Rs. ${payment_amount}) exceeds the total outstanding balance (Rs. ${totalDebt}).`);
+            }
+
+            if (payment_amount <= 0) {
+                throw new Error("Payment amount must be greater than zero.");
+            }
+
+            // 3. Distribute payment across credit entries
+            let remainingPayment = parseFloat(payment_amount);
+            const paymentsApplied = [];
+            const creditHistoryRecords = [];
+
+            for (const creditEntry of creditEntries) {
+                if (remainingPayment <= 0) break;
+
+                const amountToApply = Math.min(remainingPayment, creditEntry.balance);
+                const newBalance = creditEntry.balance - amountToApply;
+
+                // Create invoice payment record
+                const paymentRecord = await tx.invoice_payments.create({
+                    data: {
+                        invoice_id: creditEntry.invoice.id,
+                        payment_types_id: parseInt(payment_type_id),
+                        amount: amountToApply,
+                        payment_date: getSriLankanTime()
+                    }
+                });
+
+                // Update credit book balance
+                await tx.creadit_book.update({
+                    where: { id: creditEntry.id },
+                    data: {
+                        balance: newBalance
+                    }
+                });
+
+                // Record in credit_payment_history
+                await tx.credit_payment_history.create({
+                    data: {
+                        creadit_book_id: creditEntry.id,
+                        amount: amountToApply,
+                        payment_date: getSriLankanTime()
+                    }
+                });
+
+                paymentsApplied.push({
+                    invoiceNumber: creditEntry.invoice.invoice_number,
+                    amountPaid: amountToApply,
+                    previousBalance: creditEntry.balance,
+                    newBalance: newBalance
+                });
+
+                remainingPayment -= amountToApply;
+            }
+
+            // 4. Update Cash Session if user_id is provided
+            if (user_id) {
+                const activeSession = await tx.cash_sessions.findFirst({
+                    where: {
+                        user_id: parseInt(user_id),
+                        cash_status_id: 1 // Active
+                    },
+                    orderBy: { id: 'desc' }
+                });
+
+                if (activeSession) {
+                    // Use pre-fetched payment type to determine which total to update
+                    let updateData = {};
+                    const typeName = paymentType.payment_types.toLowerCase();
+                    
+                    if (typeName === 'cash') {
+                        updateData = { cash_total: { increment: parseFloat(payment_amount) } };
+                    } else if (typeName === 'card') {
+                        updateData = { card_total: { increment: parseFloat(payment_amount) } };
+                    } else if (typeName.includes('bank')) {
+                        updateData = { bank_total: { increment: parseFloat(payment_amount) } };
+                    }
+
+                    if (Object.keys(updateData).length > 0) {
+                        await tx.cash_sessions.update({
+                            where: { id: activeSession.id },
+                            data: updateData
+                        });
+                    }
+                }
+            }
+
+            // Calculate new total balance
+            const newTotalBalance = totalDebt - payment_amount;
+
+            return {
+                success: true,
+                totalPaid: payment_amount,
+                previousTotalBalance: totalDebt,
+                newTotalBalance: newTotalBalance,
+                paymentsApplied: paymentsApplied,
+                invoicesPaid: paymentsApplied.length
+            };
+        }, {
+            timeout: 20000 // Extended timeout to 20s for multi-invoice credit payment processing
+        });
+    }
+
     // Get return history
     static async getReturnHistory(filters, limit, offset) {
         const { invoiceNumber, fromDate, toDate } = filters;
@@ -1002,7 +1153,7 @@ class POS {
         return { returns, totalRecords };
     }
 
-    // Get credit payment history for a customer
+    // Get credit payment history for a customer (grouped by invoice)
     static async getCreditPaymentHistory(customerId, page = 1, limit = 10) {
         if (!customerId) {
             const emptyPagination = PaginationHelper.getPaginationMetadata(page, limit, 0);
@@ -1015,25 +1166,24 @@ class POS {
             };
         }
 
-        const offset = PaginationHelper.getSkip(page, limit);
-
-        const [history, totalRecords] = await Promise.all([
-            prisma.credit_payment_history.findMany({
-                where: {
-                    creadit_book: {
-                        invoice: {
-                            customer_id: parseInt(customerId)
+        // Get all invoices with credit history for this customer
+        const invoicesWithPayments = await prisma.invoice.findMany({
+            where: {
+                customer_id: parseInt(customerId),
+                creadit_book: {
+                    some: {
+                        credit_payment_history: {
+                            some: {}
                         }
                     }
-                },
-                include: {
-                    creadit_book: {
-                        select: {
-                            balance: true,
-                            invoice: {
-                                select: {
-                                    invoice_number: true
-                                }
+                }
+            },
+            include: {
+                creadit_book: {
+                    include: {
+                        credit_payment_history: {
+                            orderBy: {
+                                payment_date: 'desc'
                             }
                         }
                     }
@@ -1052,25 +1202,49 @@ class POS {
                         }
                     }
                 }
-            })
-        ]);
+            },
+            orderBy: {
+                created_at: 'desc'
+            }
+        });
 
-        // Format history for frontend
-        const formattedHistory = history.map(item => ({
-            id: item.id,
-            invoiceNumber: item.creadit_book.invoice.invoice_number,
-            amount: item.amount,
-            date: item.payment_date,
-            remainingBalance: item.creadit_book.balance
-        }));
+        // Group payments by invoice
+        const groupedHistory = invoicesWithPayments.map(invoice => {
+            // Get current balance from credit_book (should be one record per invoice)
+            const currentBalance = invoice.creadit_book[0]?.balance || 0;
+            
+            // Get all payments for this invoice
+            const payments = invoice.creadit_book.flatMap(cb => 
+                cb.credit_payment_history.map(payment => ({
+                    id: payment.id,
+                    amount: payment.amount,
+                    date: payment.payment_date,
+                    paymentType: 'Credit Payment' // Can be enhanced if payment type is stored
+                }))
+            );
+
+            return {
+                invoiceNumber: invoice.invoice_number,
+                invoiceId: invoice.id,
+                currentBalance: currentBalance,
+                totalPaid: payments.reduce((sum, p) => sum + p.amount, 0),
+                paymentCount: payments.length,
+                payments: payments
+            };
+        });
+
+        // Apply pagination to grouped data
+        const offset = PaginationHelper.getSkip(page, limit);
+        const paginatedHistory = groupedHistory.slice(offset, offset + limit);
+        const totalRecords = groupedHistory.length;
 
         const paginationMetadata = PaginationHelper.getPaginationMetadata(page, limit, totalRecords);
 
         return {
-            history: formattedHistory,
+            history: paginatedHistory,
             pagination: {
                 ...paginationMetadata,
-                hasMore: paginationMetadata.hasNextPage // Add hasMore as alias
+                hasMore: paginationMetadata.hasNextPage
             }
         };
     }

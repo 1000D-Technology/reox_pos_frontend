@@ -299,3 +299,29 @@ exports.getCreditPaymentHistory = catchAsync(async (req, res, next) => {
         pagination: result.pagination
     });
 });
+
+// Process credit payment for customer (across multiple invoices)
+exports.processCreditPayment = catchAsync(async (req, res, next) => {
+    const { customer_id, payment_amount, payment_type_id } = req.body;
+    const user_id = req.body.user_id || (req.user ? req.user.id : 1);
+
+    if (!customer_id || !payment_amount || !payment_type_id) {
+        return res.status(400).json({
+            success: false,
+            message: "Customer ID, payment amount and payment type are required."
+        });
+    }
+
+    const result = await POS.processCreditPayment({
+        customer_id: parseInt(customer_id),
+        payment_amount: parseFloat(payment_amount),
+        payment_type_id: parseInt(payment_type_id),
+        user_id: user_id
+    });
+
+    res.status(200).json({
+        success: true,
+        message: "Credit payment processed successfully",
+        data: result
+    });
+});
