@@ -199,13 +199,81 @@ async function main() {
   }
 
   // 10. Return Statuses (Pending, Completed, etc.)
-  const returnStatuses = ['Pending', 'Completed', 'Rejected'];
+  const returnStatuses = ['Pending', 'Completed', 'Rejected', 'Pending Review', 'Confirmed', 'Disposed', 'Returned to Supplier'];
   for (const rs of returnStatuses) {
      const exists = await prisma.return_status.findFirst({ where: { return_status: rs } });
      if (!exists) {
        await prisma.return_status.create({ data: { return_status: rs } });
        console.log(`Created return status: ${rs}`);
      }
+  }
+
+  // 11. Reasons for damaged/returns
+  const reasons = [
+    'Transit damage',
+    'Handling damage',
+    'Packaging defect',
+    'Manufacturing defect',
+    'Expired product',
+    'Customer return',
+    'Improper storage',
+    'Supplier damage',
+    'Water damage',
+    'Theft damage'
+  ];
+  for (const reasonText of reasons) {
+    const exists = await prisma.reason.findFirst({ where: { reason: reasonText } });
+    if (!exists) {
+      await prisma.reason.create({ data: { reason: reasonText } });
+      console.log(`Created reason: ${reasonText}`);
+    }
+  }
+
+  // 12. Banks
+  const banks = [
+    'Bank of Ceylon (BOC)',
+    'People\'s Bank',
+    'National Savings Bank (NSB)',
+    'Commercial Bank of Ceylon',
+    'Hatton National Bank (HNB)',
+    'Sampath Bank',
+    'Seylan Bank',
+    'Nations Trust Bank (NTB)',
+    'DFCC Bank',
+    'NDB Bank',
+    'Pan Asia Bank',
+    'Amana Bank',
+    'Union Bank',
+    'Cargills Bank',
+    'SDB Bank (Sanasa Development Bank)',
+    'Regional Development Bank (RDB)',
+    'HDFC Bank',
+    'State Mortgage & Investment Bank (SMIB)',
+    'HSBC',
+    'Standard Chartered Bank'
+  ];
+  for (const bankName of banks) {
+    const exists = await prisma.bank.findFirst({ where: { bank_name: bankName } });
+    if (!exists) {
+      await prisma.bank.create({ data: { bank_name: bankName } });
+      console.log(`Created bank: ${bankName}`);
+    }
+  }
+
+  // 13. Subscription (initial)
+  const existingSubscription = await prisma.subscription.findFirst();
+  if (!existingSubscription) {
+    const nextMonth = new Date();
+    nextMonth.setDate(nextMonth.getDate() + 30);
+    await prisma.subscription.create({
+      data: {
+        amount: 5000.00,
+        due_date: nextMonth,
+        status: 'Active',
+        is_paid: false
+      }
+    });
+    console.log('Created initial subscription');
   }
 
   console.log('Seeding finished.');

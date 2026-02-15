@@ -26,7 +26,6 @@ const { scheduleSessionClosure } = require('./schedulers/sessionClosureScheduler
 const moneyExchangeRoutes = require('./routes/moneyExchangeRoutes');
 const swaggerJsDoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
-const seedDatabase = require('./config/dbInit');
 const cashSessionRoutes = require('./routes/cashSessionRoutes');
 const quotationRoutes = require('./routes/quotationRoutes');
 const reportRoutes = require('./routes/reportRoutes');
@@ -84,38 +83,32 @@ app.use(globalErrorHandler);
 
 const PORT = process.env.PORT || 3000;
 
-seedDatabase().then(() => {
-    const server = app.listen(PORT, () => {
-        console.log(`✅ Server is running on port ${PORT}`);
+const server = app.listen(PORT, () => {
+    console.log(`✅ Server is running on port ${PORT}`);
 
-        // Initialize backup scheduler
-        try {
-            scheduleBackup();
-            console.log('✅ Backup scheduler started successfully');
-        } catch (error) {
-            console.error('❌ Failed to start backup scheduler:', error.message);
-        }
+    // Initialize backup scheduler
+    try {
+        scheduleBackup();
+        console.log('✅ Backup scheduler started successfully');
+    } catch (error) {
+        console.error('❌ Failed to start backup scheduler:', error.message);
+    }
 
-        // Initialize session auto-close scheduler
-        try {
-            scheduleSessionClosure();
-            console.log('✅ Session auto-close scheduler started successfully');
-        } catch (error) {
-            console.error('❌ Failed to start session auto-close scheduler:', error.message);
-        }
-    });
+    // Initialize session auto-close scheduler
+    try {
+        scheduleSessionClosure();
+        console.log('✅ Session auto-close scheduler started successfully');
+    } catch (error) {
+        console.error('❌ Failed to start session auto-close scheduler:', error.message);
+    }
+});
 
-    server.on('error', (error) => {
-        if (error.code === 'EADDRINUSE') {
-            console.error(`❌ Port ${PORT} is already in use. Please close the other process or change the PORT in .env.`);
-        } else {
-            console.error('❌ Server startup error:', error.message);
-        }
-        process.exit(1);
-    });
-}).catch(err => {
-    console.error("❌ Failed to seed database or initialize server:", err);
-    // Important: Exit with code 1 so Electron knows start failed
+server.on('error', (error) => {
+    if (error.code === 'EADDRINUSE') {
+        console.error(`❌ Port ${PORT} is already in use. Please close the other process or change the PORT in .env.`);
+    } else {
+        console.error('❌ Server startup error:', error.message);
+    }
     process.exit(1);
 });
 
